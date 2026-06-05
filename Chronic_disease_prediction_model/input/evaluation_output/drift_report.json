@@ -1,0 +1,339 @@
+{
+  "threshold": 0.1,
+  "risk_score_drift": {
+    "psi": 0.013534568205644006,
+    "ks_stat": 0.024249999999999994,
+    "ks_p_value": 0.408848773041322,
+    "alert": false
+  },
+  "feature_drift": {
+    "age": {
+      "psi": 0.006859937559377707,
+      "ks_stat": 0.027749999999999997,
+      "ks_p_value": 0.2525264865792085,
+      "mean_shift_ratio": 0.005920571413988539,
+      "std_shift_ratio": 0.00040179428163797045,
+      "alert": false
+    },
+    "gender": {
+      "psi": 0.0007022907934870518,
+      "ks_stat": 0.013249999999999984,
+      "ks_p_value": 0.9724954856952351,
+      "mean_shift_ratio": 0.026821808053020105,
+      "std_shift_ratio": 3.3130253230594496e-05,
+      "alert": false
+    },
+    "education_years": {
+      "psi": 0.003203708944191952,
+      "ks_stat": 0.011249999999999982,
+      "ks_p_value": 0.9957414317306887,
+      "mean_shift_ratio": 0.0005007837919541037,
+      "std_shift_ratio": 0.012844687596389175,
+      "alert": false
+    },
+    "atrial_fibrillation": {
+      "psi": 4.905849491712272e-05,
+      "ks_stat": 0.003500000000000003,
+      "ks_p_value": 1.0,
+      "mean_shift_ratio": 0.006743724963921184,
+      "std_shift_ratio": 0.00024181950784577595,
+      "alert": false
+    },
+    "previous_stroke": {
+      "psi": 1.6002693795786244e-05,
+      "ks_stat": 0.0020000000000000018,
+      "ks_p_value": 1.0,
+      "mean_shift_ratio": 0.004044481204284727,
+      "std_shift_ratio": 5.200754113777492e-05,
+      "alert": false
+    },
+    "previous_tia": {
+      "psi": 0.00019600594574775053,
+      "ks_stat": 0.006999999999999951,
+      "ks_p_value": 1.0,
+      "mean_shift_ratio": 0.013958097790433022,
+      "std_shift_ratio": 5.600196011603008e-05,
+      "alert": false
+    },
+    "heart_disease": {
+      "psi": 3.0353006292309968e-05,
+      "ks_stat": 0.00275000000000003,
+      "ks_p_value": 1.0,
+      "mean_shift_ratio": 0.005183779106919533,
+      "std_shift_ratio": 0.0003215192360487179,
+      "alert": false
+    },
+    "diabetes_years": {
+      "psi": 0.00686061062485423,
+      "ks_stat": 0.024499999999999966,
+      "ks_p_value": 0.39601505654282493,
+      "mean_shift_ratio": 0.028652277516479967,
+      "std_shift_ratio": 0.01998224106733591,
+      "alert": false
+    },
+    "hypertension_years": {
+      "psi": 0.0038220021396437468,
+      "ks_stat": 0.013499999999999956,
+      "ks_p_value": 0.9672876077402908,
+      "mean_shift_ratio": 0.004022460555859799,
+      "std_shift_ratio": 0.016490767191177425,
+      "alert": false
+    },
+    "hypertension_controlled": {
+      "psi": 0.00018225250600607877,
+      "ks_stat": 0.006749999999999978,
+      "ks_p_value": 1.0,
+      "mean_shift_ratio": 0.013581461606717157,
+      "std_shift_ratio": 1.0125395523813993e-05,
+      "alert": false
+    },
+    "chronic_kidney_disease": {
+      "psi": 0.000812842506824934,
+      "ks_stat": 0.01425000000000004,
+      "ks_p_value": 0.9480359252919567,
+      "mean_shift_ratio": 0.027403793454243326,
+      "std_shift_ratio": 0.0007347796593398306,
+      "alert": false
+    },
+    "peripheral_artery_disease": {
+      "psi": 2.503711358351504e-05,
+      "ks_stat": 0.0024999999999999467,
+      "ks_p_value": 1.0,
+      "mean_shift_ratio": 0.005213753464539182,
+      "std_shift_ratio": 0.00019280516444983403,
+      "alert": false
+    },
+    "family_stroke_history": {
+      "psi": 7.241889062175935e-05,
+      "ks_stat": 0.004249999999999976,
+      "ks_p_value": 1.0,
+      "mean_shift_ratio": 0.008891194788295373,
+      "std_shift_ratio": 0.0004110041819211701,
+      "alert": false
+    },
+    "family_heart_disease": {
+      "psi": 0.0006279786965986379,
+      "ks_stat": 0.012499999999999956,
+      "ks_p_value": 0.9847353749882335,
+      "mean_shift_ratio": 0.02312669171749905,
+      "std_shift_ratio": 0.001722323256209901,
+      "alert": false
+    },
+    "carotid_plaque": {
+      "psi": 2.50415333902238e-07,
+      "ks_stat": 0.00024999999999997247,
+      "ks_p_value": 1.0,
+      "mean_shift_ratio": 0.0005213753464539761,
+      "std_shift_ratio": 2.040905892859057e-05,
+      "alert": false
+    },
+    "white_matter_lesions": {
+      "psi": 9.022999649284106e-06,
+      "ks_stat": 0.0015000000000000568,
+      "ks_p_value": 1.0,
+      "mean_shift_ratio": 0.003164550285758894,
+      "std_shift_ratio": 0.00015189892581549371,
+      "alert": false
+    },
+    "systolic_bp": {
+      "psi": 0.004904232228700783,
+      "ks_stat": 0.02300000000000002,
+      "ks_p_value": 0.47652112297192184,
+      "mean_shift_ratio": 0.0023277056101718846,
+      "std_shift_ratio": 0.005091281456291238,
+      "alert": false
+    },
+    "diastolic_bp": {
+      "psi": 0.0026699616021881104,
+      "ks_stat": 0.014249999999999985,
+      "ks_p_value": 0.9480359252919583,
+      "mean_shift_ratio": 0.0019702055546596616,
+      "std_shift_ratio": 0.011422267088507763,
+      "alert": false
+    },
+    "total_cholesterol": {
+      "psi": 0.009573607209491608,
+      "ks_stat": 0.029999999999999916,
+      "ks_p_value": 0.17839378620353227,
+      "mean_shift_ratio": 0.007715390601194577,
+      "std_shift_ratio": 0.011545117460355855,
+      "alert": false
+    },
+    "hdl_cholesterol": {
+      "psi": 0.006531771813286423,
+      "ks_stat": 0.03025,
+      "ks_p_value": 0.17133778124692828,
+      "mean_shift_ratio": 0.00940229007091882,
+      "std_shift_ratio": 0.0073394088778562985,
+      "alert": false
+    },
+    "ldl_cholesterol": {
+      "psi": 0.007434405331452052,
+      "ks_stat": 0.02949999999999997,
+      "ks_p_value": 0.19318908858391368,
+      "mean_shift_ratio": 0.010471882524381535,
+      "std_shift_ratio": 0.014938013901646586,
+      "alert": false
+    },
+    "triglycerides": {
+      "psi": 0.01430291295926182,
+      "ks_stat": 0.035250000000000004,
+      "ks_p_value": 0.07116453033978135,
+      "mean_shift_ratio": 0.015117808484986645,
+      "std_shift_ratio": 0.010478105317452325,
+      "alert": false
+    },
+    "fasting_glucose": {
+      "psi": 0.004696906869561677,
+      "ks_stat": 0.01924999999999999,
+      "ks_p_value": 0.7024307879962329,
+      "mean_shift_ratio": 0.002427491997977741,
+      "std_shift_ratio": 0.006306701328257441,
+      "alert": false
+    },
+    "hba1c": {
+      "psi": 0.0033831814240210772,
+      "ks_stat": 0.02475000000000005,
+      "ks_p_value": 0.3834284789961097,
+      "mean_shift_ratio": 0.0005423162253544622,
+      "std_shift_ratio": 0.040523155272903615,
+      "alert": false
+    },
+    "bmi": {
+      "psi": 0.005808930868071552,
+      "ks_stat": 0.02975,
+      "ks_p_value": 0.18567625125951157,
+      "mean_shift_ratio": 0.005673525292854039,
+      "std_shift_ratio": 0.024734439895339567,
+      "alert": false
+    },
+    "waist_circumference": {
+      "psi": 0.008467133703766436,
+      "ks_stat": 0.01924999999999996,
+      "ks_p_value": 0.7024307879962346,
+      "mean_shift_ratio": 0.0007516437490532273,
+      "std_shift_ratio": 0.03963887502801355,
+      "alert": false
+    },
+    "waist_hip_ratio": {
+      "psi": 0.005601181331211224,
+      "ks_stat": 0.028249999999999997,
+      "ks_p_value": 0.23433580234787008,
+      "mean_shift_ratio": 0.003544414409997235,
+      "std_shift_ratio": 0.007763991662422541,
+      "alert": false
+    },
+    "heart_rate": {
+      "psi": 0.004020401677327173,
+      "ks_stat": 0.018000000000000016,
+      "ks_p_value": 0.77718279243564,
+      "mean_shift_ratio": 0.00339292950040628,
+      "std_shift_ratio": 0.013462830991350988,
+      "alert": false
+    },
+    "alcohol_units_week": {
+      "psi": 0.0060688870916489595,
+      "ks_stat": 0.029249999999999998,
+      "ks_p_value": 0.20093608165643,
+      "mean_shift_ratio": 0.024209812999369345,
+      "std_shift_ratio": 0.011872737695906762,
+      "alert": false
+    },
+    "physical_activity_days": {
+      "psi": 0.002188553750910693,
+      "ks_stat": 0.01150000000000001,
+      "ks_p_value": 0.9942996087874199,
+      "mean_shift_ratio": 0.007860331669590763,
+      "std_shift_ratio": 0.0005868994662591818,
+      "alert": false
+    },
+    "sleep_hours": {
+      "psi": 0.007854610783486255,
+      "ks_stat": 0.023749999999999993,
+      "ks_p_value": 0.435237011407411,
+      "mean_shift_ratio": 0.00038972621560958353,
+      "std_shift_ratio": 0.0005936454357858978,
+      "alert": false
+    },
+    "crp": {
+      "psi": 0.008522182667342724,
+      "ks_stat": 0.028750000000000053,
+      "ks_p_value": 0.2171469233819937,
+      "mean_shift_ratio": 0.025084764151510897,
+      "std_shift_ratio": 0.006904709106423405,
+      "alert": false
+    },
+    "fibrinogen": {
+      "psi": 0.004810090989657846,
+      "ks_stat": 0.017000000000000015,
+      "ks_p_value": 0.8326693187003752,
+      "mean_shift_ratio": 0.0024793841267124173,
+      "std_shift_ratio": 0.0037651590027446787,
+      "alert": false
+    },
+    "left_ventricular_ejection": {
+      "psi": 0.0018316903095373057,
+      "ks_stat": 0.01050000000000001,
+      "ks_p_value": 0.9984845170898655,
+      "mean_shift_ratio": 0.0010746452266300196,
+      "std_shift_ratio": 0.00658827436861353,
+      "alert": false
+    },
+    "avg_systolic_bp_24h": {
+      "psi": 0.006009630588950506,
+      "ks_stat": 0.036250000000000004,
+      "ks_p_value": 0.05873646659857323,
+      "mean_shift_ratio": 0.003455795441971191,
+      "std_shift_ratio": 0.012720353960161595,
+      "alert": false
+    },
+    "bp_variability": {
+      "psi": 0.007275090953192699,
+      "ks_stat": 0.019999999999999962,
+      "ks_p_value": 0.6562366293638756,
+      "mean_shift_ratio": 0.000964933488137161,
+      "std_shift_ratio": 0.005544069879272437,
+      "alert": false
+    },
+    "heart_rate_variability": {
+      "psi": 0.0063927253581860565,
+      "ks_stat": 0.03049999999999997,
+      "ks_p_value": 0.16450421131545248,
+      "mean_shift_ratio": 0.0010323714878722268,
+      "std_shift_ratio": 0.029282211665687032,
+      "alert": false
+    },
+    "daily_steps": {
+      "psi": 0.007473444701509672,
+      "ks_stat": 0.017749999999999932,
+      "ks_p_value": 0.7915144346114416,
+      "mean_shift_ratio": 0.001728355924726152,
+      "std_shift_ratio": 0.001612738760972517,
+      "alert": false
+    },
+    "sleep_efficiency": {
+      "psi": 0.007092708940676952,
+      "ks_stat": 0.015750000000000042,
+      "ks_p_value": 0.893139654502883,
+      "mean_shift_ratio": 0.002116238429562114,
+      "std_shift_ratio": 0.002928167403684449,
+      "alert": false
+    },
+    "air_quality": {
+      "psi": 0.003366139300777703,
+      "ks_stat": 0.017749999999999988,
+      "ks_p_value": 0.7915144346114386,
+      "mean_shift_ratio": 0.004231215713054887,
+      "std_shift_ratio": 0.017175701323185997,
+      "alert": false
+    },
+    "season": {
+      "psi": 0.000870488205547672,
+      "ks_stat": 0.01474999999999993,
+      "ks_p_value": 0.9321216576902224,
+      "mean_shift_ratio": 0.03038098788673965,
+      "std_shift_ratio": 0.00042063952215796367,
+      "alert": false
+    }
+  }
+}

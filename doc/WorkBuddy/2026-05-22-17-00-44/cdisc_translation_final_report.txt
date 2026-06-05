@@ -1,0 +1,162 @@
+================================================================================
+CDISC SDTM 术语翻译对照报告
+================================================================================
+
+【一、整体统计】
+  总记录数：46,774
+  codelist_name 翻译完成：46,774 (100.0%) ✅
+  cdisc_synonyms 翻译完成：41,630 (89.0%) ⚠️
+  未翻译 cdisc_synonyms: 5,144 (11.0%)
+
+【二、按类别统计（Top 30）】
+  序号 类别名称                                                     总数      已翻译        覆盖率
+-------------------------------------------------------------------------------------
+   1 Laboratory Test Code                                  2,506    2,506     100.0%
+   2 Laboratory Test Name                                  2,506    2,506     100.0%
+   3 Microorganism                                         1,708    1,708     100.0%
+   4 Anatomical Location                                   1,475    1,475     100.0%
+   5 Unit                                                    951      951     100.0%
+   6 Cell Phenotyping Test Code                              939      939     100.0%
+   7 Cell Phenotyping Test Name                              939      939     100.0%
+   8 Functional Assessment of Chronic Illness Therapy        675      675     100.0%
+   9 Functional Assessment of Chronic Illness Therapy        675      675     100.0%
+  10 National Youth Tobacco Survey 2022 Questionnaire        672      672     100.0%
+  11 National Youth Tobacco Survey 2022 Questionnaire        672      672     100.0%
+  12 PK Units of Measure                                     609      609     100.0%
+  13 Microbiology Test Code                                  562      562     100.0%
+  14 Microbiology Test Name                                  562      562     100.0%
+  15 Method                                                  532      532     100.0%
+  16 PK Parameters                                           389      389     100.0%
+  17 PK Parameters Code                                      389      389     100.0%
+  18 Binding Agent for Immunogenicity Tests                  337      337     100.0%
+  19 Category of Questionnaire                               319      319     100.0%
+  20 SDTM Microscopic Findings Test Code                     255      255     100.0%
+  21 SDTM Microscopic Findings Test Name                     255      255     100.0%
+  22 Holter ECG Results                                      239      239     100.0%
+  23 ECG Result                                              236      236     100.0%
+  24 Findings About Test Code                                225      225     100.0%
+  25 Findings About Test Name                                225      225     100.0%
+  26 Tobacco Product Testing Test Code                       211      211     100.0%
+  27 Tobacco Product Testing Test Name                       211      211     100.0%
+  28 Deployment Risk and Resilience Inventory-2 Quest        211      211     100.0%
+  29 Deployment Risk and Resilience Inventory-2 Quest        211      211     100.0%
+  30 Dosage Form                                             197      197     100.0%
+
+【三、功能测试类翻译对照样例】
+--------------------------------------------------------------------------------
+英文术语                                     中文翻译                                    
+--------------------------------------------------------------------------------
+TENMW1TC                                 10-米 步行/跑 功能 测试 测试代码                    
+TENMW101                                 TENMW1-是否 步行/跑 执行                       
+TENMW102                                 TENMW1-时间 to 步行/跑 10 米s                 
+TENMW103                                 TENMW1-穿戴 矫形器                           
+TENMW104                                 TENMW1-测试 等级                            
+TENMW1TN                                 10-米 步行/跑 功能 测试 测试项目                    
+TENMW1-Test Grade                        TENMW1-测试 等级                            
+TENMW1-Time to Walk/Run 10 Meters        TENMW1-时间 to 步行/跑 10 米s                 
+TENMW1-Was Walk/Run Performed            TENMW1-是否 步行/跑 执行                       
+TENMW1-Wear Orthoses                     TENMW1-穿戴 矫形器                           
+SIXMW1TC                                 6 分钟 步行 功能 测试 测试代码                      
+SIXMW101                                 SIXMW1-Distance at 1 分钟                 
+SIXMW102                                 SIXMW1-Distance at 2 分钟s                
+SIXMW103                                 SIXMW1-Distance at 3 分钟s                
+SIXMW104                                 SIXMW1-Distance at 4 分钟s                
+
+【四、实验室检查类翻译对照样例】
+--------------------------------------------------------------------------------
+英文术语                           中文翻译                          
+------------------------------------------------------------
+LBTESTCD                       实验室检查 代码                      
+A1AGLP                         Alpha-1 Acid Glycoprotein     
+A1ANTRPF                       Alpha-1 Antitrypsin, 功能       
+A1ANTRYP                       Alpha-1 Antitrypsin; 血清 Tryp  
+A1MCGEXR                       Alpha-1 Microglobulin Excret  
+A1MCREAT                       Alpha-1 Microglobulin/Creati  
+A1MICG                         Alpha-1 Microglobulin; Prote  
+A2MACG                         Alpha-2 Macroglobulin         
+A73OXC                         7-Alpha hydroxy-4-cholesten-  
+AAMAPAC                        Alpha-Aminoadipate; Alpha-Am  
+AAMBTAC                        Alpha-aminobutyrate; Alpha-A  
+AAP                            Alanine Aminopeptidase        
+AARGS                          Aggrecan Ala-Arg-Gly-Ser Neo  
+AATZPL                         AAT Z-Polymer; Alpha-1 Antit  
+AB42AB40                       Amyloid Beta 1-42/Amyloid Be  
+AB71A                          Activation B7-1 Antigen; B-L  
+ABFBCA                         AB-FUBINACA                   
+ABNCE                          Abnormal Cells                
+ABNCECE                        Abnormal Cells/Total Cells    
+ABNCELE                        Abnormal Cells/Leukocytes     
+
+【五、药代动力学类翻译对照样例】
+--------------------------------------------------------------------------------
+英文术语                                     中文翻译                                    
+--------------------------------------------------------------------------------
+PKANMET                                  药代动力学 Analytical Method                 
+LIN-LOG TRAPEZOIDAL METHOD               Linear-Logarithmic Trapezoidal Method   
+LINEAR TRAPEZOIDAL - LOG INTERPOLATION   Linear Trapezoidal - Logarithmic Inter  
+PKPARM                                   药代动力学 参数s                               
+Absolute Bioavailability                 Absolute Bioavailability                
+Accum Ratio AUC Infinity Obs             Accum Ratio AUC Infinity Obs            
+Accum Ratio AUC Infinity Pred            Accum Ratio AUC Infinity Pred           
+Accum Ratio AUC T1 to T2 norm by dose    Accum Ratio AUC T1 to T2 norm by dose   
+Accum Ratio AUC to Last Nonzero Conc     Accum Ratio AUC to Last Nonzero Conc    
+Accum Ratio AUCIFO Norm by Dose          Accum Ratio AUCIFO Norm by 剂量           
+Accum Ratio AUCIFP Norm by Dose          Accum Ratio AUCIFP Norm by 剂量           
+Accum Ratio AUCTAU norm by dose          Accum Ratio AUCTAU norm by dose         
+Accum Ratio Cmax norm by dose            Accum Ratio Cmax norm by dose           
+Accum Ratio Cmin norm by dose            Accum Ratio Cmin norm by dose           
+Accum Ratio Ctrough norm by dose         Accum Ratio Ctrough norm by dose        
+
+【六、量表问卷类翻译对照样例】
+--------------------------------------------------------------------------------
+英文术语                                     中文翻译                                    
+--------------------------------------------------------------------------------
+AIMS0101T07OR                            Abnormal Involuntary Movement 量表 Clini  
+Mild                                     AIMS0101 through AIMS0107-Mild          
+Minimal, may be extreme normal           AIMS0101 through AIMS0107-Minimal, may  
+Moderate                                 AIMS0101 through AIMS0107-Moderate      
+Severe                                   AIMS0101 through AIMS0107-Severe        
+AIMS0108T09OR                            Abnormal Involuntary Movement 量表 Clini  
+Mild                                     AIMS0108 through AIMS0109-Mild          
+Minimal                                  AIMS0108 through AIMS0109-Minimal       
+Moderate                                 AIMS0108 through AIMS0109-Moderate      
+None, normal                             AIMS0108 through AIMS0109-None, normal  
+Severe                                   AIMS0108 through AIMS0109-Severe        
+AIMS0110OR                               Abnormal Involuntary Movement 量表 Clini  
+Aware, mild distress                     AIMS0110-Aware, mild distress           
+Aware, moderate distress                 AIMS0110-Aware, moderate distress       
+Aware, no distress                       AIMS0110-Aware, no distress             
+
+【七、翻译覆盖率分析】
+类别名称                                                     未翻译数         总数
+----------------------------------------------------------------------
+Microorganism                                           1,037      1,708
+Anatomical Location                                       890      1,475
+PK Units of Measure                                       377        609
+Method                                                    324        532
+Unit                                                      185        951
+Dosage Form                                               182        197
+Route of Administration Response                          134        144
+Race As Collected                                         132        144
+Procedure                                                  97        153
+Specimen Type                                              91        130
+Category of Oncology Response Assessment                   81         97
+Holter ECG Results                                         62        239
+ECG Result                                                 59        236
+Medical Evaluator Identifier                               56         57
+Directionality                                             55         57
+Binding Agent for Immunogenicity Tests                     55        337
+PK Units of Measure - Dose mg                              53        157
+Evaluator                                                  52         66
+CDISC Therapeutic Area User Guide Response                 45         47
+PK Units of Measure - Dose ug                              44        135
+
+【八、总结】
+  ✅ codelist_name 字段：100% 完成翻译
+  ⚠️ cdisc_synonyms 字段：89.0% 完成翻译，仍有 11.0% 待完善
+  📊 翻译覆盖主要医学领域：实验室检查、功能测试、药代动力学、量表问卷等
+  💡 建议：对未翻译的同义词进行人工复核和补充
+
+================================================================================
+报告生成时间：2026-05-22
+================================================================================

@@ -1,0 +1,209 @@
+// Prisma Schema for Auth Service
+// 多租户认证系统 - 符合 21 CFR Part 11 规范
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 数据库种子脚本
+// npx prisma db seed
+task dbseed = "ts-node prisma/seed.ts"
+
+// ==================== 租户管理 ====================
+
+model Tenant {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  code        String   @unique
+  status      TenantStatus @default(ACTIVE)
+  settings    Json?    // 租户配置（locale, timezone 等）
+  config      Json?    // 租户配置（JSON）
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users       User[]
+  roles       Role[]
+  auditLogs   AuditLog[]
+
+  @@map("tenants")
+}
+
+enum TenantStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+// ==================== 用户管理 ====================
+
+model User {
+  id            String        @id @default(uuid())
+  tenantId      String
+  username      String
+  email         String
+  passwordHash  String         // bcrypt 加密密码
+  firstName     String?
+  lastName      String?
+  displayName   String?        // 显示名称（可选）
+  phone         String?
+  status        UserStatus     @default(ACTIVE)
+  lastLoginAt   DateTime?
+  loginAttempts Int            @default(0)
+  lockedUntil   DateTime?
+  mfaEnabled    Boolean        @default(false)
+  mfaSecret     String?
+  emailVerified Boolean        @default(false)
+  phoneVerified Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  tenant        Tenant         @relation(fields: [tenantId], references: [id])
+  userRoles     UserRole[]
+  sessions      Session[]
+  auditLogs     AuditLog[]     // 审计轨迹
+  refreshTokens RefreshToken[]
+  passwordResetTokens PasswordResetToken[]
+
+  @@unique([tenantId, username])
+  @@unique([tenantId, email])
+  @@index([tenantId])
+  @@map("users")
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  LOCKED
+  SUSPENDED
+  PENDING
+}
+
+// ==================== 角色管理（RBAC） ====================
+
+enum RoleStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Role {
+  id          String    @id @default(uuid())
+  tenantId    String
+  name        String    // 角色名称（如：super_admin）
+  displayName String    // 角色显示名称（如：超级管理员）
+  description String?   // 角色描述
+  permissions Json?     // 权限列表（JSON 数组）
+  status      RoleStatus @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  userRoles   UserRole[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("roles")
+}
+
+// ==================== 用户角色关联 ====================
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String
+  roleId    String
+  assignedBy String  // 分配者 ID
+  assignedAt DateTime @default(now())
+  expiresAt DateTime? // 过期时间（可选）
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+// ==================== 会话管理 ====================
+
+model Session {
+  id          String   @id @default(uuid())
+  userId      String
+  token       String   @unique // JWT token
+  deviceInfo  String?  // 设备信息
+  ipAddress   String?  // IP 地址
+  userAgent   String?  // User Agent
+  expiresAt   DateTime
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("sessions")
+}
+
+// ==================== 审计日志（21 CFR Part 11 合规） ====================
+
+model AuditLog {
+  id          String      @id @default(uuid())
+  tenantId    String
+  userId      String?
+  action      String      // 操作类型（LOGIN, LOGOUT, CREATE, UPDATE, DELETE）
+  entity      String?     // 实体类型（User, Study, CRF）
+  entityId    String?     // 实体 ID
+  changes     Json?       // 变更内容（before/after）
+  ipAddress   String?     // IP 地址
+  userAgent   String?     // User Agent
+  details     String?     // 额外详情
+  createdAt   DateTime    @default(now())
+
+  tenant      Tenant      @relation(fields: [tenantId], references: [id])
+  user        User?       @relation(fields: [userId], references: [id])
+
+  // 21 CFR Part 11: 审计日志不可删除
+  @@index([tenantId])
+  @@index([userId])
+  @@index([entity])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ==================== 刷新令牌 ====================
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("refresh_tokens")
+}
+
+// ==================== 密码重置令牌 ====================
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@map("password_reset_tokens")
+}

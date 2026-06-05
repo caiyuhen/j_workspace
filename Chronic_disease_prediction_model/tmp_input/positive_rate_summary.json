@@ -1,0 +1,290 @@
+{
+  "train": {
+    "stroke": {
+      "rows": 50,
+      "positives": 30,
+      "positive_rate": 0.6
+    },
+    "diabetes": {
+      "rows": 50,
+      "positives": 29,
+      "positive_rate": 0.58
+    },
+    "arrhythmia": {
+      "rows": 50,
+      "positives": 26,
+      "positive_rate": 0.52
+    },
+    "hypertension": {
+      "rows": 50,
+      "positives": 25,
+      "positive_rate": 0.5
+    },
+    "kidney_disease": {
+      "rows": 50,
+      "positives": 28,
+      "positive_rate": 0.56
+    },
+    "depression": {
+      "rows": 50,
+      "positives": 25,
+      "positive_rate": 0.5
+    },
+    "anxiety": {
+      "rows": 50,
+      "positives": 30,
+      "positive_rate": 0.6
+    },
+    "alzheimer": {
+      "rows": 50,
+      "positives": 26,
+      "positive_rate": 0.52
+    },
+    "coronary_heart_disease": {
+      "rows": 50,
+      "positives": 26,
+      "positive_rate": 0.52
+    },
+    "gout": {
+      "rows": 50,
+      "positives": 37,
+      "positive_rate": 0.74
+    },
+    "parkinson": {
+      "rows": 50,
+      "positives": 24,
+      "positive_rate": 0.48
+    },
+    "heart_failure": {
+      "rows": 50,
+      "positives": 31,
+      "positive_rate": 0.62
+    },
+    "asthma": {
+      "rows": 50,
+      "positives": 28,
+      "positive_rate": 0.56
+    },
+    "bronchiectasis": {
+      "rows": 50,
+      "positives": 24,
+      "positive_rate": 0.48
+    }
+  },
+  "val": {
+    "stroke": {
+      "rows": 7,
+      "positives": 5,
+      "positive_rate": 0.7142857142857143
+    },
+    "diabetes": {
+      "rows": 7,
+      "positives": 3,
+      "positive_rate": 0.42857142857142855
+    },
+    "arrhythmia": {
+      "rows": 7,
+      "positives": 5,
+      "positive_rate": 0.7142857142857143
+    },
+    "hypertension": {
+      "rows": 7,
+      "positives": 4,
+      "positive_rate": 0.5714285714285714
+    },
+    "kidney_disease": {
+      "rows": 7,
+      "positives": 3,
+      "positive_rate": 0.42857142857142855
+    },
+    "depression": {
+      "rows": 7,
+      "positives": 5,
+      "positive_rate": 0.7142857142857143
+    },
+    "anxiety": {
+      "rows": 7,
+      "positives": 2,
+      "positive_rate": 0.2857142857142857
+    },
+    "alzheimer": {
+      "rows": 7,
+      "positives": 2,
+      "positive_rate": 0.2857142857142857
+    },
+    "coronary_heart_disease": {
+      "rows": 7,
+      "positives": 1,
+      "positive_rate": 0.14285714285714285
+    },
+    "gout": {
+      "rows": 7,
+      "positives": 5,
+      "positive_rate": 0.7142857142857143
+    },
+    "parkinson": {
+      "rows": 7,
+      "positives": 4,
+      "positive_rate": 0.5714285714285714
+    },
+    "heart_failure": {
+      "rows": 7,
+      "positives": 5,
+      "positive_rate": 0.7142857142857143
+    },
+    "asthma": {
+      "rows": 7,
+      "positives": 4,
+      "positive_rate": 0.5714285714285714
+    },
+    "bronchiectasis": {
+      "rows": 7,
+      "positives": 2,
+      "positive_rate": 0.2857142857142857
+    }
+  },
+  "test": {
+    "stroke": {
+      "rows": 15,
+      "positives": 9,
+      "positive_rate": 0.6
+    },
+    "diabetes": {
+      "rows": 15,
+      "positives": 9,
+      "positive_rate": 0.6
+    },
+    "arrhythmia": {
+      "rows": 15,
+      "positives": 7,
+      "positive_rate": 0.4666666666666667
+    },
+    "hypertension": {
+      "rows": 15,
+      "positives": 11,
+      "positive_rate": 0.7333333333333333
+    },
+    "kidney_disease": {
+      "rows": 15,
+      "positives": 9,
+      "positive_rate": 0.6
+    },
+    "depression": {
+      "rows": 15,
+      "positives": 10,
+      "positive_rate": 0.6666666666666666
+    },
+    "anxiety": {
+      "rows": 15,
+      "positives": 5,
+      "positive_rate": 0.3333333333333333
+    },
+    "alzheimer": {
+      "rows": 15,
+      "positives": 6,
+      "positive_rate": 0.4
+    },
+    "coronary_heart_disease": {
+      "rows": 15,
+      "positives": 9,
+      "positive_rate": 0.6
+    },
+    "gout": {
+      "rows": 15,
+      "positives": 6,
+      "positive_rate": 0.4
+    },
+    "parkinson": {
+      "rows": 15,
+      "positives": 10,
+      "positive_rate": 0.6666666666666666
+    },
+    "heart_failure": {
+      "rows": 15,
+      "positives": 2,
+      "positive_rate": 0.13333333333333333
+    },
+    "asthma": {
+      "rows": 15,
+      "positives": 8,
+      "positive_rate": 0.5333333333333333
+    },
+    "bronchiectasis": {
+      "rows": 15,
+      "positives": 10,
+      "positive_rate": 0.6666666666666666
+    }
+  },
+  "all": {
+    "stroke": {
+      "rows": 72,
+      "positives": 44,
+      "positive_rate": 0.6111111111111112
+    },
+    "diabetes": {
+      "rows": 72,
+      "positives": 41,
+      "positive_rate": 0.5694444444444444
+    },
+    "arrhythmia": {
+      "rows": 72,
+      "positives": 38,
+      "positive_rate": 0.5277777777777778
+    },
+    "hypertension": {
+      "rows": 72,
+      "positives": 40,
+      "positive_rate": 0.5555555555555556
+    },
+    "kidney_disease": {
+      "rows": 72,
+      "positives": 40,
+      "positive_rate": 0.5555555555555556
+    },
+    "depression": {
+      "rows": 72,
+      "positives": 40,
+      "positive_rate": 0.5555555555555556
+    },
+    "anxiety": {
+      "rows": 72,
+      "positives": 37,
+      "positive_rate": 0.5138888888888888
+    },
+    "alzheimer": {
+      "rows": 72,
+      "positives": 34,
+      "positive_rate": 0.4722222222222222
+    },
+    "coronary_heart_disease": {
+      "rows": 72,
+      "positives": 36,
+      "positive_rate": 0.5
+    },
+    "gout": {
+      "rows": 72,
+      "positives": 48,
+      "positive_rate": 0.6666666666666666
+    },
+    "parkinson": {
+      "rows": 72,
+      "positives": 38,
+      "positive_rate": 0.5277777777777778
+    },
+    "heart_failure": {
+      "rows": 72,
+      "positives": 38,
+      "positive_rate": 0.5277777777777778
+    },
+    "asthma": {
+      "rows": 72,
+      "positives": 40,
+      "positive_rate": 0.5555555555555556
+    },
+    "bronchiectasis": {
+      "rows": 72,
+      "positives": 36,
+      "positive_rate": 0.5
+    }
+  }
+}

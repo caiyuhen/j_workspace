@@ -1,0 +1,144 @@
+# 定时任务配置
+# 使用 Cron 表达式定义自动化任务
+
+schedules:
+  # 每日医学资讯汇总
+  daily_medical_news:
+    cron: "0 8 * * * *"        # 每天早上 8 点执行
+    description: "汇总每日医学最新资讯"
+    agent: "researcher"
+    prompt: |
+      请汇总今日医学最新资讯，包括：
+      1. 最新医学研究突破
+      2. 重要临床试验结果
+      3. 新药审批信息
+      4. 行业政策变化
+      生成一份简洁的日报，包含 5-10 条重要资讯，每条附带来源链接。
+    workspace: "D:/workspace/claw/AI-agent/projects/medical/daily-news"
+    output: "daily-report.md"
+    enabled: true
+    
+  # 每周文献综述
+  weekly_literature_review:
+    cron: "0 9 * * 1"           # 每周一上午 9 点
+    description: "生成周度医学文献综述"
+    agent: "researcher"
+    prompt: |
+      请分析本周发表的重要医学文献，按以下结构生成综述：
+      1. 按疾病领域分类
+      2. 每篇文献的简要总结
+      3. 研究方法和样本量
+      4. 主要发现和结论
+      5. 临床意义评估
+      6. 引用格式（BibTeX）
+    workspace: "D:/workspace/claw/AI-agent/projects/medical/literature"
+    output: "weekly-review.md"
+    enabled: true
+    
+  # 每月 Token 使用报告
+  monthly_token_report:
+    cron: "0 10 1 * *"          # 每月 1 号上午 10 点
+    description: "生成月度 Token 使用分析报告"
+    agent: "orchestrator"
+    prompt: |
+      请生成月度 Token 使用分析报告，包含：
+      1. 总 Token 使用情况（输入/输出）
+      2. 各智能体调用统计
+      3. 成本分析
+      4. 使用趋势
+      5. 优化建议
+    workspace: "D:/workspace/claw/AI-agent/reports"
+    output: "monthly-token-report.md"
+    enabled: true
+    
+  # 每日系统健康检查
+  daily_health_check:
+    cron: "0 6 * * * *"         # 每天早上 6 点
+    description: "系统健康检查"
+    agent: "orchestrator"
+    prompt: |
+      执行系统健康检查：
+      1. 检查所有智能体服务状态
+      2. 检查 Skill 连接状态
+      3. 检查磁盘空间
+      4. 检查数据库连接
+      5. 生成健康报告
+    workspace: "D:/workspace/claw/AI-agent/health"
+    output: "health-check.md"
+    enabled: true
+    
+  # 每周数据备份
+  weekly_backup:
+    cron: "0 3 * * 0"           # 每周日凌晨 3 点
+    description: "执行系统数据备份"
+    agent: "orchestrator"
+    prompt: |
+      执行系统数据备份：
+      1. 备份项目文件
+      2. 备份数据库
+      3. 备份日志
+      4. 验证备份完整性
+      5. 上传到备份存储
+    workspace: "D:/workspace/claw/AI-agent/backup"
+    output: "backup-report.md"
+    enabled: true
+    
+  # 每月知识库更新
+  monthly_knowledge_update:
+    cron: "0 2 15 * *"          # 每月 15 号凌晨 2 点
+    description: "更新医学知识库"
+    agent: "researcher"
+    prompt: |
+      更新医学知识库：
+      1. 从权威来源获取最新医学信息
+      2. 更新诊断指南
+      3. 更新药物数据库
+      4. 验证信息准确性
+      5. 生成更新日志
+    workspace: "D:/workspace/claw/AI-agent/knowledge"
+    output: "knowledge-update.md"
+    enabled: true
+    
+  # 实时任务监控（每 5 分钟）
+  task_monitoring:
+    cron: "*/5 * * * * *"       # 每 5 分钟
+    description: "监控任务执行状态"
+    agent: "orchestrator"
+    prompt: |
+      监控当前执行的任务：
+      1. 检查任务进度
+      2. 识别异常任务
+      3. 自动重试失败任务
+      4. 生成监控报告
+    workspace: "D:/workspace/claw/AI-agent/monitor"
+    output: "task-monitor.md"
+    enabled: true
+
+# 任务调度配置
+scheduler_config:
+  # 并发控制
+  max_concurrent_tasks: 5
+  
+  # 任务队列
+  queue:
+    max_size: 1000
+    timeout: 86400              # 24 小时
+  
+  # 重试策略
+  retry:
+    max_attempts: 3
+    delay: 300                  # 5 分钟
+  
+  # 通知配置
+  notifications:
+    email: false
+    wechat: true                # 企业微信通知
+    dingtalk: false
+    
+  # 日志配置
+  logging:
+    level: "INFO"
+    retention_days: 90
+
+# 时区配置
+timezone: "Asia/Shanghai"

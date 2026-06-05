@@ -1,0 +1,125 @@
+version: '3.8'
+
+services:
+  # 数据库服务
+  database:
+    image: postgres:14-alpine
+    container_name: clinical_trials_db
+    environment:
+      POSTGRES_DB: clinical_trials_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  # 认证服务
+  auth-service:
+    build: ./backend/auth-service
+    container_name: auth-service
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres_password@database:5432/clinical_trials_db
+      - JWT_SECRET=your-super-secret-jwt-key
+    ports:
+      - "3001:3001"
+    depends_on:
+      - database
+    restart: unless-stopped
+
+  # CTMS服务
+  ctms-service:
+    build: ./backend/ctms-service
+    container_name: ctms-service
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres_password@database:5432/clinical_trials_db
+      - JWT_SECRET=your-super-secret-jwt-key
+    ports:
+      - "3002:3002"
+    depends_on:
+      - database
+      - auth-service
+    restart: unless-stopped
+
+  # EDC服务
+  edc-service:
+    build: ./backend/edc-service
+    container_name: edc-service
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres_password@database:5432/clinical_trials_db
+      - JWT_SECRET=your-super-secret-jwt-key
+    ports:
+      - "3003:3003"
+    depends_on:
+      - database
+      - auth-service
+    restart: unless-stopped
+
+  # IWRS服务
+  iwrs-service:
+    build: ./backend/iwrs-service
+    container_name: iwrs-service
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres_password@database:5432/clinical_trials_db
+      - JWT_SECRET=your-super-secret-jwt-key
+    ports:
+      - "3004:3004"
+    depends_on:
+      - database
+      - auth-service
+    restart: unless-stopped
+
+  # 病历夹服务
+  patient-folder-service:
+    build: ./backend/patient-folder-service
+    container_name: patient-folder-service
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres_password@database:5432/clinical_trials_db
+      - JWT_SECRET=your-super-secret-jwt-key
+    ports:
+      - "3005:3005"
+    depends_on:
+      - database
+      - auth-service
+    restart: unless-stopped
+
+  # API网关
+  api-gateway:
+    build: ./backend/api-gateway
+    container_name: api-gateway
+    environment:
+      - NODE_ENV=production
+      - JWT_SECRET=your-super-secret-jwt-key
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+      - ctms-service
+      - edc-service
+      - iwrs-service
+      - patient-folder-service
+    restart: unless-stopped
+
+  # 反向代理（Nginx）
+  reverse-proxy:
+    image: nginx:alpine
+    container_name: reverse-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/certs:/etc/nginx/certs
+    depends_on:
+      - api-gateway
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

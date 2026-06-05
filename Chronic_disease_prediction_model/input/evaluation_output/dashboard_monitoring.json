@@ -1,0 +1,11 @@
+{
+  "accuracy_trend": [
+    0.984,
+    0.98725
+  ],
+  "baseline_accuracy": 0.984,
+  "current_accuracy": 0.98725,
+  "performance_drop_ratio": 0.0,
+  "retrain_trigger": false,
+  "drift_alert_count": 0
+}

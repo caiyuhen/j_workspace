@@ -1,0 +1,290 @@
+{
+  "xgb_multi_7d_A": {
+    "stroke": {
+      "train_auroc": 0.9929510902777778,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "diabetes": {
+      "train_auroc": 0.9999790694444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "arrhythmia": {
+      "train_auroc": 0.9999725347222223,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "hypertension": {
+      "train_auroc": 0.9987291319444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "kidney_disease": {
+      "train_auroc": 0.9992538137843171,
+      "samples": 24000,
+      "positive_rate": 0.50775
+    },
+    "depression": {
+      "train_auroc": 0.7379357569444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "anxiety": {
+      "train_auroc": 0.9999848958333333,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "alzheimer": {
+      "train_auroc": 0.9999040803389717,
+      "samples": 24000,
+      "positive_rate": 0.515
+    },
+    "coronary_heart_disease": {
+      "train_auroc": 0.9999658749999999,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "gout": {
+      "train_auroc": 0.9999688680555556,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "parkinson": {
+      "train_auroc": 0.9998693468946821,
+      "samples": 24000,
+      "positive_rate": 0.5007916666666666
+    },
+    "heart_failure": {
+      "train_auroc": 0.9999638888888889,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "asthma": {
+      "train_auroc": 0.9999635833333334,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "bronchiectasis": {
+      "train_auroc": 0.9999663194444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    }
+  },
+  "xgb_multi_30d_A": {
+    "stroke": {
+      "train_auroc": 0.9929510902777778,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "diabetes": {
+      "train_auroc": 0.9999790694444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "arrhythmia": {
+      "train_auroc": 0.9999725347222223,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "hypertension": {
+      "train_auroc": 0.9987291319444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "kidney_disease": {
+      "train_auroc": 0.9992538137843171,
+      "samples": 24000,
+      "positive_rate": 0.50775
+    },
+    "depression": {
+      "train_auroc": 0.7379357569444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "anxiety": {
+      "train_auroc": 0.9999848958333333,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "alzheimer": {
+      "train_auroc": 0.9999040803389717,
+      "samples": 24000,
+      "positive_rate": 0.515
+    },
+    "coronary_heart_disease": {
+      "train_auroc": 0.9999658749999999,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "gout": {
+      "train_auroc": 0.9999688680555556,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "parkinson": {
+      "train_auroc": 0.9998693468946821,
+      "samples": 24000,
+      "positive_rate": 0.5007916666666666
+    },
+    "heart_failure": {
+      "train_auroc": 0.9999638888888889,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "asthma": {
+      "train_auroc": 0.9999635833333334,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "bronchiectasis": {
+      "train_auroc": 0.9999663194444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    }
+  },
+  "xgb_multi_7d_B": {
+    "stroke": {
+      "train_auroc": 0.9929510902777778,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "diabetes": {
+      "train_auroc": 0.9999790694444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "arrhythmia": {
+      "train_auroc": 0.9999725347222223,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "hypertension": {
+      "train_auroc": 0.9987291319444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "kidney_disease": {
+      "train_auroc": 0.9992538137843171,
+      "samples": 24000,
+      "positive_rate": 0.50775
+    },
+    "depression": {
+      "train_auroc": 0.7379357569444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "anxiety": {
+      "train_auroc": 0.9999848958333333,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "alzheimer": {
+      "train_auroc": 0.9999040803389717,
+      "samples": 24000,
+      "positive_rate": 0.515
+    },
+    "coronary_heart_disease": {
+      "train_auroc": 0.9999658749999999,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "gout": {
+      "train_auroc": 0.9999688680555556,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "parkinson": {
+      "train_auroc": 0.9998693468946821,
+      "samples": 24000,
+      "positive_rate": 0.5007916666666666
+    },
+    "heart_failure": {
+      "train_auroc": 0.9999638888888889,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "asthma": {
+      "train_auroc": 0.9999635833333334,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "bronchiectasis": {
+      "train_auroc": 0.9999663194444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    }
+  },
+  "xgb_multi_30d_B": {
+    "stroke": {
+      "train_auroc": 0.9929510902777778,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "diabetes": {
+      "train_auroc": 0.9999790694444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "arrhythmia": {
+      "train_auroc": 0.9999725347222223,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "hypertension": {
+      "train_auroc": 0.9987291319444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "kidney_disease": {
+      "train_auroc": 0.9992538137843171,
+      "samples": 24000,
+      "positive_rate": 0.50775
+    },
+    "depression": {
+      "train_auroc": 0.7379357569444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "anxiety": {
+      "train_auroc": 0.9999848958333333,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "alzheimer": {
+      "train_auroc": 0.9999040803389717,
+      "samples": 24000,
+      "positive_rate": 0.515
+    },
+    "coronary_heart_disease": {
+      "train_auroc": 0.9999658749999999,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "gout": {
+      "train_auroc": 0.9999688680555556,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "parkinson": {
+      "train_auroc": 0.9998693468946821,
+      "samples": 24000,
+      "positive_rate": 0.5007916666666666
+    },
+    "heart_failure": {
+      "train_auroc": 0.9999638888888889,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "asthma": {
+      "train_auroc": 0.9999635833333334,
+      "samples": 24000,
+      "positive_rate": 0.5
+    },
+    "bronchiectasis": {
+      "train_auroc": 0.9999663194444445,
+      "samples": 24000,
+      "positive_rate": 0.5
+    }
+  }
+}

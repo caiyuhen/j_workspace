@@ -1,0 +1,219 @@
+version: '3.8'
+
+services:
+  # PostgreSQL 数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: clinical-trial-db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: clinical_trial
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    networks:
+      - clinical-trial-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Nacos 配置中心
+  nacos:
+    image: nacos/nacos-server:v2.3.0
+    container_name: clinical-trial-nacos
+    restart: always
+    environment:
+      - MODE=standalone
+      - SPRING_DATASOURCE_PLATFORM=postgresql
+      - MYSQL_SERVICE_HOST=postgres
+      - MYSQL_SERVICE_PORT=5432
+      - MYSQL_SERVICE_USER=postgres
+      - MYSQL_SERVICE_PASSWORD=postgres
+      - MYSQL_SERVICE_DB_NAME=nacos_config
+      - JVM_XMS=256m
+      - JVM_XMX=256m
+    ports:
+      - "8848:8848"
+      - "9848:9848"
+      - "9849:9849"
+    volumes:
+      - nacos_data:/home/nacos/nacos/data
+    networks:
+      - clinical-trial-network
+    depends_on:
+      - postgres
+
+  # 网关服务
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: clinical-trial-gateway
+    restart: always
+    ports:
+      - "9777:9777"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - NACOS_SERVER_ADDR=nacos:8848
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    networks:
+      - clinical-trial-network
+    depends_on:
+      - nacos
+      - auth-service
+      - ctms-service
+      - edc-service
+      - iwrs-service
+      - admin-portal-service
+      - doctor-portal-service
+
+  # 认证服务
+  auth-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    container_name: clinical-trial-auth
+    restart: always
+    ports:
+      - "8881:8881"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - NACOS_SERVER_ADDR=nacos:8848
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    networks:
+      - clinical-trial-network
+    depends_on:
+      - nacos
+      - postgres
+
+  # CTMS 服务
+  ctms-service:
+    build:
+      context: ./ctms-service
+      dockerfile: Dockerfile
+    container_name: clinical-trial-ctms
+    restart: always
+    ports:
+      - "8883:8883"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - NACOS_SERVER_ADDR=nacos:8848
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    networks:
+      - clinical-trial-network
+    depends_on:
+      - nacos
+      - postgres
+
+  # EDC 服务
+  edc-service:
+    build:
+      context: ./edc-service
+      dockerfile: Dockerfile
+    container_name: clinical-trial-edc
+    restart: always
+    ports:
+      - "8882:8882"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - NACOS_SERVER_ADDR=nacos:8848
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    networks:
+      - clinical-trial-network
+    depends_on:
+      - nacos
+      - postgres
+
+  # IWRS 服务
+  iwrs-service:
+    build:
+      context: ./iwrs-service
+      dockerfile: Dockerfile
+    container_name: clinical-trial-iwrs
+    restart: always
+    ports:
+      - "8884:8884"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - NACOS_SERVER_ADDR=nacos:8848
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    networks:
+      - clinical-trial-network
+    depends_on:
+      - nacos
+      - postgres
+
+  # 管理服务
+  admin-portal-service:
+    build:
+      context: ./admin-portal-service
+      dockerfile: Dockerfile
+    container_name: clinical-trial-admin
+    restart: always
+    ports:
+      - "8886:8886"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - NACOS_SERVER_ADDR=nacos:8848
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    networks:
+      - clinical-trial-network
+    depends_on:
+      - nacos
+      - postgres
+
+  # 医生门户服务
+  doctor-portal-service:
+    build:
+      context: ./doctor-portal-service
+      dockerfile: Dockerfile
+    container_name: clinical-trial-doctor
+    restart: always
+    ports:
+      - "8885:8885"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - NACOS_SERVER_ADDR=nacos:8848
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+    networks:
+      - clinical-trial-network
+    depends_on:
+      - nacos
+      - postgres
+
+volumes:
+  postgres_data:
+    driver: local
+  nacos_data:
+    driver: local
+
+networks:
+  clinical-trial-network:
+    driver: bridge

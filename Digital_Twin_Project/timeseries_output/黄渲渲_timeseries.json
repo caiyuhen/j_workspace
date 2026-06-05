@@ -1,0 +1,5345 @@
+{
+  "patient_name": "黄渲渲",
+  "treatment_plan": {
+    "type": "Brace",
+    "duration": 24,
+    "compliance": 0.9
+  },
+  "timeline": [
+    {
+      "week": 0,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.0,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.0,
+            -1.0,
+            10.0,
+            10.0,
+            10.0,
+            13.0,
+            23.0,
+            14.0,
+            20.0,
+            6.0,
+            -1.0,
+            -3.0
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 26.0,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.0,
+            -1.0,
+            10.0,
+            10.0,
+            10.0,
+            13.0,
+            23.0,
+            14.0,
+            20.0,
+            6.0,
+            -1.0,
+            -3.0
+          ]
+        }
+      }
+    },
+    {
+      "week": 1,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.0625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.01,
+            -1.00125,
+            10.0125,
+            10.0125,
+            10.0125,
+            13.01625,
+            23.02875,
+            14.0175,
+            20.025,
+            6.0075,
+            -1.00125,
+            -3.00375
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 25.91,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.9712,
+            -0.9964,
+            9.963999999999999,
+            9.963999999999999,
+            9.963999999999999,
+            12.953199999999999,
+            22.917199999999998,
+            13.9496,
+            19.927999999999997,
+            5.9784,
+            -0.9964,
+            -2.9892
+          ]
+        }
+      }
+    },
+    {
+      "week": 2,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.02,
+            -1.0025,
+            10.024999999999999,
+            10.024999999999999,
+            10.024999999999999,
+            13.032499999999999,
+            23.057499999999997,
+            14.035,
+            20.049999999999997,
+            6.015,
+            -1.0025,
+            -3.0075
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 25.82,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.9424,
+            -0.9928,
+            9.928,
+            9.928,
+            9.928,
+            12.9064,
+            22.8344,
+            13.8992,
+            19.856,
+            5.9568,
+            -0.9928,
+            -2.9784
+          ]
+        }
+      }
+    },
+    {
+      "week": 3,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.1875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.03,
+            -1.00375,
+            10.0375,
+            10.0375,
+            10.0375,
+            13.048749999999998,
+            23.08625,
+            14.052499999999998,
+            20.075,
+            6.022499999999999,
+            -1.00375,
+            -3.0112499999999995
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 25.73,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.9136,
+            -0.9892,
+            9.892,
+            9.892,
+            9.892,
+            12.8596,
+            22.7516,
+            13.848799999999999,
+            19.784,
+            5.9352,
+            -0.9892,
+            -2.9676
+          ]
+        }
+      }
+    },
+    {
+      "week": 4,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.25,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.04,
+            -1.005,
+            10.049999999999999,
+            10.049999999999999,
+            10.049999999999999,
+            13.064999999999998,
+            23.115,
+            14.069999999999999,
+            20.099999999999998,
+            6.029999999999999,
+            -1.005,
+            -3.0149999999999997
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 25.64,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.8848,
+            -0.9856,
+            9.856,
+            9.856,
+            9.856,
+            12.812800000000001,
+            22.6688,
+            13.7984,
+            19.712,
+            5.913600000000001,
+            -0.9856,
+            -2.9568000000000003
+          ]
+        }
+      }
+    },
+    {
+      "week": 5,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.3125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.05,
+            -1.00625,
+            10.0625,
+            10.0625,
+            10.0625,
+            13.08125,
+            23.14375,
+            14.087500000000002,
+            20.125,
+            6.0375000000000005,
+            -1.00625,
+            -3.0187500000000003
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 25.55,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.856,
+            -0.982,
+            9.82,
+            9.82,
+            9.82,
+            12.766,
+            22.586,
+            13.748,
+            19.64,
+            5.8919999999999995,
+            -0.982,
+            -2.9459999999999997
+          ]
+        }
+      }
+    },
+    {
+      "week": 6,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.06,
+            -1.0075,
+            10.075000000000001,
+            10.075000000000001,
+            10.075000000000001,
+            13.0975,
+            23.172500000000003,
+            14.105,
+            20.150000000000002,
+            6.045,
+            -1.0075,
+            -3.0225
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 25.46,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.8272,
+            -0.9784,
+            9.784,
+            9.784,
+            9.784,
+            12.7192,
+            22.5032,
+            13.697600000000001,
+            19.568,
+            5.8704,
+            -0.9784,
+            -2.9352
+          ]
+        }
+      }
+    },
+    {
+      "week": 7,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.4375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.07,
+            -1.00875,
+            10.0875,
+            10.0875,
+            10.0875,
+            13.11375,
+            23.20125,
+            14.1225,
+            20.175,
+            6.0525,
+            -1.00875,
+            -3.02625
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 25.37,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.7984,
+            -0.9748,
+            9.748,
+            9.748,
+            9.748,
+            12.6724,
+            22.4204,
+            13.6472,
+            19.496,
+            5.8488,
+            -0.9748,
+            -2.9244
+          ]
+        }
+      }
+    },
+    {
+      "week": 8,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.5,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.08,
+            -1.01,
+            10.1,
+            10.1,
+            10.1,
+            13.13,
+            23.23,
+            14.14,
+            20.2,
+            6.0600000000000005,
+            -1.01,
+            -3.0300000000000002
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 25.28,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.7696,
+            -0.9712,
+            9.712,
+            9.712,
+            9.712,
+            12.625599999999999,
+            22.3376,
+            13.5968,
+            19.424,
+            5.8271999999999995,
+            -0.9712,
+            -2.9135999999999997
+          ]
+        }
+      }
+    },
+    {
+      "week": 9,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.5625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.09,
+            -1.01125,
+            10.1125,
+            10.1125,
+            10.1125,
+            13.14625,
+            23.25875,
+            14.157499999999999,
+            20.225,
+            6.0675,
+            -1.01125,
+            -3.03375
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 25.19,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.7408,
+            -0.9676,
+            9.676,
+            9.676,
+            9.676,
+            12.578800000000001,
+            22.2548,
+            13.5464,
+            19.352,
+            5.8056,
+            -0.9676,
+            -2.9028
+          ]
+        }
+      }
+    },
+    {
+      "week": 10,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.1,
+            -1.0125,
+            10.125,
+            10.125,
+            10.125,
+            13.1625,
+            23.287499999999998,
+            14.174999999999999,
+            20.25,
+            6.074999999999999,
+            -1.0125,
+            -3.0374999999999996
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 25.1,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.712,
+            -0.964,
+            9.64,
+            9.64,
+            9.64,
+            12.532,
+            22.172,
+            13.495999999999999,
+            19.28,
+            5.784,
+            -0.964,
+            -2.892
+          ]
+        }
+      }
+    },
+    {
+      "week": 11,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.6875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.11,
+            -1.01375,
+            10.1375,
+            10.1375,
+            10.1375,
+            13.178749999999999,
+            23.316249999999997,
+            14.192499999999999,
+            20.275,
+            6.0825,
+            -1.01375,
+            -3.04125
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 25.01,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.6832,
+            -0.9604,
+            9.604000000000001,
+            9.604000000000001,
+            9.604000000000001,
+            12.4852,
+            22.0892,
+            13.4456,
+            19.208000000000002,
+            5.7624,
+            -0.9604,
+            -2.8812
+          ]
+        }
+      }
+    },
+    {
+      "week": 12,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.75,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.12,
+            -1.015,
+            10.149999999999999,
+            10.149999999999999,
+            10.149999999999999,
+            13.194999999999999,
+            23.345,
+            14.209999999999999,
+            20.299999999999997,
+            6.09,
+            -1.015,
+            -3.045
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 24.92,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.6544,
+            -0.9568,
+            9.568,
+            9.568,
+            9.568,
+            12.4384,
+            22.0064,
+            13.395199999999999,
+            19.136,
+            5.7408,
+            -0.9568,
+            -2.8704
+          ]
+        }
+      }
+    },
+    {
+      "week": 13,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.8125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.13,
+            -1.01625,
+            10.162500000000001,
+            10.162500000000001,
+            10.162500000000001,
+            13.211250000000001,
+            23.37375,
+            14.227500000000001,
+            20.325000000000003,
+            6.0975,
+            -1.01625,
+            -3.04875
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 24.83,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.6256,
+            -0.9532,
+            9.532,
+            9.532,
+            9.532,
+            12.3916,
+            21.9236,
+            13.344800000000001,
+            19.064,
+            5.719200000000001,
+            -0.9532,
+            -2.8596000000000004
+          ]
+        }
+      }
+    },
+    {
+      "week": 14,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.14,
+            -1.0175,
+            10.175,
+            10.175,
+            10.175,
+            13.227500000000001,
+            23.402500000000003,
+            14.245000000000001,
+            20.35,
+            6.105,
+            -1.0175,
+            -3.0525
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 24.74,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.5968,
+            -0.9496,
+            9.496,
+            9.496,
+            9.496,
+            12.3448,
+            21.8408,
+            13.2944,
+            18.992,
+            5.6975999999999996,
+            -0.9496,
+            -2.8487999999999998
+          ]
+        }
+      }
+    },
+    {
+      "week": 15,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 26.9375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.15,
+            -1.01875,
+            10.1875,
+            10.1875,
+            10.1875,
+            13.24375,
+            23.431250000000002,
+            14.262500000000001,
+            20.375,
+            6.112500000000001,
+            -1.01875,
+            -3.0562500000000004
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 24.65,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.568,
+            -0.946,
+            9.459999999999999,
+            9.459999999999999,
+            9.459999999999999,
+            12.298,
+            21.758,
+            13.244,
+            18.919999999999998,
+            5.676,
+            -0.946,
+            -2.838
+          ]
+        }
+      }
+    },
+    {
+      "week": 16,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.0,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.16,
+            -1.02,
+            10.2,
+            10.2,
+            10.2,
+            13.26,
+            23.46,
+            14.280000000000001,
+            20.4,
+            6.12,
+            -1.02,
+            -3.06
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 24.56,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.5392,
+            -0.9424,
+            9.424,
+            9.424,
+            9.424,
+            12.2512,
+            21.6752,
+            13.1936,
+            18.848,
+            5.6544,
+            -0.9424,
+            -2.8272
+          ]
+        }
+      }
+    },
+    {
+      "week": 17,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.0625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.17,
+            -1.02125,
+            10.2125,
+            10.2125,
+            10.2125,
+            13.27625,
+            23.48875,
+            14.2975,
+            20.425,
+            6.1274999999999995,
+            -1.02125,
+            -3.0637499999999998
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 24.47,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.5104,
+            -0.9388,
+            9.388,
+            9.388,
+            9.388,
+            12.2044,
+            21.592399999999998,
+            13.1432,
+            18.776,
+            5.6328,
+            -0.9388,
+            -2.8164
+          ]
+        }
+      }
+    },
+    {
+      "week": 18,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.18,
+            -1.0225,
+            10.225,
+            10.225,
+            10.225,
+            13.2925,
+            23.5175,
+            14.315,
+            20.45,
+            6.135,
+            -1.0225,
+            -3.0675
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 24.38,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.4816,
+            -0.9352,
+            9.352,
+            9.352,
+            9.352,
+            12.1576,
+            21.5096,
+            13.0928,
+            18.704,
+            5.6112,
+            -0.9352,
+            -2.8056
+          ]
+        }
+      }
+    },
+    {
+      "week": 19,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.1875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.19,
+            -1.02375,
+            10.237499999999999,
+            10.237499999999999,
+            10.237499999999999,
+            13.30875,
+            23.546249999999997,
+            14.3325,
+            20.474999999999998,
+            6.1425,
+            -1.02375,
+            -3.07125
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 24.29,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.4528,
+            -0.9316,
+            9.315999999999999,
+            9.315999999999999,
+            9.315999999999999,
+            12.1108,
+            21.4268,
+            13.0424,
+            18.631999999999998,
+            5.5896,
+            -0.9316,
+            -2.7948
+          ]
+        }
+      }
+    },
+    {
+      "week": 20,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.25,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.2,
+            -1.025,
+            10.25,
+            10.25,
+            10.25,
+            13.325,
+            23.575,
+            14.349999999999998,
+            20.5,
+            6.1499999999999995,
+            -1.025,
+            -3.0749999999999997
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 24.2,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.4239999999999995,
+            -0.9279999999999999,
+            9.28,
+            9.28,
+            9.28,
+            12.064,
+            21.343999999999998,
+            12.991999999999999,
+            18.56,
+            5.568,
+            -0.9279999999999999,
+            -2.784
+          ]
+        }
+      }
+    },
+    {
+      "week": 21,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.3125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.21,
+            -1.02625,
+            10.262500000000001,
+            10.262500000000001,
+            10.262500000000001,
+            13.341250000000002,
+            23.60375,
+            14.367500000000001,
+            20.525000000000002,
+            6.157500000000001,
+            -1.02625,
+            -3.0787500000000003
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 24.11,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.3952,
+            -0.9244,
+            9.244,
+            9.244,
+            9.244,
+            12.0172,
+            21.2612,
+            12.9416,
+            18.488,
+            5.5464,
+            -0.9244,
+            -2.7732
+          ]
+        }
+      }
+    },
+    {
+      "week": 22,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.22,
+            -1.0275,
+            10.275,
+            10.275,
+            10.275,
+            13.357500000000002,
+            23.6325,
+            14.385000000000002,
+            20.55,
+            6.165000000000001,
+            -1.0275,
+            -3.0825000000000005
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 24.02,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.3664,
+            -0.9208,
+            9.208,
+            9.208,
+            9.208,
+            11.9704,
+            21.1784,
+            12.8912,
+            18.416,
+            5.5248,
+            -0.9208,
+            -2.7624
+          ]
+        }
+      }
+    },
+    {
+      "week": 23,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.4375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.23,
+            -1.02875,
+            10.287500000000001,
+            10.287500000000001,
+            10.287500000000001,
+            13.373750000000001,
+            23.661250000000003,
+            14.4025,
+            20.575000000000003,
+            6.1725,
+            -1.02875,
+            -3.08625
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 23.93,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.3376,
+            -0.9172,
+            9.172,
+            9.172,
+            9.172,
+            11.9236,
+            21.0956,
+            12.8408,
+            18.344,
+            5.5032,
+            -0.9172,
+            -2.7516
+          ]
+        }
+      }
+    },
+    {
+      "week": 24,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.5,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.24,
+            -1.03,
+            10.3,
+            10.3,
+            10.3,
+            13.39,
+            23.69,
+            14.42,
+            20.6,
+            6.18,
+            -1.03,
+            -3.09
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 23.84,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.3088,
+            -0.9136,
+            9.136,
+            9.136,
+            9.136,
+            11.8768,
+            21.0128,
+            12.7904,
+            18.272,
+            5.4816,
+            -0.9136,
+            -2.7408
+          ]
+        }
+      }
+    },
+    {
+      "week": 25,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.5625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.25,
+            -1.03125,
+            10.3125,
+            10.3125,
+            10.3125,
+            13.40625,
+            23.71875,
+            14.4375,
+            20.625,
+            6.1875,
+            -1.03125,
+            -3.09375
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 23.75,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.279999999999999,
+            -0.9099999999999999,
+            9.1,
+            9.1,
+            9.1,
+            11.829999999999998,
+            20.93,
+            12.739999999999998,
+            18.2,
+            5.459999999999999,
+            -0.9099999999999999,
+            -2.7299999999999995
+          ]
+        }
+      }
+    },
+    {
+      "week": 26,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.26,
+            -1.0325,
+            10.325,
+            10.325,
+            10.325,
+            13.4225,
+            23.7475,
+            14.455,
+            20.65,
+            6.195,
+            -1.0325,
+            -3.0975
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 23.66,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.2512,
+            -0.9064,
+            9.064,
+            9.064,
+            9.064,
+            11.783199999999999,
+            20.8472,
+            12.6896,
+            18.128,
+            5.4384,
+            -0.9064,
+            -2.7192
+          ]
+        }
+      }
+    },
+    {
+      "week": 27,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.6875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.27,
+            -1.03375,
+            10.337499999999999,
+            10.337499999999999,
+            10.337499999999999,
+            13.438749999999999,
+            23.776249999999997,
+            14.4725,
+            20.674999999999997,
+            6.2025,
+            -1.03375,
+            -3.10125
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 23.57,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.2224,
+            -0.9028,
+            9.028,
+            9.028,
+            9.028,
+            11.7364,
+            20.764400000000002,
+            12.6392,
+            18.056,
+            5.4168,
+            -0.9028,
+            -2.7084
+          ]
+        }
+      }
+    },
+    {
+      "week": 28,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.75,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.28,
+            -1.035,
+            10.35,
+            10.35,
+            10.35,
+            13.454999999999998,
+            23.805,
+            14.489999999999998,
+            20.7,
+            6.209999999999999,
+            -1.035,
+            -3.1049999999999995
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 23.48,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.1936,
+            -0.8992,
+            8.992,
+            8.992,
+            8.992,
+            11.6896,
+            20.6816,
+            12.588799999999999,
+            17.984,
+            5.3952,
+            -0.8992,
+            -2.6976
+          ]
+        }
+      }
+    },
+    {
+      "week": 29,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.8125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.29,
+            -1.03625,
+            10.362499999999999,
+            10.362499999999999,
+            10.362499999999999,
+            13.471249999999998,
+            23.83375,
+            14.507499999999999,
+            20.724999999999998,
+            6.217499999999999,
+            -1.03625,
+            -3.1087499999999997
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 23.39,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.1648,
+            -0.8956,
+            8.956,
+            8.956,
+            8.956,
+            11.6428,
+            20.598799999999997,
+            12.5384,
+            17.912,
+            5.3736,
+            -0.8956,
+            -2.6868
+          ]
+        }
+      }
+    },
+    {
+      "week": 30,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.3,
+            -1.0375,
+            10.375,
+            10.375,
+            10.375,
+            13.4875,
+            23.8625,
+            14.525000000000002,
+            20.75,
+            6.2250000000000005,
+            -1.0375,
+            -3.1125000000000003
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 23.3,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.136,
+            -0.892,
+            8.92,
+            8.92,
+            8.92,
+            11.596,
+            20.516000000000002,
+            12.488,
+            17.84,
+            5.352,
+            -0.892,
+            -2.676
+          ]
+        }
+      }
+    },
+    {
+      "week": 31,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 27.9375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.31,
+            -1.03875,
+            10.387500000000001,
+            10.387500000000001,
+            10.387500000000001,
+            13.50375,
+            23.891250000000003,
+            14.5425,
+            20.775000000000002,
+            6.2325,
+            -1.03875,
+            -3.11625
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 23.21,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.1072,
+            -0.8884,
+            8.884,
+            8.884,
+            8.884,
+            11.549199999999999,
+            20.4332,
+            12.4376,
+            17.768,
+            5.3304,
+            -0.8884,
+            -2.6652
+          ]
+        }
+      }
+    },
+    {
+      "week": 32,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.0,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.32,
+            -1.04,
+            10.4,
+            10.4,
+            10.4,
+            13.52,
+            23.92,
+            14.56,
+            20.8,
+            6.24,
+            -1.04,
+            -3.12
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 23.12,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.0784,
+            -0.8848,
+            8.848,
+            8.848,
+            8.848,
+            11.5024,
+            20.3504,
+            12.3872,
+            17.696,
+            5.3088,
+            -0.8848,
+            -2.6544
+          ]
+        }
+      }
+    },
+    {
+      "week": 33,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.0625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.33,
+            -1.04125,
+            10.4125,
+            10.4125,
+            10.4125,
+            13.53625,
+            23.94875,
+            14.5775,
+            20.825,
+            6.2475000000000005,
+            -1.04125,
+            -3.1237500000000002
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 23.03,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.0496,
+            -0.8812,
+            8.812,
+            8.812,
+            8.812,
+            11.4556,
+            20.267599999999998,
+            12.3368,
+            17.624,
+            5.2872,
+            -0.8812,
+            -2.6436
+          ]
+        }
+      }
+    },
+    {
+      "week": 34,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.34,
+            -1.0425,
+            10.425,
+            10.425,
+            10.425,
+            13.5525,
+            23.9775,
+            14.594999999999999,
+            20.85,
+            6.255,
+            -1.0425,
+            -3.1275
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 22.939999999999998,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -7.0207999999999995,
+            -0.8775999999999999,
+            8.776,
+            8.776,
+            8.776,
+            11.4088,
+            20.1848,
+            12.286399999999999,
+            17.552,
+            5.265599999999999,
+            -0.8775999999999999,
+            -2.6327999999999996
+          ]
+        }
+      }
+    },
+    {
+      "week": 35,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.1875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.35,
+            -1.04375,
+            10.4375,
+            10.4375,
+            10.4375,
+            13.56875,
+            24.006249999999998,
+            14.612499999999999,
+            20.875,
+            6.262499999999999,
+            -1.04375,
+            -3.1312499999999996
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 22.85,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.992,
+            -0.874,
+            8.74,
+            8.74,
+            8.74,
+            11.362,
+            20.102,
+            12.236,
+            17.48,
+            5.244,
+            -0.874,
+            -2.622
+          ]
+        }
+      }
+    },
+    {
+      "week": 36,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.25,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.36,
+            -1.045,
+            10.45,
+            10.45,
+            10.45,
+            13.584999999999999,
+            24.034999999999997,
+            14.629999999999999,
+            20.9,
+            6.27,
+            -1.045,
+            -3.135
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 22.759999999999998,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.9632,
+            -0.8704,
+            8.703999999999999,
+            8.703999999999999,
+            8.703999999999999,
+            11.315199999999999,
+            20.019199999999998,
+            12.185599999999999,
+            17.407999999999998,
+            5.2223999999999995,
+            -0.8704,
+            -2.6111999999999997
+          ]
+        }
+      }
+    },
+    {
+      "week": 37,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.3125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.37,
+            -1.04625,
+            10.462499999999999,
+            10.462499999999999,
+            10.462499999999999,
+            13.601249999999999,
+            24.06375,
+            14.647499999999999,
+            20.924999999999997,
+            6.2775,
+            -1.04625,
+            -3.13875
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 22.669999999999998,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.9344,
+            -0.8668,
+            8.668,
+            8.668,
+            8.668,
+            11.2684,
+            19.9364,
+            12.135200000000001,
+            17.336,
+            5.2008,
+            -0.8668,
+            -2.6004
+          ]
+        }
+      }
+    },
+    {
+      "week": 38,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.38,
+            -1.0475,
+            10.475000000000001,
+            10.475000000000001,
+            10.475000000000001,
+            13.617500000000001,
+            24.0925,
+            14.665000000000001,
+            20.950000000000003,
+            6.285,
+            -1.0475,
+            -3.1425
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 22.58,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.9056,
+            -0.8632,
+            8.632,
+            8.632,
+            8.632,
+            11.221599999999999,
+            19.8536,
+            12.0848,
+            17.264,
+            5.1792,
+            -0.8632,
+            -2.5896
+          ]
+        }
+      }
+    },
+    {
+      "week": 39,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.4375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.39,
+            -1.04875,
+            10.4875,
+            10.4875,
+            10.4875,
+            13.633750000000001,
+            24.121250000000003,
+            14.682500000000001,
+            20.975,
+            6.2925,
+            -1.04875,
+            -3.14625
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 22.49,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.8768,
+            -0.8596,
+            8.596,
+            8.596,
+            8.596,
+            11.174800000000001,
+            19.7708,
+            12.0344,
+            17.192,
+            5.1576,
+            -0.8596,
+            -2.5788
+          ]
+        }
+      }
+    },
+    {
+      "week": 40,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.5,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.4,
+            -1.05,
+            10.5,
+            10.5,
+            10.5,
+            13.65,
+            24.150000000000002,
+            14.700000000000001,
+            21.0,
+            6.300000000000001,
+            -1.05,
+            -3.1500000000000004
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 22.4,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.848,
+            -0.856,
+            8.56,
+            8.56,
+            8.56,
+            11.128,
+            19.688,
+            11.984,
+            17.12,
+            5.136,
+            -0.856,
+            -2.568
+          ]
+        }
+      }
+    },
+    {
+      "week": 41,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.5625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.41,
+            -1.05125,
+            10.5125,
+            10.5125,
+            10.5125,
+            13.66625,
+            24.17875,
+            14.717500000000001,
+            21.025,
+            6.3075,
+            -1.05125,
+            -3.15375
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 22.31,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.8192,
+            -0.8524,
+            8.524000000000001,
+            8.524000000000001,
+            8.524000000000001,
+            11.0812,
+            19.6052,
+            11.9336,
+            17.048000000000002,
+            5.1144,
+            -0.8524,
+            -2.5572
+          ]
+        }
+      }
+    },
+    {
+      "week": 42,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.42,
+            -1.0525,
+            10.525,
+            10.525,
+            10.525,
+            13.6825,
+            24.2075,
+            14.735,
+            21.05,
+            6.3149999999999995,
+            -1.0525,
+            -3.1574999999999998
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 22.22,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.7904,
+            -0.8488,
+            8.488,
+            8.488,
+            8.488,
+            11.0344,
+            19.5224,
+            11.8832,
+            16.976,
+            5.0928,
+            -0.8488,
+            -2.5464
+          ]
+        }
+      }
+    },
+    {
+      "week": 43,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.6875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.43,
+            -1.05375,
+            10.5375,
+            10.5375,
+            10.5375,
+            13.69875,
+            24.23625,
+            14.7525,
+            21.075,
+            6.3225,
+            -1.05375,
+            -3.16125
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 22.13,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.7616,
+            -0.8452,
+            8.452,
+            8.452,
+            8.452,
+            10.987599999999999,
+            19.4396,
+            11.832799999999999,
+            16.904,
+            5.071199999999999,
+            -0.8452,
+            -2.5355999999999996
+          ]
+        }
+      }
+    },
+    {
+      "week": 44,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.75,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.44,
+            -1.055,
+            10.549999999999999,
+            10.549999999999999,
+            10.549999999999999,
+            13.715,
+            24.264999999999997,
+            14.77,
+            21.099999999999998,
+            6.33,
+            -1.055,
+            -3.165
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 22.04,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.7328,
+            -0.8416,
+            8.416,
+            8.416,
+            8.416,
+            10.9408,
+            19.3568,
+            11.7824,
+            16.832,
+            5.0496,
+            -0.8416,
+            -2.5248
+          ]
+        }
+      }
+    },
+    {
+      "week": 45,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.8125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.45,
+            -1.05625,
+            10.5625,
+            10.5625,
+            10.5625,
+            13.73125,
+            24.29375,
+            14.787499999999998,
+            21.125,
+            6.3374999999999995,
+            -1.05625,
+            -3.1687499999999997
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 21.95,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.704,
+            -0.838,
+            8.379999999999999,
+            8.379999999999999,
+            8.379999999999999,
+            10.894,
+            19.274,
+            11.732,
+            16.759999999999998,
+            5.028,
+            -0.838,
+            -2.514
+          ]
+        }
+      }
+    },
+    {
+      "week": 46,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.46,
+            -1.0575,
+            10.575000000000001,
+            10.575000000000001,
+            10.575000000000001,
+            13.747500000000002,
+            24.3225,
+            14.805000000000001,
+            21.150000000000002,
+            6.345000000000001,
+            -1.0575,
+            -3.1725000000000003
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 21.86,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.6752,
+            -0.8344,
+            8.344000000000001,
+            8.344000000000001,
+            8.344000000000001,
+            10.8472,
+            19.191200000000002,
+            11.6816,
+            16.688000000000002,
+            5.0064,
+            -0.8344,
+            -2.5032
+          ]
+        }
+      }
+    },
+    {
+      "week": 47,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 28.9375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.47,
+            -1.05875,
+            10.5875,
+            10.5875,
+            10.5875,
+            13.763750000000002,
+            24.35125,
+            14.822500000000002,
+            21.175,
+            6.352500000000001,
+            -1.05875,
+            -3.1762500000000005
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 21.77,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.6464,
+            -0.8308,
+            8.308,
+            8.308,
+            8.308,
+            10.8004,
+            19.1084,
+            11.6312,
+            16.616,
+            4.9848,
+            -0.8308,
+            -2.4924
+          ]
+        }
+      }
+    },
+    {
+      "week": 48,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.0,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.48,
+            -1.06,
+            10.600000000000001,
+            10.600000000000001,
+            10.600000000000001,
+            13.780000000000001,
+            24.380000000000003,
+            14.84,
+            21.200000000000003,
+            6.36,
+            -1.06,
+            -3.18
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 21.68,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.6175999999999995,
+            -0.8271999999999999,
+            8.271999999999998,
+            8.271999999999998,
+            8.271999999999998,
+            10.753599999999999,
+            19.025599999999997,
+            11.5808,
+            16.543999999999997,
+            4.9632,
+            -0.8271999999999999,
+            -2.4816
+          ]
+        }
+      }
+    },
+    {
+      "week": 49,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.0625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.49,
+            -1.06125,
+            10.6125,
+            10.6125,
+            10.6125,
+            13.79625,
+            24.40875,
+            14.8575,
+            21.225,
+            6.3675,
+            -1.06125,
+            -3.18375
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 21.59,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.5888,
+            -0.8236,
+            8.236,
+            8.236,
+            8.236,
+            10.7068,
+            18.9428,
+            11.5304,
+            16.472,
+            4.9416,
+            -0.8236,
+            -2.4708
+          ]
+        }
+      }
+    },
+    {
+      "week": 50,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.5,
+            -1.0625,
+            10.625,
+            10.625,
+            10.625,
+            13.8125,
+            24.4375,
+            14.875,
+            21.25,
+            6.375,
+            -1.0625,
+            -3.1875
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 21.5,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.56,
+            -0.82,
+            8.2,
+            8.2,
+            8.2,
+            10.66,
+            18.86,
+            11.479999999999999,
+            16.4,
+            4.92,
+            -0.82,
+            -2.46
+          ]
+        }
+      }
+    },
+    {
+      "week": 51,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.1875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.51,
+            -1.06375,
+            10.6375,
+            10.6375,
+            10.6375,
+            13.82875,
+            24.46625,
+            14.8925,
+            21.275,
+            6.3825,
+            -1.06375,
+            -3.19125
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 21.41,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.5312,
+            -0.8164,
+            8.164,
+            8.164,
+            8.164,
+            10.6132,
+            18.7772,
+            11.4296,
+            16.328,
+            4.8984000000000005,
+            -0.8164,
+            -2.4492000000000003
+          ]
+        }
+      }
+    },
+    {
+      "week": 52,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.25,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.52,
+            -1.065,
+            10.649999999999999,
+            10.649999999999999,
+            10.649999999999999,
+            13.844999999999999,
+            24.494999999999997,
+            14.91,
+            21.299999999999997,
+            6.39,
+            -1.065,
+            -3.195
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 21.32,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.5024,
+            -0.8128,
+            8.128,
+            8.128,
+            8.128,
+            10.5664,
+            18.694399999999998,
+            11.379199999999999,
+            16.256,
+            4.876799999999999,
+            -0.8128,
+            -2.4383999999999997
+          ]
+        }
+      }
+    },
+    {
+      "week": 53,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.3125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.53,
+            -1.06625,
+            10.6625,
+            10.6625,
+            10.6625,
+            13.861249999999998,
+            24.52375,
+            14.927499999999998,
+            21.325,
+            6.397499999999999,
+            -1.06625,
+            -3.1987499999999995
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 21.23,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.473599999999999,
+            -0.8091999999999999,
+            8.091999999999999,
+            8.091999999999999,
+            8.091999999999999,
+            10.519599999999999,
+            18.6116,
+            11.3288,
+            16.183999999999997,
+            4.8552,
+            -0.8091999999999999,
+            -2.4276
+          ]
+        }
+      }
+    },
+    {
+      "week": 54,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.54,
+            -1.0675,
+            10.674999999999999,
+            10.674999999999999,
+            10.674999999999999,
+            13.877499999999998,
+            24.5525,
+            14.944999999999999,
+            21.349999999999998,
+            6.404999999999999,
+            -1.0675,
+            -3.2024999999999997
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 21.14,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.4448,
+            -0.8056,
+            8.056,
+            8.056,
+            8.056,
+            10.4728,
+            18.5288,
+            11.2784,
+            16.112,
+            4.8336,
+            -0.8056,
+            -2.4168
+          ]
+        }
+      }
+    },
+    {
+      "week": 55,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.4375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.55,
+            -1.06875,
+            10.6875,
+            10.6875,
+            10.6875,
+            13.89375,
+            24.58125,
+            14.962500000000002,
+            21.375,
+            6.4125000000000005,
+            -1.06875,
+            -3.2062500000000003
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 21.05,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.416,
+            -0.802,
+            8.02,
+            8.02,
+            8.02,
+            10.426,
+            18.446,
+            11.228000000000002,
+            16.04,
+            4.812,
+            -0.802,
+            -2.406
+          ]
+        }
+      }
+    },
+    {
+      "week": 56,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.5,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.56,
+            -1.07,
+            10.700000000000001,
+            10.700000000000001,
+            10.700000000000001,
+            13.91,
+            24.610000000000003,
+            14.98,
+            21.400000000000002,
+            6.42,
+            -1.07,
+            -3.21
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 20.96,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.3872,
+            -0.7984,
+            7.984,
+            7.984,
+            7.984,
+            10.3792,
+            18.3632,
+            11.1776,
+            15.968,
+            4.7904,
+            -0.7984,
+            -2.3952
+          ]
+        }
+      }
+    },
+    {
+      "week": 57,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.5625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.57,
+            -1.07125,
+            10.7125,
+            10.7125,
+            10.7125,
+            13.92625,
+            24.63875,
+            14.9975,
+            21.425,
+            6.4275,
+            -1.07125,
+            -3.21375
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 20.869999999999997,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.3584,
+            -0.7948,
+            7.9479999999999995,
+            7.9479999999999995,
+            7.9479999999999995,
+            10.3324,
+            18.2804,
+            11.127199999999998,
+            15.895999999999999,
+            4.7688,
+            -0.7948,
+            -2.3844
+          ]
+        }
+      }
+    },
+    {
+      "week": 58,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.58,
+            -1.0725,
+            10.725,
+            10.725,
+            10.725,
+            13.9425,
+            24.6675,
+            15.015,
+            21.45,
+            6.4350000000000005,
+            -1.0725,
+            -3.2175000000000002
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 20.78,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.3296,
+            -0.7912,
+            7.912,
+            7.912,
+            7.912,
+            10.2856,
+            18.1976,
+            11.0768,
+            15.824,
+            4.7472,
+            -0.7912,
+            -2.3736
+          ]
+        }
+      }
+    },
+    {
+      "week": 59,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.6875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.59,
+            -1.07375,
+            10.7375,
+            10.7375,
+            10.7375,
+            13.95875,
+            24.69625,
+            15.032499999999999,
+            21.475,
+            6.4425,
+            -1.07375,
+            -3.22125
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 20.689999999999998,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.3008,
+            -0.7876,
+            7.8759999999999994,
+            7.8759999999999994,
+            7.8759999999999994,
+            10.2388,
+            18.1148,
+            11.026399999999999,
+            15.751999999999999,
+            4.7256,
+            -0.7876,
+            -2.3628
+          ]
+        }
+      }
+    },
+    {
+      "week": 60,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.75,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.6,
+            -1.075,
+            10.75,
+            10.75,
+            10.75,
+            13.975,
+            24.724999999999998,
+            15.049999999999999,
+            21.5,
+            6.449999999999999,
+            -1.075,
+            -3.2249999999999996
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 20.6,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.272,
+            -0.784,
+            7.84,
+            7.84,
+            7.84,
+            10.192,
+            18.032,
+            10.976,
+            15.68,
+            4.704000000000001,
+            -0.784,
+            -2.3520000000000003
+          ]
+        }
+      }
+    },
+    {
+      "week": 61,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.8125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.61,
+            -1.07625,
+            10.7625,
+            10.7625,
+            10.7625,
+            13.991249999999999,
+            24.753749999999997,
+            15.067499999999999,
+            21.525,
+            6.4575,
+            -1.07625,
+            -3.22875
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 20.509999999999998,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.2432,
+            -0.7804,
+            7.804,
+            7.804,
+            7.804,
+            10.145199999999999,
+            17.9492,
+            10.9256,
+            15.608,
+            4.6823999999999995,
+            -0.7804,
+            -2.3411999999999997
+          ]
+        }
+      }
+    },
+    {
+      "week": 62,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.62,
+            -1.0775,
+            10.774999999999999,
+            10.774999999999999,
+            10.774999999999999,
+            14.007499999999999,
+            24.7825,
+            15.084999999999999,
+            21.549999999999997,
+            6.465,
+            -1.0775,
+            -3.2325
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 20.419999999999998,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.2143999999999995,
+            -0.7767999999999999,
+            7.767999999999999,
+            7.767999999999999,
+            7.767999999999999,
+            10.0984,
+            17.8664,
+            10.8752,
+            15.535999999999998,
+            4.6608,
+            -0.7767999999999999,
+            -2.3304
+          ]
+        }
+      }
+    },
+    {
+      "week": 63,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 29.9375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.63,
+            -1.07875,
+            10.787500000000001,
+            10.787500000000001,
+            10.787500000000001,
+            14.023750000000001,
+            24.81125,
+            15.102500000000001,
+            21.575000000000003,
+            6.4725,
+            -1.07875,
+            -3.23625
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 20.33,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.1856,
+            -0.7732,
+            7.732,
+            7.732,
+            7.732,
+            10.0516,
+            17.7836,
+            10.8248,
+            15.464,
+            4.6392,
+            -0.7732,
+            -2.3196
+          ]
+        }
+      }
+    },
+    {
+      "week": 64,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.0,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.64,
+            -1.08,
+            10.8,
+            10.8,
+            10.8,
+            14.040000000000001,
+            24.840000000000003,
+            15.120000000000001,
+            21.6,
+            6.48,
+            -1.08,
+            -3.24
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 20.24,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.1568,
+            -0.7696,
+            7.696,
+            7.696,
+            7.696,
+            10.0048,
+            17.700799999999997,
+            10.7744,
+            15.392,
+            4.6175999999999995,
+            -0.7696,
+            -2.3087999999999997
+          ]
+        }
+      }
+    },
+    {
+      "week": 65,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.0625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.65,
+            -1.08125,
+            10.8125,
+            10.8125,
+            10.8125,
+            14.05625,
+            24.868750000000002,
+            15.137500000000001,
+            21.625,
+            6.487500000000001,
+            -1.08125,
+            -3.2437500000000004
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 20.15,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.128,
+            -0.766,
+            7.66,
+            7.66,
+            7.66,
+            9.958,
+            17.618000000000002,
+            10.724,
+            15.32,
+            4.596,
+            -0.766,
+            -2.298
+          ]
+        }
+      }
+    },
+    {
+      "week": 66,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.66,
+            -1.0825,
+            10.825,
+            10.825,
+            10.825,
+            14.0725,
+            24.8975,
+            15.155000000000001,
+            21.65,
+            6.495,
+            -1.0825,
+            -3.2475
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 20.06,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.0992,
+            -0.7624,
+            7.624,
+            7.624,
+            7.624,
+            9.9112,
+            17.5352,
+            10.6736,
+            15.248,
+            4.5744,
+            -0.7624,
+            -2.2872
+          ]
+        }
+      }
+    },
+    {
+      "week": 67,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.1875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.67,
+            -1.08375,
+            10.8375,
+            10.8375,
+            10.8375,
+            14.08875,
+            24.92625,
+            15.1725,
+            21.675,
+            6.5024999999999995,
+            -1.08375,
+            -3.2512499999999998
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 19.97,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.070399999999999,
+            -0.7587999999999999,
+            7.587999999999999,
+            7.587999999999999,
+            7.587999999999999,
+            9.8644,
+            17.452399999999997,
+            10.623199999999999,
+            15.175999999999998,
+            4.5527999999999995,
+            -0.7587999999999999,
+            -2.2763999999999998
+          ]
+        }
+      }
+    },
+    {
+      "week": 68,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.25,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.68,
+            -1.085,
+            10.85,
+            10.85,
+            10.85,
+            14.105,
+            24.955,
+            15.19,
+            21.7,
+            6.51,
+            -1.085,
+            -3.255
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 19.88,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.0416,
+            -0.7552,
+            7.552,
+            7.552,
+            7.552,
+            9.8176,
+            17.3696,
+            10.572799999999999,
+            15.104,
+            4.5312,
+            -0.7552,
+            -2.2656
+          ]
+        }
+      }
+    },
+    {
+      "week": 69,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.3125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.69,
+            -1.08625,
+            10.862499999999999,
+            10.862499999999999,
+            10.862499999999999,
+            14.12125,
+            24.983749999999997,
+            15.2075,
+            21.724999999999998,
+            6.5175,
+            -1.08625,
+            -3.25875
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 19.79,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -6.0127999999999995,
+            -0.7515999999999999,
+            7.515999999999999,
+            7.515999999999999,
+            7.515999999999999,
+            9.7708,
+            17.2868,
+            10.5224,
+            15.031999999999998,
+            4.5096,
+            -0.7515999999999999,
+            -2.2548
+          ]
+        }
+      }
+    },
+    {
+      "week": 70,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.7,
+            -1.0875,
+            10.875,
+            10.875,
+            10.875,
+            14.1375,
+            25.0125,
+            15.224999999999998,
+            21.75,
+            6.5249999999999995,
+            -1.0875,
+            -3.2624999999999997
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 19.7,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.984,
+            -0.748,
+            7.48,
+            7.48,
+            7.48,
+            9.724,
+            17.204,
+            10.472,
+            14.96,
+            4.4879999999999995,
+            -0.748,
+            -2.2439999999999998
+          ]
+        }
+      }
+    },
+    {
+      "week": 71,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.4375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.71,
+            -1.08875,
+            10.887500000000001,
+            10.887500000000001,
+            10.887500000000001,
+            14.153750000000002,
+            25.04125,
+            15.242500000000001,
+            21.775000000000002,
+            6.532500000000001,
+            -1.08875,
+            -3.2662500000000003
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 19.61,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.9552,
+            -0.7444,
+            7.443999999999999,
+            7.443999999999999,
+            7.443999999999999,
+            9.6772,
+            17.121199999999998,
+            10.4216,
+            14.887999999999998,
+            4.4664,
+            -0.7444,
+            -2.2332
+          ]
+        }
+      }
+    },
+    {
+      "week": 72,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.5,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.72,
+            -1.09,
+            10.9,
+            10.9,
+            10.9,
+            14.170000000000002,
+            25.07,
+            15.260000000000002,
+            21.8,
+            6.540000000000001,
+            -1.09,
+            -3.2700000000000005
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 19.52,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.926399999999999,
+            -0.7407999999999999,
+            7.4079999999999995,
+            7.4079999999999995,
+            7.4079999999999995,
+            9.630399999999998,
+            17.0384,
+            10.371199999999998,
+            14.815999999999999,
+            4.444799999999999,
+            -0.7407999999999999,
+            -2.2223999999999995
+          ]
+        }
+      }
+    },
+    {
+      "week": 73,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.5625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.73,
+            -1.09125,
+            10.912500000000001,
+            10.912500000000001,
+            10.912500000000001,
+            14.186250000000001,
+            25.098750000000003,
+            15.2775,
+            21.825000000000003,
+            6.5475,
+            -1.09125,
+            -3.27375
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 19.43,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.8976,
+            -0.7372,
+            7.372,
+            7.372,
+            7.372,
+            9.583599999999999,
+            16.9556,
+            10.3208,
+            14.744,
+            4.4232,
+            -0.7372,
+            -2.2116
+          ]
+        }
+      }
+    },
+    {
+      "week": 74,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.74,
+            -1.0925,
+            10.925,
+            10.925,
+            10.925,
+            14.2025,
+            25.1275,
+            15.295,
+            21.85,
+            6.555,
+            -1.0925,
+            -3.2775
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 19.34,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.8688,
+            -0.7336,
+            7.336,
+            7.336,
+            7.336,
+            9.5368,
+            16.8728,
+            10.2704,
+            14.672,
+            4.4016,
+            -0.7336,
+            -2.2008
+          ]
+        }
+      }
+    },
+    {
+      "week": 75,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.6875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.75,
+            -1.09375,
+            10.9375,
+            10.9375,
+            10.9375,
+            14.21875,
+            25.15625,
+            15.3125,
+            21.875,
+            6.5625,
+            -1.09375,
+            -3.28125
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 19.25,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.84,
+            -0.73,
+            7.3,
+            7.3,
+            7.3,
+            9.49,
+            16.79,
+            10.219999999999999,
+            14.6,
+            4.38,
+            -0.73,
+            -2.19
+          ]
+        }
+      }
+    },
+    {
+      "week": 76,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.75,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.76,
+            -1.095,
+            10.95,
+            10.95,
+            10.95,
+            14.235,
+            25.185,
+            15.33,
+            21.9,
+            6.57,
+            -1.095,
+            -3.285
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 19.16,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.8111999999999995,
+            -0.7263999999999999,
+            7.263999999999999,
+            7.263999999999999,
+            7.263999999999999,
+            9.4432,
+            16.7072,
+            10.169599999999999,
+            14.527999999999999,
+            4.3584,
+            -0.7263999999999999,
+            -2.1792
+          ]
+        }
+      }
+    },
+    {
+      "week": 77,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.8125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.77,
+            -1.09625,
+            10.962499999999999,
+            10.962499999999999,
+            10.962499999999999,
+            14.251249999999999,
+            25.213749999999997,
+            15.3475,
+            21.924999999999997,
+            6.5775,
+            -1.09625,
+            -3.28875
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 19.07,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.7824,
+            -0.7228,
+            7.228,
+            7.228,
+            7.228,
+            9.3964,
+            16.6244,
+            10.1192,
+            14.456,
+            4.3368,
+            -0.7228,
+            -2.1684
+          ]
+        }
+      }
+    },
+    {
+      "week": 78,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.78,
+            -1.0975,
+            10.975,
+            10.975,
+            10.975,
+            14.267499999999998,
+            25.2425,
+            15.364999999999998,
+            21.95,
+            6.584999999999999,
+            -1.0975,
+            -3.2924999999999995
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 18.98,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.7536000000000005,
+            -0.7192000000000001,
+            7.192,
+            7.192,
+            7.192,
+            9.3496,
+            16.541600000000003,
+            10.068800000000001,
+            14.384,
+            4.315200000000001,
+            -0.7192000000000001,
+            -2.1576000000000004
+          ]
+        }
+      }
+    },
+    {
+      "week": 79,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 30.9375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.79,
+            -1.09875,
+            10.987499999999999,
+            10.987499999999999,
+            10.987499999999999,
+            14.283749999999998,
+            25.27125,
+            15.382499999999999,
+            21.974999999999998,
+            6.592499999999999,
+            -1.09875,
+            -3.2962499999999997
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 18.89,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.7248,
+            -0.7156,
+            7.156000000000001,
+            7.156000000000001,
+            7.156000000000001,
+            9.3028,
+            16.4588,
+            10.0184,
+            14.312000000000001,
+            4.2936,
+            -0.7156,
+            -2.1468
+          ]
+        }
+      }
+    },
+    {
+      "week": 80,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.0,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.8,
+            -1.1,
+            11.0,
+            11.0,
+            11.0,
+            14.3,
+            25.3,
+            15.400000000000002,
+            22.0,
+            6.6000000000000005,
+            -1.1,
+            -3.3000000000000003
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 18.799999999999997,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.696,
+            -0.712,
+            7.119999999999999,
+            7.119999999999999,
+            7.119999999999999,
+            9.256,
+            16.375999999999998,
+            9.968,
+            14.239999999999998,
+            4.272,
+            -0.712,
+            -2.136
+          ]
+        }
+      }
+    },
+    {
+      "week": 81,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.0625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.81,
+            -1.10125,
+            11.012500000000001,
+            11.012500000000001,
+            11.012500000000001,
+            14.31625,
+            25.328750000000003,
+            15.4175,
+            22.025000000000002,
+            6.6075,
+            -1.10125,
+            -3.30375
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 18.71,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.667199999999999,
+            -0.7083999999999999,
+            7.084,
+            7.084,
+            7.084,
+            9.2092,
+            16.2932,
+            9.917599999999998,
+            14.168,
+            4.250399999999999,
+            -0.7083999999999999,
+            -2.1251999999999995
+          ]
+        }
+      }
+    },
+    {
+      "week": 82,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.82,
+            -1.1025,
+            11.025,
+            11.025,
+            11.025,
+            14.3325,
+            25.3575,
+            15.435,
+            22.05,
+            6.615,
+            -1.1025,
+            -3.3075
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 18.619999999999997,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.6384,
+            -0.7048,
+            7.048,
+            7.048,
+            7.048,
+            9.1624,
+            16.2104,
+            9.8672,
+            14.096,
+            4.2288,
+            -0.7048,
+            -2.1144
+          ]
+        }
+      }
+    },
+    {
+      "week": 83,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.1875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.83,
+            -1.10375,
+            11.0375,
+            11.0375,
+            11.0375,
+            14.34875,
+            25.38625,
+            15.4525,
+            22.075,
+            6.6225000000000005,
+            -1.10375,
+            -3.3112500000000002
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 18.53,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.6096,
+            -0.7012,
+            7.0120000000000005,
+            7.0120000000000005,
+            7.0120000000000005,
+            9.1156,
+            16.1276,
+            9.8168,
+            14.024000000000001,
+            4.2072,
+            -0.7012,
+            -2.1036
+          ]
+        }
+      }
+    },
+    {
+      "week": 84,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.25,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.84,
+            -1.105,
+            11.05,
+            11.05,
+            11.05,
+            14.365,
+            25.415,
+            15.469999999999999,
+            22.1,
+            6.63,
+            -1.105,
+            -3.315
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 18.439999999999998,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.5808,
+            -0.6976,
+            6.976,
+            6.976,
+            6.976,
+            9.0688,
+            16.0448,
+            9.7664,
+            13.952,
+            4.1856,
+            -0.6976,
+            -2.0928
+          ]
+        }
+      }
+    },
+    {
+      "week": 85,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.3125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.85,
+            -1.10625,
+            11.0625,
+            11.0625,
+            11.0625,
+            14.38125,
+            25.443749999999998,
+            15.487499999999999,
+            22.125,
+            6.637499999999999,
+            -1.10625,
+            -3.3187499999999996
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 18.349999999999998,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.552,
+            -0.694,
+            6.9399999999999995,
+            6.9399999999999995,
+            6.9399999999999995,
+            9.021999999999998,
+            15.962,
+            9.716,
+            13.879999999999999,
+            4.164,
+            -0.694,
+            -2.082
+          ]
+        }
+      }
+    },
+    {
+      "week": 86,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.86,
+            -1.1075,
+            11.075,
+            11.075,
+            11.075,
+            14.397499999999999,
+            25.472499999999997,
+            15.504999999999999,
+            22.15,
+            6.645,
+            -1.1075,
+            -3.3225
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 18.259999999999998,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.523199999999999,
+            -0.6903999999999999,
+            6.903999999999999,
+            6.903999999999999,
+            6.903999999999999,
+            8.9752,
+            15.879199999999997,
+            9.665599999999998,
+            13.807999999999998,
+            4.142399999999999,
+            -0.6903999999999999,
+            -2.0711999999999997
+          ]
+        }
+      }
+    },
+    {
+      "week": 87,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.4375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.87,
+            -1.10875,
+            11.087499999999999,
+            11.087499999999999,
+            11.087499999999999,
+            14.413749999999999,
+            25.50125,
+            15.522499999999999,
+            22.174999999999997,
+            6.6525,
+            -1.10875,
+            -3.32625
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 18.169999999999998,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.4944,
+            -0.6868,
+            6.867999999999999,
+            6.867999999999999,
+            6.867999999999999,
+            8.9284,
+            15.796399999999998,
+            9.6152,
+            13.735999999999999,
+            4.1208,
+            -0.6868,
+            -2.0604
+          ]
+        }
+      }
+    },
+    {
+      "week": 88,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.5,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.88,
+            -1.11,
+            11.100000000000001,
+            11.100000000000001,
+            11.100000000000001,
+            14.430000000000001,
+            25.53,
+            15.540000000000001,
+            22.200000000000003,
+            6.66,
+            -1.11,
+            -3.33
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 18.08,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.4656,
+            -0.6832,
+            6.832000000000001,
+            6.832000000000001,
+            6.832000000000001,
+            8.8816,
+            15.713600000000001,
+            9.5648,
+            13.664000000000001,
+            4.0992,
+            -0.6832,
+            -2.0496
+          ]
+        }
+      }
+    },
+    {
+      "week": 89,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.5625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.89,
+            -1.11125,
+            11.1125,
+            11.1125,
+            11.1125,
+            14.446250000000001,
+            25.558750000000003,
+            15.557500000000001,
+            22.225,
+            6.6675,
+            -1.11125,
+            -3.33375
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 17.99,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.4368,
+            -0.6796,
+            6.795999999999999,
+            6.795999999999999,
+            6.795999999999999,
+            8.8348,
+            15.630799999999999,
+            9.5144,
+            13.591999999999999,
+            4.0776,
+            -0.6796,
+            -2.0388
+          ]
+        }
+      }
+    },
+    {
+      "week": 90,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.625,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.9,
+            -1.1125,
+            11.125,
+            11.125,
+            11.125,
+            14.4625,
+            25.587500000000002,
+            15.575000000000001,
+            22.25,
+            6.675000000000001,
+            -1.1125,
+            -3.3375000000000004
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 17.9,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.4079999999999995,
+            -0.6759999999999999,
+            6.76,
+            6.76,
+            6.76,
+            8.787999999999998,
+            15.547999999999998,
+            9.463999999999999,
+            13.52,
+            4.055999999999999,
+            -0.6759999999999999,
+            -2.0279999999999996
+          ]
+        }
+      }
+    },
+    {
+      "week": 91,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.6875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.91,
+            -1.11375,
+            11.1375,
+            11.1375,
+            11.1375,
+            14.47875,
+            25.61625,
+            15.592500000000001,
+            22.275,
+            6.6825,
+            -1.11375,
+            -3.34125
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 17.81,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.379199999999999,
+            -0.6723999999999999,
+            6.723999999999998,
+            6.723999999999998,
+            6.723999999999998,
+            8.7412,
+            15.465199999999998,
+            9.413599999999999,
+            13.447999999999997,
+            4.0344,
+            -0.6723999999999999,
+            -2.0172
+          ]
+        }
+      }
+    },
+    {
+      "week": 92,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.75,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.92,
+            -1.115,
+            11.15,
+            11.15,
+            11.15,
+            14.495,
+            25.645,
+            15.61,
+            22.3,
+            6.6899999999999995,
+            -1.115,
+            -3.3449999999999998
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 17.72,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.3504,
+            -0.6688,
+            6.688,
+            6.688,
+            6.688,
+            8.6944,
+            15.382399999999999,
+            9.363199999999999,
+            13.376,
+            4.0127999999999995,
+            -0.6688,
+            -2.0063999999999997
+          ]
+        }
+      }
+    },
+    {
+      "week": 93,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.8125,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.93,
+            -1.11625,
+            11.1625,
+            11.1625,
+            11.1625,
+            14.51125,
+            25.67375,
+            15.6275,
+            22.325,
+            6.6975,
+            -1.11625,
+            -3.34875
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 17.63,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.3216,
+            -0.6652,
+            6.652,
+            6.652,
+            6.652,
+            8.6476,
+            15.2996,
+            9.3128,
+            13.304,
+            3.9912,
+            -0.6652,
+            -1.9956
+          ]
+        }
+      }
+    },
+    {
+      "week": 94,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.875,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.94,
+            -1.1175,
+            11.174999999999999,
+            11.174999999999999,
+            11.174999999999999,
+            14.5275,
+            25.702499999999997,
+            15.645,
+            22.349999999999998,
+            6.705,
+            -1.1175,
+            -3.3525
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 17.54,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.2928,
+            -0.6616,
+            6.616,
+            6.616,
+            6.616,
+            8.6008,
+            15.2168,
+            9.2624,
+            13.232,
+            3.9696,
+            -0.6616,
+            -1.9848
+          ]
+        }
+      }
+    },
+    {
+      "week": 95,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 31.9375,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.95,
+            -1.11875,
+            11.1875,
+            11.1875,
+            11.1875,
+            14.54375,
+            25.73125,
+            15.662499999999998,
+            22.375,
+            6.7124999999999995,
+            -1.11875,
+            -3.3562499999999997
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 17.45,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.263999999999999,
+            -0.6579999999999999,
+            6.579999999999999,
+            6.579999999999999,
+            6.579999999999999,
+            8.553999999999998,
+            15.133999999999999,
+            9.212,
+            13.159999999999998,
+            3.9479999999999995,
+            -0.6579999999999999,
+            -1.9739999999999998
+          ]
+        }
+      }
+    },
+    {
+      "week": 96,
+      "control": {
+        "metrics": {
+          "kyphosis_max": 32.0,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -8.96,
+            -1.12,
+            11.200000000000001,
+            11.200000000000001,
+            11.200000000000001,
+            14.560000000000002,
+            25.76,
+            15.680000000000001,
+            22.400000000000002,
+            6.720000000000001,
+            -1.12,
+            -3.3600000000000003
+          ]
+        }
+      },
+      "intervention": {
+        "metrics": {
+          "kyphosis_max": 17.36,
+          "lordosis_max": 10,
+          "coronal_offset_max": 357.0,
+          "sagittal_offset_max": 0
+        },
+        "curve_data": {
+          "coronal_offsets": [],
+          "sagittal_angles": [],
+          "vertebral_rotation": [
+            -5.2352,
+            -0.6544,
+            6.544,
+            6.544,
+            6.544,
+            8.5072,
+            15.0512,
+            9.1616,
+            13.088,
+            3.9264,
+            -0.6544,
+            -1.9632
+          ]
+        }
+      }
+    }
+  ]
+}

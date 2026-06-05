@@ -1,0 +1,25 @@
+services:
+  dr_digital_twin_backend:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    image: dr-digital-twin-backend:latest
+    container_name: dr_digital_twin_backend
+    restart: unless-stopped
+    ports:
+      - "8123:8123"
+    environment:
+      - TZ=Asia/Shanghai
+      - HF_ENDPOINT=https://hf-mirror.com
+      # 如果外部服务不在 docker network 内，需注意使用宿主机IP或真实服务器IP
+    volumes:
+      # 将日志目录挂载出来，方便在宿主机查看
+      - ./logs:/app/logs
+      # 将生成的视频等文档映射出来
+      - ./docs:/app/docs
+    networks:
+      - twin_net
+
+networks:
+  twin_net:
+    driver: bridge

@@ -1,0 +1,19 @@
+# Dockerignore 排除不必要的文件，加快构建并避免本地环境污染
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+.env
+.git
+.gitignore
+.github/
+.vscode/
+
+# IDE 缓存
+.idea/
+*.swp
+
+# 如果本地下载了巨大的 checkpoints 模型，您可以取消下方注释，
+# 但推荐将 checkpoints 通过 docker-compose 卷挂载到容器中，或者打进镜像
+# checkpoints/
+# gfpgan/weights/

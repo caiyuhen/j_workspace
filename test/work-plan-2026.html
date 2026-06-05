@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>医疗AI项目工作计划 2026年4月-12月</title>
+<style>
+  :root {
+    --blue: #1a6fc4;
+    --blue-light: #e8f2fc;
+    --teal: #0d9488;
+    --teal-light: #e0f5f3;
+    --purple: #7c3aed;
+    --purple-light: #ede9fe;
+    --orange: #d97706;
+    --orange-light: #fef3c7;
+    --pink: #db2777;
+    --pink-light: #fce7f3;
+    --gray: #64748b;
+    --gray-light: #f1f5f9;
+    --dark: #1e293b;
+    --border: #e2e8f0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'PingFang SC', 'Microsoft YaHei', 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f172a 100%);
+    min-height: 100vh;
+    color: #1e293b;
+    padding: 24px;
+  }
+
+  .container { max-width: 1400px; margin: 0 auto; }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    padding: 48px 32px 36px;
+    background: linear-gradient(135deg, rgba(26,111,196,0.15), rgba(124,58,237,0.15));
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    margin-bottom: 32px;
+    backdrop-filter: blur(10px);
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 30% 50%, rgba(26,111,196,0.2) 0%, transparent 60%),
+                radial-gradient(ellipse at 70% 50%, rgba(124,58,237,0.2) 0%, transparent 60%);
+  }
+  .header h1 {
+    font-size: 2.4rem; font-weight: 800;
+    background: linear-gradient(90deg, #60a5fa, #a78bfa, #34d399);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    margin-bottom: 10px; position: relative;
+  }
+  .header p { color: rgba(255,255,255,0.7); font-size: 1rem; position: relative; }
+  .header .badge-row { display: flex; gap: 10px; justify-content: center; margin-top: 18px; flex-wrap: wrap; position: relative; }
+  .badge {
+    padding: 5px 16px; border-radius: 20px; font-size: 0.82rem; font-weight: 600;
+    backdrop-filter: blur(6px);
+  }
+  .badge-blue   { background: rgba(26,111,196,0.25); color: #93c5fd; border: 1px solid rgba(93,163,255,0.3); }
+  .badge-teal   { background: rgba(13,148,136,0.25); color: #5eead4; border: 1px solid rgba(94,234,212,0.3); }
+  .badge-purple { background: rgba(124,58,237,0.25); color: #c4b5fd; border: 1px solid rgba(196,181,253,0.3); }
+  .badge-orange { background: rgba(217,119,6,0.25);  color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+  .badge-pink   { background: rgba(219,39,119,0.25); color: #f9a8d4; border: 1px solid rgba(249,168,212,0.3); }
+
+  /* STATS ROW */
+  .stats-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 32px; }
+  .stat-card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px; padding: 22px 18px;
+    text-align: center; backdrop-filter: blur(6px);
+    transition: transform .2s, box-shadow .2s;
+  }
+  .stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+  .stat-number { font-size: 2rem; font-weight: 800; margin-bottom: 4px; }
+  .stat-label  { font-size: 0.8rem; color: rgba(255,255,255,0.6); }
+
+  /* PROJECT TRACKS */
+  .section-title {
+    font-size: 1.3rem; font-weight: 700; color: #fff;
+    margin-bottom: 18px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::before { content: ''; display: block; width: 4px; height: 20px; border-radius: 2px; }
+  .section-title.blue::before   { background: #60a5fa; }
+  .section-title.teal::before   { background: #34d399; }
+  .section-title.purple::before { background: #a78bfa; }
+  .section-title.orange::before { background: #fbbf24; }
+  .section-title.pink::before   { background: #f9a8d4; }
+
+  .project-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; margin-bottom: 36px; }
+  .project-card {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px; padding: 22px;
+    backdrop-filter: blur(6px);
+    transition: transform .2s;
+    position: relative; overflow: hidden;
+  }
+  .project-card:hover { transform: translateY(-2px); }
+  .project-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  }
+  .project-card.blue::before   { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+  .project-card.teal::before   { background: linear-gradient(90deg, #0d9488, #34d399); }
+  .project-card.purple::before { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+  .project-card.orange::before { background: linear-gradient(90deg, #d97706, #fbbf24); }
+  .project-card.pink::before   { background: linear-gradient(90deg, #db2777, #f9a8d4); }
+
+  .card-icon { font-size: 1.8rem; margin-bottom: 10px; }
+  .card-title { font-size: 1.05rem; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
+  .card-desc  { font-size: 0.83rem; color: rgba(255,255,255,0.55); line-height: 1.6; margin-bottom: 14px; }
+  .card-progress-label { display: flex; justify-content: space-between; margin-bottom: 6px; }
+  .card-progress-label span { font-size: 0.78rem; color: rgba(255,255,255,0.5); }
+  .progress-bar { height: 5px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; margin-bottom: 14px; }
+  .progress-fill { height: 100%; border-radius: 3px; }
+  .blue.progress-fill,   .project-card.blue   .progress-fill { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+  .teal.progress-fill,   .project-card.teal   .progress-fill { background: linear-gradient(90deg, #0d9488, #34d399); }
+  .purple.progress-fill, .project-card.purple .progress-fill { background: linear-gradient(90deg, #7c3aed, #a78bfa); }
+  .orange.progress-fill, .project-card.orange .progress-fill { background: linear-gradient(90deg, #d97706, #fbbf24); }
+  .pink.progress-fill,   .project-card.pink   .progress-fill { background: linear-gradient(90deg, #db2777, #f9a8d4); }
+
+  .tag { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; margin: 2px; }
+  .tag-blue   { background: rgba(59,130,246,0.2); color: #93c5fd; }
+  .tag-teal   { background: rgba(13,148,136,0.2); color: #5eead4; }
+  .tag-purple { background: rgba(124,58,237,0.2); color: #c4b5fd; }
+  .tag-orange { background: rgba(217,119,6,0.2);  color: #fbbf24; }
+  .tag-pink   { background: rgba(219,39,119,0.2); color: #f9a8d4; }
+
+  /* TIMELINE */
+  .timeline-section {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px; padding: 32px;
+    margin-bottom: 32px;
+  }
+  .timeline-grid {
+    display: grid;
+    grid-template-columns: 80px repeat(9, 1fr);
+    gap: 0;
+    margin-top: 20px;
+  }
+  .tg-header { background: rgba(255,255,255,0.05); font-size: 0.8rem; font-weight: 700; color: rgba(255,255,255,0.7); padding: 10px 6px; text-align: center; }
+  .tg-label  { padding: 8px 10px; font-size: 0.78rem; color: rgba(255,255,255,0.6); display: flex; align-items: center; font-weight: 600; white-space: nowrap; }
+  .tg-cell   { padding: 4px 3px; }
+  .tg-bar {
+    height: 22px; border-radius: 5px; width: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; font-weight: 600; white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis; padding: 0 6px;
+  }
+  .tg-empty { height: 22px; }
+  .row-alt { background: rgba(255,255,255,0.015); }
+
+  /* MILESTONE */
+  .milestone-section {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-bottom: 32px;
+  }
+  .milestone-quarter {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px; padding: 22px;
+  }
+  .mq-title { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .mq-tag { font-size: 0.72rem; padding: 2px 10px; border-radius: 10px; }
+  .milestone-item { display: flex; gap: 10px; margin-bottom: 12px; align-items: flex-start; }
+  .mi-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+  .mi-content { flex: 1; }
+  .mi-title { font-size: 0.85rem; font-weight: 600; color: rgba(255,255,255,0.85); margin-bottom: 2px; }
+  .mi-desc  { font-size: 0.77rem; color: rgba(255,255,255,0.5); line-height: 1.5; }
+
+  /* RISK TABLE */
+  .risk-section {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px; padding: 32px; margin-bottom: 32px;
+  }
+  .risk-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  .risk-table th { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7); font-size: 0.82rem; padding: 10px 14px; text-align: left; }
+  .risk-table td { padding: 10px 14px; font-size: 0.82rem; color: rgba(255,255,255,0.7); border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .risk-high   { color: #fca5a5; }
+  .risk-mid    { color: #fbbf24; }
+  .risk-low    { color: #6ee7b7; }
+  .risk-pill { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 0.75rem; }
+  .pill-high { background: rgba(239,68,68,0.2); color: #fca5a5; }
+  .pill-mid  { background: rgba(245,158,11,0.2); color: #fbbf24; }
+  .pill-low  { background: rgba(52,211,153,0.2); color: #6ee7b7; }
+
+  /* FOOTER */
+  .footer {
+    text-align: center; padding: 24px;
+    color: rgba(255,255,255,0.3); font-size: 0.8rem;
+  }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .stats-row { grid-template-columns: repeat(3, 1fr); }
+    .milestone-section { grid-template-columns: 1fr; }
+    .timeline-grid { grid-template-columns: 70px repeat(9, 1fr); font-size: 0.7rem; }
+  }
+  @media (max-width: 600px) {
+    .header h1 { font-size: 1.6rem; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    body { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>🏥 医疗AI项目工作计划</h1>
+    <p>2026年 4月 — 12月 · 全栈医疗数智化战略路线图</p>
+    <div class="badge-row">
+      <span class="badge badge-blue">🧠 医疗大模型优化</span>
+      <span class="badge badge-teal">📊 慢病预测模型</span>
+      <span class="badge badge-orange">🖥️ CTMS扫尾</span>
+      <span class="badge badge-purple">🩺 数字孪生医生</span>
+      <span class="badge badge-pink">❤️ 数字孪生患者</span>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-number" style="color:#60a5fa;">5</div>
+      <div class="stat-label">核心项目方向</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" style="color:#34d399;">9</div>
+      <div class="stat-label">月份跨度</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" style="color:#a78bfa;">3</div>
+      <div class="stat-label">疾病领域覆盖</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" style="color:#fbbf24;">28+</div>
+      <div class="stat-label">关键里程碑</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" style="color:#f9a8d4;">2</div>
+      <div class="stat-label">数字孪生系统</div>
+    </div>
+  </div>
+
+  <!-- PROJECT CARDS -->
+  <div class="section-title blue">🧠 五大项目全景</div>
+  <div class="project-cards">
+
+    <div class="project-card blue">
+      <div class="card-icon">🧠</div>
+      <div class="card-title">医疗大模型优化</div>
+      <div class="card-desc">基于领域数据的持续预训练与微调，提升临床推理能力、医学知识准确性、多模态诊断支持能力。</div>
+      <div class="card-progress-label"><span>预期完成度</span><span>85%</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:85%;background:linear-gradient(90deg,#3b82f6,#60a5fa);"></div></div>
+      <div>
+        <span class="tag tag-blue">RAG增强</span>
+        <span class="tag tag-blue">SFT微调</span>
+        <span class="tag tag-blue">RLHF对齐</span>
+        <span class="tag tag-blue">多模态</span>
+      </div>
+    </div>
+
+    <div class="project-card teal">
+      <div class="card-icon">📊</div>
+      <div class="card-title">慢病预测模型训练</div>
+      <div class="card-desc">构建2型糖尿病、心血管、脑卒中的高精度预测模型，集成多源异构健康数据，支持风险分层与预警。</div>
+      <div class="card-progress-label"><span>预期完成度</span><span>90%</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:90%;background:linear-gradient(90deg,#0d9488,#34d399);"></div></div>
+      <div>
+        <span class="tag tag-teal">特征工程</span>
+        <span class="tag tag-teal">集成学习</span>
+        <span class="tag tag-teal">风险分层</span>
+        <span class="tag tag-teal">可解释AI</span>
+      </div>
+    </div>
+
+    <div class="project-card orange">
+      <div class="card-icon">🖥️</div>
+      <div class="card-title">CTMS修改扫尾</div>
+      <div class="card-desc">临床试验管理系统（基本完成）剩余功能优化、Bug修复、性能调优、文档完善及上线部署。</div>
+      <div class="card-progress-label"><span>预期完成度</span><span>100%</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:100%;background:linear-gradient(90deg,#d97706,#fbbf24);"></div></div>
+      <div>
+        <span class="tag tag-orange">Bug修复</span>
+        <span class="tag tag-orange">性能优化</span>
+        <span class="tag tag-orange">UAT测试</span>
+        <span class="tag tag-orange">上线部署</span>
+      </div>
+    </div>
+
+    <div class="project-card purple">
+      <div class="card-icon">🩺</div>
+      <div class="card-title">数字孪生医生</div>
+      <div class="card-desc">2型糖尿病 + 心血管 + 脑卒中三病共管数字孪生医生，具备个体化诊疗建议、治疗方案推演能力。</div>
+      <div class="card-progress-label"><span>预期完成度</span><span>75%</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:75%;background:linear-gradient(90deg,#7c3aed,#a78bfa);"></div></div>
+      <div>
+        <span class="tag tag-purple">知识图谱</span>
+        <span class="tag tag-purple">推理引擎</span>
+        <span class="tag tag-purple">决策支持</span>
+        <span class="tag tag-purple">三病联合</span>
+      </div>
+    </div>
+
+    <div class="project-card pink">
+      <div class="card-icon">❤️</div>
+      <div class="card-title">数字孪生患者（心脏）</div>
+      <div class="card-desc">构建心脏数字孪生模型，基于个体生理参数仿真心脏功能，支持治疗方案虚拟验证与个体化预测。</div>
+      <div class="card-progress-label"><span>预期完成度</span><span>70%</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:70%;background:linear-gradient(90deg,#db2777,#f9a8d4);"></div></div>
+      <div>
+        <span class="tag tag-pink">生理仿真</span>
+        <span class="tag tag-pink">FEA/CFD</span>
+        <span class="tag tag-pink">个体化参数</span>
+        <span class="tag tag-pink">可视化</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TIMELINE GANTT -->
+  <div class="timeline-section">
+    <div class="section-title teal">📅 甘特图：月度任务分布</div>
+    <div style="overflow-x:auto;">
+      <div class="timeline-grid" style="min-width:860px;">
+
+        <!-- HEADER -->
+        <div class="tg-header" style="background:transparent;"></div>
+        <div class="tg-header">4月</div>
+        <div class="tg-header">5月</div>
+        <div class="tg-header">6月</div>
+        <div class="tg-header">7月</div>
+        <div class="tg-header">8月</div>
+        <div class="tg-header">9月</div>
+        <div class="tg-header">10月</div>
+        <div class="tg-header">11月</div>
+        <div class="tg-header">12月</div>
+
+        <!-- ROW 1: 大模型 - 数据准备 -->
+        <div class="tg-label">🧠 大模型<br>数据准备</div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#1d4ed8,#3b82f6);color:#fff;">医疗语料收集</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#1d4ed8,#3b82f6);color:#fff;">数据清洗标注</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#1d4ed8,#3b82f6);color:#fff;">知识库构建</div></div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+
+        <!-- ROW 2: 大模型 - 训练优化 -->
+        <div class="tg-label row-alt">🧠 大模型<br>训练优化</div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#2563eb,#60a5fa);color:#fff;">RAG框架搭建</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#2563eb,#60a5fa);color:#fff;">SFT微调</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#2563eb,#60a5fa);color:#fff;">RLHF对齐</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#2563eb,#60a5fa);color:#fff;">多模态融合</div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+
+        <!-- ROW 3: 大模型 - 评估落地 -->
+        <div class="tg-label">🧠 大模型<br>评估落地</div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#1e40af,#818cf8);color:#fff;">基准评测</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#1e40af,#818cf8);color:#fff;">临床验证</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#1e40af,#818cf8);color:#fff;">迭代优化</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#1e40af,#818cf8);color:#fff;">正式发布</div></div>
+
+        <!-- ROW 4: 慢病预测 - 数据&特征 -->
+        <div class="tg-label row-alt">📊 慢病模型<br>数据特征</div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#065f46,#10b981);color:#fff;">数据汇聚</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#065f46,#10b981);color:#fff;">特征工程</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#065f46,#10b981);color:#fff;">特征选择</div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+
+        <!-- ROW 5: 慢病预测 - 建模 -->
+        <div class="tg-label">📊 慢病模型<br>建模训练</div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#047857,#34d399);color:#fff;">糖尿病模型</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#047857,#34d399);color:#fff;">心血管模型</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#047857,#34d399);color:#fff;">脑卒中模型</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#047857,#34d399);color:#fff;">联合预测</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#047857,#34d399);color:#fff;">模型评估</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#047857,#34d399);color:#fff;">部署集成</div></div>
+        <div class="tg-cell"><div class="tg-empty"></div></div>
+
+        <!-- ROW 6: CTMS -->
+        <div class="tg-label row-alt">🖥️ CTMS<br>扫尾上线</div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#92400e,#f59e0b);color:#fff;">Bug修复</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#92400e,#f59e0b);color:#fff;">功能优化</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#92400e,#f59e0b);color:#fff;">UAT测试</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#b45309,#fbbf24);color:#fff;">✅正式上线</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:rgba(180,83,9,0.3);color:#fbbf24;">运维支持</div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+        <div class="tg-cell row-alt"><div class="tg-empty"></div></div>
+
+        <!-- ROW 7: 数字孪生医生 -->
+        <div class="tg-label">🩺 孪生医生<br>设计研发</div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#4c1d95,#8b5cf6);color:#fff;">架构设计</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#4c1d95,#8b5cf6);color:#fff;">知识图谱</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#4c1d95,#8b5cf6);color:#fff;">推理引擎</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#4c1d95,#8b5cf6);color:#fff;">糖尿病模块</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#4c1d95,#8b5cf6);color:#fff;">心血管模块</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#5b21b6,#a78bfa);color:#fff;">脑卒中模块</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#5b21b6,#a78bfa);color:#fff;">三病联合</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#5b21b6,#a78bfa);color:#fff;">临床验证</div></div>
+        <div class="tg-cell"><div class="tg-bar" style="background:linear-gradient(90deg,#5b21b6,#a78bfa);color:#fff;">Beta发布</div></div>
+
+        <!-- ROW 8: 数字孪生患者 -->
+        <div class="tg-label row-alt">❤️ 孪生患者<br>心脏仿真</div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#831843,#ec4899);color:#fff;">生理模型</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#831843,#ec4899);color:#fff;">参数个体化</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#831843,#ec4899);color:#fff;">血流动力学</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#831843,#ec4899);color:#fff;">仿真验证</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#be185d,#f9a8d4);color:#fff;">可视化界面</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#be185d,#f9a8d4);color:#fff;">治疗推演</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#be185d,#f9a8d4);color:#fff;">临床数据接入</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#be185d,#f9a8d4);color:#fff;">精度优化</div></div>
+        <div class="tg-cell row-alt"><div class="tg-bar" style="background:linear-gradient(90deg,#be185d,#f9a8d4);color:#fff;">原型演示</div></div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MILESTONE QUARTERS -->
+  <div class="section-title purple">🏆 季度里程碑</div>
+  <div class="milestone-section">
+
+    <!-- Q2 -->
+    <div class="milestone-quarter">
+      <div class="mq-title">
+        🌱 Q2 · 4-6月
+        <span class="mq-tag" style="background:rgba(16,185,129,0.2);color:#34d399;">启动期</span>
+      </div>
+
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#f59e0b;"></div>
+        <div class="mi-content">
+          <div class="mi-title">CTMS扫尾完成，6月底上线</div>
+          <div class="mi-desc">完成所有遗留功能、Bug修复、UAT测试，7月正式部署上线</div>
+        </div>
+      </div>
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#60a5fa;"></div>
+        <div class="mi-content">
+          <div class="mi-title">大模型医疗语料库 v1.0</div>
+          <div class="mi-desc">完成50万+条高质量临床数据标注，知识库构建完成</div>
+        </div>
+      </div>
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#34d399;"></div>
+        <div class="mi-content">
+          <div class="mi-title">慢病数据特征工程完成</div>
+          <div class="mi-desc">三大疾病特征体系构建，数据清洗pipeline就绪</div>
+        </div>
+      </div>
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#a78bfa;"></div>
+        <div class="mi-content">
+          <div class="mi-title">数字孪生医生架构定稿</div>
+          <div class="mi-desc">整体技术架构、知识图谱schema、推理引擎方案确定</div>
+        </div>
+      </div>
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#f9a8d4;"></div>
+        <div class="mi-content">
+          <div class="mi-title">心脏孪生生理模型建立</div>
+          <div class="mi-desc">基础心脏电-力-血流耦合模型完成，参数可配置化</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q3 -->
+    <div class="milestone-quarter">
+      <div class="mq-title">
+        ⚡ Q3 · 7-9月
+        <span class="mq-tag" style="background:rgba(59,130,246,0.2);color:#60a5fa;">攻坚期</span>
+      </div>
+
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#f59e0b;"></div>
+        <div class="mi-content">
+          <div class="mi-title">CTMS正式上线运行</div>
+          <div class="mi-desc">7月完成部署，持续运维优化，进入稳定运行阶段</div>
+        </div>
+      </div>
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#60a5fa;"></div>
+        <div class="mi-content">
+          <div class="mi-title">大模型SFT+RLHF完成</div>
+          <div class="mi-desc">完成基于临床指南的监督微调与人类反馈强化学习对齐</div>
+        </div>
+      </div>
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#34d399;"></div>
+        <div class="mi-content">
+          <div class="mi-title">三病预测模型 v1.0发布</div>
+          <div class="mi-desc">糖尿病、心血管、脑卒中三个独立预测模型完成训练评估</div>
+        </div>
+      </div>
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#a78bfa;"></div>
+        <div class="mi-content">
+          <div class="mi-title">数字孪生医生核心模块完成</div>
+          <div class="mi-desc">三病诊疗模块完成开发，推理引擎基本可用</div>
+        </div>
+      </div>
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#f9a8d4;"></div>
+        <div class="mi-content">
+          <div class="mi-title">心脏孪生仿真验证完成</div>
+          <div class="mi-desc">血流动力学仿真精度达标，可视化界面完成开发</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Q4 -->
+    <div class="milestone-quarter">
+      <div class="mq-title">
+        🚀 Q4 · 10-12月
+        <span class="mq-tag" style="background:rgba(168,85,247,0.2);color:#c4b5fd;">收尾期</span>
+      </div>
+
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#60a5fa;"></div>
+        <div class="mi-content">
+          <div class="mi-title">医疗大模型 v1.0正式发布</div>
+          <div class="mi-desc">完成临床基准测试，达到或超越同规模SOTA，正式对外发布</div>
+        </div>
+      </div>
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#34d399;"></div>
+        <div class="mi-content">
+          <div class="mi-title">联合慢病预测系统上线</div>
+          <div class="mi-desc">三病联合风险预测系统集成，部署至生产环境，支持实时预警</div>
+        </div>
+      </div>
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#a78bfa;"></div>
+        <div class="mi-content">
+          <div class="mi-title">数字孪生医生Beta版发布</div>
+          <div class="mi-desc">完成临床专家验证，具备三病共管完整诊疗建议能力</div>
+        </div>
+      </div>
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#f9a8d4;"></div>
+        <div class="mi-content">
+          <div class="mi-title">心脏数字孪生原型演示</div>
+          <div class="mi-desc">接入真实患者数据，完成个体化心脏孪生原型，可展示治疗推演</div>
+        </div>
+      </div>
+      <div class="milestone-item">
+        <div class="mi-dot" style="background:#fbbf24;"></div>
+        <div class="mi-content">
+          <div class="mi-title">全项目年度总结报告</div>
+          <div class="mi-desc">技术成果汇总，下一年规划，论文/专利产出清单</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DETAILED MONTHLY PLAN -->
+  <div class="timeline-section">
+    <div class="section-title orange">📋 月度详细任务清单</div>
+
+    <details open style="margin-bottom:12px;">
+      <summary style="cursor:pointer;padding:12px 16px;background:rgba(255,255,255,0.05);border-radius:10px;color:#f1f5f9;font-weight:600;font-size:0.92rem;list-style:none;display:flex;align-items:center;gap:8px;">
+        <span>🌸 4月 — 全面启动</span>
+      </summary>
+      <div style="padding:16px 16px 4px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:8px;">
+        <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#93c5fd;font-weight:700;font-size:0.85rem;margin-bottom:8px;">🧠 大模型</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 收集临床指南、病历、医学文献语料<br>• 建立数据清洗与去标识化pipeline<br>• 评估基座模型（Qwen-Medical/BioMedLM等）<br>• 搭建训练基础设施</div>
+        </div>
+        <div style="background:rgba(13,148,136,0.1);border:1px solid rgba(13,148,136,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#5eead4;font-weight:700;font-size:0.85rem;margin-bottom:8px;">📊 慢病预测</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 对接HIS/EMR/可穿戴设备数据源<br>• 定义三病预测目标变量<br>• 数据质量评估与缺失值处理策略<br>• 建立基础EDA报告</div>
+        </div>
+        <div style="background:rgba(217,119,6,0.1);border:1px solid rgba(217,119,6,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#fbbf24;font-weight:700;font-size:0.85rem;margin-bottom:8px;">🖥️ CTMS</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 梳理所有遗留Bug清单（优先级排序）<br>• 修复P0/P1级严重Bug<br>• 完善权限管理与数据安全模块<br>• 编写部署文档</div>
+        </div>
+        <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#c4b5fd;font-weight:700;font-size:0.85rem;margin-bottom:8px;">🩺 孪生医生</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 调研数字孪生医生技术路线<br>• 设计知识图谱本体schema<br>• 确定LLM+知识图谱融合架构<br>• 糖尿病诊疗知识图谱初稿</div>
+        </div>
+        <div style="background:rgba(219,39,119,0.1);border:1px solid rgba(219,39,119,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#f9a8d4;font-weight:700;font-size:0.85rem;margin-bottom:8px;">❤️ 孪生患者</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 选型心脏生理仿真框架（OpenCOR/FEniCS等）<br>• 建立基础Windkessel血流动力学模型<br>• 定义个体化参数集<br>• 搭建仿真计算环境</div>
+        </div>
+      </div>
+    </details>
+
+    <details style="margin-bottom:12px;">
+      <summary style="cursor:pointer;padding:12px 16px;background:rgba(255,255,255,0.05);border-radius:10px;color:#f1f5f9;font-weight:600;font-size:0.92rem;list-style:none;display:flex;align-items:center;gap:8px;">
+        <span>🌿 5月 — 深入推进</span>
+      </summary>
+      <div style="padding:16px 16px 4px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:8px;">
+        <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#93c5fd;font-weight:700;font-size:0.85rem;margin-bottom:8px;">🧠 大模型</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 构建RAG检索增强框架<br>• 完成指令跟随数据集构建（10万条+）<br>• 开始持续预训练第一轮<br>• 建立模型评估基准（CMB/MedQA等）</div>
+        </div>
+        <div style="background:rgba(13,148,136,0.1);border:1px solid rgba(13,148,136,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#5eead4;font-weight:700;font-size:0.85rem;margin-bottom:8px;">📊 慢病预测</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 特征工程：时序特征、交叉特征<br>• 构建2型糖尿病风险预测基线模型<br>• XGBoost/LightGBM/深度学习对比<br>• SHAP可解释性分析</div>
+        </div>
+        <div style="background:rgba(217,119,6,0.1);border:1px solid rgba(217,119,6,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#fbbf24;font-weight:700;font-size:0.85rem;margin-bottom:8px;">🖥️ CTMS</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 完成功能完善（报表/通知/导出）<br>• 系统性能压测与优化<br>• 开始内部UAT测试<br>• API文档与运维手册编写</div>
+        </div>
+        <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#c4b5fd;font-weight:700;font-size:0.85rem;margin-bottom:8px;">🩺 孪生医生</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 构建医学知识图谱（糖尿病+心血管）<br>• 开发知识图谱查询推理接口<br>• 设计多轮对话诊疗框架<br>• 集成预测模型输出作为决策输入</div>
+        </div>
+        <div style="background:rgba(219,39,119,0.1);border:1px solid rgba(219,39,119,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#f9a8d4;font-weight:700;font-size:0.85rem;margin-bottom:8px;">❤️ 孪生患者</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 完善心脏电生理模型（Hodgkin-Huxley）<br>• 实现患者个体参数自动拟合<br>• 初步血流动力学仿真验证<br>• 与临床ECG/Echo数据对接</div>
+        </div>
+      </div>
+    </details>
+
+    <details style="margin-bottom:12px;">
+      <summary style="cursor:pointer;padding:12px 16px;background:rgba(255,255,255,0.05);border-radius:10px;color:#f1f5f9;font-weight:600;font-size:0.92rem;list-style:none;display:flex;align-items:center;gap:8px;">
+        <span>☀️ 6月 — 阶段收束</span>
+      </summary>
+      <div style="padding:16px 16px 4px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:8px;">
+        <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#93c5fd;font-weight:700;font-size:0.85rem;margin-bottom:8px;">🧠 大模型</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 完成医疗知识库构建（RAG后端）<br>• SFT第一轮训练完成<br>• 初步基准测试并分析薄弱点<br>• 启动多模态（影像报告）数据收集</div>
+        </div>
+        <div style="background:rgba(13,148,136,0.1);border:1px solid rgba(13,148,136,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#5eead4;font-weight:700;font-size:0.85rem;margin-bottom:8px;">📊 慢病预测</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 完成特征选择最终方案<br>• 三病各自建立最优预测模型<br>• 撰写模型技术报告<br>• 准备模型部署接口设计</div>
+        </div>
+        <div style="background:rgba(217,119,6,0.1);border:1px solid rgba(217,119,6,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#fbbf24;font-weight:700;font-size:0.85rem;margin-bottom:8px;">🖥️ CTMS ✅</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 完成所有UAT测试问题整改<br>• 通过安全扫描和合规检查<br>• <strong style="color:#fbbf24;">正式上线部署！</strong><br>• 用户培训与系统移交</div>
+        </div>
+        <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#c4b5fd;font-weight:700;font-size:0.85rem;margin-bottom:8px;">🩺 孪生医生</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 完成推理引擎核心开发<br>• 第一版诊疗对话系统demo<br>• 与临床医生进行初步反馈<br>• 启动脑卒中知识图谱构建</div>
+        </div>
+        <div style="background:rgba(219,39,119,0.1);border:1px solid rgba(219,39,119,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#f9a8d4;font-weight:700;font-size:0.85rem;margin-bottom:8px;">❤️ 孪生患者</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 完成心脏力学仿真（心肌收缩力）<br>• 建立血流动力学参数数据库<br>• 开发Web可视化3D展示界面原型<br>• 阶段性进展汇报演示</div>
+        </div>
+      </div>
+    </details>
+
+    <details style="margin-bottom:12px;">
+      <summary style="cursor:pointer;padding:12px 16px;background:rgba(255,255,255,0.05);border-radius:10px;color:#f1f5f9;font-weight:600;font-size:0.92rem;list-style:none;display:flex;align-items:center;gap:8px;">
+        <span>🌊 7-9月 — 核心攻坚</span>
+      </summary>
+      <div style="padding:16px 16px 4px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:8px;">
+        <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#93c5fd;font-weight:700;font-size:0.85rem;margin-bottom:8px;">🧠 大模型 (7-8月)</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 完成RLHF数据标注与训练<br>• 多模态影像-文本融合训练<br>• 9月：完成基准测试，启动临床专家评估<br>• Agent能力开发（工具调用、多步推理）</div>
+        </div>
+        <div style="background:rgba(13,148,136,0.1);border:1px solid rgba(13,148,136,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#5eead4;font-weight:700;font-size:0.85rem;margin-bottom:8px;">📊 慢病预测 (7-9月)</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 7月：三病模型部署至测试环境<br>• 8月：联合预测框架开发（多病共患）<br>• 9月：完成并发预测、风险分层系统<br>• 接入实时患者数据流</div>
+        </div>
+        <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#c4b5fd;font-weight:700;font-size:0.85rem;margin-bottom:8px;">🩺 孪生医生 (7-9月)</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 7月：糖尿病+心血管模块集成联调<br>• 8月：脑卒中模块完成，三病联合接入<br>• 9月：与大模型深度融合，完整版demo<br>• 临床医生参与评估反馈</div>
+        </div>
+        <div style="background:rgba(219,39,119,0.1);border:1px solid rgba(219,39,119,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#f9a8d4;font-weight:700;font-size:0.85rem;margin-bottom:8px;">❤️ 孪生患者 (7-9月)</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 7月：完善仿真精度，加入药物响应模型<br>• 8月：可视化界面完整版开发<br>• 9月：治疗推演功能（支架/搭桥虚拟试验）<br>• 与电子病历数据双向同步</div>
+        </div>
+      </div>
+    </details>
+
+    <details style="margin-bottom:12px;">
+      <summary style="cursor:pointer;padding:12px 16px;background:rgba(255,255,255,0.05);border-radius:10px;color:#f1f5f9;font-weight:600;font-size:0.92rem;list-style:none;display:flex;align-items:center;gap:8px;">
+        <span>🍂 10-12月 — 集成收尾</span>
+      </summary>
+      <div style="padding:16px 16px 4px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px;margin-top:8px;">
+        <div style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#93c5fd;font-weight:700;font-size:0.85rem;margin-bottom:8px;">🧠 大模型 (10-12月)</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 10月：临床专家验证，针对性迭代<br>• 11月：压力测试、安全评估、合规检查<br>• 12月：<strong style="color:#93c5fd;">v1.0正式发布上线</strong><br>• 论文投稿（EMNLP/AAAI/AI in Medicine）</div>
+        </div>
+        <div style="background:rgba(13,148,136,0.1);border:1px solid rgba(13,148,136,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#5eead4;font-weight:700;font-size:0.85rem;margin-bottom:8px;">📊 慢病预测 (10-11月)</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 10月：生产环境部署与系统集成<br>• 11月：<strong style="color:#5eead4;">联合预测系统正式上线</strong><br>• 医院端实时风险预警功能验收<br>• 撰写技术论文，申请专利</div>
+        </div>
+        <div style="background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#c4b5fd;font-weight:700;font-size:0.85rem;margin-bottom:8px;">🩺 孪生医生 (10-12月)</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 10月：与大模型、预测系统全链路集成<br>• 11月：临床验证、安全评估<br>• 12月：<strong style="color:#c4b5fd;">Beta版正式对外发布</strong><br>• 用户反馈收集，制定2027迭代计划</div>
+        </div>
+        <div style="background:rgba(219,39,119,0.1);border:1px solid rgba(219,39,119,0.2);border-radius:10px;padding:14px;">
+          <div style="color:#f9a8d4;font-weight:700;font-size:0.85rem;margin-bottom:8px;">❤️ 孪生患者 (10-12月)</div>
+          <div style="color:rgba(255,255,255,0.7);font-size:0.8rem;line-height:1.8;">• 10月：接入真实患者数据，精度优化<br>• 11月：整合入孪生医生系统作为子模块<br>• 12月：<strong style="color:#f9a8d4;">原型系统完整演示</strong><br>• 学术成果整理（MICCAI等）</div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- RISK TABLE -->
+  <div class="risk-section">
+    <div class="section-title pink">⚠️ 风险识别与应对</div>
+    <table class="risk-table">
+      <thead>
+        <tr>
+          <th>风险项</th>
+          <th>涉及项目</th>
+          <th>等级</th>
+          <th>应对策略</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>高质量医疗数据获取困难（合规/授权）</td>
+          <td>大模型、慢病预测</td>
+          <td><span class="risk-pill pill-high">高</span></td>
+          <td>提前签订数据合作协议，使用公开数据集+合成数据作为补充</td>
+        </tr>
+        <tr>
+          <td>大模型训练算力资源不足</td>
+          <td>大模型优化</td>
+          <td><span class="risk-pill pill-high">高</span></td>
+          <td>申请云端GPU资源，考虑LoRA等参数高效微调方案降低算力需求</td>
+        </tr>
+        <tr>
+          <td>心脏仿真精度不足/计算时间过长</td>
+          <td>数字孪生患者</td>
+          <td><span class="risk-pill pill-mid">中</span></td>
+          <td>引入降阶模型（ROM）加速仿真，与物理模型并行优化精度</td>
+        </tr>
+        <tr>
+          <td>CTMS遗留Bug超出预期、影响上线时间</td>
+          <td>CTMS</td>
+          <td><span class="risk-pill pill-mid">中</span></td>
+          <td>4月初完成Bug全量梳理并定级，可适当将上线计划延至7月初</td>
+        </tr>
+        <tr>
+          <td>临床验证周期长、专家配合度不足</td>
+          <td>孪生医生、大模型</td>
+          <td><span class="risk-pill pill-mid">中</span></td>
+          <td>提前建立临床合作关系，设计低负担的评估流程（问卷/任务制）</td>
+        </tr>
+        <tr>
+          <td>多项目并行资源冲突</td>
+          <td>全部</td>
+          <td><span class="risk-pill pill-mid">中</span></td>
+          <td>CTMS 7月前优先，之后重心转向大模型+孪生体系，明确人员分工</td>
+        </tr>
+        <tr>
+          <td>医疗AI监管/合规要求变化</td>
+          <td>大模型、孪生医生</td>
+          <td><span class="risk-pill pill-low">低</span></td>
+          <td>持续跟踪NMPA/国家卫健委政策动态，产品定位"辅助工具"规避风险</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    📅 制定于 2026年4月10日 · 医疗AI全项目工作路线图 · 下一次评审建议：2026年6月底
+  </div>
+
+</div>
+</body>
+</html>

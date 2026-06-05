@@ -1,0 +1,1532 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String              @id @default(uuid())
+  username          String              @unique @db.VarChar(100)
+  email             String              @unique @db.VarChar(200)
+  passwordHash      String              @map("password_hash") @db.VarChar(255)
+  displayName       String              @map("display_name") @db.VarChar(200)
+  phone             String?             @db.VarChar(50)
+  title             String?             @db.VarChar(200)
+  department        String?             @db.VarChar(200)
+  organization      String?             @db.VarChar(200)
+  avatarUrl         String?             @map("avatar_url") @db.VarChar(500)
+  status            String              @default("active") @db.VarChar(20)
+  lastLoginAt       DateTime?           @map("last_login_at") @db.Timestamptz(6)
+  passwordChangedAt DateTime?           @map("password_changed_at") @db.Timestamptz(6)
+  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  notifications     Notification[]
+  signatureRecords  SignatureRecord[]
+  siteStaff         SiteStaff[]
+  auditLogs         AuditLog[]          @relation("AuditUser")
+  userRoles         UserRole[]
+  wechatBindings    WechatUserBinding[]
+  doctorPatients    DoctorPatientRecord[]
+
+  @@map("users")
+}
+
+model Role {
+  id              String           @id @default(uuid())
+  roleCode        String           @unique @map("role_code") @db.VarChar(50)
+  roleName        String           @map("role_name") @db.VarChar(100)
+  description     String?          @db.VarChar(500)
+  isSystemRole    Boolean          @default(false) @map("is_system_role")
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+
+  @@map("roles")
+}
+
+model UserRole {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id") @db.VarChar(36)
+  roleId    String   @map("role_id") @db.VarChar(36)
+  projectId String?  @map("project_id") @db.VarChar(36)
+  siteId    String?  @map("site_id") @db.VarChar(36)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  role      Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roleId, projectId, siteId])
+  @@index([userId])
+  @@index([roleId])
+  @@map("user_roles")
+}
+
+model Permission {
+  id                 String           @id @default(uuid())
+  permissionCode     String           @unique @map("permission_code") @db.VarChar(100)
+  permissionName     String           @map("permission_name") @db.VarChar(200)
+  permissionType     String           @map("permission_type") @db.VarChar(20)
+  resourceType       String?          @map("resource_type") @db.VarChar(50)
+  actionType         String?          @map("action_type") @db.VarChar(50)
+  description        String?          @db.VarChar(500)
+  isSystemPermission Boolean          @default(false) @map("is_system_permission")
+  createdAt          DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  rolePermissions    RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  id            String     @id @default(uuid())
+  roleId        String     @map("role_id") @db.VarChar(36)
+  permissionId  String     @map("permission_id") @db.VarChar(36)
+  resourceScope String     @default("all") @map("resource_scope") @db.VarChar(20)
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  permission    Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  role          Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@index([roleId])
+  @@map("role_permissions")
+}
+
+model Organization {
+  id                   String   @id @default(uuid())
+  orgCode              String   @unique @map("org_code") @db.VarChar(100)
+  orgName              String   @map("org_name") @db.VarChar(200)
+  orgType              String   @map("org_type") @db.VarChar(50)
+  address              String?  @db.VarChar(500)
+  contactPerson        String?  @map("contact_person") @db.VarChar(200)
+  contactPhone         String?  @map("contact_phone") @db.VarChar(50)
+  status               String   @default("active") @db.VarChar(20)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  city                 String?  @db.VarChar(100)
+  contactEmail         String?  @map("contact_email") @db.VarChar(200)
+  country              String?  @default("China") @db.VarChar(50)
+  description          String?
+  parentId             String?  @map("parent_id") @db.VarChar(36)
+  province             String?  @db.VarChar(100)
+  shortName            String?  @map("short_name") @db.VarChar(100)
+  sortOrder            Int      @default(0) @map("sort_order")
+  gcpContactName       String?  @map("gcp_contact_name") @db.VarChar(200)
+  gcpContactPhone      String?  @map("gcp_contact_phone") @db.VarChar(50)
+  researchContactName  String?  @map("research_contact_name") @db.VarChar(200)
+  researchContactPhone String?  @map("research_contact_phone") @db.VarChar(50)
+  investigatorName     String?  @map("investigator_name") @db.VarChar(200)
+
+  @@index([orgType])
+  @@index([status])
+  @@index([parentId])
+  @@map("organizations")
+}
+
+model Project {
+  id                   String                   @id @default(uuid())
+  projectCode          String                   @unique @map("project_code") @db.VarChar(100)
+  projectName          String                   @map("project_name") @db.VarChar(200)
+  description          String?
+  studyType            String?                  @map("study_type") @db.VarChar(50)
+  therapeuticArea      String?                  @map("therapeutic_area") @db.VarChar(200)
+  indication           String?                  @db.VarChar(300)
+  blindType            String?                  @map("blind_type") @db.VarChar(50)
+  sampleSize           Int?                     @map("sample_size")
+  startDate            DateTime?                @map("start_date") @db.Date
+  endDate              DateTime?                @map("end_date") @db.Date
+  totalBudget          Float?                   @map("total_budget")
+  currency             String?                  @default("CNY") @db.VarChar(10)
+  status               String                   @default("draft") @db.VarChar(20)
+  statusReason         String?                  @map("status_reason") @db.VarChar(500)
+  createdBy            String                   @map("created_by") @db.VarChar(36)
+  createdAt            DateTime                 @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(6)
+  phase                String?                  @db.VarChar(20)
+  consentRecords       ConsentRecord[]
+  crfForms             CrfForm[]
+  dataQueries          DataQuery[]
+  dataSyncLogs         DataSyncLog[]
+  drugs                Drug[]
+  lockRecords          EdcLockRecord[]
+  randomizationRecords EdcRandomizationRecord[]
+  templates            EdcTemplate[]
+  editCheckExecutions  EditCheckExecution[]
+  ethicsApprovals      EthicsApproval[]
+  milestones           Milestone[]
+  monitoringPlans      MonitoringPlan[]
+  monitoringVisits     MonitoringVisit[]
+  sites                Site[]
+  subjects             Subject[]
+  tmfDocuments         TmfDocument[]
+  auditLogs            AuditLog[]               @relation("AuditProject")
+  visits               Visit[]
+
+  @@index([status])
+  @@map("projects")
+}
+
+model Milestone {
+  id            String    @id @default(uuid())
+  projectId     String    @map("project_id") @db.VarChar(36)
+  milestoneName String    @map("milestone_name") @db.VarChar(200)
+  milestoneType String    @map("milestone_type") @db.VarChar(50)
+  plannedDate   DateTime  @map("planned_date") @db.Date
+  actualDate    DateTime? @map("actual_date") @db.Date
+  status        String    @default("pending") @db.VarChar(20)
+  description   String?
+  sortOrder     Int       @default(0) @map("sort_order")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  project       Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("milestones")
+}
+
+model Site {
+  id                   String            @id @default(uuid())
+  projectId            String?           @map("project_id") @db.VarChar(36)
+  siteCode             String            @map("site_code") @db.VarChar(100)
+  siteName             String            @map("site_name") @db.VarChar(200)
+  piUserId             String?           @map("pi_user_id") @db.VarChar(36)
+  address              String?           @db.VarChar(500)
+  contactPhone         String?           @map("contact_phone") @db.VarChar(50)
+  ethicsStatus         String?           @map("ethics_status") @db.VarChar(50)
+  ethicsApproveDate    DateTime?         @map("ethics_approve_date") @db.Date
+  contractStatus       String?           @map("contract_status") @db.VarChar(50)
+  plannedSampleSize    Int?              @map("planned_sample_size")
+  gcpContactName       String?           @map("gcp_contact_name") @db.VarChar(200)
+  gcpContactPhone      String?           @map("gcp_contact_phone") @db.VarChar(50)
+  researchContactName  String?           @map("research_contact_name") @db.VarChar(200)
+  researchContactPhone String?           @map("research_contact_phone") @db.VarChar(50)
+  status               String            @default("pending") @db.VarChar(20)
+  createdAt            DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  consentRecords       ConsentRecord[]
+  ethicsApprovals      EthicsApproval[]
+  monitoringVisits     MonitoringVisit[]
+  siteStaff            SiteStaff[]
+  project              Project?          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subjects             Subject[]
+  visits               Visit[]
+
+  @@unique([projectId, siteCode])
+  @@index([projectId])
+  @@map("sites")
+}
+
+model SiteStaff {
+  id         String    @id @default(uuid())
+  siteId     String    @map("site_id") @db.VarChar(36)
+  userId     String    @map("user_id") @db.VarChar(36)
+  roleAtSite String    @map("role_at_site") @db.VarChar(50)
+  joinedAt   DateTime  @default(now()) @map("joined_at") @db.Timestamptz(6)
+  leftAt     DateTime? @map("left_at") @db.Timestamptz(6)
+  status     String    @default("active") @db.VarChar(20)
+  site       Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([siteId, userId])
+  @@index([siteId])
+  @@map("site_staff")
+}
+
+model MonitoringPlan {
+  id               String            @id @default(uuid())
+  projectId        String            @map("project_id") @db.VarChar(36)
+  planName         String            @map("plan_name") @db.VarChar(200)
+  frequency        String?           @db.VarChar(100)
+  description      String?
+  status           String            @default("draft") @db.VarChar(20)
+  createdBy        String            @map("created_by") @db.VarChar(36)
+  createdAt        DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+  project          Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  monitoringVisits MonitoringVisit[]
+
+  @@index([projectId])
+  @@map("monitoring_plans")
+}
+
+model MonitoringVisit {
+  id            String          @id @default(uuid())
+  planId        String?         @map("plan_id") @db.VarChar(36)
+  projectId     String          @map("project_id") @db.VarChar(36)
+  siteId        String?         @map("site_id") @db.VarChar(36)
+  craUserId     String          @map("cra_user_id") @db.VarChar(36)
+  visitType     String          @map("visit_type") @db.VarChar(50)
+  plannedDate   DateTime        @map("planned_date") @db.Date
+  actualDate    DateTime?       @map("actual_date") @db.Date
+  status        String          @default("planned") @db.VarChar(20)
+  sdvPercentage Float?          @map("sdv_percentage")
+  reportId      String?         @map("report_id") @db.VarChar(36)
+  createdAt     DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime        @updatedAt @map("updated_at") @db.Timestamptz(6)
+  plan          MonitoringPlan? @relation(fields: [planId], references: [id])
+  project       Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  site          Site?           @relation(fields: [siteId], references: [id])
+
+  @@index([projectId])
+  @@map("monitoring_visits")
+}
+
+model Timesheet {
+  id              String           @id @default(uuid())
+  userId          String           @map("user_id") @db.VarChar(36)
+  projectId       String?          @map("project_id") @db.VarChar(36)
+  weekStartDate   DateTime         @map("week_start_date") @db.Date
+  totalHours      Float            @map("total_hours")
+  status          String           @default("draft") @db.VarChar(20)
+  submittedAt     DateTime?        @map("submitted_at") @db.Timestamptz(6)
+  approvedBy      String?          @map("approved_by") @db.VarChar(36)
+  approvedAt      DateTime?        @map("approved_at") @db.Timestamptz(6)
+  rejectionReason String?          @map("rejection_reason") @db.VarChar(500)
+  createdAt       DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  entries         TimesheetEntry[]
+
+  @@index([userId, weekStartDate])
+  @@map("timesheets")
+}
+
+model TimesheetEntry {
+  id          String    @id @default(uuid())
+  timesheetId String    @map("timesheet_id") @db.VarChar(36)
+  workDate    DateTime  @map("work_date") @db.Date
+  hours       Float
+  workType    String    @map("work_type") @db.VarChar(20)
+  projectId   String?   @map("project_id") @db.VarChar(36)
+  siteId      String?   @map("site_id") @db.VarChar(36)
+  description String?   @db.VarChar(500)
+  isBillable  Boolean   @default(true) @map("is_billable")
+  timesheet   Timesheet @relation(fields: [timesheetId], references: [id], onDelete: Cascade)
+
+  @@index([timesheetId])
+  @@map("timesheet_entries")
+}
+
+model FinancialIncome {
+  id           String    @id @default(uuid())
+  projectId    String?   @map("project_id") @db.VarChar(36)
+  incomeCode   String    @unique @map("income_code") @db.VarChar(100)
+  incomeType   String    @map("income_type") @db.VarChar(20)
+  description  String?   @db.VarChar(300)
+  amount       Float
+  currency     String    @default("CNY") @db.VarChar(10)
+  expectedDate DateTime? @map("expected_date") @db.Date
+  receivedDate DateTime? @map("received_date") @db.Date
+  status       String    @default("pending") @db.VarChar(20)
+  invoiceId    String?   @map("invoice_id") @db.VarChar(36)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([projectId])
+  @@map("financial_incomes")
+}
+
+model FinancialExpense {
+  id                  String   @id @default(uuid())
+  projectId           String?  @map("project_id") @db.VarChar(36)
+  expenseCode         String   @unique @map("expense_code") @db.VarChar(100)
+  expenseType         String   @map("expense_type") @db.VarChar(20)
+  description         String?  @db.VarChar(300)
+  amount              Float
+  currency            String   @default("CNY") @db.VarChar(10)
+  expenseDate         DateTime @map("expense_date") @db.Date
+  submittedBy         String   @map("submitted_by") @db.VarChar(36)
+  status              String   @default("pending") @db.VarChar(20)
+  reimbursementStatus String?  @map("reimbursement_status") @db.VarChar(20)
+  invoiceUrl          String?  @map("invoice_url") @db.VarChar(500)
+  createdAt           DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([projectId])
+  @@index([submittedBy])
+  @@map("financial_expenses")
+}
+
+model Subject {
+  id                    String                  @id @default(uuid())
+  projectId             String                  @map("project_id") @db.VarChar(36)
+  siteId                String?                 @map("site_id") @db.VarChar(36)
+  subjectCode           String                  @map("subject_code") @db.VarChar(100)
+  screeningNumber       String?                 @map("screening_number") @db.VarChar(100)
+  randomizationNumber   String?                 @map("randomization_number") @db.VarChar(50)
+  enrollmentStatus      String                  @default("screening") @map("enrollment_status") @db.VarChar(20)
+  screeningFailedReason String?                 @map("screening_failed_reason") @db.VarChar(500)
+  enrolledAt            DateTime?               @map("enrolled_at") @db.Timestamptz(6)
+  discontinuedAt        DateTime?               @map("discontinued_at") @db.Timestamptz(6)
+  discontinuationReason String?                 @map("discontinuation_reason") @db.VarChar(500)
+  createdAt             DateTime                @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime                @updatedAt @map("updated_at") @db.Timestamptz(6)
+  crfData               CrfData[]
+  queries               DataQuery[]
+  randRecord            EdcRandomizationRecord?
+  project               Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  site                  Site?                   @relation(fields: [siteId], references: [id])
+  visits                Visit[]
+
+  @@unique([projectId, subjectCode])
+  @@index([projectId])
+  @@index([enrollmentStatus])
+  @@map("subjects")
+}
+
+model Visit {
+  id             String    @id @default(uuid())
+  projectId      String    @map("project_id") @db.VarChar(36)
+  subjectId      String?   @map("subject_id") @db.VarChar(36)
+  siteId         String?   @map("site_id") @db.VarChar(36)
+  visitCode      String    @map("visit_code") @db.VarChar(100)
+  visitName      String    @map("visit_name") @db.VarChar(200)
+  plannedDate    DateTime? @map("planned_date") @db.Date
+  actualDate     DateTime? @map("actual_date") @db.Date
+  status         String    @default("planned") @db.VarChar(20)
+  isSDVCompleted Boolean   @default(false) @map("is_sdv_completed")
+  sdvCompletedBy String?   @map("sdv_completed_by") @db.VarChar(36)
+  sdvCompletedAt DateTime? @map("sdv_completed_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  project        Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  site           Site?     @relation(fields: [siteId], references: [id])
+  subject        Subject?  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([subjectId])
+  @@map("visits")
+}
+
+model EdcTemplate {
+  id               String    @id @default(uuid())
+  templateCode     String    @unique @map("template_code") @db.VarChar(100)
+  templateName     String    @map("template_name") @db.VarChar(200)
+  templateType     String    @map("template_type") @db.VarChar(20)
+  therapeuticArea  String?   @map("therapeutic_area") @db.VarChar(100)
+  indication       String?   @db.VarChar(200)
+  description      String?
+  version          String    @default("1.0") @db.VarChar(20)
+  isSystemTemplate Boolean   @default(false) @map("is_system_template")
+  isShared         Boolean   @default(false) @map("is_shared")
+  ownerUserId      String?   @map("owner_user_id") @db.VarChar(36)
+  projectId        String?   @map("project_id") @db.VarChar(36)
+  templateData     Json      @default("{}") @map("template_data")
+  usageCount       Int       @default(0) @map("usage_count")
+  status           String    @default("draft") @db.VarChar(20)
+  publishedAt      DateTime? @map("published_at") @db.Timestamptz(6)
+  publishedBy      String?   @map("published_by") @db.VarChar(36)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  project          Project?  @relation(fields: [projectId], references: [id])
+
+  @@index([templateType])
+  @@map("edc_templates")
+}
+
+model CrfData {
+  id                String           @id @default(uuid())
+  subjectId         String           @map("subject_id") @db.VarChar(36)
+  visitId           String?          @map("visit_id") @db.VarChar(36)
+  formId            String           @map("form_id") @db.VarChar(100)
+  formCode          String           @map("form_code") @db.VarChar(100)
+  fieldId           String           @map("field_id") @db.VarChar(100)
+  fieldCode         String           @map("field_code") @db.VarChar(100)
+  fieldValue        String?          @map("field_value")
+  rawValue          Json?            @map("raw_value")
+  standardizedValue Json?            @map("standardized_value")
+  formData          Json?            @map("form_data")
+  cdiscDomain       String?          @map("cdisc_domain") @db.VarChar(10)
+  cdashDataset      String?          @map("cdash_dataset") @db.VarChar(50)
+  cdashVariable     String?          @map("cdash_variable") @db.VarChar(40)
+  sdtmVariable      String?          @map("sdtm_variable") @db.VarChar(40)
+  codeListOid       String?          @map("code_list_oid") @db.VarChar(100)
+  collectionVersion String?          @map("collection_version") @db.VarChar(20)
+  enteredBy         String           @map("entered_by") @db.VarChar(36)
+  enteredAt         DateTime         @default(now()) @map("entered_at") @db.Timestamptz(6)
+  updatedBy         String?          @map("updated_by") @db.VarChar(36)
+  updatedAt         DateTime?        @map("updated_at") @db.Timestamptz(6)
+  isDeleted         Boolean          @default(false) @map("is_deleted")
+  deletedBy         String?          @map("deleted_by") @db.VarChar(36)
+  deletedAt         DateTime?        @map("deleted_at") @db.Timestamptz(6)
+  auditTrail        Json?            @map("audit_trail")
+  esigStatus        String?          @map("esig_status") @db.VarChar(20)
+  esigSignedBy      String?          @map("esig_signed_by") @db.VarChar(36)
+  esigSignedAt      DateTime?        @map("esig_signed_at") @db.Timestamptz(6)
+  subject           Subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  histories         CrfDataHistory[]
+
+  @@index([subjectId, formCode])
+  @@index([cdiscDomain, cdashVariable])
+  @@index([enteredBy])
+  @@map("crf_data")
+}
+
+model CrfDataHistory {
+  id           String   @id @default(uuid())
+  crfDataId    String   @map("crf_data_id") @db.VarChar(36)
+  fieldId      String   @map("field_id") @db.VarChar(100)
+  oldValue     Json?    @map("old_value")
+  newValue     Json?    @map("new_value")
+  changeReason String?  @map("change_reason") @db.VarChar(500)
+  changedBy    String   @map("changed_by") @db.VarChar(36)
+  changedAt    DateTime @default(now()) @map("changed_at") @db.Timestamptz(6)
+  crfData      CrfData  @relation(fields: [crfDataId], references: [id], onDelete: Cascade)
+
+  @@index([crfDataId])
+  @@map("crf_data_history")
+}
+
+model DataQuery {
+  id              String             @id @default(uuid())
+  projectId       String             @map("project_id") @db.VarChar(36)
+  subjectId       String?            @map("subject_id") @db.VarChar(36)
+  visitId         String?            @map("visit_id") @db.VarChar(36)
+  formId          String?            @map("form_id") @db.VarChar(100)
+  fieldId         String?            @map("field_id") @db.VarChar(100)
+  queryType       String             @map("query_type") @db.VarChar(50)
+  priority        String             @default("normal") @db.VarChar(20)
+  title           String             @map("title") @db.VarChar(300)
+  description     String
+  assignedTo      String?            @map("assigned_to") @db.VarChar(36)
+  raisedBy        String             @map("raised_by") @db.VarChar(36)
+  status          String             @default("open") @db.VarChar(20)
+  dueDate         DateTime?          @map("due_date") @db.Date
+  answeredAt      DateTime?          @map("answered_at") @db.Timestamptz(6)
+  answer          String?
+  closedAt        DateTime?          @map("closed_at") @db.Timestamptz(6)
+  closedBy        String?            @map("closed_by") @db.VarChar(36)
+  escalationLevel Int                @default(0) @map("escalation_level")
+  createdAt       DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  project         Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  subject         Subject?           @relation(fields: [subjectId], references: [id])
+  histories       DataQueryHistory[]
+
+  @@index([projectId])
+  @@index([status])
+  @@index([assignedTo])
+  @@map("data_queries")
+}
+
+model DataQueryHistory {
+  id         String    @id @default(uuid())
+  queryId    String    @map("query_id") @db.VarChar(36)
+  actionType String    @map("action_type") @db.VarChar(20)
+  actionBy   String    @map("action_by") @db.VarChar(36)
+  actionAt   DateTime  @default(now()) @map("action_at") @db.Timestamptz(6)
+  oldValue   Json?     @map("old_value")
+  newValue   Json?     @map("new_value")
+  reason     String?
+  query      DataQuery @relation(fields: [queryId], references: [id], onDelete: Cascade)
+
+  @@index([queryId])
+  @@map("data_query_histories")
+}
+
+model EdcRandomizationRecord {
+  id                  String    @id @default(uuid())
+  subjectId           String    @unique @map("subject_id") @db.VarChar(36)
+  projectId           String    @map("project_id") @db.VarChar(36)
+  randomizationNumber String    @unique @map("randomization_number") @db.VarChar(50)
+  treatmentArm        String?   @map("treatment_arm") @db.VarChar(100)
+  randomizationDate   DateTime  @map("randomization_date") @db.Timestamptz(6)
+  method              String?   @db.VarChar(50)
+  stratifiedFactors   Json?     @map("stratified_factors")
+  drugBatch           String?   @map("drug_batch") @db.VarChar(50)
+  drugExpiryDate      DateTime? @map("drug_expiry_date") @db.Date
+  randomizedBy        String    @map("randomized_by") @db.VarChar(36)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  project             Project   @relation(fields: [projectId], references: [id])
+  subject             Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("edc_randomization_records")
+}
+
+model EdcLockRecord {
+  id               String    @id @default(uuid())
+  projectId        String    @map("project_id") @db.VarChar(36)
+  lockType         String    @map("lock_type") @db.VarChar(20)
+  targetId         String    @map("target_id") @db.VarChar(36)
+  lockReason       String?   @map("lock_reason")
+  lockedBy         String    @map("locked_by") @db.VarChar(36)
+  lockedAt         DateTime  @default(now()) @map("locked_at") @db.Timestamptz(6)
+  unlockApprovedBy String?   @map("unlock_approved_by") @db.VarChar(36)
+  unlockAt         DateTime? @map("unlock_at") @db.Timestamptz(6)
+  status           String    @default("locked") @db.VarChar(20)
+  esigRecords      Json?     @map("esig_records")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  project          Project   @relation(fields: [projectId], references: [id])
+
+  @@index([projectId])
+  @@index([status])
+  @@map("edc_lock_records")
+}
+
+model WorkflowDefinition {
+  id                  String             @id @default(uuid())
+  workflowCode        String             @unique @map("workflow_code") @db.VarChar(100)
+  workflowName        String             @map("workflow_name") @db.VarChar(200)
+  workflowType        String             @map("workflow_type") @db.VarChar(50)
+  isTemplate          Boolean            @default(false) @map("is_template")
+  stages              Json               @default("[]") @map("stages")
+  allowDelegate       Boolean            @default(true) @map("allow_delegate")
+  notificationEnabled Boolean            @default(true) @map("notification_enabled")
+  isActive            Boolean            @default(true) @map("is_active")
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  instances           WorkflowInstance[]
+
+  @@map("workflow_definitions")
+}
+
+model WorkflowInstance {
+  id                String             @id @default(uuid())
+  definitionId      String             @map("definition_id") @db.VarChar(36)
+  workflowType      String             @map("workflow_type") @db.VarChar(50)
+  initiatorId       String             @map("initiator_id") @db.VarChar(36)
+  projectId         String?            @map("project_id") @db.VarChar(36)
+  businessData      Json?              @map("business_data")
+  currentStageIndex Int                @default(0) @map("current_stage_index")
+  status            String             @default("pending") @db.VarChar(20)
+  completedAt       DateTime?          @map("completed_at") @db.Timestamptz(6)
+  result            String?            @db.VarChar(20)
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  definition        WorkflowDefinition @relation(fields: [definitionId], references: [id])
+  tasks             WorkflowTask[]
+
+  @@index([status])
+  @@index([initiatorId])
+  @@map("workflow_instances")
+}
+
+model WorkflowTask {
+  id                   String           @id @default(uuid())
+  instanceId           String           @map("instance_id") @db.VarChar(36)
+  stageId              String           @map("stage_id") @db.VarChar(100)
+  stageName            String           @map("stage_name") @db.VarChar(200)
+  assignedTo           String           @map("assigned_to") @db.VarChar(36)
+  approverRole         String?          @map("approver_role") @db.VarChar(50)
+  esigRequired         Boolean          @default(false) @map("esig_required")
+  status               String           @default("pending") @db.VarChar(20)
+  action               String?          @db.VarChar(20)
+  comment              String?
+  esigData             Json?            @map("esig_data")
+  dueAt                DateTime?        @map("due_at") @db.Timestamptz(6)
+  completedAt          DateTime?        @map("completed_at") @db.Timestamptz(6)
+  createdAt            DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  countersignApprovers Json?            @default("[]") @map("countersign_approvers")
+  countersignCompleted Json?            @default("[]") @map("countersign_completed")
+  isCountersign        Boolean          @default(false) @map("is_countersign")
+  instance             WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+
+  @@index([assignedTo, status])
+  @@index([instanceId])
+  @@map("workflow_tasks")
+}
+
+model AuditLog {
+  id             String   @id @default(uuid())
+  systemCode     String   @map("system_code") @db.VarChar(10)
+  projectId      String?  @map("project_id") @db.VarChar(36)
+  userId         String   @map("user_id") @db.VarChar(36)
+  sessionId      String?  @map("session_id") @db.VarChar(50)
+  ipAddress      String?  @map("ip_address") @db.VarChar(50)
+  eventType      String   @map("event_type") @db.VarChar(50)
+  eventCategory  String?  @map("event_category") @db.VarChar(30)
+  tableName      String?  @map("table_name") @db.VarChar(100)
+  recordId       String?  @map("record_id") @db.VarChar(36)
+  action         String   @map("action") @db.VarChar(100)
+  oldValues      Json?    @map("old_values")
+  newValues      Json?    @map("new_values")
+  changedFields  Json?    @map("changed_fields")
+  regulatoryRef  String?  @map("regulatory_ref") @db.VarChar(100)
+  previousHash   String?  @map("previous_hash") @db.VarChar(64)
+  currentHash    String?  @map("current_hash") @db.VarChar(64)
+  signatureId    String?  @map("signature_id") @db.VarChar(36)
+  eventTimestamp DateTime @default(now()) @map("event_timestamp") @db.Timestamptz(6)
+  project        Project? @relation("AuditProject", fields: [projectId], references: [id])
+  user           User     @relation("AuditUser", fields: [userId], references: [id])
+
+  @@index([systemCode])
+  @@index([projectId])
+  @@index([userId])
+  @@index([eventTimestamp])
+  @@index([tableName, recordId])
+  @@map("unified_audit_logs")
+}
+
+model Notification {
+  id           String    @id @default(uuid())
+  recipientId  String    @map("recipient_id") @db.VarChar(36)
+  channel      String    @map("channel") @db.VarChar(20)
+  title        String    @db.VarChar(500)
+  content      String
+  businessType String?   @map("business_type") @db.VarChar(50)
+  businessId   String?   @map("business_id") @db.VarChar(36)
+  status       String    @default("pending") @db.VarChar(20)
+  sentAt       DateTime? @map("sent_at") @db.Timestamptz(6)
+  deliveredAt  DateTime? @map("delivered_at") @db.Timestamptz(6)
+  readAt       DateTime? @map("read_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  user         User      @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, status])
+  @@map("notifications")
+}
+
+model CrfForm {
+  id                  String             @id @default(uuid())
+  projectId           String             @map("project_id") @db.VarChar(36)
+  formCode            String             @map("form_code") @db.VarChar(100)
+  formName            String             @map("form_name") @db.VarChar(200)
+  formType            String             @map("form_type") @db.VarChar(50)
+  standardName        String?            @default("CDASH") @map("standard_name") @db.VarChar(50)
+  standardVersion     String?            @default("2.1") @map("standard_version") @db.VarChar(20)
+  cdiscDomain         String?            @map("cdisc_domain") @db.VarChar(10)
+  cdashModel          String?            @map("cdash_model") @db.VarChar(50)
+  sdtmDatasetName     String?            @map("sdtm_dataset_name") @db.VarChar(10)
+  implementationGuide String?            @map("implementation_guide") @db.VarChar(100)
+  description         String?
+  formMetadata        Json?              @default("{}") @map("form_metadata")
+  version             String             @default("1.0") @db.VarChar(20)
+  status              String             @default("draft") @db.VarChar(20)
+  publishedAt         DateTime?          @map("published_at") @db.Timestamptz(6)
+  publishedBy         String?            @map("published_by") @db.VarChar(36)
+  isRepeating         Boolean            @default(false) @map("is_repeating")
+  maxRepeats          Int?               @map("max_repeats")
+  visitWindow         String?            @map("visit_window") @db.VarChar(100)
+  sortOrder           Int                @default(0) @map("sort_order")
+  createdBy           String             @map("created_by") @db.VarChar(36)
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime           @updatedAt @map("updated_at") @db.Timestamptz(6)
+  editCheckRules      CrfEditCheckRule[]
+  fields              CrfFormField[]
+  domainDef           CdiscDomain?       @relation(fields: [cdiscDomain], references: [domainCode])
+  project             Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, formCode])
+  @@index([cdiscDomain])
+  @@index([projectId])
+  @@index([status])
+  @@map("crf_forms")
+}
+
+model CrfFormField {
+  id                  String         @id @default(uuid())
+  formId              String         @map("form_id") @db.VarChar(36)
+  fieldCode           String         @map("field_code") @db.VarChar(100)
+  fieldName           String         @map("field_name") @db.VarChar(200)
+  fieldType           String         @map("field_type") @db.VarChar(50)
+  controlType         String         @default("input") @map("control_type") @db.VarChar(50)
+  description         String?        @db.VarChar(500)
+  placeholder         String?        @db.VarChar(200)
+  questionText        String?        @map("question_text") @db.VarChar(500)
+  defaultValue        String?        @map("default_value")
+  required            Boolean        @default(false)
+  maxLength           Int?           @map("max_length")
+  minValue            Float?         @map("min_value")
+  maxValue            Float?         @map("max_value")
+  displayFormat       String?        @map("display_format") @db.VarChar(100)
+  origin              String?        @db.VarChar(50)
+  validationRegex     String?        @map("validation_regex") @db.VarChar(500)
+  options             Json?          @default("[]")
+  unit                String?        @db.VarChar(50)
+  sortOrder           Int            @default(0) @map("sort_order")
+  parentFieldId       String?        @map("parent_field_id") @db.VarChar(36)
+  dependencyRule      Json?          @map("dependency_rule")
+  status              String         @default("active") @db.VarChar(20)
+  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime       @updatedAt @map("updated_at") @db.Timestamptz(6)
+  cdiscDomain         String?        @map("cdisc_domain") @db.VarChar(10)
+  cdashDataset        String?        @map("cdash_dataset") @db.VarChar(50)
+  cdashVariable       String?        @map("cdash_variable") @db.VarChar(40)
+  cdashDataType       String?        @map("cdash_data_type") @db.VarChar(20)
+  codeListOid         String?        @map("code_list_oid") @db.VarChar(100)
+  cdashPrompt         String?        @map("cdash_prompt") @db.VarChar(500)
+  sdtmVariable        String?        @map("sdtm_variable") @db.VarChar(40)
+  sdtmRole            String?        @map("sdtm_role") @db.VarChar(20)
+  implementationClass String?        @map("implementation_class") @db.VarChar(50)
+  standardMetadata    Json?          @default("{}") @map("standard_metadata")
+  form                CrfForm        @relation(fields: [formId], references: [id], onDelete: Cascade)
+  codeList            CdiscCodeList? @relation(fields: [codeListOid], references: [codeListOid])
+  domainDef           CdiscDomain?   @relation(fields: [cdiscDomain], references: [domainCode])
+
+  @@unique([formId, fieldCode])
+  @@index([cdiscDomain, cdashVariable])
+  @@index([codeListOid])
+  @@index([formId])
+  @@map("crf_form_fields")
+}
+
+model CrfEditCheckRule {
+  id             String               @id @default(uuid())
+  formId         String               @map("form_id") @db.VarChar(36)
+  ruleCode       String               @map("rule_code") @db.VarChar(100)
+  ruleName       String               @map("rule_name") @db.VarChar(200)
+  ruleType       String               @map("rule_type") @db.VarChar(50)
+  description    String?
+  expression     String
+  errorMessage   String               @map("error_message") @db.VarChar(500)
+  severity       String               @default("warning") @db.VarChar(20)
+  targetFieldIds Json                 @default("[]") @map("target_field_ids")
+  isActive       Boolean              @default(true) @map("is_active")
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  form           CrfForm              @relation(fields: [formId], references: [id], onDelete: Cascade)
+  executions     EditCheckExecution[]
+
+  @@unique([formId, ruleCode])
+  @@index([formId])
+  @@map("crf_edit_check_rules")
+}
+
+model CrfFormVersion {
+  id        String   @id @default(uuid())
+  formId    String   @map("form_id") @db.VarChar(36)
+  version   String   @db.VarChar(20)
+  changeLog String?
+  formData  Json     @map("form_data")
+  status    String   @default("released") @db.VarChar(20)
+  createdBy String   @map("created_by") @db.VarChar(36)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@unique([formId, version])
+  @@index([formId])
+  @@map("crf_form_versions")
+}
+
+model CrfFormPublication {
+  id            String   @id @default(uuid())
+  formId        String   @map("form_id") @db.VarChar(36)
+  version       String   @db.VarChar(20)
+  scopeType     String   @map("scope_type") @db.VarChar(20)
+  targetIds     Json     @default("[]") @map("target_ids")
+  publishedBy   String   @map("published_by") @db.VarChar(36)
+  publishedAt   DateTime @default(now()) @map("published_at") @db.Timestamptz(6)
+  effectiveDate DateTime @map("effective_date") @db.Timestamptz(6)
+  notes         String?
+
+  @@index([formId])
+  @@map("crf_form_publications")
+}
+
+model Drug {
+  id               String           @id @default(uuid())
+  projectId        String           @map("project_id") @db.VarChar(36)
+  drugCode         String           @map("drug_code") @db.VarChar(100)
+  drugName         String           @map("drug_name") @db.VarChar(200)
+  genericName      String?          @map("generic_name") @db.VarChar(200)
+  dosageForm       String?          @map("dosage_form") @db.VarChar(100)
+  strength         String?          @db.VarChar(100)
+  manufacturer     String?          @db.VarChar(200)
+  storageCondition String?          @map("storage_condition") @db.VarChar(500)
+  temperatureMin   Float?           @map("temperature_min")
+  temperatureMax   Float?           @map("temperature_max")
+  shelfLife        Int?             @map("shelf_life")
+  shelfLifeUnit    String?          @map("shelf_life_unit") @db.VarChar(20)
+  isBlinded        Boolean          @default(false) @map("is_blinded")
+  description      String?
+  status           String           @default("active") @db.VarChar(20)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  inventories      DrugInventory[]
+  shipments        DrugShipment[]
+  supplyPlans      DrugSupplyPlan[]
+  project          Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, drugCode])
+  @@index([projectId])
+  @@map("drugs")
+}
+
+model DrugSupplyPlan {
+  id          String    @id @default(uuid())
+  drugId      String    @map("drug_id") @db.VarChar(36)
+  planName    String    @map("plan_name") @db.VarChar(200)
+  plannedDate DateTime  @map("planned_date") @db.Date
+  quantity    Int
+  batchNumber String?   @map("batch_number") @db.VarChar(100)
+  expiryDate  DateTime? @map("expiry_date") @db.Date
+  status      String    @default("planned") @db.VarChar(20)
+  notes       String?
+  createdBy   String    @map("created_by") @db.VarChar(36)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  drug        Drug      @relation(fields: [drugId], references: [id], onDelete: Cascade)
+
+  @@index([drugId])
+  @@map("drug_supply_plans")
+}
+
+model DrugShipment {
+  id             String    @id @default(uuid())
+  drugId         String    @map("drug_id") @db.VarChar(36)
+  shipmentCode   String    @unique @map("shipment_code") @db.VarChar(100)
+  fromLocation   String    @map("from_location") @db.VarChar(200)
+  toSiteId       String?   @map("to_site_id") @db.VarChar(36)
+  toLocation     String?   @map("to_location") @db.VarChar(200)
+  quantity       Int
+  batchNumber    String    @map("batch_number") @db.VarChar(100)
+  expiryDate     DateTime  @map("expiry_date") @db.Date
+  shippedDate    DateTime  @map("shipped_date") @db.Timestamptz(6)
+  receivedDate   DateTime? @map("received_date") @db.Timestamptz(6)
+  receivedBy     String?   @map("received_by") @db.VarChar(36)
+  temperatureOk  Boolean?  @map("temperature_ok")
+  temperatureLog Json?     @map("temperature_log")
+  courier        String?   @db.VarChar(200)
+  trackingNumber String?   @map("tracking_number") @db.VarChar(100)
+  status         String    @default("shipped") @db.VarChar(20)
+  notes          String?
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  drug           Drug      @relation(fields: [drugId], references: [id], onDelete: Cascade)
+
+  @@index([drugId])
+  @@index([status])
+  @@map("drug_shipments")
+}
+
+model DrugInventory {
+  id                String    @id @default(uuid())
+  drugId            String    @map("drug_id") @db.VarChar(36)
+  siteId            String?   @map("site_id") @db.VarChar(36)
+  location          String    @db.VarChar(200)
+  batchNumber       String    @map("batch_number") @db.VarChar(100)
+  expiryDate        DateTime  @map("expiry_date") @db.Date
+  quantityOnHand    Int       @map("quantity_on_hand")
+  quantityReserved  Int       @default(0) @map("quantity_reserved")
+  quantityDispensed Int       @default(0) @map("quantity_dispensed")
+  lastCountDate     DateTime? @map("last_count_date") @db.Timestamptz(6)
+  status            String    @default("normal") @db.VarChar(20)
+  notes             String?
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  drug              Drug      @relation(fields: [drugId], references: [id], onDelete: Cascade)
+
+  @@index([drugId])
+  @@index([siteId])
+  @@map("drug_inventories")
+}
+
+model DrugDestruction {
+  id                String   @id @default(uuid())
+  drugId            String   @map("drug_id") @db.VarChar(36)
+  siteId            String?  @map("site_id") @db.VarChar(36)
+  batchNumber       String   @map("batch_number") @db.VarChar(100)
+  quantity          Int
+  destructionDate   DateTime @map("destruction_date") @db.Timestamptz(6)
+  destructionMethod String   @map("destruction_method") @db.VarChar(200)
+  reason            String
+  witnessIds        Json     @default("[]") @map("witness_ids")
+  performedBy       String   @map("performed_by") @db.VarChar(36)
+  certificateUrl    String?  @map("certificate_url") @db.VarChar(500)
+  status            String   @default("completed") @db.VarChar(20)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([drugId])
+  @@map("drug_destructions")
+}
+
+model TmfDocument {
+  id               String               @id @default(uuid())
+  projectId        String               @map("project_id") @db.VarChar(36)
+  tmfSection       String               @map("tmf_section") @db.VarChar(50)
+  documentCode     String               @map("document_code") @db.VarChar(100)
+  documentName     String               @map("document_name") @db.VarChar(300)
+  documentType     String               @map("document_type") @db.VarChar(50)
+  description      String?
+  fileUrl          String?              @map("file_url") @db.VarChar(500)
+  fileSize         Int?                 @map("file_size")
+  mimeType         String?              @map("mime_type") @db.VarChar(100)
+  version          String               @default("1.0") @db.VarChar(20)
+  status           String               @default("draft") @db.VarChar(20)
+  isRequired       Boolean              @default(false) @map("is_required")
+  expectedDate     DateTime?            @map("expected_date") @db.Date
+  receivedDate     DateTime?            @map("received_date") @db.Date
+  expiryDate       DateTime?            @map("expiry_date") @db.Date
+  uploadedBy       String?              @map("uploaded_by") @db.VarChar(36)
+  tags             Json?                @default("[]") @map("tags")
+  metadata         Json?                @map("metadata")
+  parentDocumentId String?              @map("parent_document_id") @db.VarChar(36)
+  zonalType        String?              @map("zonal_type") @db.VarChar(20)
+  country          String?              @db.VarChar(50)
+  siteId           String?              @map("site_id") @db.VarChar(36)
+  createdBy        String               @map("created_by") @db.VarChar(36)
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime             @updatedAt @map("updated_at") @db.Timestamptz(6)
+  versions         TmfDocumentVersion[]
+  project          Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, documentCode])
+  @@index([projectId])
+  @@index([tmfSection])
+  @@index([status])
+  @@map("tmf_documents")
+}
+
+model TmfDocumentVersion {
+  id         String      @id @default(uuid())
+  documentId String      @map("document_id") @db.VarChar(36)
+  version    String      @db.VarChar(20)
+  changeLog  String?
+  fileUrl    String      @map("file_url") @db.VarChar(500)
+  fileSize   Int?        @map("file_size")
+  mimeType   String?     @map("mime_type") @db.VarChar(100)
+  uploadedBy String      @map("uploaded_by") @db.VarChar(36)
+  uploadedAt DateTime    @default(now()) @map("uploaded_at") @db.Timestamptz(6)
+  document   TmfDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, version])
+  @@index([documentId])
+  @@map("tmf_document_versions")
+}
+
+model SdvRecord {
+  id                String    @id @default(uuid())
+  projectId         String    @map("project_id") @db.VarChar(36)
+  siteId            String    @map("site_id") @db.VarChar(36)
+  subjectId         String    @map("subject_id") @db.VarChar(36)
+  visitId           String?   @map("visit_id") @db.VarChar(36)
+  formId            String?   @map("form_id") @db.VarChar(36)
+  craUserId         String    @map("cra_user_id") @db.VarChar(36)
+  monitoringVisitId String?   @map("monitoring_visit_id") @db.VarChar(36)
+  sdvDate           DateTime  @map("sdv_date") @db.Timestamptz(6)
+  totalItems        Int       @default(0) @map("total_items")
+  verifiedItems     Int       @default(0) @map("verified_items")
+  discrepancyItems  Int       @default(0) @map("discrepancy_items")
+  percentage        Float     @default(0)
+  notes             String?
+  status            String    @default("in_progress") @db.VarChar(20)
+  completedAt       DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  items             SdvItem[]
+
+  @@index([projectId])
+  @@index([siteId])
+  @@index([subjectId])
+  @@index([craUserId])
+  @@map("sdv_records")
+}
+
+model SdvItem {
+  id              String    @id @default(uuid())
+  sdvRecordId     String    @map("sdv_record_id") @db.VarChar(36)
+  crfDataId       String    @map("crf_data_id") @db.VarChar(36)
+  fieldCode       String    @map("field_code") @db.VarChar(100)
+  crfValue        String?   @map("crf_value")
+  sourceValue     String?   @map("source_value")
+  isVerified      Boolean   @default(false) @map("is_verified")
+  isMatch         Boolean?  @map("is_match")
+  discrepancyType String?   @map("discrepancy_type") @db.VarChar(50)
+  comment         String?
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  sdvRecord       SdvRecord @relation(fields: [sdvRecordId], references: [id], onDelete: Cascade)
+
+  @@index([sdvRecordId])
+  @@map("sdv_items")
+}
+
+model AdverseEvent {
+  id                  String      @id @default(uuid())
+  projectId           String      @map("project_id") @db.VarChar(36)
+  subjectId           String      @map("subject_id") @db.VarChar(36)
+  reportCode          String      @unique @map("report_code") @db.VarChar(100)
+  eventType           String      @map("event_type") @db.VarChar(20)
+  termPreferred       String      @map("term_preferred") @db.VarChar(500)
+  termCode            String?     @map("term_code") @db.VarChar(50)
+  meddraCode          String?     @map("meddra_code") @db.VarChar(50)
+  onsetDate           DateTime    @map("onset_date") @db.Date
+  endDate             DateTime?   @map("end_date") @db.Date
+  isOngoing           Boolean     @default(true) @map("is_ongoing")
+  severity            String      @map("severity") @db.VarChar(20)
+  seriousness         String      @map("seriousness") @db.VarChar(20)
+  seriousnessCriteria Json        @default("[]") @map("seriousness_criteria")
+  causality           String?     @db.VarChar(50)
+  causalityMethod     String?     @map("causality_method") @db.VarChar(50)
+  relationship        String?     @map("relationship") @db.VarChar(50)
+  description         String
+  actionTaken         Json        @default("[]") @map("action_taken")
+  outcome             String?     @map("outcome") @db.VarChar(100)
+  reporterId          String      @map("reporter_id") @db.VarChar(36)
+  siteId              String?     @map("site_id") @db.VarChar(36)
+  status              String      @default("open") @db.VarChar(20)
+  reportedAt          DateTime    @default(now()) @map("reported_at") @db.Timestamptz(6)
+  createdAt           DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime    @updatedAt @map("updated_at") @db.Timestamptz(6)
+  reports             SaeReport[]
+
+  @@index([projectId])
+  @@index([subjectId])
+  @@index([eventType])
+  @@index([status])
+  @@map("adverse_events")
+}
+
+model SaeReport {
+  id                   String       @id @default(uuid())
+  adverseEventId       String       @map("adverse_event_id") @db.VarChar(36)
+  reportType           String       @map("report_type") @db.VarChar(50)
+  reportVersion        String       @map("report_version") @db.VarChar(20)
+  regulatoryBody       String?      @map("regulatory_body") @db.VarChar(200)
+  reportDate           DateTime     @map("report_date") @db.Timestamptz(6)
+  submissionDeadline   DateTime?    @map("submission_deadline") @db.Timestamptz(6)
+  actualSubmissionDate DateTime?    @map("actual_submission_date") @db.Timestamptz(6)
+  reportContent        Json         @default("{}") @map("report_content")
+  reviewStatus         String       @default("pending") @map("review_status") @db.VarChar(20)
+  reviewedBy           String?      @map("reviewed_by") @db.VarChar(36)
+  reviewedAt           DateTime?    @map("reviewed_at") @db.Timestamptz(6)
+  reviewComments       String?      @map("review_comments")
+  submittedTo          String?      @map("submitted_to") @db.VarChar(200)
+  submissionRef        String?      @map("submission_ref") @db.VarChar(200)
+  status               String       @default("draft") @db.VarChar(20)
+  submittedBy          String?      @map("submitted_by") @db.VarChar(36)
+  createdAt            DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+  adverseEvent         AdverseEvent @relation(fields: [adverseEventId], references: [id], onDelete: Cascade)
+
+  @@index([adverseEventId])
+  @@index([reportType])
+  @@index([status])
+  @@map("sae_reports")
+}
+
+model AiAgentLog {
+  id           String   @id @default(uuid())
+  agentType    String   @map("agent_type") @db.VarChar(50)
+  projectId    String?  @map("project_id") @db.VarChar(36)
+  userId       String   @map("user_id") @db.VarChar(36)
+  input        Json
+  output       Json?
+  contextData  Json?    @map("context_data")
+  modelUsed    String?  @map("model_used") @db.VarChar(100)
+  tokensUsed   Int?     @default(0) @map("tokens_used")
+  durationMs   Int?     @map("duration_ms")
+  status       String   @default("success") @db.VarChar(20)
+  errorMessage String?  @map("error_message")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([agentType])
+  @@index([projectId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("ai_agent_logs")
+}
+
+model SystemConfig {
+  id          String   @id @default(uuid())
+  configKey   String   @unique @map("config_key") @db.VarChar(100)
+  configValue String?  @map("config_value")
+  configType  String   @default("string") @map("config_type") @db.VarChar(20)
+  description String?  @db.VarChar(500)
+  isEncrypted Boolean  @default(false) @map("is_encrypted")
+  scope       String   @default("global") @db.VarChar(20)
+  scopeId     String?  @map("scope_id") @db.VarChar(36)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("system_configs")
+}
+
+model Vendor {
+  id            String     @id @default(uuid())
+  vendorCode    String     @unique @map("vendor_code") @db.VarChar(100)
+  vendorName    String     @map("vendor_name") @db.VarChar(200)
+  vendorType    String     @map("vendor_type") @db.VarChar(50)
+  contactPerson String?    @map("contact_person") @db.VarChar(200)
+  contactPhone  String?    @map("contact_phone") @db.VarChar(50)
+  contactEmail  String?    @map("contact_email") @db.VarChar(200)
+  address       String?    @db.VarChar(500)
+  qualification Json?      @map("qualification")
+  rating        Float?     @default(0)
+  description   String?
+  status        String     @default("active") @db.VarChar(20)
+  createdBy     String     @map("created_by") @db.VarChar(36)
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+  contracts     Contract[]
+
+  @@index([vendorType])
+  @@index([status])
+  @@map("vendors")
+}
+
+model Contract {
+  id            String    @id @default(uuid())
+  contractCode  String    @unique @map("contract_code") @db.VarChar(100)
+  contractName  String    @map("contract_name") @db.VarChar(300)
+  contractType  String    @map("contract_type") @db.VarChar(50)
+  vendorId      String?   @map("vendor_id") @db.VarChar(36)
+  projectId     String?   @map("project_id") @db.VarChar(36)
+  amount        Float?
+  currency      String    @default("CNY") @db.VarChar(10)
+  startDate     DateTime? @map("start_date") @db.Date
+  endDate       DateTime? @map("end_date") @db.Date
+  signStatus    String    @default("draft") @map("sign_status") @db.VarChar(20)
+  version       String    @default("1.0") @db.VarChar(20)
+  attachmentUrl String?   @map("attachment_url") @db.VarChar(500)
+  description   String?
+  createdBy     String    @map("created_by") @db.VarChar(36)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  vendor        Vendor?   @relation(fields: [vendorId], references: [id])
+
+  @@index([projectId])
+  @@index([vendorId])
+  @@index([signStatus])
+  @@map("contracts")
+}
+
+model EthicsApproval {
+  id              String    @id @default(uuid())
+  projectId       String    @map("project_id") @db.VarChar(36)
+  siteId          String?   @map("site_id") @db.VarChar(36)
+  ethicsCommittee String    @map("ethics_committee") @db.VarChar(200)
+  approvalType    String    @map("approval_type") @db.VarChar(50)
+  approvalNumber  String?   @map("approval_number") @db.VarChar(100)
+  submissionDate  DateTime? @map("submission_date") @db.Date
+  approvalDate    DateTime? @map("approval_date") @db.Date
+  expiryDate      DateTime? @map("expiry_date") @db.Date
+  approvalStatus  String    @default("pending") @map("approval_status") @db.VarChar(20)
+  documentUrl     String?   @map("document_url") @db.VarChar(500)
+  notes           String?
+  createdBy       String    @map("created_by") @db.VarChar(36)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  project         Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  site            Site?     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([siteId])
+  @@index([approvalStatus])
+  @@map("ethics_approvals")
+}
+
+model DataSyncLog {
+  id           String    @id @default(uuid())
+  syncType     String    @map("sync_type") @db.VarChar(50)
+  direction    String    @db.VarChar(20)
+  projectId    String?   @map("project_id") @db.VarChar(36)
+  sourceSystem String    @map("source_system") @db.VarChar(10)
+  targetSystem String    @map("target_system") @db.VarChar(10)
+  recordId     String?   @map("record_id") @db.VarChar(36)
+  recordType   String?   @map("record_type") @db.VarChar(50)
+  payload      Json?
+  status       String    @default("pending") @db.VarChar(20)
+  errorMessage String?   @map("error_message")
+  retryCount   Int       @default(0) @map("retry_count")
+  syncedAt     DateTime? @map("synced_at") @db.Timestamptz(6)
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  project      Project?  @relation(fields: [projectId], references: [id])
+
+  @@index([syncType])
+  @@index([projectId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("data_sync_logs")
+}
+
+model QueryHistory {
+  id         String   @id @default(uuid())
+  queryId    String   @map("query_id") @db.VarChar(36)
+  actionType String   @map("action_type") @db.VarChar(20)
+  actionBy   String   @map("action_by") @db.VarChar(36)
+  oldValue   Json?    @map("old_value")
+  newValue   Json?    @map("new_value")
+  reason     String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([queryId])
+  @@map("query_histories")
+}
+
+model WechatUserBinding {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id") @db.VarChar(36)
+  channel     String    @db.VarChar(10)
+  openId      String?   @map("open_id") @db.VarChar(100)
+  unionId     String?   @map("union_id") @db.VarChar(100)
+  wecomUserId String?   @map("wecom_user_id") @db.VarChar(100)
+  bindStatus  String    @default("active") @map("bind_status") @db.VarChar(20)
+  bindTime    DateTime  @default(now()) @map("bind_time") @db.Timestamptz(6)
+  unbindTime  DateTime? @map("unbind_time") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, channel])
+  @@index([openId])
+  @@map("wechat_user_bindings")
+}
+
+model ConsentRecord {
+  id              String   @id @default(uuid())
+  projectId       String   @map("project_id") @db.VarChar(36)
+  siteId          String   @map("site_id") @db.VarChar(36)
+  subjectId       String   @map("subject_id") @db.VarChar(36)
+  consentVersion  String   @map("consent_version") @db.VarChar(20)
+  consentDate     DateTime @map("consent_date") @db.Timestamptz(6)
+  signeeType      String   @map("signee_type") @db.VarChar(50)
+  signeeName      String   @map("signee_name") @db.VarChar(200)
+  reconsentReason String?  @map("reconsent_reason")
+  documentUrl     String?  @map("document_url") @db.VarChar(500)
+  signatureId     String?  @map("signature_id") @db.VarChar(36)
+  status          String   @default("active") @db.VarChar(20)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+  project         Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  site            Site     @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([siteId])
+  @@index([subjectId])
+  @@map("consent_records")
+}
+
+model AbacPolicy {
+  id            String   @id @default(uuid())
+  policyCode    String   @unique @map("policy_code") @db.VarChar(100)
+  policyName    String   @map("policy_name") @db.VarChar(200)
+  resources     Json     @map("resources")
+  conditions    Json     @map("conditions")
+  effect        String   @default("permit") @db.VarChar(20)
+  denyOtherwise Boolean  @default(false) @map("deny_otherwise")
+  priority      Int      @default(0)
+  isActive      Boolean  @default(true) @map("is_active")
+  description   String?
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("abac_policies")
+}
+
+model SignatureRecord {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id") @db.VarChar(36)
+  projectId        String?  @map("project_id") @db.VarChar(36)
+  signatureMeaning String   @map("signature_meaning") @db.VarChar(200)
+  signatureReason  String   @map("signature_reason") @db.VarChar(500)
+  tableName        String?  @map("table_name") @db.VarChar(100)
+  recordId         String?  @map("record_id") @db.VarChar(36)
+  previousHash     String?  @map("previous_hash") @db.VarChar(64)
+  currentHash      String?  @map("current_hash") @db.VarChar(64)
+  ipAddress        String?  @map("ip_address") @db.VarChar(50)
+  userAgent        String?  @map("user_agent") @db.VarChar(500)
+  signedAt         DateTime @default(now()) @map("signed_at") @db.Timestamptz(6)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([projectId])
+  @@index([tableName, recordId])
+  @@map("signature_records")
+}
+
+model DataMaskingRule {
+  id           String   @id @default(uuid())
+  ruleName     String   @map("rule_name") @db.VarChar(200)
+  tableName    String   @map("table_name") @db.VarChar(100)
+  fieldName    String   @map("field_name") @db.VarChar(100)
+  maskType     String   @map("mask_type") @db.VarChar(50)
+  maskPattern  String?  @map("mask_pattern") @db.VarChar(200)
+  allowedRoles Json     @default("[]") @map("allowed_roles")
+  isActive     Boolean  @default(true) @map("is_active")
+  description  String?
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@index([tableName, fieldName])
+  @@map("data_masking_rules")
+}
+
+model ReportTemplate {
+  id           String           @id @default(uuid())
+  templateCode String           @unique @map("template_code") @db.VarChar(100)
+  templateName String           @map("template_name") @db.VarChar(200)
+  reportType   String           @map("report_type") @db.VarChar(50)
+  description  String?
+  queryConfig  Json             @map("query_config")
+  columnConfig Json             @map("column_config")
+  format       String           @default("json") @db.VarChar(20)
+  isActive     Boolean          @default(true) @map("is_active")
+  createdBy    String           @map("created_by") @db.VarChar(36)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz(6)
+  instances    ReportInstance[]
+
+  @@index([reportType])
+  @@map("report_templates")
+}
+
+model ReportInstance {
+  id          String         @id @default(uuid())
+  templateId  String         @map("template_id") @db.VarChar(36)
+  projectId   String?        @map("project_id") @db.VarChar(36)
+  reportName  String         @map("report_name") @db.VarChar(300)
+  parameters  Json           @default("{}") @map("parameters")
+  fileUrl     String?        @map("file_url") @db.VarChar(500)
+  fileSize    Int?           @map("file_size")
+  format      String         @default("json") @db.VarChar(20)
+  status      String         @default("completed") @db.VarChar(20)
+  generatedBy String         @map("generated_by") @db.VarChar(36)
+  generatedAt DateTime       @default(now()) @map("generated_at") @db.Timestamptz(6)
+  template    ReportTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  @@index([templateId])
+  @@index([projectId])
+  @@map("report_instances")
+}
+
+model EditCheckExecution {
+  id             String           @id @default(uuid())
+  ruleId         String           @map("rule_id") @db.VarChar(36)
+  projectId      String           @map("project_id") @db.VarChar(36)
+  subjectId      String           @map("subject_id") @db.VarChar(36)
+  visitId        String?          @map("visit_id") @db.VarChar(36)
+  formId         String           @map("form_id") @db.VarChar(36)
+  fieldValues    Json             @map("field_values")
+  result         String           @default("pass") @db.VarChar(20)
+  errorMessage   String?          @map("error_message") @db.VarChar(500)
+  queryGenerated Boolean          @default(false) @map("query_generated")
+  queryId        String?          @map("query_id") @db.VarChar(36)
+  executedAt     DateTime         @default(now()) @map("executed_at") @db.Timestamptz(6)
+  project        Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  rule           CrfEditCheckRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId])
+  @@index([projectId])
+  @@index([subjectId])
+  @@map("edit_check_executions")
+}
+
+model WorkflowTimeoutConfig {
+  id              String   @id @default(uuid())
+  workflowType    String   @map("workflow_type") @db.VarChar(50)
+  stageIndex      Int      @map("stage_index")
+  timeoutHours    Int      @map("timeout_hours")
+  reminderHours   Int      @default(24) @map("reminder_hours")
+  escalateToRole  String?  @map("escalate_to_role") @db.VarChar(50)
+  actionOnTimeout String   @default("notify") @map("action_on_timeout") @db.VarChar(20)
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([workflowType, stageIndex])
+  @@map("workflow_timeout_configs")
+}
+
+model CdiscDomain {
+  id              String          @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar(36)
+  domainCode      String          @unique @map("domain_code") @db.VarChar(10)
+  domainName      String          @map("domain_name") @db.VarChar(200)
+  domainClass     String?         @map("domain_class") @db.VarChar(50)
+  standardName    String?         @default("CDISC") @map("standard_name") @db.VarChar(20)
+  standardVersion String?         @default("2.1") @map("standard_version") @db.VarChar(20)
+  description     String?
+  isActive        Boolean?        @default(true) @map("is_active")
+  createdAt       DateTime?       @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime?       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+  codeLists       CdiscCodeList[]
+  forms           CrfForm[]
+  fields          CrfFormField[]
+
+  @@map("cdisc_domains")
+}
+
+model CdiscCodeList {
+  id           String         @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar(36)
+  codeListOid  String         @unique @map("code_list_oid") @db.VarChar(100)
+  codeListName String         @map("code_list_name") @db.VarChar(200)
+  domain       String         @db.VarChar(10)
+  dataType     String?        @default("text") @map("data_type") @db.VarChar(20)
+  items        Json           @default("[]") @db.Json
+  isActive     Boolean?       @default(true) @map("is_active")
+  createdAt    DateTime?      @default(now()) @map("created_at") @db.Timestamptz(6)
+  domainDef    CdiscDomain?   @relation(fields: [domain], references: [domainCode])
+  fields       CrfFormField[]
+
+  @@index([domain], map: "idx_cdisc_code_lists_domain")
+  @@map("cdisc_code_lists")
+}
+
+model SdtmExportConfig {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.VarChar(36)
+  projectId       String    @map("project_id") @db.VarChar(36)
+  domain          String    @db.VarChar(10)
+  sdtmDatasetName String    @map("sdtm_dataset_name") @db.VarChar(10)
+  formCodeMapping Json      @default("{}") @map("form_code_mapping") @db.Json
+  fieldMappings   Json      @default("{}") @map("field_mappings") @db.Json
+  isActive        Boolean?  @default(true) @map("is_active")
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime? @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([projectId, domain])
+  @@index([projectId], map: "idx_sdtm_export_configs_project")
+  @@map("sdtm_export_configs")
+}
+
+model SdtmExport {
+  id           String   @id @default(uuid())
+  projectId    String   @map("project_id") @db.VarChar(36)
+  exportConfig String   @map("export_config")
+  data         String
+  status       String   @db.VarChar(20)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([projectId])
+  @@map("sdtm_exports")
+}
+
+model DoctorPatientRecord {
+  id               String                 @id @default(uuid())
+  doctorId         String                 @map("doctor_id") @db.VarChar(36)
+  patientName      String                 @map("patient_name") @db.VarChar(255)
+  gender           String                 @db.VarChar(20)
+  dateOfBirth      DateTime?              @map("date_of_birth") @db.Date
+  contactInfo      String?
+  diagnosis        String?
+  treatmentHistory Json?                  @map("treatment_history")
+  patientTags      Json?                  @map("patient_tags")
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  doctor           User                   @relation(fields: [doctorId], references: [id])
+  followUpRecords  DoctorFollowUpRecord[]
+
+  @@index([doctorId])
+  @@map("doctor_patient_records")
+}
+
+model DoctorFollowUpRecord {
+  id               String              @id @default(uuid())
+  patientRecordId  String              @map("patient_record_id") @db.VarChar(36)
+  visitDate        DateTime            @map("visit_date") @db.Date
+  visitType        String              @map("visit_type") @db.VarChar(100)
+  formTemplateId   String?             @map("form_template_id") @db.VarChar(36)
+  formTemplateName String?             @map("form_template_name") @db.VarChar(255)
+  data             Json
+  status           String              @default("active") @db.VarChar(50)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(6)
+  
+  patientRecord    DoctorPatientRecord @relation(fields: [patientRecordId], references: [id], onDelete: Cascade)
+
+  @@index([patientRecordId])
+  @@map("doctor_follow_up_records")
+}
+
+model DoctorFormTemplate {
+  id                 String   @id @default(uuid())
+  templateName       String   @map("template_name") @db.VarChar(255)
+  templateType       String   @map("template_type") @db.VarChar(50)
+  fields             Json
+  usedInDoctorFolder Boolean  @default(true) @map("used_in_doctor_folder")
+  createdAt          DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("doctor_form_templates")
+}

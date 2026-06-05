@@ -1,0 +1,214 @@
+================================================================================
+CDISC SDTM 终极翻译详细报告
+================================================================================
+报告生成时间：2026-05-25 09:44:43
+
+================================================================================
+整体统计
+================================================================================
+未翻译记录总数：1000
+新增翻译：75 (7.50%)
+跳过（无法翻译）: 925 (92.50%)
+更新失败：0
+
+================================================================================
+按类别翻译统计（按翻译数量降序）
+================================================================================
+Evaluator                                         
+  翻译：  13  跳过：  39  成功率： 25.00%
+ECG Lead                                          
+  翻译：   8  跳过：  11  成功率： 42.11%
+Ethnicity As Collected                            
+  翻译：   7  跳过：   7  成功率： 50.00%
+Environmental Setting                             
+  翻译：   6  跳过：  12  成功率： 33.33%
+Employment Status                                 
+  翻译：   5  跳过：   0  成功率：100.00%
+Epoch                                             
+  翻译：   5  跳过：   8  成功率： 38.46%
+Dosage Form                                       
+  翻译：   4  跳过： 133  成功率：  2.92%
+Frequency                                         
+  翻译：   4  跳过：  12  成功率： 25.00%
+ECG Analysis Method                               
+  翻译：   3  跳过：   7  成功率： 30.00%
+ECG Read Method Response                          
+  翻译：   3  跳过：   0  成功率：100.00%
+ECG Result                                        
+  翻译：   3  跳过：  56  成功率：  5.08%
+ECG Test Method                                   
+  翻译：   3  跳过：   9  成功率： 25.00%
+FDA Technical Specification Response              
+  翻译：   3  跳过：  20  成功率： 13.04%
+Genomic Findings Analytical Method Calculation Formula
+  翻译：   3  跳过：   2  成功率： 60.00%
+PK Units of Measure                               
+  翻译：   3  跳过： 334  成功率：  0.89%
+Gender Identity Response                          
+  翻译：   1  跳过：   0  成功率：100.00%
+Genetic Sample Type                               
+  翻译：   1  跳过：   0  成功率：100.00%
+ECG T Wave Offset Method Response                 
+  翻译：   0  跳过：   1  成功率：  0.00%
+Genomic Findings Test Detail                      
+  翻译：   0  跳过：  29  成功率：  0.00%
+Genomic Inheritability Type Response              
+  翻译：   0  跳过：   3  成功率：  0.00%
+Genomic Symbol Type Response                      
+  翻译：   0  跳过：   9  成功率：  0.00%
+Graft Type                                        
+  翻译：   0  跳过：   7  成功率：  0.00%
+Health Care Encounters Dictionary Derived Term    
+  翻译：   0  跳过：  28  成功率：  0.00%
+Holter ECG Read Method Response                   
+  翻译：   0  跳过：   3  成功率：  0.00%
+Holter ECG Results                                
+  翻译：   0  跳过：  32  成功率：  0.00%
+Microorganism                                     
+  翻译：   0  跳过：  41  成功率：  0.00%
+Microscopic Findings Test Details                 
+  翻译：   0  跳过：  42  成功率：  0.00%
+Mode of Delivery                                  
+  翻译：   0  跳过：   4  成功率：  0.00%
+Mode of Disease Transmission                      
+  翻译：   0  跳过：  10  成功率：  0.00%
+Mode of Subject Contact                           
+  翻译：   0  跳过：   6  成功率：  0.00%
+Never/Current/Former Classification               
+  翻译：   0  跳过：   2  成功率：  0.00%
+Non-system Reason for PCI Delay                   
+  翻译：   0  跳过：   3  成功率：  0.00%
+Normal Abnormal Response                          
+  翻译：   0  跳过：   1  成功率：  0.00%
+Not Done                                          
+  翻译：   0  跳过：   1  成功率：  0.00%
+Observational Study Model                         
+  翻译：   0  跳过：   6  成功率：  0.00%
+Observational Study Sampling Method               
+  翻译：   0  跳过：   2  成功率：  0.00%
+Observational Study Time Perspective              
+  翻译：   0  跳过：   3  成功率：  0.00%
+Oncology Response Assessment Result               
+  翻译：   0  跳过：  29  成功率：  0.00%
+Ophthalmic Focus of Study Specific Interest       
+  翻译：   0  跳过：   3  成功率：  0.00%
+Other Disposition Event Response                  
+  翻译：   0  跳过：   4  成功率：  0.00%
+Outcome of Event                                  
+  翻译：   0  跳过：   4  成功率：  0.00%
+PK Analytical Method                              
+  翻译：   0  跳过：   2  成功率：  0.00%
+
+================================================================================
+翻译样例
+================================================================================
+
+Dosage Form:
+  "FOR SOLUTION" -> "用于溶液"
+  "FOR SUSPENSION" -> "用于混悬液"
+  "FOR SUSPENSION, EXTENDED RELEASE" -> "用于缓释混悬液"
+  "SOLUTION" -> "溶液"
+
+ECG Analysis Method:
+  "GLOBAL MEDIAN BEAT METHOD" -> "全局中值拍方法"
+  "MEAN SINGLE BEAT SINGLE LEAD METHOD" -> "平均单拍单导联方法"
+  "MEAN SINGLE BEAT SUPERIMPOSED LEADS METHOD" -> "平均单拍叠加导联方法"
+
+ECG Lead:
+  "LEAD aV6" -> "导联 aV6"
+  "LEAD aVF" -> "导联 aVF"
+  "LEAD aVF-VENTRAL" -> "导联 aVF-腹侧"
+  "LEAD aVL" -> "导联 aVL"
+  "LEAD aVR" -> "导联 aVR"
+
+ECG Read Method Response:
+  "AUTOMATIC" -> "自动"
+  "MANUAL" -> "手动"
+  "SEMI-AUTOMATIC" -> "半自动"
+
+ECG Result:
+  "ACUTE EXTENSIVE ANTERIOR WALL MYOCARDIAL INFARCTION" -> "急性广泛前壁心肌梗死"
+  "ALL PRECORDIAL ELECTRODES DISCONNECTED" -> "所有胸前导联电极断开"
+  "ARTIFACT" -> "伪影"
+
+ECG Test Method:
+  "12 LEAD CONTINUOUS ECG" -> "12 导联连续心电图"
+  "12 LEAD ECG EXTRACTED FROM 12 LEAD CONTINUOUS ECG RECORDING" -> "从 12 导联连续心电图记录中提取的 12 导联心电图"
+  "15 LEAD INCLUDING V3R-V5R" -> "15 导联包括 V3R-V5R"
+
+Employment Status:
+  "EMPLOYED" -> "已就业"
+  "FULL-TIME" -> "全职"
+  "NOT EMPLOYED" -> "未就业"
+  "PART-TIME" -> "兼职"
+  "RETIRED" -> "退休"
+
+Environmental Setting:
+  "CHILD CARE CENTER" -> "托儿中心"
+  "CLINIC" -> "诊所"
+  "FARM" -> "农场"
+  "HOME" -> "家庭"
+  "HOSPITAL" -> "医院"
+
+Epoch:
+  "BASELINE" -> "基线"
+  "BLINDED TREATMENT" -> "盲态治疗"
+  "FOLLOW-UP" -> "随访"
+  "SCREENING" -> "筛选"
+  "TREATMENT" -> "治疗"
+
+Ethnicity As Collected:
+  "ASHKENAZI JEW" -> "阿什肯纳兹犹太人"
+  "CENTRAL AMERICAN" -> "中美洲人"
+  "CUBAN AMERICAN" -> "古巴裔美国人"
+  "HISPANIC" -> "西班牙裔"
+  "MEXICAN AMERICAN" -> "墨西哥裔美国人"
+
+Evaluator:
+  "ADJUDICATION COMMITTEE" -> "裁决委员会"
+  "ADJUDICATOR" -> "裁决者"
+  "AUDIOLOGIST" -> "听力学家"
+  "CARDIOLOGIST" -> "心脏科医生"
+  "DERMATOLOGIST" -> "皮肤科医生"
+
+FDA Technical Specification Response:
+  "Clinical Endpoint BE Studies v1.0" -> "临床终点 BE 研究 v1.0"
+  "HIV Technical Specifications Guidance v1.0" -> "HIV 技术规格指南 v1.0"
+  "Study Data Technical Conformance Guide v4.2.1" -> "研究数据技术一致性指南 v4.2.1"
+
+Frequency:
+  "2 TIMES PER CYCLE" -> "每周期 2 次"
+  "3 TIMES PER CYCLE" -> "每周期 3 次"
+  "EVERY 10 YEARS" -> "每 10 年"
+  "EVERY 5 YEARS" -> "每 5 年"
+
+Gender Identity Response:
+  "AGENDER" -> "无性别"
+
+Genetic Sample Type:
+  "GERMLINE DNA" -> "种系 DNA"
+
+Genomic Findings Analytical Method Calculation Formula:
+  "ADME VARIANT PROFILE" -> "ADME 变异谱"
+  "COLORADO SCORING METHOD FOR EGFR GENE AMPLIFICATION 2006 ALGORITHM" -> "EGFR 基因扩增 2006 算法科罗拉多评分方法"
+  "COLORADO SCORING METHOD FOR EGFR GENE AMPLIFICATION 2009 ALGORITHM" -> "EGFR 基因扩增 2009 算法科罗拉多评分方法"
+
+PK Units of Measure:
+  "day" -> "天"
+  "L/min" -> "升/分钟"
+  "mL/min" -> "毫升/分钟"
+
+================================================================================
+后续建议
+================================================================================
+以下类别仍有部分未翻译，需要人工审核或补充翻译词典:
+  - PK Units of Measure: 334 条未翻译
+  - Dosage Form: 133 条未翻译
+  - ECG Result: 56 条未翻译
+  - Microscopic Findings Test Details: 42 条未翻译
+  - Microorganism: 41 条未翻译
+  - Evaluator: 39 条未翻译
+  - Holter ECG Results: 32 条未翻译
+  - Genomic Findings Test Detail: 29 条未翻译
+  - Oncology Response Assessment Result: 29 条未翻译
+  - Health Care Encounters Dictionary Derived Term: 28 条未翻译

@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+
+<head>
+
+<meta charset="UTF-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>服务器性能测试报告 - 192.168.0.214</title>
+
+<style>
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+
+    font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+
+    background: #0f1117;
+
+    color: #e0e0e0;
+
+    min-height: 100vh;
+
+  }
+
+  .header {
+
+    background: linear-gradient(135deg, #1a1f36 0%, #0d1b2a 100%);
+
+    border-bottom: 2px solid #00d4ff;
+
+    padding: 30px 40px;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: space-between;
+
+  }
+
+  .header h1 {
+
+    font-size: 26px;
+
+    color: #00d4ff;
+
+    text-shadow: 0 0 20px rgba(0,212,255,0.4);
+
+  }
+
+  .header .meta {
+
+    text-align: right;
+
+    font-size: 13px;
+
+    color: #8899aa;
+
+  }
+
+  .header .meta span { display: block; margin: 2px 0; }
+
+  .header .meta .highlight { color: #00d4ff; font-weight: bold; font-size: 15px; }
+
+
+
+  .container { max-width: 1400px; margin: 0 auto; padding: 30px 40px; }
+
+
+
+  /* 概览卡片 */
+
+  .overview-grid {
+
+    display: grid;
+
+    grid-template-columns: repeat(5, 1fr);
+
+    gap: 16px;
+
+    margin-bottom: 36px;
+
+  }
+
+  .overview-card {
+
+    background: linear-gradient(135deg, #1a2035, #1e2844);
+
+    border: 1px solid #2a3a5c;
+
+    border-radius: 12px;
+
+    padding: 20px 18px;
+
+    text-align: center;
+
+    position: relative;
+
+    overflow: hidden;
+
+    transition: transform 0.2s, box-shadow 0.2s;
+
+  }
+
+  .overview-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,212,255,0.15); }
+
+  .overview-card::before {
+
+    content: '';
+
+    position: absolute;
+
+    top: 0; left: 0; right: 0;
+
+    height: 3px;
+
+  }
+
+  .overview-card.cpu::before { background: linear-gradient(90deg, #ff6b6b, #ff8e53); }
+
+  .overview-card.gpu::before { background: linear-gradient(90deg, #76d275, #43a047); }
+
+  .overview-card.mem::before { background: linear-gradient(90deg, #64b5f6, #1565c0); }
+
+  .overview-card.disk::before { background: linear-gradient(90deg, #ffd54f, #ff8f00); }
+
+  .overview-card.net::before { background: linear-gradient(90deg, #ce93d8, #7b1fa2); }
+
+  .overview-card .icon { font-size: 30px; margin-bottom: 8px; }
+
+  .overview-card .title { font-size: 12px; color: #8899aa; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px; }
+
+  .overview-card .value { font-size: 18px; font-weight: bold; color: #fff; line-height: 1.2; }
+
+  .overview-card .sub { font-size: 11px; color: #8899aa; margin-top: 4px; }
+
+  .badge-pass { background: #1b4332; color: #6fcf97; border-radius: 4px; padding: 2px 8px; font-size: 11px; display: inline-block; margin-top: 6px; }
+
+  .badge-warn { background: #3d2c00; color: #f6b93b; border-radius: 4px; padding: 2px 8px; font-size: 11px; display: inline-block; margin-top: 6px; }
+
+
+
+  /* 章节 */
+
+  .section {
+
+    background: #141922;
+
+    border: 1px solid #1e2a3a;
+
+    border-radius: 14px;
+
+    margin-bottom: 28px;
+
+    overflow: hidden;
+
+  }
+
+  .section-header {
+
+    background: linear-gradient(90deg, #1a2035, #1e2844);
+
+    padding: 18px 24px;
+
+    display: flex;
+
+    align-items: center;
+
+    border-bottom: 1px solid #1e2a3a;
+
+  }
+
+  .section-header .icon { font-size: 22px; margin-right: 12px; }
+
+  .section-header h2 { font-size: 18px; font-weight: 600; }
+
+  .section-header .badge { margin-left: auto; font-size: 12px; padding: 4px 12px; border-radius: 20px; }
+
+  .badge-excellent { background: #1b4332; color: #6fcf97; }
+
+  .badge-good { background: #0d3d5e; color: #56ccf2; }
+
+  .badge-warning { background: #3d2c00; color: #f6b93b; }
+
+  .section-body { padding: 24px; }
+
+
+
+  /* 指标网格 */
+
+  .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+
+  .metric-item {
+
+    background: #1a2035;
+
+    border: 1px solid #2a3a5c;
+
+    border-radius: 10px;
+
+    padding: 16px;
+
+  }
+
+  .metric-item .label { font-size: 12px; color: #8899aa; margin-bottom: 6px; }
+
+  .metric-item .val { font-size: 20px; font-weight: bold; color: #fff; }
+
+  .metric-item .unit { font-size: 12px; color: #8899aa; }
+
+  .metric-item .bar-wrap { background: #0d1117; border-radius: 4px; height: 6px; margin-top: 8px; overflow: hidden; }
+
+  .metric-item .bar { height: 100%; border-radius: 4px; transition: width 1s ease; }
+
+  .bar-red { background: linear-gradient(90deg, #ff6b6b, #ff8e53); }
+
+  .bar-green { background: linear-gradient(90deg, #76d275, #43a047); }
+
+  .bar-blue { background: linear-gradient(90deg, #64b5f6, #1565c0); }
+
+  .bar-yellow { background: linear-gradient(90deg, #ffd54f, #ff8f00); }
+
+  .bar-purple { background: linear-gradient(90deg, #ce93d8, #7b1fa2); }
+
+
+
+  /* 图表容器 */
+
+  .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+
+  .chart-box {
+
+    background: #1a2035;
+
+    border: 1px solid #2a3a5c;
+
+    border-radius: 10px;
+
+    padding: 16px;
+
+  }
+
+  .chart-box h4 { font-size: 13px; color: #8899aa; margin-bottom: 12px; }
+
+  canvas { max-height: 220px; }
+
+
+
+  /* 规格表 */
+
+  .spec-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+
+  .spec-table th { background: #1a2035; color: #8899aa; font-size: 12px; text-transform: uppercase; padding: 10px 14px; text-align: left; border-bottom: 1px solid #2a3a5c; }
+
+  .spec-table td { padding: 10px 14px; border-bottom: 1px solid #1a2035; font-size: 13px; }
+
+  .spec-table tr:hover td { background: #1a2035; }
+
+  .spec-table .key { color: #8899aa; width: 40%; }
+
+  .spec-table .val-good { color: #6fcf97; }
+
+  .spec-table .val-warn { color: #f6b93b; }
+
+  .spec-table .val-info { color: #56ccf2; }
+
+
+
+  /* 进度条组 */
+
+  .perf-bars { margin-top: 16px; }
+
+  .perf-bar-item { display: flex; align-items: center; margin-bottom: 12px; }
+
+  .perf-bar-item .label { width: 160px; font-size: 13px; color: #8899aa; flex-shrink: 0; }
+
+  .perf-bar-item .bar-outer { flex: 1; background: #0d1117; border-radius: 6px; height: 14px; overflow: hidden; margin: 0 12px; }
+
+  .perf-bar-item .bar-inner { height: 100%; border-radius: 6px; }
+
+  .perf-bar-item .val-text { width: 100px; font-size: 13px; font-weight: bold; text-align: right; flex-shrink: 0; }
+
+
+
+  /* GPU卡片 */
+
+  .gpu-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+
+  .gpu-card {
+
+    background: linear-gradient(135deg, #1a2035, #1b3a1c);
+
+    border: 1px solid #2d5a2e;
+
+    border-radius: 10px;
+
+    padding: 20px;
+
+  }
+
+  .gpu-card .gpu-name { font-size: 16px; font-weight: bold; color: #6fcf97; margin-bottom: 12px; }
+
+  .gpu-card .gpu-metric { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1a3a1b; font-size: 13px; }
+
+  .gpu-card .gpu-metric .gk { color: #8899aa; }
+
+  .gpu-card .gpu-metric .gv { color: #fff; font-weight: 600; }
+
+
+
+  /* 网络拓扑 */
+
+  .net-topo { display: flex; justify-content: space-around; align-items: center; padding: 20px 0; }
+
+  .net-node { text-align: center; }
+
+  .net-node .node-icon { font-size: 36px; margin-bottom: 8px; }
+
+  .net-node .node-name { font-size: 12px; color: #8899aa; }
+
+  .net-node .node-detail { font-size: 11px; color: #56ccf2; margin-top: 3px; }
+
+  .net-line { flex: 1; display: flex; flex-direction: column; align-items: center; }
+
+  .net-line .speed { font-size: 13px; color: #6fcf97; font-weight: bold; }
+
+  .net-line hr { width: 100%; border: none; border-top: 2px dashed #2a3a5c; margin: 6px 0; }
+
+  .net-line .proto { font-size: 11px; color: #8899aa; }
+
+
+
+  /* 总结 */
+
+  .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 20px; }
+
+  .summary-item { background: #1a2035; border: 1px solid #2a3a5c; border-radius: 10px; padding: 16px; }
+
+  .summary-item h4 { font-size: 13px; color: #8899aa; margin-bottom: 10px; }
+
+  .summary-item ul { list-style: none; }
+
+  .summary-item ul li { font-size: 13px; padding: 4px 0; padding-left: 16px; position: relative; color: #c0cce0; }
+
+  .summary-item ul li::before { content: '?'; position: absolute; left: 0; }
+
+  .li-good::before { color: #6fcf97 !important; }
+
+  .li-warn::before { color: #f6b93b !important; }
+
+
+
+  .footer { text-align: center; padding: 30px; color: #445566; font-size: 12px; border-top: 1px solid #1e2a3a; margin-top: 20px; }
+
+</style>
+
+</head>
+
+<body>
+
+
+
+<div class="header">
+
+  <div>
+
+    <h1>📊 服务器性能测试报告</h1>
+
+    <div style="color:#8899aa;font-size:13px;margin-top:6px;">全面性能基准测试 · CPU / GPU / 内存 / 硬盘 / 网卡</div>
+
+  </div>
+
+  <div class="meta">
+
+    <span class="highlight">192.168.0.214</span>
+
+    <span>Ubuntu 24.04.4 LTS · x86_64</span>
+
+    <span>测试时间：2026-04-07 16:46</span>
+
+    <span style="color:#6fcf97;margin-top:4px;display:block;">✅ 全部测试完成</span>
+
+  </div>
+
+</div>
+
+
+
+<div class="container">
+
+
+
+  <!-- 概览卡片 -->
+
+  <div class="overview-grid">
+
+    <div class="overview-card cpu">
+
+      <div class="icon">💻</div>
+      <div class="title">CPU</div>
+
+      <div class="value">89,617</div>
+
+      <div class="sub">events/sec (112线程)</div>
+
+      <span class="badge-pass">性能优秀</span>
+
+    </div>
+
+    <div class="overview-card gpu">
+
+      <div class="icon">🎮</div>
+      <div class="title">GPU</div>
+
+      <div class="value">2 × L20</div>
+
+      <div class="sub">各 46GB VRAM · CUDA 13</div>
+
+      <span class="badge-pass">空闲就绪</span>
+
+    </div>
+
+    <div class="overview-card mem">
+
+      <div class="icon">🧠</div>
+      <div class="title">内存</div>
+
+      <div class="value">62 GB</div>
+
+      <div class="sub">已用 3.0G / 空闲 59G</div>
+
+      <span class="badge-pass">充裕</span>
+
+    </div>
+
+    <div class="overview-card disk">
+
+      <div class="icon">💾</div>
+      <div class="title">硬盘</div>
+
+      <div class="value">1286 MB/s</div>
+
+      <div class="sub">NVMe 顺序读取</div>
+
+      <span class="badge-pass">高速NVMe</span>
+
+    </div>
+
+    <div class="overview-card net">
+
+      <div class="icon">🌐</div>
+      <div class="title">网卡</div>
+
+      <div class="value">22.5 Gbps</div>
+
+      <div class="sub">本地回环带宽</div>
+
+      <span class="badge-pass">1GbE链路</span>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ===== CPU ===== -->
+
+  <div class="section">
+
+    <div class="section-header">
+
+      <span class="icon">💻</span>
+      <h2>CPU 性能测试</h2>
+
+      <span class="badge badge-excellent">优秀</span>
+
+    </div>
+
+    <div class="section-body">
+
+      <div class="metrics-grid">
+
+        <div class="metric-item">
+
+          <div class="label">处理器型号</div>
+
+          <div class="val" style="font-size:14px;">AMD EPYC 7663</div>
+
+          <div class="unit">56核心 / 112线程</div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">单线程性能</div>
+
+          <div class="val">1,576 <span class="unit">events/sec</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-red" style="width:63%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">多线程性能 (112T)</div>
+
+          <div class="val">89,617 <span class="unit">events/sec</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-red" style="width:92%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">最高频率</div>
+
+          <div class="val">3,541 <span class="unit">MHz</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-red" style="width:72%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">当前CPU利用率</div>
+
+          <div class="val">0.2<span class="unit"> %</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-red" style="width:0.2%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">平均延迟 (单线程)</div>
+
+          <div class="val">0.63 <span class="unit">ms</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-red" style="width:30%"></div></div>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="chart-row">
+
+        <div class="chart-box">
+
+          <h4>📊 单线程 vs 多线程 性能对比</h4>
+
+          <canvas id="cpuCompare"></canvas>
+
+        </div>
+
+        <div class="chart-box">
+
+          <h4>📊 CPU延迟分布 (单线程)</h4>
+
+          <canvas id="cpuLatency"></canvas>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="perf-bars" style="margin-top:20px;">
+
+        <h4 style="color:#8899aa;font-size:13px;margin-bottom:12px;">多线程扩展效率</h4>
+
+        <div class="perf-bar-item">
+
+          <div class="label">单线程基准</div>
+
+          <div class="bar-outer"><div class="bar-inner bar-red" style="width:1.76%"></div></div>
+
+          <div class="val-text" style="color:#ff8e53;">1,576 eps</div>
+
+        </div>
+
+        <div class="perf-bar-item">
+
+          <div class="label">112线程</div>
+
+          <div class="bar-outer"><div class="bar-inner bar-red" style="width:100%"></div></div>
+
+          <div class="val-text" style="color:#ff6b6b;">89,617 eps</div>
+
+        </div>
+
+        <div class="perf-bar-item">
+
+          <div class="label">理论满线程 (×112)</div>
+
+          <div class="bar-outer"><div class="bar-inner" style="width:100%;background:rgba(255,107,107,0.25)"></div></div>
+
+          <div class="val-text" style="color:#445566;">176,512 eps</div>
+
+        </div>
+
+      </div>
+
+
+
+      <table class="spec-table" style="margin-top:16px;">
+
+        <tr><th>参数</th><th>值</th></tr>
+
+        <tr><td class="key">架构</td><td class="val-info">x86_64</td></tr>
+
+        <tr><td class="key">物理核心数</td><td class="val-info">56 cores / 1 socket</td></tr>
+
+        <tr><td class="key">逻辑线程数</td><td class="val-info">112 (HyperThreading)</td></tr>
+
+        <tr><td class="key">最大主频</td><td class="val-good">3,541 MHz</td></tr>
+
+        <tr><td class="key">最小主频</td><td class="val-info">1,500 MHz</td></tr>
+
+        <tr><td class="key">NUMA节点</td><td class="val-info">node0: CPU 0-111</td></tr>
+
+        <tr><td class="key">系统负载 (1/5/15min)</td><td class="val-warn">20.43 / 6.48 / 2.36</td></tr>
+
+        <tr><td class="key">测试工具</td><td class="val-info">sysbench 1.0.20</td></tr>
+
+        <tr><td class="key">多线程扩展比</td><td class="val-good">56.8x (理论112x)</td></tr>
+
+      </table>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ===== GPU ===== -->
+
+  <div class="section">
+
+    <div class="section-header">
+
+      <span class="icon">🎮</span>
+      <h2>GPU 性能测试</h2>
+
+      <span class="badge badge-excellent">NVIDIA L20 × 2</span>
+
+    </div>
+
+    <div class="section-body">
+
+
+
+      <div class="gpu-card-grid">
+
+        <div class="gpu-card">
+
+          <div class="gpu-name">🎮 GPU 0 — NVIDIA L20</div>
+
+          <div class="gpu-metric"><span class="gk">显存总量</span><span class="gv">46,068 MiB (~45 GB)</span></div>
+
+          <div class="gpu-metric"><span class="gk">显存已用</span><span class="gv">0 MiB (空闲)</span></div>
+
+          <div class="gpu-metric"><span class="gk">GPU温度</span><span class="gv" style="color:#6fcf97;">30°C ❄️</span></div>
+
+          <div class="gpu-metric"><span class="gk">GPU利用率</span><span class="gv">0%</span></div>
+
+          <div class="gpu-metric"><span class="gk">功耗</span><span class="gv">25W / 350W</span></div>
+
+          <div class="gpu-metric"><span class="gk">当前图形频率</span><span class="gv">210 MHz</span></div>
+
+          <div class="gpu-metric"><span class="gk">PCI总线</span><span class="gv">00000000:81:00.0</span></div>
+
+          <div class="gpu-metric"><span class="gk">Persistence Mode</span><span class="gv">Off</span></div>
+
+        </div>
+
+        <div class="gpu-card">
+
+          <div class="gpu-name">🎮 GPU 1 — NVIDIA L20</div>
+
+          <div class="gpu-metric"><span class="gk">显存总量</span><span class="gv">46,068 MiB (~45 GB)</span></div>
+
+          <div class="gpu-metric"><span class="gk">显存已用</span><span class="gv">0 MiB (空闲)</span></div>
+
+          <div class="gpu-metric"><span class="gk">GPU温度</span><span class="gv" style="color:#6fcf97;">29°C ❄️</span></div>
+
+          <div class="gpu-metric"><span class="gk">GPU利用率</span><span class="gv">0%</span></div>
+
+          <div class="gpu-metric"><span class="gk">功耗</span><span class="gv">24W / 350W</span></div>
+
+          <div class="gpu-metric"><span class="gk">当前图形频率</span><span class="gv">210 MHz</span></div>
+
+          <div class="gpu-metric"><span class="gk">PCI总线</span><span class="gv">00000000:C1:00.0</span></div>
+
+          <div class="gpu-metric"><span class="gk">Persistence Mode</span><span class="gv">Off</span></div>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="chart-row" style="margin-top:20px;">
+
+        <div class="chart-box">
+
+          <h4>📊 GPU 状态对比</h4>
+
+          <canvas id="gpuState"></canvas>
+
+        </div>
+
+        <div class="chart-box">
+
+          <h4>📊 总显存分配</h4>
+
+          <canvas id="gpuMem"></canvas>
+
+        </div>
+
+      </div>
+
+
+
+      <table class="spec-table" style="margin-top:16px;">
+
+        <tr><th>参数</th><th>值</th></tr>
+
+        <tr><td class="key">显卡型号</td><td class="val-good">NVIDIA L20 × 2</td></tr>
+
+        <tr><td class="key">驱动版本</td><td class="val-info">580.126.09</td></tr>
+
+        <tr><td class="key">CUDA版本</td><td class="val-info">13.0</td></tr>
+
+        <tr><td class="key">单卡显存</td><td class="val-good">46,068 MiB ≈ 45 GB</td></tr>
+
+        <tr><td class="key">双卡总显存</td><td class="val-good">92,136 MiB ≈ 90 GB</td></tr>
+
+        <tr><td class="key">当前运行进程</td><td class="val-info">无 (空闲待命)</td></tr>
+
+        <tr><td class="key">ECC状态</td><td class="val-info">已启用 (Data Center级)</td></tr>
+
+        <tr><td class="key">MIG模式</td><td class="val-info">N/A</td></tr>
+
+        <tr><td class="key">PyTorch状态</td><td class="val-warn">未安装 (需要手动安装)</td></tr>
+
+      </table>
+
+
+
+      <div style="background:#1a2035;border:1px solid #2d5a2e;border-radius:8px;padding:14px;margin-top:16px;">
+
+        <div style="color:#6fcf97;font-size:13px;font-weight:bold;margin-bottom:8px;">💡 GPU 说明</div>
+
+        <div style="font-size:13px;color:#c0cce0;line-height:1.7;">
+
+          NVIDIA L20 是专为数据中心设计的 Ada Lovelace 架构 GPU，单卡 TDP 350W，具备高性能 FP32/FP16/INT8 计算能力及 Tensor Core 加速。
+
+          目前两张 GPU 均处于空闲状态，温度极低（29-30°C），显存完全未占用，随时可投入 AI 推理/训练或 CUDA 计算负载。
+
+          建议安装 PyTorch 2.x + CUDA 12.x 进行完整 GPU 基准测试。
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ===== 内存 ===== -->
+
+  <div class="section">
+
+    <div class="section-header">
+
+      <span class="icon">🧠</span>
+      <h2>内存 性能测试</h2>
+
+      <span class="badge badge-good">充裕</span>
+
+    </div>
+
+    <div class="section-body">
+
+      <div class="metrics-grid">
+
+        <div class="metric-item">
+
+          <div class="label">物理内存总量</div>
+
+          <div class="val">62 <span class="unit">GB</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-blue" style="width:100%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">已使用</div>
+
+          <div class="val">3.0 <span class="unit">GB</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-blue" style="width:4.8%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">可用内存</div>
+
+          <div class="val">59 <span class="unit">GB</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-blue" style="width:95.2%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">缓冲/缓存</div>
+
+          <div class="val">7.5 <span class="unit">GB</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-blue" style="width:12%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">Swap 总量</div>
+
+          <div class="val">8.0 <span class="unit">GB</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-blue" style="width:0%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">Swap 已用</div>
+
+          <div class="val">0 <span class="unit">B</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-blue" style="width:0%"></div></div>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="chart-row">
+
+        <div class="chart-box">
+
+          <h4>📊 内存使用分布</h4>
+
+          <canvas id="memPie"></canvas>
+
+        </div>
+
+        <div class="chart-box">
+
+          <h4>📊 内存容量规模对比</h4>
+
+          <canvas id="memBar"></canvas>
+
+        </div>
+
+      </div>
+
+
+
+      <table class="spec-table" style="margin-top:16px;">
+
+        <tr><th>参数</th><th>值</th></tr>
+
+        <tr><td class="key">MemTotal</td><td class="val-good">65,648,056 kB ≈ 62.6 GB</td></tr>
+
+        <tr><td class="key">MemFree</td><td class="val-good">55,449,252 kB ≈ 52.9 GB</td></tr>
+
+        <tr><td class="key">MemAvailable</td><td class="val-good">62,543,112 kB ≈ 59.6 GB</td></tr>
+
+        <tr><td class="key">Buffers</td><td class="val-info">261,684 kB ≈ 255 MB</td></tr>
+
+        <tr><td class="key">Cached</td><td class="val-info">7,238,188 kB ≈ 6.9 GB</td></tr>
+
+        <tr><td class="key">SwapTotal</td><td class="val-info">8,388,604 kB = 8 GB</td></tr>
+
+        <tr><td class="key">SwapFree</td><td class="val-good">8,388,604 kB (0% 使用)</td></tr>
+
+        <tr><td class="key">内存使用率</td><td class="val-good">4.8% (极低)</td></tr>
+
+      </table>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ===== 硬盘 ===== -->
+
+  <div class="section">
+
+    <div class="section-header">
+
+      <span class="icon">💾</span>
+      <h2>硬盘 性能测试</h2>
+
+      <span class="badge badge-excellent">高速 NVMe SSD</span>
+
+    </div>
+
+    <div class="section-body">
+
+      <div class="metrics-grid">
+
+        <div class="metric-item">
+
+          <div class="label">设备</div>
+
+          <div class="val" style="font-size:13px;">Samsung 990 PRO</div>
+
+          <div class="unit">1TB NVMe SSD</div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">顺序读取带宽</div>
+
+          <div class="val">1,286 <span class="unit">MB/s</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-yellow" style="width:64%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">随机4K读取</div>
+
+          <div class="val">263 <span class="unit">MB/s</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-yellow" style="width:55%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">随机4K写入</div>
+
+          <div class="val">263 <span class="unit">MB/s</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-yellow" style="width:55%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">磁盘利用率</div>
+
+          <div class="val">39 <span class="unit">%</span></div>
+
+          <div class="unit">已用 36GB / 98GB</div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">随机4K IOPS估算</div>
+
+          <div class="val">~67K <span class="unit">IOPS</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-yellow" style="width:67%"></div></div>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="chart-row">
+
+        <div class="chart-box">
+
+          <h4>📊 读写带宽对比 (MB/s)</h4>
+
+          <canvas id="diskPerf"></canvas>
+
+        </div>
+
+        <div class="chart-box">
+
+          <h4>📊 磁盘空间使用情况</h4>
+
+          <canvas id="diskUsage"></canvas>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="perf-bars" style="margin-top:16px;">
+
+        <h4 style="color:#8899aa;font-size:13px;margin-bottom:12px;">性能横向对比（参考值）</h4>
+
+        <div class="perf-bar-item">
+
+          <div class="label">本机顺序读 (实测)</div>
+
+          <div class="bar-outer"><div class="bar-inner bar-yellow" style="width:64.3%"></div></div>
+
+          <div class="val-text" style="color:#ffd54f;">1,286 MB/s</div>
+
+        </div>
+
+        <div class="perf-bar-item">
+
+          <div class="label">Samsung 990 PRO 标称</div>
+
+          <div class="bar-outer"><div class="bar-inner" style="width:100%;background:rgba(255,213,79,0.2)"></div></div>
+
+          <div class="val-text" style="color:#445566;">7,450 MB/s</div>
+
+        </div>
+
+        <div class="perf-bar-item">
+
+          <div class="label">本机随机4K读 (实测)</div>
+
+          <div class="bar-outer"><div class="bar-inner bar-yellow" style="width:13.1%"></div></div>
+
+          <div class="val-text" style="color:#ffd54f;">263 MB/s</div>
+
+        </div>
+
+        <div class="perf-bar-item">
+
+          <div class="label">普通HDD参考</div>
+
+          <div class="bar-outer"><div class="bar-inner" style="width:5%;background:rgba(255,213,79,0.15)"></div></div>
+
+          <div class="val-text" style="color:#445566;">~100 MB/s</div>
+
+        </div>
+
+      </div>
+
+
+
+      <table class="spec-table" style="margin-top:16px;">
+
+        <tr><th>参数</th><th>值</th></tr>
+
+        <tr><td class="key">磁盘型号</td><td class="val-good">Samsung SSD 990 PRO 1TB</td></tr>
+
+        <tr><td class="key">接口类型</td><td class="val-info">NVMe (nvme0n1)</td></tr>
+
+        <tr><td class="key">磁盘总容量</td><td class="val-info">931.5 GB</td></tr>
+
+        <tr><td class="key">系统分区 (/)</td><td class="val-warn">36GB / 98GB (39%)</td></tr>
+
+        <tr><td class="key">顺序读取</td><td class="val-good">1,286 MB/s (fio, qdepth=32)</td></tr>
+
+        <tr><td class="key">随机4K读取</td><td class="val-good">263 MB/s</td></tr>
+
+        <tr><td class="key">随机4K写入</td><td class="val-good">263 MB/s</td></tr>
+
+        <tr><td class="key">磁盘利用率 (空闲时)</td><td class="val-good">~0%</td></tr>
+
+        <tr><td class="key">测试工具</td><td class="val-info">fio (libaio engine)</td></tr>
+
+      </table>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ===== 网卡 ===== -->
+
+  <div class="section">
+
+    <div class="section-header">
+
+      <span class="icon">🌐</span>
+      <h2>网卡 性能测试</h2>
+
+      <span class="badge badge-good">1GbE · 22.5Gbps回环</span>
+
+    </div>
+
+    <div class="section-body">
+
+
+
+      <div class="net-topo">
+
+        <div class="net-node">
+
+          <div class="node-icon">🖥️</div>
+
+          <div class="node-name">本机</div>
+
+          <div class="node-detail">192.168.0.214</div>
+
+        </div>
+
+        <div class="net-line">
+
+          <div class="speed">1,000 Mb/s</div>
+
+          <hr>
+
+          <div class="proto">Full Duplex · Auto-negotiation</div>
+
+        </div>
+
+        <div class="net-node">
+
+          <div class="node-icon">🖥️</div>
+
+          <div class="node-name">交换机/路由</div>
+
+          <div class="node-detail">192.168.0.0/24</div>
+
+        </div>
+
+        <div class="net-line">
+
+          <div class="speed">内部回环</div>
+
+          <hr>
+
+          <div class="proto">127.0.0.1 iperf3</div>
+
+        </div>
+
+        <div class="net-node">
+
+          <div class="node-icon">🖥️</div>
+
+          <div class="node-name">本地回环</div>
+
+          <div class="node-detail">22.5 Gbps</div>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="metrics-grid" style="margin-top:16px;">
+
+        <div class="metric-item">
+
+          <div class="label">物理网卡速率</div>
+
+          <div class="val">1,000 <span class="unit">Mb/s</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-purple" style="width:50%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">iperf3 回环带宽</div>
+
+          <div class="val">22.5 <span class="unit">Gbps</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-purple" style="width:95%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">实时接收速率</div>
+
+          <div class="val">7 <span class="unit">KB/s</span></div>
+
+          <div class="bar-wrap"><div class="bar bar-purple" style="width:0.07%"></div></div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">TCP连接数</div>
+
+          <div class="val">14 <span class="unit"></span></div>
+
+          <div class="unit">Estab: 4</div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">总接收流量</div>
+
+          <div class="val">1.1 <span class="unit">GB</span></div>
+
+          <div class="unit">eno2 累计</div>
+
+        </div>
+
+        <div class="metric-item">
+
+          <div class="label">总发送流量</div>
+
+          <div class="val">120 <span class="unit">MB</span></div>
+
+          <div class="unit">eno2 累计</div>
+
+        </div>
+
+      </div>
+
+
+
+      <div class="chart-row">
+
+        <div class="chart-box">
+
+          <h4>📊 iperf3 回环带宽 (每秒)</h4>
+
+          <canvas id="netBw"></canvas>
+
+        </div>
+
+        <div class="chart-box">
+
+          <h4>📊 网卡接口状态</h4>
+
+          <canvas id="netIface"></canvas>
+
+        </div>
+
+      </div>
+
+
+
+      <table class="spec-table" style="margin-top:16px;">
+
+        <tr><th>接口</th><th>IP地址</th><th>状态</th><th>速率</th><th>备注</th></tr>
+
+        <tr><td>eno2</td><td class="val-info">192.168.0.214/24</td><td><span style="color:#6fcf97">UP</span></td><td class="val-good">1000 Mb/s</td><td>主网卡</td></tr>
+
+        <tr><td>eno1</td><td class="val-warn">无</td><td><span style="color:#f6b93b">DOWN</span></td><td>-</td><td>备用网口</td></tr>
+
+        <tr><td>enxbe3af...</td><td class="val-info">169.254.3.1/24</td><td><span style="color:#56ccf2">UNKNOWN</span></td><td>-</td><td>USB/管理口</td></tr>
+
+        <tr><td>docker0</td><td class="val-info">172.17.0.1/16</td><td><span style="color:#f6b93b">DOWN</span></td><td>-</td><td>Docker虚拟网桥</td></tr>
+
+        <tr><td>br-9b59...</td><td class="val-info">172.18.0.1/16</td><td><span style="color:#6fcf97">UP</span></td><td>-</td><td>Docker自定义网络</td></tr>
+
+        <tr><td>lo</td><td class="val-info">127.0.0.1/8</td><td><span style="color:#6fcf97">UP</span></td><td>22.5 Gbps</td><td>回环接口</td></tr>
+
+      </table>
+
+    </div>
+
+  </div>
+
+
+
+  <!-- ===== 综合总结 ===== -->
+
+  <div class="section">
+
+    <div class="section-header">
+
+      <span class="icon">📈</span>
+      <h2>综合评估 & 建议</h2>
+
+    </div>
+
+    <div class="section-body">
+
+      <div class="summary-grid">
+
+        <div class="summary-item">
+
+          <h4>✅ 优势项</h4>
+
+          <ul>
+
+            <li class="li-good">CPU核心数极多 (56C/112T)</li>
+
+            <li class="li-good">双卡 NVIDIA L20 各 45GB 显存</li>
+
+            <li class="li-good">内存充裕 (62GB, 仅用4.8%)</li>
+
+            <li class="li-good">NVMe SSD 高速读写 1.2GB/s+</li>
+
+            <li class="li-good">网络回环带宽高达 22.5Gbps</li>
+
+            <li class="li-good">Swap 未使用，系统稳定</li>
+
+          </ul>
+
+        </div>
+
+        <div class="summary-item">
+
+          <h4>⚠️ 关注项</h4>
+
+          <ul>
+
+            <li class="li-warn">1分钟负载 20.43 偏高 (有后台任务)</li>
+
+            <li class="li-warn">NVMe实测未达标称值 (存在虚拟层)</li>
+
+            <li class="li-warn">外网网卡仅1GbE可能成为瓶颈</li>
+
+            <li class="li-warn">eno1 网口 DOWN，冗余未启用</li>
+
+            <li class="li-warn">未安装 PyTorch (GPU深度测试受限)</li>
+
+          </ul>
+
+        </div>
+
+        <div class="summary-item">
+
+          <h4>💡 优化建议</h4>
+
+          <ul>
+
+            <li class="li-good">安装 PyTorch + CUDA 做GPU压测</li>
+
+            <li class="li-good">检查负载20的来源进程</li>
+
+            <li class="li-good">考虑启用 eno1 做链路聚合</li>
+
+            <li class="li-good">为GPU开启 Persistence Mode</li>
+
+            <li class="li-good">sysbench内存测试参数需更新</li>
+
+            <li class="li-good">定期监控 nvme 健康状态(SMART)</li>
+
+          </ul>
+
+        </div>
+
+      </div>
+
+
+
+      <div style="background:linear-gradient(135deg,#1a2035,#1e3a1e);border:1px solid #2d5a2e;border-radius:10px;padding:20px;margin-top:20px;">
+
+        <div style="font-size:15px;font-weight:bold;color:#6fcf97;margin-bottom:12px;">🏆 综合评分</div>
+
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;text-align:center;">
+
+          <div><div style="font-size:28px;font-weight:bold;color:#ff6b6b;">A+</div><div style="font-size:12px;color:#8899aa;">CPU</div></div>
+
+          <div><div style="font-size:28px;font-weight:bold;color:#6fcf97;">A+</div><div style="font-size:12px;color:#8899aa;">GPU</div></div>
+
+          <div><div style="font-size:28px;font-weight:bold;color:#64b5f6;">A</div><div style="font-size:12px;color:#8899aa;">内存</div></div>
+
+          <div><div style="font-size:28px;font-weight:bold;color:#ffd54f;">B+</div><div style="font-size:12px;color:#8899aa;">硬盘</div></div>
+
+          <div><div style="font-size:28px;font-weight:bold;color:#ce93d8;">B+</div><div style="font-size:12px;color:#8899aa;">网卡</div></div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+
+</div>
+
+
+
+<div class="footer">
+
+  服务器性能测试报告 · 目标主机: 192.168.0.214 · Ubuntu 24.04.4 LTS · 测试时间: 2026-04-07 16:46
+
+</div>
+
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<script>
+
+Chart.defaults.color = '#8899aa';
+
+Chart.defaults.borderColor = '#2a3a5c';
+
+
+
+// CPU对比
+
+new Chart(document.getElementById('cpuCompare'), {
+
+  type: 'bar',
+
+  data: {
+
+    labels: ['单线程', '多线程(112T)', '理论上限'],
+
+    datasets: [{
+
+      label: 'Events/sec',
+
+      data: [1576.75, 89617.20, 176536],
+
+      backgroundColor: ['rgba(255,107,107,0.8)', 'rgba(255,142,83,0.8)', 'rgba(255,107,107,0.2)'],
+
+      borderColor: ['#ff6b6b', '#ff8e53', '#ff6b6b'],
+
+      borderWidth: 1, borderRadius: 6
+
+    }]
+
+  },
+
+  options: {
+
+    responsive: true, maintainAspectRatio: true,
+
+    plugins: { legend: { display: false } },
+
+    scales: { y: { beginAtZero: true, grid: { color: '#1e2a3a' } }, x: { grid: { display: false } } }
+
+  }
+
+});
+
+
+
+// CPU延迟
+
+new Chart(document.getElementById('cpuLatency'), {
+
+  type: 'bar',
+
+  data: {
+
+    labels: ['Min', 'Avg', '95th', 'Max'],
+
+    datasets: [{
+
+      label: '延迟 (ms)',
+
+      data: [0.63, 0.63, 0.64, 1.27],
+
+      backgroundColor: ['rgba(100,181,246,0.8)', 'rgba(255,107,107,0.8)', 'rgba(255,213,79,0.8)', 'rgba(206,147,216,0.8)'],
+
+      borderRadius: 6
+
+    }]
+
+  },
+
+  options: {
+
+    responsive: true, maintainAspectRatio: true,
+
+    plugins: { legend: { display: false } },
+
+    scales: { y: { beginAtZero: true, grid: { color: '#1e2a3a' } }, x: { grid: { display: false } } }
+
+  }
+
+});
+
+
+
+// GPU状态雷达
+
+new Chart(document.getElementById('gpuState'), {
+
+  type: 'radar',
+
+  data: {
+
+    labels: ['温度安全', '显存可用', 'ECC保护', '低功耗', '利用率'],
+
+    datasets: [
+
+      {
+
+        label: 'GPU 0', data: [95, 100, 100, 92.9, 0],
+
+        backgroundColor: 'rgba(111,207,151,0.2)', borderColor: '#6fcf97', pointBackgroundColor: '#6fcf97'
+
+      },
+
+      {
+
+        label: 'GPU 1', data: [96, 100, 100, 93.1, 0],
+
+        backgroundColor: 'rgba(86,204,242,0.2)', borderColor: '#56ccf2', pointBackgroundColor: '#56ccf2'
+
+      }
+
+    ]
+
+  },
+
+  options: {
+
+    responsive: true, maintainAspectRatio: true,
+
+    scales: { r: { beginAtZero: true, max: 100, grid: { color: '#2a3a5c' }, ticks: { display: false } } }
+
+  }
+
+});
+
+
+
+// GPU显存
+
+new Chart(document.getElementById('gpuMem'), {
+
+  type: 'doughnut',
+
+  data: {
+
+    labels: ['GPU0可用', 'GPU1可用', '已用'],
+
+    datasets: [{
+
+      data: [46068, 46068, 0],
+
+      backgroundColor: ['rgba(111,207,151,0.8)', 'rgba(86,204,242,0.8)', 'rgba(255,107,107,0.5)'],
+
+      borderWidth: 2, borderColor: '#141922'
+
+    }]
+
+  },
+
+  options: {
+
+    responsive: true, maintainAspectRatio: true,
+
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+
+    cutout: '60%'
+
+  }
+
+});
+
+
+
+// 内存饼
+
+new Chart(document.getElementById('memPie'), {
+
+  type: 'doughnut',
+
+  data: {
+
+    labels: ['程序占用 (3GB)', '文件缓存 (7.5GB)', '空闲 (52GB)'],
+
+    datasets: [{
+
+      data: [3, 7.5, 52],
+
+      backgroundColor: ['rgba(255,107,107,0.8)', 'rgba(255,213,79,0.7)', 'rgba(100,181,246,0.3)'],
+
+      borderWidth: 2, borderColor: '#141922'
+
+    }]
+
+  },
+
+  options: {
+
+    responsive: true, maintainAspectRatio: true,
+
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+
+    cutout: '60%'
+
+  }
+
+});
+
+
+
+// 内存容量对比
+
+new Chart(document.getElementById('memBar'), {
+
+  type: 'bar',
+
+  data: {
+
+    labels: ['物理内存', '可用内存', 'Swap'],
+
+    datasets: [{
+
+      label: 'GB',
+
+      data: [62.6, 59.6, 8],
+
+      backgroundColor: ['rgba(100,181,246,0.8)', 'rgba(111,207,151,0.8)', 'rgba(255,213,79,0.5)'],
+
+      borderRadius: 6
+
+    }]
+
+  },
+
+  options: {
+
+    responsive: true, maintainAspectRatio: true,
+
+    plugins: { legend: { display: false } },
+
+    scales: { y: { beginAtZero: true, grid: { color: '#1e2a3a' } }, x: { grid: { display: false } } }
+
+  }
+
+});
+
+
+
+// 磁盘性能
+
+new Chart(document.getElementById('diskPerf'), {
+
+  type: 'bar',
+
+  data: {
+
+    labels: ['顺序读取', '随机4K读', '随机4K写'],
+
+    datasets: [{
+
+      label: 'MB/s',
+
+      data: [1286, 263, 263],
+
+      backgroundColor: ['rgba(255,213,79,0.9)', 'rgba(255,143,0,0.8)', 'rgba(255,87,34,0.8)'],
+
+      borderRadius: 6
+
+    }]
+
+  },
+
+  options: {
+
+    responsive: true, maintainAspectRatio: true,
+
+    plugins: { legend: { display: false } },
+
+    scales: { y: { beginAtZero: true, grid: { color: '#1e2a3a' } }, x: { grid: { display: false } } }
+
+  }
+
+});
+
+
+
+// 磁盘使用
+
+new Chart(document.getElementById('diskUsage'), {
+
+  type: 'doughnut',
+
+  data: {
+
+    labels: ['已用 (36GB)', '可用 (58GB)'],
+
+    datasets: [{
+
+      data: [36, 58],
+
+      backgroundColor: ['rgba(255,143,0,0.8)', 'rgba(255,213,79,0.2)'],
+
+      borderWidth: 2, borderColor: '#141922'
+
+    }]
+
+  },
+
+  options: {
+
+    responsive: true, maintainAspectRatio: true,
+
+    plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } },
+
+    cutout: '60%'
+
+  }
+
+});
+
+
+
+// 网络带宽
+
+new Chart(document.getElementById('netBw'), {
+
+  type: 'line',
+
+  data: {
+
+    labels: ['0s', '1s', '2s', '3s', '4s', '5s'],
+
+    datasets: [{
+
+      label: 'Gbits/sec',
+
+      data: [0, 31.8, 19.9, 17.7, 17.2, 18.8],
+
+      fill: true,
+
+      backgroundColor: 'rgba(206,147,216,0.2)',
+
+      borderColor: '#ce93d8', tension: 0.4, pointRadius: 4
+
+    }]
+
+  },
+
+  options: {
+
+    responsive: true, maintainAspectRatio: true,
+
+    plugins: { legend: { display: false } },
+
+    scales: { y: { beginAtZero: true, grid: { color: '#1e2a3a' } }, x: { grid: { display: false } } }
+
+  }
+
+});
+
+
+
+// 网卡状态
+
+new Chart(document.getElementById('netIface'), {
+
+  type: 'bar',
+
+  data: {
+
+    labels: ['eno2\n(主网卡)', 'eno1\n(备用)', 'lo\n(回环)', 'docker0\n(虚拟)'],
+
+    datasets: [{
+
+      label: '状态 (1=UP)',
+
+      data: [1, 0, 1, 0],
+
+      backgroundColor: ['rgba(111,207,151,0.8)', 'rgba(255,107,107,0.4)', 'rgba(86,204,242,0.8)', 'rgba(255,213,79,0.4)'],
+
+      borderRadius: 6
+
+    }]
+
+  },
+
+  options: {
+
+    responsive: true, maintainAspectRatio: true,
+
+    plugins: { legend: { display: false } },
+
+    scales: { y: { beginAtZero: true, max: 1.5, grid: { color: '#1e2a3a' }, ticks: { callback: v => v === 1 'UP' : v === 0 'DOWN' : '' } }, x: { grid: { display: false } } }
+
+  }
+
+});
+
+</script>
+
+</body>
+
+</html>
+

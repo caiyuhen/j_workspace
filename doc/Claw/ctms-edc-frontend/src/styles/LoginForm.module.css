@@ -1,0 +1,53 @@
+.formContainer {
+  width: 100%;
+}
+
+.formTitle {
+  text-align: center;
+  color: #263238;
+  margin-bottom: 32px;
+  font-weight: 600;
+}
+
+.loginForm {
+  width: 100%;
+}
+
+.prefixIcon {
+  color: rgba(0, 0, 0, 0.25);
+}
+
+.formActions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.remember {
+  color: rgba(0, 0, 0, 0.65);
+}
+
+.forgot {
+  color: #1890ff;
+  font-size: 14px;
+}
+
+.submitButton {
+  height: 44px;
+  font-size: 16px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.submitButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.submitButton:active {
+  transform: translateY(0);
+}

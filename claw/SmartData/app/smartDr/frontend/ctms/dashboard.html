@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTMS系统 - 试验管理</title>
+    <link rel="stylesheet" href="../auth/styles.css">
+    <style>
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            color: #333;
+            margin: 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .trial-card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .trial-card:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .trial-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .trial-status {
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9em;
+            font-weight: bold;
+        }
+        
+        .status-draft { background: #ffc107; color: #212529; }
+        .status-active { background: #28a745; color: white; }
+        .status-completed { background: #6c757d; color: white; }
+        
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 500px;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: black;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>CTMS系统</h1>
+            <p>临床试验管理系统</p>
+        </div>
+        
+        <div class="dashboard-container">
+            <div class="action-buttons" style="margin-bottom: 20px;">
+                <button class="btn btn-primary" onclick="openCreateTrialModal()">创建试验</button>
+                <button class="btn btn-success" onclick="location.href='/auth'">返回登录</button>
+            </div>
+            
+            <h2 class="section-title">临床试验列表</h2>
+            
+            <div id="trialsContainer">
+                <!-- 试验列表将通过JavaScript动态加载 -->
+                <div class="trial-card">
+                    <div class="trial-header">
+                        <h3>试验名称 1</h3>
+                        <span class="trial-status status-draft">草案</span>
+                    </div>
+                    <p><strong>描述:</strong> 这是一个测试试验</p>
+                    <p><strong>时间范围:</strong> 2024-01-01 至 2024-12-31</p>
+                    <div class="action-buttons">
+                        <button class="btn btn-success">查看详情</button>
+                        <button class="btn btn-primary">编辑</button>
+                        <button class="btn btn-danger">删除</button>
+                    </div>
+                </div>
+                
+                <div class="trial-card">
+                    <div class="trial-header">
+                        <h3>试验名称 2</h3>
+                        <span class="trial-status status-active">进行中</span>
+                    </div>
+                    <p><strong>描述:</strong> 另一个测试试验</p>
+                    <p><strong>时间范围:</strong> 2024-03-01 至 2025-03-01</p>
+                    <div class="action-buttons">
+                        <button class="btn btn-success">查看详情</button>
+                        <button class="btn btn-primary">编辑</button>
+                        <button class="btn btn-danger">删除</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 创建试验模态框 -->
+        <div id="createTrialModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeCreateTrialModal()">&times;</span>
+                <h2>创建新试验</h2>
+                <form id="createTrialForm">
+                    <div class="form-group">
+                        <label for="trialName">试验名称 *</label>
+                        <input type="text" id="trialName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="trialDescription">试验描述</label>
+                        <textarea id="trialDescription" class="form-control"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="trialStartDate">开始日期</label>
+                        <input type="date" id="trialStartDate" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="trialEndDate">结束日期</label>
+                        <input type="date" id="trialEndDate" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="trialStatus">状态</label>
+                        <select id="trialStatus" class="form-control">
+                            <option value="DRAFT">草案</option>
+                            <option value="ACTIVE">进行中</option>
+                            <option value="COMPLETED">已完成</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">创建试验</button>
+                        <button type="button" class="btn btn-danger" onclick="closeCreateTrialModal()">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2026 CTMS系统. 保留所有权利.</p>
+        </div>
+    </div>
+
+    <script>
+        // 打开创建试验模态框
+        function openCreateTrialModal() {
+            document.getElementById('createTrialModal').style.display = 'block';
+        }
+        
+        // 关闭创建试验模态框
+        function closeCreateTrialModal() {
+            document.getElementById('createTrialModal').style.display = 'none';
+            document.getElementById('createTrialForm').reset();
+        }
+        
+        // 提交创建试验表单
+        document.getElementById('createTrialForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('trialName').value,
+                description: document.getElementById('trialDescription').value,
+                startDate: document.getElementById('trialStartDate').value,
+                endDate: document.getElementById('trialEndDate').value,
+                status: document.getElementById('trialStatus').value
+            };
+            
+            // 保存到本地存储测试
+            alert('试验已创建 (模拟功能)');
+            closeCreateTrialModal();
+        });
+        
+        // 页面加载完成后添加删除按钮事件
+        document.addEventListener('DOMContentLoaded', function() {
+            // 为所有删除按钮添加事件
+            const deleteButtons = document.querySelectorAll('.btn-danger');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    if (confirm('确定要删除这个试验吗？')) {
+                        alert('试验已删除 (模拟功能)');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

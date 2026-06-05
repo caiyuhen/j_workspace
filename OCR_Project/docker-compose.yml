@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  ocr-service:
+    build: .
+    image: ocr-microservice:latest
+    container_name: ocr-service
+    ports:
+      - "9080:9080"
+    volumes:
+      - ./output:/app/output
+    restart: always
+    environment:
+      - PYTHONUNBUFFERED=1

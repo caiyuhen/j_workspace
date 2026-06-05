@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>病历夹系统 - 患者管理</title>
+    <link rel="stylesheet" href="../auth/styles.css">
+    <style>
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            color: #333;
+            margin: 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+        
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 500px;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: black;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .tab-container {
+            margin: 20px 0;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tab-btn {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab-btn.active {
+            border-bottom: 3px solid #667eea;
+            background: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .folder-item {
+            border-left: 4px solid #667eea;
+            padding-left: 15px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>病历夹系统</h1>
+            <p>医生个人病历夹</p>
+        </div>
+        
+        <div class="dashboard-container">
+            <div class="action-buttons" style="margin-bottom: 20px;">
+                <button class="btn btn-primary" onclick="openCreatePatientModal()">创建患者</button>
+                <button class="btn btn-success" onclick="openCreateFolderModal()">创建病历夹</button>
+                <button class="btn btn-warning" onclick="location.href='/auth'">返回登录</button>
+            </div>
+            
+            <div class="tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="switchTab('patients')">患者管理</button>
+                    <button class="tab-btn" onclick="switchTab('folders')">病历夹管理</button>
+                    <button class="tab-btn" onclick="switchTab('templates')">模板管理</button>
+                </div>
+                
+                <!-- 患者管理 Tab -->
+                <div id="patientsTab" class="tab-content active">
+                    <h2 class="section-title">患者列表</h2>
+                    
+                    <div class="card">
+                        <h3>患者: 001-2024</h3>
+                        <p><strong>姓名:</strong> 张三</p>
+                        <p><strong>出生日期:</strong> 1985-06-15</p>
+                        <p><strong>性别:</strong> 男</p>
+                        <p><strong>创建时间:</strong> 2024-01-10</p>
+                        <div class="action-buttons">
+                            <button class="btn btn-success" onclick="viewPatientDetails('001-2024')">查看详情</button>
+                            <button class="btn btn-primary">编辑</button>
+                            <button class="btn btn-danger">删除</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>患者: 002-2024</h3>
+                        <p><strong>姓名:</strong> 李四</p>
+                        <p><strong>出生日期:</strong> 1990-12-20</p>
+                        <p><strong>性别:</strong> 女</p>
+                        <p><strong>创建时间:</strong> 2024-01-12</p>
+                        <div class="action-buttons">
+                            <button class="btn btn-success" onclick="viewPatientDetails('002-2024')">查看详情</button>
+                            <button class="btn btn-primary">编辑</button>
+                            <button class="btn btn-danger">删除</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 病历夹管理 Tab -->
+                <div id="foldersTab" class="tab-content">
+                    <h2 class="section-title">病历夹管理</h2>
+                    
+                    <div class="card">
+                        <h3>患者张三 - 病历夹1</h3>
+                        <p><strong>描述:</strong> 主要随访记录</p>
+                        <p><strong>创建时间:</strong> 2024-01-12</p>
+                        <div class="folder-item">
+                            <strong>数据记录:</strong>
+                            <p>生命体征记录 (2024-01-15)</p>
+                            <p>不良事件报告 (2024-01-16)</p>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-success" onclick="viewFolderData('1')">查看数据</button>
+                            <button class="btn btn-primary">编辑</button>
+                            <button class="btn btn-danger">删除</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>患者李四 - 病历夹2</h3>
+                        <p><strong>描述:</strong> 实验室检查记录</p>
+                        <p><strong>创建时间:</strong> 2024-01-14</p>
+                        <div class="folder-item">
+                            <strong>数据记录:</strong>
+                            <p>实验室检查报告 (2024-01-14)</p>
+                        </div>
+                        <div class="action-buttons">
+                            <button class="btn btn-success" onclick="viewFolderData('2')">查看数据</button>
+                            <button class="btn btn-primary">编辑</button>
+                            <button class="btn btn-danger">删除</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 模板管理 Tab -->
+                <div id="templatesTab" class="tab-content">
+                    <h2 class="section-title">模板管理</h2>
+                    <p>从EDC系统导入模板到病历夹</p>
+                    
+                    <div class="card">
+                        <h3>不良事件报告模板</h3>
+                        <p><strong>描述:</strong> 标准不良事件报告表单</p>
+                        <p><strong>创建时间:</strong> 2024-01-10</p>
+                        <div class="action-buttons">
+                            <button class="btn btn-success" onclick="importTemplate('AE')">导入到病历夹</button>
+                            <button class="btn btn-primary">查看详情</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>生命体征记录模板</h3>
+                        <p><strong>描述:</strong> 常规生命体征记录表单</p>
+                        <p><strong>创建时间:</strong> 2024-01-12</p>
+                        <div class="action-buttons">
+                            <button class="btn btn-success" onclick="importTemplate('LB')">导入到病历夹</button>
+                            <button class="btn btn-primary">查看详情</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 创建患者模态框 -->
+        <div id="createPatientModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeCreatePatientModal()">&times;</span>
+                <h2>创建新患者</h2>
+                <form id="createPatientForm">
+                    <div class="form-group">
+                        <label for="patientId">患者ID *</label>
+                        <input type="text" id="patientId" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="firstName">名 *</label>
+                        <input type="text" id="firstName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="lastName">姓 *</label>
+                        <input type="text" id="lastName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="dateOfBirth">出生日期</label>
+                        <input type="date" id="dateOfBirth" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label for="gender">性别</label>
+                        <select id="gender" class="form-control">
+                            <option value="male">男</option>
+                            <option value="female">女</option>
+                            <option value="other">其他</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">创建患者</button>
+                        <button type="button" class="btn btn-danger" onclick="closeCreatePatientModal()">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- 创建病历夹模态框 -->
+        <div id="createFolderModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeCreateFolderModal()">&times;</span>
+                <h2>创建新病历夹</h2>
+                <form id="createFolderForm">
+                    <div class="form-group">
+                        <label for="folderPatientId">患者ID *</label>
+                        <input type="text" id="folderPatientId" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="folderName">病历夹名称 *</label>
+                        <input type="text" id="folderName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="folderDescription">描述</label>
+                        <textarea id="folderDescription" class="form-control"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">创建病历夹</button>
+                        <button type="button" class="btn btn-danger" onclick="closeCreateFolderModal()">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2026 病历夹系统. 保留所有权利.</p>
+        </div>
+    </div>
+
+    <script>
+        // 切换Tab
+        function switchTab(tabName) {
+            // 隐藏所有tab内容
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 移除所有tab按钮的激活状态
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 显示当前tab内容并激活按钮
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // 打开创建患者模态框
+        function openCreatePatientModal() {
+            document.getElementById('createPatientModal').style.display = 'block';
+        }
+        
+        // 关闭创建患者模态框
+        function closeCreatePatientModal() {
+            document.getElementById('createPatientModal').style.display = 'none';
+            document.getElementById('createPatientForm').reset();
+        }
+        
+        // 打开创建病历夹模态框
+        function openCreateFolderModal() {
+            document.getElementById('createFolderModal').style.display = 'block';
+        }
+        
+        // 关闭创建病历夹模态框
+        function closeCreateFolderModal() {
+            document.getElementById('createFolderModal').style.display = 'none';
+            document.getElementById('createFolderForm').reset();
+        }
+        
+        // 查看患者详情
+        function viewPatientDetails(patientId) {
+            alert('查看患者' + patientId + '详情 (模拟功能)');
+        }
+        
+        // 查看病历夹数据
+        function viewFolderData(folderId) {
+            alert('查看病历夹' + folderId + '数据 (模拟功能)');
+        }
+        
+        // 导入模板
+        function importTemplate(templateType) {
+            alert('导入' + templateType + '模板到病历夹 (模拟功能)');
+        }
+        
+        // 提交创建患者表单
+        document.getElementById('createPatientForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                patientId: document.getElementById('patientId').value,
+                firstName: document.getElementById('firstName').value,
+                lastName: document.getElementById('lastName').value,
+                dateOfBirth: document.getElementById('dateOfBirth').value,
+                gender: document.getElementById('gender').value
+            };
+            
+            // 保存到本地存储测试
+            alert('患者已创建 (模拟功能)');
+            closeCreatePatientModal();
+        });
+        
+        // 提交创建病历夹表单
+        document.getElementById('createFolderForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                patientId: document.getElementById('folderPatientId').value,
+                name: document.getElementById('folderName').value,
+                description: document.getElementById('folderDescription').value
+            };
+            
+            // 保存到本地存储测试
+            alert('病历夹已创建 (模拟功能)');
+            closeCreateFolderModal();
+        });
+        
+        // 页面加载完成后添加按钮事件
+        document.addEventListener('DOMContentLoaded', function() {
+            // 为所有删除按钮添加事件
+            const deleteButtons = document.querySelectorAll('.btn-danger');
+            deleteButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    if (confirm('确定要删除吗？')) {
+                        alert('操作已提交 (模拟功能)');
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

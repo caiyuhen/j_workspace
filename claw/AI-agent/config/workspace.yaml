@@ -1,0 +1,59 @@
+# 工作目录配置
+# 用于配置工作空间、项目结构和权限
+
+workspace:
+  # 默认工作目录
+  default_path: "D:/workspace/claw/AI-agent"
+  
+  # 项目目录结构
+  structure:
+    projects: "projects/"        # 项目目录
+    skills: "skills/"            # Skill 目录
+    tasks: "tasks/"              # 任务目录
+    logs: "logs/"                # 日志目录
+    memory: ".workbuddy/memory/" # 记忆目录
+    docs: "docs/"                # 文档目录
+    config: "config/"            # 配置文件目录
+    
+  # 工作空间列表
+  spaces:
+    - name: "medical"
+      path: "D:/workspace/claw/AI-agent/projects/medical"
+      description: "医学专业智能体项目"
+      active: true
+      
+    - name: "general"
+      path: "D:/workspace/claw/AI-agent/projects/general"
+      description: "通用项目工作区"
+      active: false
+      
+    - name: "research"
+      path: "D:/workspace/claw/AI-agent/projects/research"
+      description: "研究项目工作区"
+      active: false
+
+  # 权限配置
+  permissions:
+    read: true              # 读取权限
+    write: true             # 写入权限
+    execute: false          # 执行权限
+    delete: false           # 删除权限（安全起见默认关闭）
+    
+  # 自动备份配置
+  backup:
+    enabled: true           # 是否启用自动备份
+    interval: 3600          # 备份间隔（秒）
+    retention_days: 30      # 保留天数
+    max_backups: 10         # 最大备份数量
+    
+  # 同步配置
+  sync:
+    enabled: false          # 是否启用文件同步
+    target: ""              # 同步目标路径
+    
+  # 监控配置
+  monitor:
+    file_changes: true      # 监控文件变化
+    disk_space: true        # 监控磁盘空间
+    alerts:
+      disk_threshold: 90    # 磁盘空间警告阈值（%）
