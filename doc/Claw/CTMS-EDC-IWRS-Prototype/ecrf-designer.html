@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eCRF 设计器 - CTMS 平台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f7fafc;
+            min-height: 100vh;
+        }
+
+        /* 顶部导航栏 */
+        .top-nav {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 0;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .nav-container {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-link:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .nav-link.active {
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 280px 1fr 320px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        /* 左侧组件面板 */
+        .component-category {
+            margin-bottom: 20px;
+        }
+
+        .category-title {
+            color: #4a5568;
+            font-weight: 600;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .component-item {
+            padding: 12px 15px;
+            margin-bottom: 8px;
+            background: #f7fafc;
+            border-radius: 8px;
+            cursor: grab;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .component-item:hover {
+            background: #edf2f7;
+            transform: translateX(5px);
+        }
+
+        .component-icon {
+            font-size: 20px;
+        }
+
+        .component-name {
+            flex: 1;
+            color: #2d3748;
+            font-size: 14px;
+        }
+
+        .cdash-tag {
+            background: #c6f6d5;
+            color: #22543d;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        /* 中间画布 */
+        .canvas-area {
+            min-height: 800px;
+            background: #edf2f7;
+            border-radius: 8px;
+            padding: 30px;
+            overflow-y: auto;
+            max-height: 900px;
+        }
+
+        .crf-page {
+            background: white;
+            min-height: 1100px;
+            padding: 40px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin: 0 auto;
+            max-width: 900px;
+        }
+
+        .crf-section {
+            margin-bottom: 30px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .crf-section-header {
+            background: #f7fafc;
+            padding: 15px 20px;
+            font-weight: 600;
+            color: #2d3748;
+            border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .crf-section-body {
+            padding: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 12px;
+            background: #fafbfc;
+            border-radius: 6px;
+            border-left: 3px solid transparent;
+        }
+
+        .form-row:hover {
+            border-left-color: #667eea;
+            background: #f7fafc;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: #4a5568;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .label-cn {
+            font-size: 14px;
+            color: #2d3748;
+        }
+
+        .label-en {
+            font-size: 12px;
+            color: #718096;
+        }
+
+        .form-field {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .field-type {
+            padding: 6px 12px;
+            background: #edf2f7;
+            border-radius: 6px;
+            font-size: 12px;
+            color: #4a5568;
+        }
+
+        .field-validation {
+            font-size: 12px;
+            color: #718096;
+        }
+
+        .drag-placeholder {
+            border: 2px dashed #cbd5e0;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            color: #718096;
+            background: #f7fafc;
+            margin-top: 20px;
+        }
+
+        /* 右侧属性面板 */
+        .property-group {
+            margin-bottom: 25px;
+        }
+
+        .property-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .property-item {
+            margin-bottom: 15px;
+        }
+
+        .property-label {
+            display: block;
+            font-size: 13px;
+            color: #4a5568;
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+
+        .property-input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .property-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .property-select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #edf2f7;
+            color: #4a5568;
+            margin-left: 10px;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .action-buttons {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <div class="top-nav">
+        <div class="nav-container">
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">📊 仪表盘</a>
+                <a href="edc-entry.html" class="nav-link">📝 EDC 录入</a>
+                <a href="ecrf-designer.html" class="nav-link active">🎨 eCRF 设计</a>
+                <a href="iwrs-config.html" class="nav-link">🎲 IWRS 随机化</a>
+                <a href="etmf-docs.html" class="nav-link">📁 eTMF 文档</a>
+                <a href="doctor-portfolio.html" class="nav-link">👨‍⚕️ 医生病历夹</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="layout">
+        <!-- 左侧组件库 -->
+        <div class="panel">
+            <div class="panel-header">📦 字段组件库</div>
+            <div class="panel-body">
+                <div class="component-category">
+                    <div class="category-title">CDASH 标准字段</div>
+                    <div class="component-item">
+                        <span class="component-icon">🔢</span>
+                        <span class="component-name">受试者编号</span>
+                        <span class="cdash-tag">CDASH</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">📅</span>
+                        <span class="component-name">访视点日期</span>
+                        <span class="cdash-tag">CDASH</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">⚖️</span>
+                        <span class="component-name">体重</span>
+                        <span class="cdash-tag">CDASH</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">📏</span>
+                        <span class="component-name">身高</span>
+                        <span class="cdash-tag">CDASH</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">❤️</span>
+                        <span class="component-name">心率</span>
+                        <span class="cdash-tag">CDASH</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">🩸</span>
+                        <span class="component-name">血压收缩压</span>
+                        <span class="cdash-tag">CDASH</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">🩻</span>
+                        <span class="component-name">血压舒张压</span>
+                        <span class="cdash-tag">CDASH</span>
+                    </div>
+                </div>
+
+                <div class="component-category">
+                    <div class="category-title">基本字段类型</div>
+                    <div class="component-item">
+                        <span class="component-icon">📝</span>
+                        <span class="component-name">单行文本</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">📄</span>
+                        <span class="component-name">多行文本</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">🔢</span>
+                        <span class="component-name">数字</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">📅</span>
+                        <span class="component-name">日期</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">🕐</span>
+                        <span class="component-name">时间</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">📊</span>
+                        <span class="component-name">下拉选择</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">☑️</span>
+                        <span class="component-name">复选框</span>
+                    </div>
+                </div>
+
+                <div class="component-category">
+                    <div class="category-title">高级组件</div>
+                    <div class="component-item">
+                        <span class="component-icon">🔁</span>
+                        <span class="component-name">重复表</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">📋</span>
+                        <span class="component-name">计算字段</span>
+                    </div>
+                    <div class="component-item">
+                        <span class="component-icon">🔗</span>
+                        <span class="component-name">引用字段</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中间画布 -->
+        <div class="panel">
+            <div class="panel-header">
+                🎨 eCRF 设计画布 - 生命科学体征 (VS)
+            </div>
+            <div class="panel-body">
+                <div class="canvas-area">
+                    <div class="crf-page">
+                        <h2 style="margin-bottom: 20px; color: #2d3748;">生命科学体征评估表</h2>
+                        <p style="color: #718096; margin-bottom: 30px;">Domain: VS | 访视点：基线、第 2 周、第 4 周、第 8 周</p>
+
+                        <div class="crf-section">
+                            <div class="crf-section-header">
+                                <span>受试者基本信息</span>
+                                <span style="font-size: 12px; color: #718096;">SUBJ</span>
+                            </div>
+                            <div class="crf-section-body">
+                                <div class="form-row">
+                                    <div class="form-label">
+                                        <div class="label-cn">受试者编号</div>
+                                        <div class="label-en">SUBJID</div>
+                                    </div>
+                                    <div class="form-field">
+                                        <span class="field-type">单行文本</span>
+                                        <span class="field-validation">必填</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-label">
+                                        <div class="label-cn">随机号</div>
+                                        <div class="label-en">RFSTDTC</div>
+                                    </div>
+                                    <div class="form-field">
+                                        <span class="field-type">自动填充</span>
+                                        <span class="field-validation">只读</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-label">
+                                        <div class="label-cn">访视日期</div>
+                                        <div class="label-en">VSDTC</div>
+                                    </div>
+                                    <div class="form-field">
+                                        <span class="field-type">日期</span>
+                                        <span class="field-validation">必填 | CDASH</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="crf-section">
+                            <div class="crf-section-header">
+                                <span>生命体征测量</span>
+                                <span style="font-size: 12px; color: #718096;">VITALS</span>
+                            </div>
+                            <div class="crf-section-body">
+                                <div class="form-row">
+                                    <div class="form-label">
+                                        <div class="label-cn">体重 (kg)</div>
+                                        <div class="label-en">VSSTRESU</div>
+                                    </div>
+                                    <div class="form-field">
+                                        <span class="field-type">数字</span>
+                                        <span class="field-validation">范围：20-300 | CDASH</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-label">
+                                        <div class="label-cn">身高 (cm)</div>
+                                        <div class="label-en">HTSTRESU</div>
+                                    </div>
+                                    <div class="form-field">
+                                        <span class="field-type">数字</span>
+                                        <span class="field-validation">范围：50-250 | CDASH</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-label">
+                                        <div class="label-cn">体质指数 (BMI)</div>
+                                        <div class="label-en">AEBODWGT</div>
+                                    </div>
+                                    <div class="form-field">
+                                        <span class="field-type">计算字段</span>
+                                        <span class="field-validation">自动计算</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-label">
+                                        <div class="label-cn">心率 (次/分)</div>
+                                        <div class="label-en">VSSORRESU</div>
+                                    </div>
+                                    <div class="form-field">
+                                        <span class="field-type">数字</span>
+                                        <span class="field-validation">范围：40-200 | CDASH</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-label">
+                                        <div class="label-cn">收缩压 (mmHg)</div>
+                                        <div class="label-en">VSS1ORRESU</div>
+                                    </div>
+                                    <div class="form-field">
+                                        <span class="field-type">数字</span>
+                                        <span class="field-validation">范围：70-250 | CDASH</span>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-label">
+                                        <div class="label-cn">舒张压 (mmHg)</div>
+                                        <div class="label-en">VSS2ORRESU</div>
+                                    </div>
+                                    <div class="form-field">
+                                        <span class="field-type">数字</span>
+                                        <span class="field-validation">范围：40-150 | CDASH</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="drag-placeholder">
+                            🖱️ 从左侧拖拽字段到此处
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧属性面板 -->
+        <div class="panel">
+            <div class="panel-header">⚙️ 字段属性</div>
+            <div class="panel-body">
+                <div class="property-group">
+                    <div class="property-title">字段标识</div>
+                    <div class="property-item">
+                        <label class="property-label">中文名称</label>
+                        <input type="text" class="property-input" value="收缩压" placeholder="请输入中文名称">
+                    </div>
+                    <div class="property-item">
+                        <label class="property-label">英文名称 (SDTM 变量)</label>
+                        <input type="text" class="property-input" value="VSS1ORRESU" placeholder="请输入英文名称">
+                    </div>
+                </div>
+
+                <div class="property-group">
+                    <div class="property-title">字段类型</div>
+                    <div class="property-item">
+                        <label class="property-label">数据类型</label>
+                        <select class="property-select">
+                            <option>数字</option>
+                            <option>文本</option>
+                            <option>日期</option>
+                            <option>选择</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="property-group">
+                    <div class="property-title">验证规则</div>
+                    <div class="property-item">
+                        <label class="property-label">最小值</label>
+                        <input type="number" class="property-input" value="70" placeholder="请输入最小值">
+                    </div>
+                    <div class="property-item">
+                        <label class="property-label">最大值</label>
+                        <input type="number" class="property-input" value="250" placeholder="请输入最大值">
+                    </div>
+                    <div class="property-item">
+                        <label class="property-label">单位</label>
+                        <input type="text" class="property-input" value="mmHg" placeholder="请输入单位">
+                    </div>
+                </div>
+
+                <div class="property-group">
+                    <div class="property-title">必填设置</div>
+                    <div class="property-item">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="required" checked>
+                            <label for="required" style="font-size: 14px; color: #4a5568;">此字段为必填项</label>
+                        </div>
+                    </div>
+                    <div class="property-item">
+                        <div class="checkbox-group">
+                            <input type="checkbox" id="cdash" checked>
+                            <label for="cdash" style="font-size: 14px; color: #4a5568;">符合 CDASH 标准</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="property-group">
+                    <div class="property-title">逻辑核查</div>
+                    <div class="property-item">
+                        <label class="property-label">核查规则</label>
+                        <textarea class="property-input" rows="4" placeholder="请输入逻辑核查规则 (JS 表达式)">if (VSS1ORRESU < VSS2ORRESU) {
+    flag = "收缩压不能小于舒张压"
+}</textarea>
+                    </div>
+                </div>
+
+                <div class="action-buttons">
+                    <button class="btn btn-primary" style="width: 100%; margin-bottom: 10px;">💾 保存字段</button>
+                    <button class="btn btn-secondary" style="width: 100%;">🗑️ 删除字段</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

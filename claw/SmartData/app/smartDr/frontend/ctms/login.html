@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTMS系统 - 登录</title>
+    <link rel="stylesheet" href="../auth/styles.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>CTMS系统</h1>
+            <p>临床试验管理系统</p>
+        </div>
+        
+        <div class="login-form">
+            <h2>系统登录</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="text" id="username" name="username" placeholder="用户名" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="password" name="password" placeholder="密码" required>
+                </div>
+                <button type="submit" class="submit-btn">登录CTMS</button>
+            </form>
+            <div id="loginMessage" class="message"></div>
+            <div style="margin-top: 20px;">
+                <a href="/auth" style="color: #667eea; text-decoration: none;">返回统一登录页面</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2026 CTMS系统. 保留所有权利.</p>
+        </div>
+    </div>
+
+    <script>
+        // 登录表单处理
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const messageDiv = document.getElementById('loginMessage');
+            
+            // 清除之前的提示信息
+            messageDiv.className = 'message';
+            messageDiv.textContent = '';
+            
+            // 简单验证
+            if (!username || !password) {
+                showMessage('请输入用户名和密码', 'error');
+                return;
+            }
+            
+            try {
+                // 发送登录请求到认证服务
+                const response = await fetch('http://localhost:3001/api/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        password: password
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('登录成功！', 'success');
+                    // 保存token到本地存储
+                    localStorage.setItem('authToken', result.token);
+                    localStorage.setItem('system', 'ctms');
+                    
+                    // 重定向到CTMS系统主页
+                    window.location.href = '/ctms/dashboard';
+                } else {
+                    showMessage(result.message || '登录失败', 'error');
+                }
+            } catch (error) {
+                console.error('登录错误:', error);
+                showMessage('服务器连接失败，请稍后重试', 'error');
+            }
+        });
+
+        // 显示消息的辅助函数
+        function showMessage(message, type) {
+            const messageDiv = document.getElementById('loginMessage');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+        }
+    </script>
+</body>
+</html>

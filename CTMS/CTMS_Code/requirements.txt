@@ -1,0 +1,8 @@
+Django>=4.2,<5.0
+djangorestframework>=3.14
+django-cors-headers>=4.0
+django-filter>=23.0
+drf-yasg>=1.21  # Swagger documentation
+django-simple-history>=3.3  # For Audit Trail
+pytest-django>=4.5
+PyJWT>=2.8

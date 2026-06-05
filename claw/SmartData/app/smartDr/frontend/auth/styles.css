@@ -1,0 +1,178 @@
+/* 全局样式 */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.login-container {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 800px;
+    padding: 40px;
+    text-align: center;
+}
+
+.login-header {
+    margin-bottom: 40px;
+}
+
+.login-header h1 {
+    color: #333;
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.login-header p {
+    color: #666;
+    font-size: 1.1em;
+}
+
+.login-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.option-card {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.option-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    border-color: #667eea;
+}
+
+.option-card h3 {
+    color: #333;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+}
+
+.option-card p {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 15px;
+}
+
+.login-btn {
+    display: inline-block;
+    background: #667eea;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background 0.3s ease;
+}
+
+.login-btn:hover {
+    background: #5a6fd8;
+}
+
+.login-form {
+    margin-top: 30px;
+}
+
+.login-form h2 {
+    color: #333;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    transition: border 0.3s ease;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 15px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background 0.3s ease;
+}
+
+.submit-btn:hover {
+    background: #5a6fd8;
+}
+
+.message {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.message.error {
+    background: #fee;
+    color: #c53f3f;
+    border: 1px solid #fcc;
+}
+
+.message.success {
+    background: #efe;
+    color: #3f723f;
+    border: 1px solid #cfc;
+}
+
+.footer {
+    margin-top: 40px;
+    color: #666;
+    font-size: 0.9em;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .login-container {
+        padding: 20px;
+    }
+    
+    .login-header h1 {
+        font-size: 2em;
+    }
+    
+    .login-options {
+        grid-template-columns: 1fr;
+    }
+    
+    .option-card {
+        padding: 15px;
+    }
+}

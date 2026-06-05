@@ -1,0 +1,13 @@
+# TypeScript configuration for development
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "sourceMap": true,
+    "pretty": true,
+    "noEmit": true,
+    "incremental": true,
+    "tsBuildInfoFile": "./.tsbuildinfo"
+  },
+  "include": ["src/**/*", "prisma/seed.ts", "**/*.test.ts", "**/*.spec.ts"],
+  "exclude": ["node_modules", "dist"]
+}

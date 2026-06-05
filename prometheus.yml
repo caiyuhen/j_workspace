@@ -1,0 +1,45 @@
+ my global config
+Global:
+  scrape_interval: 15s # Set the scrape interval to every 15 seconds. Default is every 1 minute.
+  evaluation_interval: 15s # Evaluate rules every 15 seconds. The default is every 1 minute.
+  # scrape_timeout is set to the global default (10s).
+
+ # ====== 1. 基础系统监控（Node Exporter） ======
+  - job_name: 'node_exporter'
+    static_configs:
+      - targets: ['localhost:9100']  # Prometheus Node Exporter默认端口
+    # 完整可用指标示例：
+    # - cpu: node_cpu_seconds_total{mode="user"}
+    # - memory: node_memory_MemTotal_bytes
+    # - network: node_network_receive_bytes_total
+  # ====== 2. NVIDIA GPU 监控（GPU Exporter） ======
+  - job_name: 'nvidia_gpu'
+    static_configs:
+      - targets: ['localhost:9400']  # NVIDIA GPU Exporter端口（需确保已安装）
+    # 完整可用指标示例：
+    # - gpu_utilization: gpu_utilization{gpu="0"}
+    # - gpu_temperature: gpu_temperature_celsius{gpu="0"}
+    # - memory_usage: gpu_memory_total_bytes - gpu_memory_free_bytes
+  # ====== 3. 网络性能监控（可选：iperf3测试数据） ======
+  - job_name: 'iperf3'
+    metrics_path: /metrics  # 通过prometheus的metrics接口
+    static_configs:
+      - targets: ['localhost:8080']  # 从iperf3测试工具生成的metrics端口
+    # 说明：需部署iperf3的Prometheus exporter
+    # 例如：https://github.com/ksgeer/iperf3-prometheus-exporter
+  # ====== 4. 磁盘IO监控（推荐） ======
+  - job_name: 'disk_io'
+    static_configs:
+      - targets: ['localhost:9100']  # 通过Node Exporter追踪
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: 127.0.0.1:9100
+  # ====== 5. 自定义指标（可扩展） ======
+  - job_name: 'custom_metrics'
+    static_configs:
+      - targets: ['localhost:9090']  # 您后期添加的业务指标端口
+

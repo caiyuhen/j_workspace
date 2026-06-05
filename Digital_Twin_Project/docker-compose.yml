@@ -1,0 +1,69 @@
+version: '3.8'
+
+services:
+  # 1. 报告网关 (API Gateway)
+  report-gateway:
+    build: ./services/report-gateway
+    container_name: report-gateway
+    ports:
+      - "8000:8000"
+    environment:
+      - PATIENT_SERVICE_URL=http://patient-service:8003
+      - SIMULATION_SERVICE_URL=http://simulation-service:8001
+      - VISUALIZATION_SERVICE_URL=http://visualization-service:8002
+      - OCR_SERVICE_URL=http://ocr-service:8004
+    depends_on:
+      - patient-service
+      - simulation-service
+      - visualization-service
+      - ocr-service
+    volumes:
+      - ./services/report-gateway/src:/app
+      - ./logs:/app/logs
+
+  # 2. 模拟服务
+  simulation-service:
+    build: ./services/simulation-service
+    container_name: simulation-service
+    ports:
+      - "8001:8001"
+    command: uvicorn main:app --host 0.0.0.0 --port 8001
+    volumes:
+      - ./services/simulation-service/src:/app
+
+  # 3. 可视化服务
+  visualization-service:
+    build: ./services/visualization-service
+    container_name: visualization-service
+    ports:
+      - "8002:8002"
+    command: uvicorn main:app --host 0.0.0.0 --port 8002
+    volumes:
+      - ./services/visualization-service/src:/app
+
+  # 4. 患者服务
+  patient-service:
+    build: ./services/patient-service
+    container_name: patient-service
+    ports:
+      - "8003:8003"
+    command: uvicorn main:app --host 0.0.0.0 --port 8003
+    volumes:
+      - ./services/patient-service/src:/app
+      - ./extracted_data:/app/data
+
+  # 5. OCR 服务
+  ocr-service:
+    build: ./services/ocr-service
+    container_name: ocr-service
+    ports:
+      - "8004:8004"
+    command: uvicorn main:app --host 0.0.0.0 --port 8004
+    volumes:
+      - ./services/ocr-service/src:/app
+      - ./extracted_data:/app/extracted_data
+
+# 定义网络 (可选，Docker Compose 默认会创建一个)
+networks:
+  default:
+    driver: bridge

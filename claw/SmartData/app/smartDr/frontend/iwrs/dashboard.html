@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IWRS系统 - 随机化管理</title>
+    <link rel="stylesheet" href="../auth/styles.css">
+    <style>
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .section-title {
+            color: #333;
+            margin: 20px 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .card {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 15px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .card:hover {
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        
+        .btn {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #5a6fd8;
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #218838;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 10% auto;
+            padding: 20px;
+            border-radius: 10px;
+            width: 80%;
+            max-width: 500px;
+        }
+        
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        
+        .close:hover {
+            color: black;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .tab-container {
+            margin: 20px 0;
+        }
+        
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tab-btn {
+            padding: 10px 20px;
+            background: #f8f9fa;
+            border: none;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .tab-btn.active {
+            border-bottom: 3px solid #667eea;
+            background: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>IWRS系统</h1>
+            <p>交互式随机化与药物供应管理系统</p>
+        </div>
+        
+        <div class="dashboard-container">
+            <div class="action-buttons" style="margin-bottom: 20px;">
+                <button class="btn btn-primary" onclick="openRandomizationConfigModal()">创建随机化配置</button>
+                <button class="btn btn-success" onclick="location.href='/auth'">返回登录</button>
+            </div>
+            
+            <div class="tab-container">
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="switchTab('randomization')">随机化管理</button>
+                    <button class="tab-btn" onclick="switchTab('inventory')">药物库存</button>
+                    <button class="tab-btn" onclick="switchTab('blinding')">破盲申请</button>
+                </div>
+                
+                <!-- 随机化管理 Tab -->
+                <div id="randomizationTab" class="tab-content active">
+                    <h2 class="section-title">随机化配置</h2>
+                    
+                    <div class="card">
+                        <h3>试验A - 随机化配置</h3>
+                        <p><strong>算法:</strong> 区组随机化</p>
+                        <p><strong>治疗组:</strong> ARM_A, ARM_B</p>
+                        <p><strong>分配比例:</strong> 1:1</p>
+                        <p><strong>区组大小:</strong> 4</p>
+                        <div class="action-buttons">
+                            <button class="btn btn-success">查看详细</button>
+                            <button class="btn btn-primary">编辑配置</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>试验B - 随机化配置</h3>
+                        <p><strong>算法:</strong> 分层随机化</p>
+                        <p><strong>治疗组:</strong> ARM_A, ARM_B, ARM_C</p>
+                        <p><strong>分配比例:</strong> 2:1:1</p>
+                        <p><strong>区组大小:</strong> 6</p>
+                        <div class="action-buttons">
+                            <button class="btn btn-success">查看详细</button>
+                            <button class="btn btn-primary">编辑配置</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 药物库存 Tab -->
+                <div id="inventoryTab" class="tab-content">
+                    <h2 class="section-title">药物库存管理</h2>
+                    
+                    <div class="card">
+                        <h3>药物A - 治疗药物</h3>
+                        <p><strong>规格:</strong> 50mg/片</p>
+                        <p><strong>批号:</strong> A123456</p>
+                        <p><strong>数量:</strong> 1000片</p>
+                        <p><strong>过期日期:</strong> 2025-12-31</p>
+                        <div class="action-buttons">
+                            <button class="btn btn-primary">查看详情</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>药物B - 对照药物</h3>
+                        <p><strong>规格:</strong> 100mg/片</p>
+                        <p><strong>批号:</strong> B789012</p>
+                        <p><strong>数量:</strong> 800片</p>
+                        <p><strong>过期日期:</strong> 2026-06-30</p>
+                        <div class="action-buttons">
+                            <button class="btn btn-primary">查看详情</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 破盲申请 Tab -->
+                <div id="blindingTab" class="tab-content">
+                    <h2 class="section-title">破盲申请</h2>
+                    
+                    <div class="card">
+                        <h3>患者: 001-2024</h3>
+                        <p><strong>试验:</strong> 试验A</p>
+                        <p><strong>申请理由:</strong> 紧急治疗需要</p>
+                        <p><strong>状态:</strong> <span style="color: #ffc107;">待审批</span></p>
+                        <p><strong>申请时间:</strong> 2024-01-15 14:30</p>
+                        <div class="action-buttons">
+                            <button class="btn btn-success">批准</button>
+                            <button class="btn btn-danger">拒绝</button>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <h3>患者: 002-2024</h3>
+                        <p><strong>试验:</strong> 试验B</p>
+                        <p><strong>申请理由:</strong> 安全性考虑</p>
+                        <p><strong>状态:</strong> <span style="color: #28a745;">已批准</span></p>
+                        <p><strong>申请时间:</strong> 2024-01-10 09:15</p>
+                        <div class="action-buttons">
+                            <button class="btn btn-primary">查看详情</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 创建随机化配置模态框 -->
+        <div id="randomizationConfigModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeRandomizationConfigModal()">&times;</span>
+                <h2>创建随机化配置</h2>
+                <form id="randomizationConfigForm">
+                    <div class="form-group">
+                        <label for="trialId">试验ID *</label>
+                        <input type="text" id="trialId" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="algorithm">算法 *</label>
+                        <select id="algorithm" class="form-control" required>
+                            <option value="block">区组随机化</option>
+                            <option value="stratified">分层随机化</option>
+                            <option value="simple">简单随机化</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="treatmentArms">治疗组 (用逗号分隔) *</label>
+                        <input type="text" id="treatmentArms" class="form-control" placeholder="ARM_A,ARM_B" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="allocationRatio">分配比例</label>
+                        <input type="text" id="allocationRatio" class="form-control" placeholder="例如: 1:1">
+                    </div>
+                    <div class="form-group">
+                        <label for="blockSizes">区组大小</label>
+                        <input type="number" id="blockSizes" class="form-control" placeholder="例如: 4">
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">创建配置</button>
+                        <button type="button" class="btn btn-danger" onclick="closeRandomizationConfigModal()">取消</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2026 IWRS系统. 保留所有权利.</p>
+        </div>
+    </div>
+
+    <script>
+        // 切换Tab
+        function switchTab(tabName) {
+            // 隐藏所有tab内容
+            const tabContents = document.querySelectorAll('.tab-content');
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 移除所有tab按钮的激活状态
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 显示当前tab内容并激活按钮
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+        
+        // 打开创建随机化配置模态框
+        function openRandomizationConfigModal() {
+            document.getElementById('randomizationConfigModal').style.display = 'block';
+        }
+        
+        // 关闭创建随机化配置模态框
+        function closeRandomizationConfigModal() {
+            document.getElementById('randomizationConfigModal').style.display = 'none';
+            document.getElementById('randomizationConfigForm').reset();
+        }
+        
+        // 提交创建随机化配置表单
+        document.getElementById('randomizationConfigForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                trialId: document.getElementById('trialId').value,
+                algorithm: document.getElementById('algorithm').value,
+                treatmentArms: document.getElementById('treatmentArms').value,
+                allocationRatio: document.getElementById('allocationRatio').value,
+                blockSizes: document.getElementById('blockSizes').value
+            };
+            
+            // 保存到本地存储测试
+            alert('随机化配置已创建 (模拟功能)');
+            closeRandomizationConfigModal();
+        });
+        
+        // 页面加载完成后添加按钮事件
+        document.addEventListener('DOMContentLoaded', function() {
+            // 为所有批准/拒绝按钮添加事件
+            const actionButtons = document.querySelectorAll('.btn-success, .btn-danger');
+            actionButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    alert('操作已提交 (模拟功能)');
+                });
+            });
+        });
+    </script>
+</body>
+</html>

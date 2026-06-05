@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数字孪生医生 · 大模型技术方案</title>
+<style>
+  :root {
+    --primary: #1a56db;
+    --accent: #e74694;
+    --green: #0e9f6e;
+    --orange: #ff6b35;
+    --purple: #7e3af2;
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #64748b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); line-height: 1.7; }
+  
+  /* Header */
+  .hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 50%, #0f2847 100%);
+    color: #fff;
+    padding: 60px 40px 50px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .hero h1 { font-size: 2.4em; font-weight: 700; margin-bottom: 12px; position: relative; }
+  .hero p { font-size: 1.1em; color: #94a3b8; position: relative; max-width: 700px; margin: 0 auto; }
+  .hero .tags { margin-top: 20px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .tag { padding: 4px 14px; border-radius: 20px; font-size: 0.82em; font-weight: 600; }
+  .tag-blue { background: rgba(59,130,246,0.25); color: #93c5fd; border: 1px solid rgba(59,130,246,0.3); }
+  .tag-pink { background: rgba(231,70,148,0.25); color: #f9a8d4; border: 1px solid rgba(231,70,148,0.3); }
+  .tag-green { background: rgba(16,185,129,0.25); color: #6ee7b7; border: 1px solid rgba(16,185,129,0.3); }
+  .tag-orange { background: rgba(251,146,60,0.25); color: #fdba74; border: 1px solid rgba(251,146,60,0.3); }
+
+  /* Nav */
+  .nav {
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    display: flex;
+    gap: 4px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    overflow-x: auto;
+  }
+  .nav a {
+    padding: 14px 18px;
+    font-size: 0.88em;
+    color: var(--muted);
+    text-decoration: none;
+    white-space: nowrap;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  .nav a:hover, .nav a.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  /* Container */
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 24px; }
+
+  /* Section */
+  .section { margin-bottom: 60px; }
+  .section-title {
+    font-size: 1.55em;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid var(--primary);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title .icon { font-size: 1.1em; }
+
+  /* Cards */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+  }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+  .card h3 { font-size: 1.05em; font-weight: 700; margin-bottom: 10px; }
+  .card p { font-size: 0.9em; color: var(--muted); }
+
+  /* Architecture diagram */
+  .arch {
+    background: #0f172a;
+    border-radius: 16px;
+    padding: 40px;
+    color: #e2e8f0;
+    overflow-x: auto;
+  }
+  .arch-title { text-align: center; font-size: 1.1em; color: #94a3b8; margin-bottom: 30px; letter-spacing: 2px; }
+  .arch-layers { display: flex; flex-direction: column; gap: 12px; }
+  .arch-layer {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .arch-layer-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    background: #1e3a5f;
+    color: #93c5fd;
+    padding: 10px 8px;
+    border-radius: 8px;
+    font-size: 0.78em;
+    font-weight: 700;
+    letter-spacing: 1px;
+    min-width: 32px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .arch-boxes {
+    flex: 1;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .arch-box {
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-size: 0.85em;
+    font-weight: 600;
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    border: 1px solid rgba(255,255,255,0.1);
+    transition: transform 0.2s;
+    cursor: default;
+  }
+  .arch-box:hover { transform: translateY(-2px); }
+  .ab-blue { background: rgba(29,78,216,0.4); color: #93c5fd; }
+  .ab-green { background: rgba(5,150,105,0.4); color: #6ee7b7; }
+  .ab-purple { background: rgba(109,40,217,0.4); color: #c4b5fd; }
+  .ab-orange { background: rgba(194,65,12,0.4); color: #fdba74; }
+  .ab-pink { background: rgba(157,23,77,0.4); color: #f9a8d4; }
+  .ab-teal { background: rgba(15,118,110,0.4); color: #99f6e4; }
+
+  /* Flow diagram */
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 20px 0; }
+  .flow-step {
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 0.85em;
+    font-weight: 600;
+    text-align: center;
+  }
+  .flow-arrow { color: var(--muted); font-size: 1.2em; }
+  .fs-blue { background: #dbeafe; color: #1d4ed8; }
+  .fs-green { background: #d1fae5; color: #065f46; }
+  .fs-purple { background: #ede9fe; color: #5b21b6; }
+  .fs-orange { background: #ffedd5; color: #9a3412; }
+  .fs-pink { background: #fce7f3; color: #9d174d; }
+  .fs-teal { background: #ccfbf1; color: #0f766e; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: 0.88em; }
+  th { background: #f1f5f9; padding: 10px 14px; text-align: left; font-weight: 700; color: var(--text); border-bottom: 2px solid var(--border); }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:hover td { background: #f8fafc; }
+
+  /* List styles */
+  .list { list-style: none; }
+  .list li { padding: 8px 0; padding-left: 20px; position: relative; font-size: 0.9em; border-bottom: 1px solid #f1f5f9; }
+  .list li::before { content: '▸'; position: absolute; left: 0; color: var(--primary); font-size: 0.9em; }
+  .list li:last-child { border-bottom: none; }
+
+  /* Badge */
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 0.75em; font-weight: 700; margin-left: 8px; vertical-align: middle; }
+  .b-blue { background: #dbeafe; color: #1d4ed8; }
+  .b-green { background: #d1fae5; color: #065f46; }
+  .b-orange { background: #ffedd5; color: #9a3412; }
+  .b-red { background: #fee2e2; color: #991b1b; }
+  .b-purple { background: #ede9fe; color: #5b21b6; }
+
+  /* Code block */
+  .code-block {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 10px;
+    padding: 20px;
+    font-family: 'Cascadia Code', 'Fira Code', 'Courier New', monospace;
+    font-size: 0.83em;
+    line-height: 1.8;
+    overflow-x: auto;
+    margin: 16px 0;
+  }
+  .code-block .kw { color: #93c5fd; }
+  .code-block .str { color: #6ee7b7; }
+  .code-block .cmt { color: #64748b; }
+  .code-block .fn { color: #f9a8d4; }
+  .code-block .num { color: #fdba74; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; margin-bottom: -1px; }
+  .tab-btn {
+    padding: 8px 20px;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+    background: #f8fafc;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.88em;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .tab-btn.active { background: #fff; color: var(--primary); border-bottom: 1px solid #fff; z-index: 1; }
+  .tab-content {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 0 8px 8px 8px;
+    padding: 24px;
+    display: none;
+  }
+  .tab-content.active { display: block; }
+
+  /* Timeline */
+  .timeline { position: relative; padding-left: 30px; }
+  .timeline::before { content: ''; position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: var(--border); }
+  .tl-item { position: relative; margin-bottom: 24px; }
+  .tl-dot {
+    position: absolute;
+    left: -26px;
+    top: 4px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--primary);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 3px var(--border);
+  }
+  .tl-dot.green { background: var(--green); }
+  .tl-dot.orange { background: var(--orange); }
+  .tl-dot.purple { background: var(--purple); }
+  .tl-title { font-weight: 700; font-size: 0.95em; }
+  .tl-body { font-size: 0.87em; color: var(--muted); margin-top: 4px; }
+
+  /* Highlight box */
+  .highlight-box {
+    border-left: 4px solid var(--primary);
+    background: #eff6ff;
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 16px 0;
+  }
+  .highlight-box.orange { border-left-color: var(--orange); background: #fff7ed; }
+  .highlight-box.green { border-left-color: var(--green); background: #ecfdf5; }
+  .highlight-box.purple { border-left-color: var(--purple); background: #f5f3ff; }
+  .highlight-box.red { border-left-color: #ef4444; background: #fef2f2; }
+  .highlight-box p { font-size: 0.9em; }
+  .highlight-box strong { font-size: 0.92em; }
+
+  /* Grid 2col */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 700px) { .grid-2 { grid-template-columns: 1fr; } }
+
+  /* Progress bar */
+  .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .progress-label { font-size: 0.85em; width: 120px; color: var(--muted); }
+  .progress-bar { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 4px; }
+  .progress-val { font-size: 0.82em; color: var(--muted); width: 36px; text-align: right; }
+
+  /* Sticky anchor offset */
+  [id] { scroll-margin-top: 60px; }
+</style>
+</head>
+<body>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>🩺 数字孪生医生 · 大模型技术方案</h1>
+  <p>基于大语言模型构建覆盖 2型糖尿病 · 心血管疾病 · 脑卒中 的智能数字孪生医生完整技术架构</p>
+  <div class="tags">
+    <span class="tag tag-blue">LLM + RAG</span>
+    <span class="tag tag-pink">多模态融合</span>
+    <span class="tag tag-green">知识图谱</span>
+    <span class="tag tag-orange">智能体 Agent</span>
+    <span class="tag tag-blue">数字孪生</span>
+    <span class="tag tag-pink">临床决策支持</span>
+  </div>
+</div>
+
+<!-- Nav -->
+<nav class="nav">
+  <a href="#overview" class="active">总体思路</a>
+  <a href="#architecture">系统架构</a>
+  <a href="#data">数据层</a>
+  <a href="#model">模型层</a>
+  <a href="#agent">Agent层</a>
+  <a href="#training">训练策略</a>
+  <a href="#rag">RAG知识库</a>
+  <a href="#inference">推理引擎</a>
+  <a href="#eval">评估体系</a>
+  <a href="#roadmap">实施路线</a>
+  <a href="#risk">风险点</a>
+</nav>
+
+<div class="container">
+
+  <!-- ===== 总体思路 ===== -->
+  <div class="section" id="overview">
+    <div class="section-title"><span class="icon">💡</span> 核心思路：什么是"数字孪生医生"</div>
+
+    <div class="highlight-box">
+      <strong>定义：</strong>数字孪生医生 = 大模型 + 医学知识图谱 + 患者动态数字孪生 + 多智能体推理，
+      能够<strong>模拟专科医生的诊断思维</strong>，对特定患者进行个性化、持续性的病情分析、风险预测与治疗方案推荐。
+    </div>
+
+    <div class="card-grid" style="margin-top:20px;">
+      <div class="card" style="border-top: 3px solid #3b82f6;">
+        <h3>🧠 与普通医疗AI的区别</h3>
+        <ul class="list">
+          <li>不是问答机器人，而是<strong>持续跟踪</strong>患者状态</li>
+          <li>不是静态规则引擎，而是<strong>动态推理</strong></li>
+          <li>不是单病种，而是<strong>三病共病联合分析</strong></li>
+          <li>有<strong>时间轴记忆</strong>，模拟医生的随访思维</li>
+          <li>结合<strong>数字孪生模型</strong>做仿真推演</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 3px solid #10b981;">
+        <h3>🎯 目标能力</h3>
+        <ul class="list">
+          <li><strong>诊断支持</strong>：识别三病共病模式，鉴别诊断</li>
+          <li><strong>风险分层</strong>：ASCVD/NIHSS/HbA1c等评分自动化</li>
+          <li><strong>治疗推荐</strong>：符合指南的个性化用药方案</li>
+          <li><strong>随访预测</strong>：3/6/12月预后动态预测</li>
+          <li><strong>患者教育</strong>：生成可读懂的患者报告</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top: 3px solid #8b5cf6;">
+        <h3>🏥 三病协同的特殊挑战</h3>
+        <ul class="list">
+          <li>T2DM → 冠心病 → 脑卒中的<strong>疾病进展链条</strong></li>
+          <li>用药相互作用（二甲双胍 vs 抗凝药 vs 他汀）</li>
+          <li>共病时评估量表需<strong>同时权衡</strong>多个指标</li>
+          <li>不同科室知识壁垒（内分泌/心内/神经）</li>
+          <li>治疗目标有时<strong>相互冲突</strong>，需优先级决策</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 系统架构 ===== -->
+  <div class="section" id="architecture">
+    <div class="section-title"><span class="icon">🏗️</span> 系统整体架构</div>
+
+    <div class="arch">
+      <div class="arch-title">数字孪生医生 · 五层架构</div>
+      <div class="arch-layers">
+
+        <div class="arch-layer">
+          <div class="arch-layer-label">交互层</div>
+          <div class="arch-boxes">
+            <div class="arch-box ab-blue">医生工作站 Web</div>
+            <div class="arch-box ab-blue">移动端 APP</div>
+            <div class="arch-box ab-blue">HIS/EMR对接</div>
+            <div class="arch-box ab-blue">语音输入</div>
+            <div class="arch-box ab-blue">患者端小程序</div>
+          </div>
+        </div>
+
+        <div class="arch-layer">
+          <div class="arch-layer-label">Agent层</div>
+          <div class="arch-boxes">
+            <div class="arch-box ab-pink">DiabetesAgent<br><small>糖尿病专科智能体</small></div>
+            <div class="arch-box ab-pink">CardioAgent<br><small>心血管专科智能体</small></div>
+            <div class="arch-box ab-pink">StrokeAgent<br><small>脑卒中专科智能体</small></div>
+            <div class="arch-box ab-orange">OrchestratorAgent<br><small>主调度智能体（多病协调）</small></div>
+          </div>
+        </div>
+
+        <div class="arch-layer">
+          <div class="arch-layer-label">模型层</div>
+          <div class="arch-boxes">
+            <div class="arch-box ab-green">医疗领域LLM<br><small>SFT微调 + RLHF对齐</small></div>
+            <div class="arch-box ab-green">RAG检索增强<br><small>向量数据库 + BM25</small></div>
+            <div class="arch-box ab-green">数字孪生引擎<br><small>患者状态建模 + 仿真</small></div>
+            <div class="arch-box ab-green">多模态模型<br><small>影像/ECG/检验报告</small></div>
+          </div>
+        </div>
+
+        <div class="arch-layer">
+          <div class="arch-layer-label">知识层</div>
+          <div class="arch-boxes">
+            <div class="arch-box ab-purple">医学知识图谱<br><small>疾病/药物/指南/症状</small></div>
+            <div class="arch-box ab-purple">临床指南库<br><small>ADA/ACC/AHA/CMA</small></div>
+            <div class="arch-box ab-purple">药物相互作用<br><small>DrugBank + 中国药典</small></div>
+            <div class="arch-box ab-purple">患者记忆库<br><small>随访轨迹 + 孪生状态</small></div>
+          </div>
+        </div>
+
+        <div class="arch-layer">
+          <div class="arch-layer-label">数据层</div>
+          <div class="arch-boxes">
+            <div class="arch-box ab-teal">EMR结构化数据</div>
+            <div class="arch-box ab-teal">医学影像 DICOM</div>
+            <div class="arch-box ab-teal">可穿戴/IoT数据</div>
+            <div class="arch-box ab-teal">基因组学数据</div>
+            <div class="arch-box ab-teal">脱敏随访数据库</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="highlight-box" style="margin-top:20px;">
+      <strong>关键设计原则：</strong>每个专科 Agent 有独立的专业知识库和推理能力，
+      OrchestratorAgent 负责跨病种协调，解决治疗冲突，最终输出整合性诊疗建议。
+    </div>
+  </div>
+
+  <!-- ===== 数据层 ===== -->
+  <div class="section" id="data">
+    <div class="section-title"><span class="icon">📦</span> 数据层：训练数据构建</div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab(event,'data','pretrain')">预训练语料</button>
+      <button class="tab-btn" onclick="switchTab(event,'data','sft')">SFT微调数据</button>
+      <button class="tab-btn" onclick="switchTab(event,'data','rlhf')">RLHF偏好数据</button>
+      <button class="tab-btn" onclick="switchTab(event,'data','patient')">患者孪生数据</button>
+    </div>
+
+    <div id="data-pretrain" class="tab-content active">
+      <h3 style="margin-bottom:16px;">预训练医学语料（Domain Continual Pre-training）</h3>
+      <table>
+        <tr><th>语料类型</th><th>来源</th><th>规模估算</th><th>作用</th></tr>
+        <tr><td>中文临床指南</td><td>CDS/CMA/中华医学会</td><td>~500MB</td><td>建立规范性知识</td></tr>
+        <tr><td>医学教材</td><td>人卫出版社教材（内科/心内/神内）</td><td>~2GB</td><td>基础医学逻辑</td></tr>
+        <tr><td>PubMed文献（中译）</td><td>T2DM/CVD/Stroke相关</td><td>~5GB</td><td>前沿研究知识</td></tr>
+        <tr><td>中文医学论文</td><td>CNKI/万方/维普</td><td>~3GB</td><td>本土化表达</td></tr>
+        <tr><td>药物说明书</td><td>NMPA国家药监局</td><td>~1GB</td><td>用药安全</td></tr>
+        <tr><td>诊疗案例（脱敏）</td><td>合作医院EMR</td><td>~2GB</td><td>临床推理能力</td></tr>
+        <tr><td>患者问答（脱敏）</td><td>医患对话记录</td><td>~500MB</td><td>沟通能力</td></tr>
+      </table>
+      <div class="highlight-box" style="margin-top:16px;">
+        <strong>⚠️ 数据合规要求：</strong>所有患者数据必须通过IRB伦理委员会审批，完成三级脱敏（
+        姓名/身份证/手机号 → 删除；住院号/日期 → 偏移；地址 → 模糊化），签订数据共享协议。
+      </div>
+    </div>
+
+    <div id="data-sft" class="tab-content">
+      <h3 style="margin-bottom:16px;">SFT监督微调数据集（Instruction Tuning）</h3>
+      <div class="highlight-box green">
+        <strong>核心策略：</strong>构建医学指令-响应对，让模型学习"医生思维链"（Chain-of-Thought），
+        而非仅仅给出答案。每条SFT数据 = 背景信息 + 思考过程 + 规范答复。
+      </div>
+      <div class="card-grid" style="margin-top:16px;">
+        <div class="card">
+          <h3>📋 任务类型分布</h3>
+          <div style="margin-top:12px;">
+            <div class="progress-row"><span class="progress-label">病例分析</span><div class="progress-bar"><div class="progress-fill" style="width:30%;background:#3b82f6;"></div></div><span class="progress-val">30%</span></div>
+            <div class="progress-row"><span class="progress-label">用药推荐</span><div class="progress-bar"><div class="progress-fill" style="width:25%;background:#10b981;"></div></div><span class="progress-val">25%</span></div>
+            <div class="progress-row"><span class="progress-label">风险评分</span><div class="progress-bar"><div class="progress-fill" style="width:15%;background:#8b5cf6;"></div></div><span class="progress-val">15%</span></div>
+            <div class="progress-row"><span class="progress-label">患者随访</span><div class="progress-bar"><div class="progress-fill" style="width:15%;background:#f59e0b;"></div></div><span class="progress-val">15%</span></div>
+            <div class="progress-row"><span class="progress-label">指南问答</span><div class="progress-bar"><div class="progress-fill" style="width:10%;background:#ef4444;"></div></div><span class="progress-val">10%</span></div>
+            <div class="progress-row"><span class="progress-label">患者教育</span><div class="progress-bar"><div class="progress-fill" style="width:5%;background:#06b6d4;"></div></div><span class="progress-val">5%</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>📝 数据格式示例</h3>
+          <div class="code-block" style="font-size:0.78em;">
+<span class="cmt">// CoT格式：问题 → 思维链 → 答案</span>
+{
+  <span class="str">"instruction"</span>: <span class="str">"患者男，67岁，T2DM 12年，
+HbA1c 9.2%，LDL 3.8，3年前
+心梗史，现出现TIA症状..."</span>,
+  <span class="str">"thinking"</span>: <span class="str">"Step1: 评估CVD风险极高危
+Step2: TIA提示脑血管受累
+Step3: 三病共病，需优先..."</span>,
+  <span class="str">"output"</span>: <span class="str">"基于患者三病共病状态，
+建议：1.优先控制血压至130/80↓..."</span>
+}
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:16px;">
+        <strong>SFT数据规模建议：</strong>
+        <span class="badge b-blue">每病种1万+条</span>
+        <span class="badge b-green">共病场景3000+条</span>
+        <span class="badge b-orange">专家标注金标准500+条</span>
+      </div>
+    </div>
+
+    <div id="data-rlhf" class="tab-content">
+      <h3 style="margin-bottom:16px;">RLHF偏好数据（人类反馈强化学习）</h3>
+      <div class="flow">
+        <div class="flow-step fs-blue">模型生成<br>2-4个答案</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step fs-green">专科医生<br>排序偏好</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step fs-purple">训练<br>Reward Model</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step fs-orange">PPO/DPO<br>策略优化</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step fs-pink">模型对齐<br>医学规范</div>
+      </div>
+      <div class="card-grid" style="margin-top:16px;">
+        <div class="card">
+          <h3>✅ 偏好标准（正向）</h3>
+          <ul class="list">
+            <li>符合最新临床指南（如2024 ADA标准）</li>
+            <li>有明确的证据等级引用</li>
+            <li>考虑了三病共病相互影响</li>
+            <li>给出了安全性警示（禁忌证）</li>
+            <li>回答有层次、有逻辑</li>
+            <li>适当表达不确定性（"建议进一步检查"）</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>❌ 需惩罚的行为（负向）</h3>
+          <ul class="list">
+            <li>编造药物剂量或适应证</li>
+            <li>忽视禁忌证（如肾功能不全用二甲双胍）</li>
+            <li>过度自信，未承认局限性</li>
+            <li>建议与指南明显矛盾</li>
+            <li>拒绝合理临床问题（过度拒绝）</li>
+            <li>答非所问或格式混乱</li>
+          </ul>
+        </div>
+      </div>
+      <div class="highlight-box orange" style="margin-top:16px;">
+        <strong>推荐方案：DPO（Direct Preference Optimization）</strong> — 相比PPO更稳定、更易实现，
+        直接用偏好对数据优化策略，无需额外的Reward Model网络，训练成本低40%+。
+      </div>
+    </div>
+
+    <div id="data-patient" class="tab-content">
+      <h3 style="margin-bottom:16px;">患者数字孪生数据结构</h3>
+      <div class="highlight-box purple">
+        <strong>核心思想：</strong>为每位患者构建一个<strong>动态状态向量</strong>（Patient State Vector），
+        随随访更新，作为大模型推理时的"患者上下文"注入。
+      </div>
+      <div class="code-block" style="margin-top:16px;">
+<span class="cmt">// 患者数字孪生状态对象（Patient Digital Twin State）</span>
+{
+  <span class="str">"patient_id"</span>: <span class="str">"PSV-20240001"</span>,
+  <span class="str">"demographics"</span>: { <span class="str">"age"</span>: <span class="num">65</span>, <span class="str">"sex"</span>: <span class="str">"M"</span>, <span class="str">"bmi"</span>: <span class="num">26.8</span> },
+
+  <span class="str">"disease_state"</span>: {
+    <span class="str">"t2dm"</span>: { <span class="str">"hba1c"</span>: <span class="num">8.2</span>, <span class="str">"duration_years"</span>: <span class="num">10</span>, <span class="str">"complications"</span>: [<span class="str">"DR"</span>, <span class="str">"DN_stage2"</span>] },
+    <span class="str">"cvd"</span>: { <span class="str">"ascvd_10yr"</span>: <span class="num">0.23</span>, <span class="str">"lvef"</span>: <span class="num">48</span>, <span class="str">"nyha"</span>: <span class="num">2</span> },
+    <span class="str">"stroke"</span>: { <span class="str">"nihss"</span>: <span class="num">2</span>, <span class="str">"tia_history"</span>: <span class="kw">true</span>, <span class="str">"carotid_stenosis"</span>: <span class="num">0.45</span> }
+  },
+
+  <span class="str">"labs_trend"</span>: {
+    <span class="str">"hba1c"</span>: [<span class="num">9.1</span>, <span class="num">8.6</span>, <span class="num">8.2</span>],    <span class="cmt">// 时序数据</span>
+    <span class="str">"ldl"</span>: [<span class="num">3.8</span>, <span class="num">2.9</span>, <span class="num">2.1</span>],
+    <span class="str">"bp_systolic"</span>: [<span class="num">152</span>, <span class="num">140</span>, <span class="num">132</span>]
+  },
+
+  <span class="str">"medications"</span>: [
+    { <span class="str">"drug"</span>: <span class="str">"metformin"</span>, <span class="str">"dose"</span>: <span class="str">"1000mg bid"</span>, <span class="str">"start"</span>: <span class="str">"2022-03"</span> },
+    { <span class="str">"drug"</span>: <span class="str">"rosuvastatin"</span>, <span class="str">"dose"</span>: <span class="str">"10mg qd"</span>, <span class="str">"start"</span>: <span class="str">"2023-01"</span> }
+  ],
+
+  <span class="str">"risk_scores"</span>: {
+    <span class="str">"ascvd_10yr_risk"</span>: <span class="num">0.23</span>,
+    <span class="str">"ckd_progression"</span>: <span class="str">"moderate"</span>,
+    <span class="str">"stroke_recurrence_1yr"</span>: <span class="num">0.08</span>
+  },
+
+  <span class="str">"last_updated"</span>: <span class="str">"2026-04-01"</span>,
+  <span class="str">"twin_version"</span>: <span class="str">"v2.3"</span>
+}
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 模型层 ===== -->
+  <div class="section" id="model">
+    <div class="section-title"><span class="icon">🧠</span> 模型层：大模型选型与微调策略</div>
+
+    <div class="grid-2">
+      <div>
+        <h3 style="margin-bottom:16px; font-size:1.05em;">基座模型推荐</h3>
+        <table>
+          <tr><th>模型</th><th>规模</th><th>推荐原因</th><th>评分</th></tr>
+          <tr>
+            <td><strong>Qwen2.5-72B</strong> <span class="badge b-blue">推荐</span></td>
+            <td>72B</td>
+            <td>中文最强，医学表现优异，支持128K上下文</td>
+            <td>⭐⭐⭐⭐⭐</td>
+          </tr>
+          <tr>
+            <td><strong>DeepSeek-V2</strong></td>
+            <td>236B/21B激活</td>
+            <td>MoE架构，推理成本低，医学推理强</td>
+            <td>⭐⭐⭐⭐⭐</td>
+          </tr>
+          <tr>
+            <td><strong>Llama-3.1-70B</strong></td>
+            <td>70B</td>
+            <td>开源生态好，英文医学表现强</td>
+            <td>⭐⭐⭐⭐</td>
+          </tr>
+          <tr>
+            <td><strong>HuatuoGPT-II</strong></td>
+            <td>34B</td>
+            <td>专门面向中文医学的SFT模型</td>
+            <td>⭐⭐⭐⭐</td>
+          </tr>
+          <tr>
+            <td><strong>MedQwen-7B</strong> <span class="badge b-green">轻量</span></td>
+            <td>7B</td>
+            <td>资源受限场景，可本地部署</td>
+            <td>⭐⭐⭐</td>
+          </tr>
+        </table>
+      </div>
+      <div>
+        <h3 style="margin-bottom:16px; font-size:1.05em;">微调技术选型</h3>
+        <div class="card" style="margin-bottom:12px; border-left:4px solid #3b82f6;">
+          <h3>LoRA / QLoRA <span class="badge b-blue">首选</span></h3>
+          <p>仅训练低秩矩阵，参数量减少99%，在4×A100上可微调70B模型。
+          rank=16~64，alpha=32~128。适合领域自适应SFT。</p>
+        </div>
+        <div class="card" style="margin-bottom:12px; border-left:4px solid #10b981;">
+          <h3>Full Fine-tuning <span class="badge b-orange">大算力</span></h3>
+          <p>需要8×A100 80G起步。效果最好，但成本高。建议用于最终发布版本。</p>
+        </div>
+        <div class="card" style="border-left:4px solid #8b5cf6;">
+          <h3>Prompt Tuning / Prefix Tuning</h3>
+          <p>极轻量，仅调整前缀token。适合多任务快速切换，效果略逊于LoRA。</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;">
+      <h3 style="margin-bottom:16px; font-size:1.05em;">微调训练配置推荐</h3>
+      <div class="code-block">
+<span class="cmt"># 推荐 QLoRA 微调配置（基于 transformers + peft + bitsandbytes）</span>
+
+<span class="kw">model</span>: Qwen2.5-72B-Instruct
+<span class="kw">quantization</span>: 4-bit NF4 (bitsandbytes)
+<span class="kw">lora_config</span>:
+  r: <span class="num">64</span>
+  lora_alpha: <span class="num">128</span>
+  target_modules: [<span class="str">"q_proj"</span>, <span class="str">"k_proj"</span>, <span class="str">"v_proj"</span>, <span class="str">"o_proj"</span>, <span class="str">"gate_proj"</span>, <span class="str">"up_proj"</span>, <span class="str">"down_proj"</span>]
+  lora_dropout: <span class="num">0.05</span>
+  bias: <span class="str">"none"</span>
+  task_type: <span class="str">"CAUSAL_LM"</span>
+
+<span class="kw">training</span>:
+  num_train_epochs: <span class="num">3</span>
+  per_device_train_batch_size: <span class="num">2</span>
+  gradient_accumulation_steps: <span class="num">16</span>   <span class="cmt"># 等效 batch 32</span>
+  learning_rate: <span class="num">2e-4</span>
+  lr_scheduler_type: <span class="str">"cosine"</span>
+  warmup_ratio: <span class="num">0.03</span>
+  max_seq_length: <span class="num">8192</span>
+  fp16: <span class="kw">true</span>
+
+<span class="kw">hardware</span>: <span class="num">4</span>×A100-80G  <span class="cmt"># 约需72小时完成一轮</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Agent层 ===== -->
+  <div class="section" id="agent">
+    <div class="section-title"><span class="icon">🤖</span> Agent层：多智能体架构设计</div>
+
+    <div class="highlight-box">
+      <strong>设计模式：</strong>采用 <strong>Supervisor + Specialist 模式</strong>。
+      OrchestratorAgent 作为主控，接收用户问题后，分析病种特征，
+      分配给对应专科Agent，最后整合多科结论，解决冲突，输出联合方案。
+    </div>
+
+    <div class="flow" style="margin:24px 0; justify-content:center;">
+      <div class="flow-step fs-blue" style="font-size:0.95em; padding:14px 20px;">用户输入<br><small>医生/患者</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step fs-orange" style="padding:14px 20px;">OrchestratorAgent<br><small>路由 + 分解任务</small></div>
+      <div class="flow-arrow">→</div>
+      <div style="display:flex; flex-direction:column; gap:8px;">
+        <div class="flow-step fs-pink">DiabetesAgent</div>
+        <div class="flow-step fs-green">CardioAgent</div>
+        <div class="flow-step fs-teal">StrokeAgent</div>
+      </div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step fs-orange" style="padding:14px 20px;">冲突解决<br><small>整合优先级</small></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-step fs-purple" style="padding:14px 20px;">输出联合<br>诊疗方案</div>
+    </div>
+
+    <div class="card-grid">
+      <div class="card" style="border-top:3px solid #ec4899;">
+        <h3>🩸 DiabetesAgent（糖尿病）</h3>
+        <ul class="list">
+          <li>HbA1c趋势分析 + 控糖方案</li>
+          <li>T2DM并发症风险评估（DR/DN/DPN）</li>
+          <li>GLP-1/SGLT-2/DPP-4选药逻辑</li>
+          <li>饮食+运动+用药三联建议</li>
+          <li>低血糖风险警示（尤其脑卒中患者）</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top:3px solid #10b981;">
+        <h3>❤️ CardioAgent（心血管）</h3>
+        <ul class="list">
+          <li>ASCVD 10年风险自动计算</li>
+          <li>他汀强度选择（ACC/AHA指南）</li>
+          <li>ACEI/ARB/SGLT-2心衰适应证</li>
+          <li>抗板/抗凝治疗策略（结合脑卒中风险）</li>
+          <li>心脏康复方案个性化推荐</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top:3px solid #3b82f6;">
+        <h3>🧠 StrokeAgent（脑卒中）</h3>
+        <ul class="list">
+          <li>NIHSS/mRS评分解读</li>
+          <li>二级预防方案（抗板vs抗凝决策）</li>
+          <li>颈动脉狭窄管理策略</li>
+          <li>血糖/血压对脑卒中预后的影响分析</li>
+          <li>康复进度跟踪与功能预测</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top:3px solid #f59e0b;">
+        <h3>🎯 OrchestratorAgent（主控）</h3>
+        <ul class="list">
+          <li>任务分解：判断哪些问题需要哪几个Agent</li>
+          <li>冲突检测：如抗凝+出血风险矛盾</li>
+          <li>优先级排序：生命安全 > 功能保留 > 代谢控制</li>
+          <li>整合输出：生成统一格式的联合方案</li>
+          <li>置信度标注：低置信度场景提示转诊</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="margin-top:24px;">
+      <h3 style="margin-bottom:12px; font-size:1em;">Agent 工具调用设计（Tool Use）</h3>
+      <div class="code-block">
+<span class="cmt"># 每个 Agent 配备的工具函数</span>
+
+<span class="fn">calculate_ascvd_risk</span>(age, sex, ldl, hdl, sbp, smoking, diabetes) <span class="cmt">→ float</span>
+<span class="fn">check_drug_interaction</span>(drug_list) <span class="cmt">→ interaction_warnings[]</span>
+<span class="fn">query_guideline</span>(disease, scenario, year=<span class="num">2024</span>) <span class="cmt">→ guideline_text</span>
+<span class="fn">get_patient_state</span>(patient_id) <span class="cmt">→ PatientDigitalTwin</span>
+<span class="fn">update_patient_state</span>(patient_id, new_data) <span class="cmt">→ updated_twin</span>
+<span class="fn">run_simulation</span>(patient_twin, intervention) <span class="cmt">→ predicted_outcome</span>
+<span class="fn">search_similar_cases</span>(patient_profile, top_k=<span class="num">5</span>) <span class="cmt">→ case_list</span>
+<span class="fn">generate_patient_report</span>(patient_id, language=<span class="str">"zh"</span>) <span class="cmt">→ report_html</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 训练策略 ===== -->
+  <div class="section" id="training">
+    <div class="section-title"><span class="icon">🏋️</span> 训练策略：完整流程设计</div>
+
+    <div class="timeline">
+      <div class="tl-item">
+        <div class="tl-dot"></div>
+        <div class="tl-title">Stage 1：领域预训练（Domain CPT）</div>
+        <div class="tl-body">在基座模型上用医学语料继续预训练，注入领域知识。<br>
+        <strong>方法：</strong>全量继续预训练 或 LoRA轻量化。语料：见数据层。<br>
+        <strong>目标：</strong>模型在医学词汇、专业术语、疾病逻辑上显著提升。</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot green"></div>
+        <div class="tl-title">Stage 2：指令微调（Supervised Fine-Tuning）</div>
+        <div class="tl-body">用结构化的医学指令-响应对（含CoT）训练对话能力。<br>
+        <strong>重点：</strong>三病共病场景的多步骤推理，药物安全警示，治疗方案格式化输出。<br>
+        <strong>工具：</strong>LLaMA-Factory / Axolotl + QLoRA</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot orange"></div>
+        <div class="tl-title">Stage 3：偏好对齐（DPO / RLHF）</div>
+        <div class="tl-body">用医生排序的偏好对数据优化模型行为。<br>
+        <strong>重点：</strong>降低幻觉（hallucination），提升安全性，校准置信度表达。<br>
+        <strong>工具：</strong>TRL库 DPOTrainer / 或商业RLHF平台</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot purple"></div>
+        <div class="tl-title">Stage 4：RAG增强 + Agent集成</div>
+        <div class="tl-body">将微调好的模型接入RAG知识库和Agent框架，启用工具调用能力。<br>
+        <strong>框架：</strong>LangChain / LlamaIndex + FastAPI<br>
+        <strong>测试：</strong>功能测试 → 安全测试 → 临床专家评审</div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="background:#ef4444;"></div>
+        <div class="tl-title">Stage 5：持续学习（Continual Learning）</div>
+        <div class="tl-body">上线后定期用新的随访数据和医生反馈更新模型（增量微调）。<br>
+        <strong>关键：</strong>避免灾难性遗忘（EWC / Replay Buffer），监控模型漂移。</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== RAG ===== -->
+  <div class="section" id="rag">
+    <div class="section-title"><span class="icon">📚</span> RAG知识库：检索增强架构</div>
+
+    <div class="grid-2">
+      <div>
+        <h3 style="margin-bottom:14px; font-size:1em;">为什么数字孪生医生必须用RAG？</h3>
+        <ul class="list">
+          <li>医学知识更新快，指南每1-2年更新一次，模型参数无法实时跟进</li>
+          <li>需要引用<strong>可溯源的证据</strong>，不能凭"记忆"推断</li>
+          <li>患者个人历史数据<strong>不能写入模型权重</strong>（隐私+动态性）</li>
+          <li>三病共病场景需要实时查询多个知识库</li>
+          <li>降低幻觉的最有效手段之一</li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="margin-bottom:14px; font-size:1em;">RAG架构选型</h3>
+        <div class="card" style="margin-bottom:10px; border-left:4px solid #3b82f6;">
+          <h3>向量数据库 <span class="badge b-blue">Milvus / Qdrant</span></h3>
+          <p>语义检索，embedding模型推荐 text2vec-large-chinese 或 BGE-M3</p>
+        </div>
+        <div class="card" style="margin-bottom:10px; border-left:4px solid #10b981;">
+          <h3>关键词检索 <span class="badge b-green">Elasticsearch</span></h3>
+          <p>BM25 精确匹配，用于药物名、ICD码等精确检索</p>
+        </div>
+        <div class="card" style="border-left:4px solid #8b5cf6;">
+          <h3>混合检索 <span class="badge b-purple">推荐</span></h3>
+          <p>向量召回 + BM25重排序（RRF融合），最高效</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <h3 style="margin-bottom:14px; font-size:1em;">知识库内容设计</h3>
+      <table>
+        <tr><th>知识库名称</th><th>内容</th><th>更新频率</th><th>检索优先级</th></tr>
+        <tr><td><strong>临床指南库</strong></td><td>ADA/ACC/AHA/CMA官方指南，中文翻译版</td><td>年更新</td><td>⭐⭐⭐⭐⭐</td></tr>
+        <tr><td><strong>药物知识库</strong></td><td>药物说明书、相互作用、禁忌证（DrugBank+NMPA）</td><td>季更新</td><td>⭐⭐⭐⭐⭐</td></tr>
+        <tr><td><strong>患者病历库</strong></td><td>脱敏历史病历（相似案例检索）</td><td>实时</td><td>⭐⭐⭐⭐</td></tr>
+        <tr><td><strong>文献证据库</strong></td><td>关键RCT研究摘要（UKPDS/ACCORD/HOPE等）</td><td>月更新</td><td>⭐⭐⭐</td></tr>
+        <tr><td><strong>评分量表库</strong></td><td>NIHSS/mRS/ASCVD/CHA₂DS₂-VASc等计算逻辑</td><td>年更新</td><td>⭐⭐⭐⭐</td></tr>
+        <tr><td><strong>患者教育库</strong></td><td>科普文章，分层（医生/患者）</td><td>月更新</td><td>⭐⭐</td></tr>
+      </table>
+    </div>
+
+    <div class="code-block" style="margin-top:16px;">
+<span class="cmt"># RAG 检索流程伪代码</span>
+<span class="kw">def</span> <span class="fn">rag_query</span>(query: str, patient_state: dict) -> str:
+    <span class="cmt"># 1. 意图识别：是指南查询/药物查询/患者历史？</span>
+    intent = <span class="fn">classify_intent</span>(query)
+
+    <span class="cmt"># 2. 多路检索（并发）</span>
+    guideline_hits = <span class="fn">vector_search</span>(query, db=<span class="str">"guidelines"</span>, top_k=<span class="num">5</span>)
+    drug_hits = <span class="fn">bm25_search</span>(query, db=<span class="str">"drugs"</span>, top_k=<span class="num">3</span>)
+    similar_cases = <span class="fn">vector_search</span>(patient_state, db=<span class="str">"cases"</span>, top_k=<span class="num">3</span>)
+
+    <span class="cmt"># 3. 重排序（cross-encoder reranker）</span>
+    all_hits = guideline_hits + drug_hits + similar_cases
+    ranked = <span class="fn">rerank</span>(query, all_hits, model=<span class="str">"bge-reranker-large"</span>)
+
+    <span class="cmt"># 4. 构造 Prompt 上下文</span>
+    context = <span class="fn">format_context</span>(ranked[:<span class="num">6</span>])
+    prompt = f<span class="str">"""
+[患者状态]: {patient_state}
+[参考依据]: {context}
+[临床问题]: {query}
+请作为专业医生，基于上述依据，给出循证医学建议："""</span>
+
+    <span class="kw">return</span> <span class="fn">llm_generate</span>(prompt)
+    </div>
+  </div>
+
+  <!-- ===== 推理引擎 ===== -->
+  <div class="section" id="inference">
+    <div class="section-title"><span class="icon">⚡</span> 推理引擎：性能优化与部署</div>
+
+    <div class="card-grid">
+      <div class="card" style="border-top:3px solid #3b82f6;">
+        <h3>🚀 量化压缩</h3>
+        <ul class="list">
+          <li><strong>AWQ 4-bit</strong>：无精度损失，推理速度提升3-4x</li>
+          <li><strong>GPTQ</strong>：适合A10G/RTX系列，较成熟</li>
+          <li><strong>FP8</strong>（H100）：原生精度，推荐最新硬件</li>
+          <li>70B模型量化后可在2×A100上推理</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top:3px solid #10b981;">
+        <h3>⚙️ 推理框架</h3>
+        <ul class="list">
+          <li><strong>vLLM</strong>：最高吞吐，PagedAttention <span class="badge b-green">推荐</span></li>
+          <li><strong>TGI</strong>（Hugging Face）：稳定，适合生产</li>
+          <li><strong>SGLang</strong>：对 Agent 多步推理优化好</li>
+          <li><strong>Ollama</strong>：本地小模型快速验证</li>
+        </ul>
+      </div>
+      <div class="card" style="border-top:3px solid #8b5cf6;">
+        <h3>📊 性能目标</h3>
+        <ul class="list">
+          <li>首Token延迟（TTFT）：&lt; <strong>3秒</strong></li>
+          <li>生成速度：&gt; <strong>30 tokens/s</strong></li>
+          <li>并发支持：&gt; <strong>50路</strong>（vLLM批处理）</li>
+          <li>可用性：&gt; <strong>99.5%</strong></li>
+        </ul>
+      </div>
+      <div class="card" style="border-top:3px solid #f59e0b;">
+        <h3>🏗️ 部署架构</h3>
+        <ul class="list">
+          <li>GPU集群 + 负载均衡（Nginx/Kong）</li>
+          <li>模型版本A/B测试（流量分发）</li>
+          <li>响应缓存（Redis，相似问题复用）</li>
+          <li>医疗安全过滤层（pre/post filter）</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 评估体系 ===== -->
+  <div class="section" id="eval">
+    <div class="section-title"><span class="icon">📏</span> 评估体系：医学AI专项评测</div>
+
+    <div class="highlight-box orange">
+      <strong>医疗AI的评测≠通用LLM评测。</strong>除了流畅性、一致性，更需要关注：
+      <strong>安全性（用药错误率）、循证性（指南依从率）、可解释性</strong>。
+    </div>
+
+    <div class="grid-2" style="margin-top:20px;">
+      <div>
+        <h3 style="margin-bottom:14px; font-size:1em;">自动评估指标</h3>
+        <table>
+          <tr><th>指标</th><th>说明</th><th>目标值</th></tr>
+          <tr><td>医学准确率</td><td>与金标准答案对比（MedQA）</td><td>&gt;85%</td></tr>
+          <tr><td>指南依从率</td><td>建议是否符合最新指南</td><td>&gt;90%</td></tr>
+          <tr><td>幻觉率</td><td>编造信息的比例</td><td>&lt;3%</td></tr>
+          <tr><td>用药安全率</td><td>无禁忌证违反</td><td>&gt;99%</td></tr>
+          <tr><td>拒绝率</td><td>不该拒绝的问题被拒绝</td><td>&lt;5%</td></tr>
+          <tr><td>三病协调率</td><td>多病冲突处理正确率</td><td>&gt;80%</td></tr>
+        </table>
+      </div>
+      <div>
+        <h3 style="margin-bottom:14px; font-size:1em;">人工评估体系（专家盲审）</h3>
+        <div class="card">
+          <ul class="list">
+            <li><strong>临床可行性</strong>：建议是否能在临床执行（1-5分）</li>
+            <li><strong>安全性评分</strong>：是否存在明显风险（危险标注）</li>
+            <li><strong>推理链质量</strong>：思考过程是否符合医学逻辑</li>
+            <li><strong>患者适宜性</strong>：方案是否考虑到该患者具体情况</li>
+            <li><strong>与指南一致性</strong>：是否引用了正确的证据来源</li>
+            <li><strong>沟通质量</strong>：表达是否清晰、患者友好</li>
+          </ul>
+          <div style="margin-top:12px; padding:8px; background:#f8fafc; border-radius:6px; font-size:0.82em; color:var(--muted);">
+            建议：招募 3-5 名内分泌科/心内科/神经科医生参与盲审评估，每批评估200条case
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 实施路线 ===== -->
+  <div class="section" id="roadmap">
+    <div class="section-title"><span class="icon">🗺️</span> 实施路线：三阶段落地计划</div>
+
+    <div class="card-grid">
+      <div class="card" style="border-top:4px solid #3b82f6;">
+        <h3>🔷 Phase 1：MVP原型（4-7月）</h3>
+        <ul class="list">
+          <li>基座模型选定 + 数据清洗管道搭建</li>
+          <li>第一版SFT数据集（每病种1000条）</li>
+          <li>单Agent原型（先做DiabetesAgent）</li>
+          <li>RAG知识库基础版（指南+药物）</li>
+          <li>简单UI：医生工作站Demo版</li>
+          <li>基础评估框架搭建</li>
+        </ul>
+        <div style="margin-top:12px;"><span class="badge b-blue">交付</span> 可用的单病种对话演示</div>
+      </div>
+      <div class="card" style="border-top:4px solid #10b981;">
+        <h3>🔷 Phase 2：三病联合（8-10月）</h3>
+        <ul class="list">
+          <li>三个专科Agent全部上线</li>
+          <li>OrchestratorAgent冲突解决机制</li>
+          <li>患者数字孪生状态管理系统</li>
+          <li>DPO偏好对齐训练</li>
+          <li>与医院EMR系统对接测试</li>
+          <li>临床专家评审第一轮</li>
+        </ul>
+        <div style="margin-top:12px;"><span class="badge b-green">交付</span> 三病联合内测版 + 评测报告</div>
+      </div>
+      <div class="card" style="border-top:4px solid #8b5cf6;">
+        <h3>🔷 Phase 3：Beta发布（11-12月）</h3>
+        <ul class="list">
+          <li>多模态能力（ECG/影像报告解析）</li>
+          <li>患者端App发布（随访+教育）</li>
+          <li>性能优化（量化+vLLM部署）</li>
+          <li>合规审查（AI医疗器械注册预评估）</li>
+          <li>持续学习机制上线</li>
+          <li>临床验证 + 论文准备</li>
+        </ul>
+        <div style="margin-top:12px;"><span class="badge b-purple">交付</span> Beta公开版 + 技术论文</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 风险 ===== -->
+  <div class="section" id="risk">
+    <div class="section-title"><span class="icon">⚠️</span> 核心风险与应对策略</div>
+
+    <table>
+      <tr><th>风险类别</th><th>具体风险</th><th>影响</th><th>应对策略</th></tr>
+      <tr>
+        <td><span class="badge b-red">极高</span> 医疗安全</td>
+        <td>模型给出错误用药建议导致不良事件</td>
+        <td>患者受害/法律责任</td>
+        <td>强制双重验证（专家规则库兜底），明确"辅助决策"定位，不可替代医生</td>
+      </tr>
+      <tr>
+        <td><span class="badge b-red">极高</span> 数据合规</td>
+        <td>患者数据泄露、未获IRB批准</td>
+        <td>法律合规风险</td>
+        <td>数据三级脱敏，IRB审批，本地化部署，定期审计</td>
+      </tr>
+      <tr>
+        <td><span class="badge b-orange">高</span> 幻觉问题</td>
+        <td>模型编造药物剂量/指南内容</td>
+        <td>误导临床决策</td>
+        <td>RAG强制引用来源，结果可溯源，安全过滤层</td>
+      </tr>
+      <tr>
+        <td><span class="badge b-orange">高</span> 算力资源</td>
+        <td>GPU算力不足影响训练进度</td>
+        <td>项目延期</td>
+        <td>优先LoRA轻量化，备选云GPU（腾讯云/阿里云HAI）</td>
+      </tr>
+      <tr>
+        <td><span class="badge b-blue">中</span> 知识过时</td>
+        <td>指南更新但模型未同步</td>
+        <td>推荐不符合最新规范</td>
+        <td>RAG知识库独立维护，年度定期更新，版本追踪</td>
+      </tr>
+      <tr>
+        <td><span class="badge b-blue">中</span> 监管政策</td>
+        <td>AI医疗器械注册要求</td>
+        <td>上线受阻</td>
+        <td>提前与NMPA合规顾问沟通，按AI医疗器械三类规划</td>
+      </tr>
+    </table>
+
+    <div class="highlight-box red" style="margin-top:20px;">
+      <strong>⚕️ 最重要的原则：</strong>数字孪生医生是<strong>临床决策支持工具，不是替代医生的系统</strong>。
+      所有输出必须附带"建议仅供参考，以主治医生判断为准"，且必须有明确的安全边界（如不得给出手术建议、急诊处置方案等高风险操作）。
+    </div>
+  </div>
+
+</div>
+
+<script>
+function switchTab(event, group, tabId) {
+  // 隐藏所有tab内容
+  document.querySelectorAll('[id^="' + group + '-"]').forEach(el => el.classList.remove('active'));
+  // 取消所有按钮激活
+  event.target.closest('.tabs').querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+  // 激活目标
+  document.getElementById(group + '-' + tabId).classList.add('active');
+  event.target.classList.add('active');
+}
+
+// 导航高亮
+const sections = document.querySelectorAll('[id]');
+const navLinks = document.querySelectorAll('.nav a');
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const link = document.querySelector('.nav a[href="#' + e.target.id + '"]');
+      if (link) link.classList.add('active');
+    }
+  });
+}, { rootMargin: '-60px 0px -60% 0px' });
+sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

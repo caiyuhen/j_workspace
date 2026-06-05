@@ -1,0 +1,145 @@
+# Skill 配置
+# 用于管理 SkillHub.cn 和 MCP 技能集成
+
+skills:
+  # SkillHub.cn 集成
+  skillhub:
+    enabled: true
+    base_url: "https://skillhub.cn/api"
+    # API 密钥通过环境变量或安全存储管理
+    # api_key: ${SKILLHUB_API_KEY}
+    
+    # 自动同步
+    auto_sync: true
+    sync_interval: 3600      # 每小时同步一次
+    cached_skills_path: "skills/skillhub/cache/"
+    
+    # 默认分类
+    default_categories:
+      - "data_analysis"
+      - "file_management"
+      - "web_search"
+      - "database"
+      
+  # MCP 集成
+  mcp:
+    enabled: true
+    servers:
+      # 文件系统 MCP 服务器
+      - name: "filesystem"
+        description: "文件系统操作"
+        command: "npx"
+        args:
+          - "-y"
+          - "@modelcontextprotocol/server-filesystem"
+        args_override:
+          path: "D:/workspace/claw/AI-agent"
+          
+      # 数据库 MCP 服务器
+      - name: "sqlite"
+        description: "SQLite 数据库操作"
+        command: "npx"
+        args:
+          - "-y"
+          - "@modelcontextprotocol/server-sqlite"
+        args_override:
+          path: "data/database.db"
+          
+      # 代码分析 MCP 服务器
+      - name: "github"
+        description: "GitHub 代码仓库管理"
+        command: "npx"
+        args:
+          - "-y"
+          - "@modelcontextprotocol/server-github"
+        env:
+          GITHUB_TOKEN: ${GITHUB_TOKEN}
+          
+      # 搜索 MCP 服务器
+      - name: "search"
+        description: "网络搜索"
+        command: "npx"
+        args:
+          - "-y"
+          - "@modelcontextprotocol/server-fetch"
+    
+    # MCP 服务器管理
+    server_management:
+      auto_start: true        # 自动启动服务器
+      max_servers: 5          # 最大同时运行服务器数
+      timeout: 300            # 服务器启动超时（秒）
+      
+  # 本地 Skill 目录
+  local:
+    path: "skills/"         # 本地 Skill 存储路径
+    auto_load: true         # 自动加载本地 Skill
+    watch: true             # 监听文件变化
+    validation: strict      # 严格验证 Skill 格式
+    
+    # 本地 Skill 模板
+    templates:
+      - "basic_skill.json"
+      - "data_processing.json"
+      - "file_operation.json"
+      - "api_call.json"
+      
+  # Skill 管理
+  manager:
+    # 注册表
+    registry: "skills/registry.json"
+    
+    # 缓存
+    cache_enabled: true
+    cache_ttl: 86400        # 缓存 24 小时
+    
+    # 权限控制
+    permissions:
+      require_approval: false  # 不需要审批即可调用
+      allowlist: []            # 允许调用的 Skill 列表（空表示全部允许）
+      denylist: []             # 禁止调用的 Skill 列表
+      
+    # 调用限制
+    rate_limit:
+      enabled: true
+      requests_per_minute: 60
+      requests_per_hour: 1000
+
+# Skill 使用示例
+examples:
+  # SkillHub.cn Skill 调用示例
+  skillhub_example:
+    skill_id: "data-analysis-basic"
+    parameters:
+      input_type: "csv"
+      operations: ["clean", "aggregate", "visualize"]
+      
+  # MCP 服务器调用示例
+  mcp_example:
+    server: "filesystem"
+    tool: "read_file"
+    arguments:
+      path: "config/model.yaml"
+      
+  # 本地 Skill 调用示例
+  local_example:
+    name: "medical_data_processor"
+    parameters:
+      source: "patient_data.csv"
+      transformations:
+        - "normalize"
+        - "anonymize"
+      output: "processed_data.json"
+
+# 兼容性配置
+compatibility:
+  # SkillHub 版本
+  skillhub_version: "1.0"
+  
+  # MCP 版本
+  mcp_version: "2024-11-05"
+  
+  # 自定义协议支持
+  custom_protocols:
+    - name: "custom-tool"
+      version: "1.0"
+      handler: "src/skills/custom_handler.py"

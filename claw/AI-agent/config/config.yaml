@@ -1,0 +1,76 @@
+# 系统主配置
+# 包含所有核心配置项
+
+system:
+  # 系统信息
+  name: "Medical Agent Orchestrator"
+  version: "1.0.0"
+  environment: "production"
+  
+  # 大模型配置
+  model:
+    base_url: "http://192.168.0.214:8802/chat/"
+    default_model: "qwen3.5-35b-a3b"
+    
+  # 工作目录配置
+  workspace:
+    default_path: "D:/workspace/claw/AI-agent"
+    
+  # 智能体配置
+  agents:
+    default: "orchestrator"
+    medical_expert: "medical_expert"
+    researcher: "researcher"
+    
+  # Skill 配置
+  skills:
+    enable_skillhub: true
+    enable_mcp: true
+    local_path: "skills/"
+    
+  # Token 配置
+  token:
+    enabled: true
+    pricing:
+      input_per_1k: 0.002
+      output_per_1k: 0.006
+      
+  # 定时任务配置
+  schedules:
+    enabled: true
+    timezone: "Asia/Shanghai"
+    
+  # 日志配置
+  logging:
+    level: "INFO"
+    path: "logs/"
+    retention_days: 90
+    
+  # 安全配置
+  security:
+    # 访问控制
+    authentication:
+      enabled: false      # 生产环境建议启用
+      type: "bearer_token"
+      
+    # API 限流
+    rate_limit:
+      enabled: true
+      requests_per_minute: 100
+      
+    # 数据加密
+    encryption:
+      enabled: true
+      algorithm: "AES-256-GCM"
+      
+  # 监控配置
+  monitoring:
+    enabled: true
+    metrics_path: "/metrics"
+    health_check_path: "/health"
+    
+  # 扩展配置
+  extensions:
+    enable_web_ui: true
+    enable_cli: true
+    enable_api: true

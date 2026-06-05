@@ -1,0 +1,1 @@
+minio/minio.exe[[:space:]]dataPlaform/omop-platform/inputdata/comprehensive_emr_3m.csv !text !filter !merge !diff

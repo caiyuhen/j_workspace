@@ -1,0 +1,155 @@
+# 智能体配置
+# 用于定义和管理各类 AI 智能体
+
+agents:
+  # 编排者智能体
+  orchestrator:
+    name: "AgentsOrchestrator"
+    role: "pipeline_manager"
+    personality: "systematic, quality-focused, persistent"
+    description: "智能体编排者，负责协调多个专业智能体协同工作"
+    capabilities:
+      - task_decomposition
+      - agent_scheduling
+      - workflow_management
+      - quality_gates
+    max_retries: 3
+      
+  # 医学专家智能体
+  medical_expert:
+    name: "MedicalExpert"
+    role: "medical_consultant"
+    specialties:
+      - "diagnosis"
+      - "treatment"
+      - "drug_interaction"
+      - "symptom_analysis"
+    description: "提供医学专业咨询、诊断建议和治疗方案"
+    knowledge_base: "medical_knowledge/"
+    sources:
+      - "UpToDate"
+      - "PubMed"
+      - "Cochrane"
+    constraints:
+      - "必须声明建议仅供参考，不能替代专业医生诊断"
+      - "涉及用药必须咨询执业医师"
+      
+  # 文献研究智能体
+  researcher:
+    name: "MedicalResearcher"
+    role: "literature_review"
+    specialties:
+      - "paper_search"
+      - "data_analysis"
+      - "evidence_synthesis"
+      - "meta_analysis"
+    description: "医学文献检索、分析和综述生成"
+    databases:
+      - "PubMed"
+      - "Web of Science"
+      - "CNKI"
+    output_formats:
+      - "markdown"
+      - "pdf"
+      - "biblatex"
+      
+  # 数据分析智能体
+  data_analyst:
+    name: "DataAnalyst"
+    role: "statistical_analyst"
+    specialties:
+      - "descriptive_statistics"
+      - "inferential_statistics"
+      - "regression_analysis"
+      - "visualization"
+    description: "医学数据分析和统计处理"
+    tools:
+      - "pandas"
+      - "numpy"
+      - "scipy"
+      - "matplotlib"
+      - "seaborn"
+      
+  # 药物研究智能体
+  drug_researcher:
+    name: "DrugResearcher"
+    role: "pharmacology_expert"
+    specialties:
+      - "drug_information"
+      - "drug_interaction"
+      - "adverse_effects"
+      - "dosage_calculation"
+    description: "药物信息查询和相互作用分析"
+    databases:
+      - "DrugBank"
+      - "FDA Database"
+      - "中国药品说明书"
+      
+  # 临床决策智能体
+  clinical_decision:
+    name: "ClinicalDecision"
+    role: "clinical_support"
+    specialties:
+      - "clinical_pathways"
+      - "treatment_recommendations"
+      - "prognosis_assessment"
+      - "risk_evaluation"
+    description: "临床路径建议和治疗方案支持"
+    guidelines:
+      - "中国临床诊疗指南"
+      - "NCCN 指南"
+      - "WHO 指南"
+      
+  # 医学教育智能体
+  medical_educator:
+    name: "MedicalEducator"
+    role: "medical_teacher"
+    specialties:
+      - "knowledge_explanation"
+      - "case_studies"
+      - "quiz_generation"
+      - "training_materials"
+    description: "医学知识教学和培训材料生成"
+    levels:
+      - "undergraduate"
+      - "graduate"
+      - "continuing_education"
+
+# 智能体协作规则
+collaboration:
+  # 编排者优先
+  orchestrator_first: true
+  
+  # 医学相关任务必须调用医学专家
+  medical_task_requirement:
+    - "diagnosis" -> ["medical_expert"]
+    - "treatment" -> ["medical_expert", "clinical_decision"]
+    - "drug" -> ["medical_expert", "drug_researcher"]
+    - "research" -> ["researcher", "data_analyst"]
+    
+  # 并行执行规则
+  parallel_execution:
+    - ["researcher", "data_analyst"]  # 可以同时执行
+    - ["drug_researcher", "medical_expert"]  # 药物查询可以同时
+    
+  # 依赖关系
+  dependencies:
+    - "clinical_decision" 需要 "medical_expert" 的输出
+    - "data_analyst" 可以独立执行
+    - "researcher" 需要明确的研究主题
+
+# 智能体输出格式
+output_formats:
+  default: "markdown"
+  supported:
+    - "markdown"
+    - "json"
+    - "xml"
+    - "pdf"
+    
+# 智能体温度参数
+temperature:
+  default: 0.7
+  medical_expert: 0.5      # 医学建议需要更保守
+  researcher: 0.8          # 研究可以更有创造性
+  medical_educator: 0.9    # 教学可以更灵活

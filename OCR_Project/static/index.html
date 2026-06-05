@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR 测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .upload-section {
+            margin-bottom: 2rem;
+            text-align: center;
+        }
+        #file-input {
+            margin-bottom: 1rem;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #result {
+            margin-top: 2rem;
+            white-space: pre-wrap;
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            border: 1px solid #eee;
+            min-height: 100px;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .success {
+            color: #28a745;
+        }
+        .preview-image {
+            max-width: 100%;
+            max-height: 300px;
+            margin-top: 1rem;
+            display: none;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>OCR 图片文字识别测试</h1>
+        <div class="upload-section">
+            <input type="file" id="file-input" accept="image/*">
+            <br>
+            <img id="preview" class="preview-image" alt="预览图">
+            <br><br>
+            <button onclick="uploadImage()">识别文字</button>
+        </div>
+        
+        <div id="status"></div>
+        <h3>识别结果 (JSON):</h3>
+        <pre id="result">等待上传...</pre>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('file-input');
+        const preview = document.getElementById('preview');
+        const resultDiv = document.getElementById('result');
+        const statusDiv = document.getElementById('status');
+
+        fileInput.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'inline-block';
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        async function uploadImage() {
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('请先选择一张图片');
+                return;
+            }
+
+            statusDiv.textContent = '正在识别中，请稍候... (首次运行可能需要下载模型，较慢)';
+            statusDiv.className = 'loading';
+            resultDiv.textContent = '';
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/ocr', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                statusDiv.textContent = '识别成功！结果已保存至 output 文件夹。';
+                statusDiv.className = 'success';
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                console.error('Error:', error);
+                statusDiv.textContent = '识别失败: ' + error.message;
+                statusDiv.className = 'error';
+                resultDiv.textContent = '发生错误，请查看控制台日志。';
+            }
+        }
+    </script>
+</body>
+</html>

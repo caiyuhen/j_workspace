@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IWRS 随机化配置 - CTMS 平台</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+            background: #f7fafc;
+            min-height: 100vh;
+        }
+
+        /* 顶部导航栏 */
+        .top-nav {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 1800px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-logo {
+            font-size: 20px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 25px;
+        }
+
+        .nav-link {
+            color: white;
+            text-decoration: none;
+            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .nav-link:hover {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .nav-link.active {
+            background: rgba(255,255,255,0.3);
+            font-weight: 600;
+        }
+
+        /* 面包屑 */
+        .breadcrumb {
+            background: #edf2f7;
+            padding: 12px 30px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #718096;
+        }
+
+        .breadcrumb a {
+            color: #667eea;
+            text-decoration: none;
+        }
+
+        .breadcrumb a:hover {
+            text-decoration: underline;
+        }
+
+        /* 主布局 */
+        .layout {
+            display: grid;
+            grid-template-columns: 1fr 350px;
+            gap: 20px;
+            padding: 20px;
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: #f7fafc;
+            padding: 20px;
+            border-bottom: 2px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2d3748;
+        }
+
+        .panel-body {
+            padding: 25px;
+        }
+
+        /* 配置卡片 */
+        .config-card {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .config-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .config-body {
+            padding: 20px;
+        }
+
+        .config-row {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .config-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+
+        .config-label {
+            font-weight: 500;
+            color: #4a5568;
+            font-size: 14px;
+        }
+
+        .config-input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        .config-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .config-select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+        }
+
+        /* 随机化算法说明 */
+        .algo-card {
+            background: #f7fafc;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .algo-title {
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .algo-desc {
+            font-size: 14px;
+            color: #718096;
+            line-height: 1.6;
+        }
+
+        /* 分层因子列表 */
+        .stratify-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .stratify-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: #f7fafc;
+            border-radius: 8px;
+        }
+
+        .stratify-name {
+            flex: 1;
+            font-weight: 500;
+            color: #2d3748;
+        }
+
+        .stratify-levels {
+            padding: 6px 12px;
+            background: #edf2f7;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #4a5568;
+        }
+
+        .stratify-action {
+            padding: 6px 12px;
+            background: #fed7d7;
+            color: #c53030;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .stratify-action:hover {
+            background: #feb2b2;
+        }
+
+        /* 治疗方案表格 */
+        .treatment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .treatment-table th {
+            background: #f7fafc;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: #4a5568;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .treatment-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .treatment-table input {
+            width: 80px;
+            padding: 8px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        /* 药物库存卡片 */
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .inventory-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .inventory-label {
+            font-size: 13px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .inventory-value {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .inventory-status {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        /* 按钮 */
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        .btn-danger {
+            background: #fc8181;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #f56565;
+        }
+
+        .btn-outline {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-outline:hover {
+            background: #edf2f7;
+        }
+
+        /* 右侧面板 */
+        .sidebar-section {
+            margin-bottom: 25px;
+        }
+
+        .sidebar-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #2d3748;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .log-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-item {
+            padding: 12px;
+            background: #f7fafc;
+            border-left: 3px solid #667eea;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .log-time {
+            color: #718096;
+            font-size: 12px;
+            margin-bottom: 4px;
+        }
+
+        .log-content {
+            color: #2d3748;
+            line-height: 1.5;
+        }
+
+        .log-subject {
+            font-weight: 600;
+            color: #667eea;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-pending {
+            background: #fef5c7;
+            color: #744210;
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+        }
+
+        @media (max-width: 1200px) {
+            .layout {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航栏 -->
+    <div class="top-nav">
+        <div class="nav-container">
+            <div class="nav-logo">
+                🧬 CTMS+EDC+IWRS 平台
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">📊 仪表盘</a>
+                <a href="edc-entry.html" class="nav-link">📝 EDC 录入</a>
+                <a href="ecrf-designer.html" class="nav-link">🎨 eCRF 设计</a>
+                <a href="iwrs-config.html" class="nav-link active">🎲 IWRS 随机化</a>
+                <a href="etmf-docs.html" class="nav-link">📁 eTMF 文档</a>
+                <a href="doctor-portfolio.html" class="nav-link">👨‍⚕️ 医生病历夹</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 面包屑 -->
+    <div class="breadcrumb">
+        <a href="index.html">首页</a> / 
+        <a href="#">试验管理</a> / 
+        <span>CTMS-2024-001</span> / 
+        <span>IWRS 随机化配置</span>
+    </div>
+
+    <div class="layout">
+        <!-- 主内容区域 -->
+        <div>
+            <!-- 试验基本信息 -->
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title">📋 随机化方案配置</div>
+                    <span class="status-badge status-active">已启用</span>
+                </div>
+                <div class="panel-body">
+                    <div class="config-card">
+                        <div class="config-header">
+                            <span>随机化算法设置</span>
+                            <span style="font-size: 13px; opacity: 0.9;">Algorithm Type</span>
+                        </div>
+                        <div class="config-body">
+                            <div class="config-row">
+                                <div class="config-label">算法类型</div>
+                                <select class="config-select">
+                                    <option>分层区组随机化 (Stratified Block)</option>
+                                    <option>简单随机化 (Simple Random)</option>
+                                    <option>动态随机化 (Dynamic Allocation)</option>
+                                    <option>最小化法 (Minimization)</option>
+                                </select>
+                            </div>
+                            <div class="config-row">
+                                <div class="config-label">区组大小</div>
+                                <select class="config-select">
+                                    <option>固定区组 (Fixed: 6)</option>
+                                    <option>随机区组 (Variable: 4/6/8)</option>
+                                    <option>不设置区组</option>
+                                </select>
+                            </div>
+                            <div class="config-row">
+                                <div class="config-label">分配比例</div>
+                                <input type="text" class="config-input" value="1:1 (试验组：对照组)">
+                            </div>
+
+                            <div class="algo-card">
+                                <div class="algo-title">
+                                    📊 分层区组随机化
+                                </div>
+                                <div class="algo-desc">
+                                    在每一层内（如研究中心）采用区组随机化，确保各层内治疗组样本量平衡。区组大小可变，防止预测下一个分配。适用于多中心临床试验，有效控制中心效应。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 分层因子 -->
+                    <div class="config-card">
+                        <div class="config-header">
+                            <span>分层因子 (Stratification Factors)</span>
+                            <button class="btn btn-outline" style="padding: 6px 12px; font-size: 13px;">
+                                ➕ 添加因子
+                            </button>
+                        </div>
+                        <div class="config-body">
+                            <div class="stratify-list">
+                                <div class="stratify-item">
+                                    <div class="stratify-name">研究中心 (Site ID)</div>
+                                    <div class="stratify-levels">24 个中心</div>
+                                    <div class="stratify-action">🗑️ 删除</div>
+                                </div>
+                                <div class="stratify-item">
+                                    <div class="stratify-name">疾病分期 (Stage)</div>
+                                    <div class="stratify-levels">I 期 / II 期 / III 期</div>
+                                    <div class="stratify-action">🗑️ 删除</div>
+                                </div>
+                                <div class="stratify-item">
+                                    <div class="stratify-name">年龄组 (Age Group)</div>
+                                    <div class="stratify-levels">18-40 / 41-60 / 60+</div>
+                                    <div class="stratify-action">🗑️ 删除</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 治疗方案 -->
+                    <div class="config-card">
+                        <div class="config-header">
+                            <span>治疗方案 (Treatment Arms)</span>
+                            <span style="font-size: 13px; opacity: 0.9;">3 Arms</span>
+                        </div>
+                        <div class="config-body">
+                            <table class="treatment-table">
+                                <thead>
+                                    <tr>
+                                        <th>方案代码</th>
+                                        <th>方案名称</th>
+                                        <th>药物类型</th>
+                                        <th>剂量</th>
+                                        <th>分配比例 (%)</th>
+                                        <th>状态</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td><input type="text" value="ARM-A"></td>
+                                        <td>试验药物 200mg</td>
+                                        <td>试验药</td>
+                                        <td>200mg qd</td>
+                                        <td><input type="number" value="50"></td>
+                                        <td><span class="status-badge status-active">启用</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="text" value="ARM-B"></td>
+                                        <td>试验药物 100mg</td>
+                                        <td>试验药</td>
+                                        <td>100mg qd</td>
+                                        <td><input type="number" value="30"></td>
+                                        <td><span class="status-badge status-active">启用</span></td>
+                                    </tr>
+                                    <tr>
+                                        <td><input type="text" value="ARM-C"></td>
+                                        <td>安慰剂</td>
+                                        <td>安慰剂</td>
+                                        <td>-</td>
+                                        <td><input type="number" value="20"></td>
+                                        <td><span class="status-badge status-pending">暂停</span></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                            <button class="btn btn-outline" style="margin-top: 15px;">
+                                ➕ 添加治疗方案
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 药物供应管理 -->
+                    <div class="config-card">
+                        <div class="config-header">
+                            <span>药物供应管理 (Drug Supply)</span>
+                        </div>
+                        <div class="config-body">
+                            <div class="inventory-grid">
+                                <div class="inventory-card">
+                                    <div class="inventory-label">试验药物总库存</div>
+                                    <div class="inventory-value">12,480</div>
+                                    <div class="inventory-status">片剂 | 充足</div>
+                                </div>
+                                <div class="inventory-card">
+                                    <div class="inventory-label">已分配药物</div>
+                                    <div class="inventory-value">8,760</div>
+                                    <div class="inventory-status">70.2% 已使用</div>
+                                </div>
+                                <div class="inventory-card">
+                                    <div class="inventory-label">可用库存</div>
+                                    <div class="inventory-value">3,720</div>
+                                    <div class="inventory-status">可支持 152 名受试者</div>
+                                </div>
+                                <div class="inventory-card">
+                                    <div class="inventory-label">药物追回</div>
+                                    <div class="inventory-value">186</div>
+                                    <div class="inventory-status">待处理</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="action-bar">
+                        <button class="btn btn-primary">💾 保存配置</button>
+                        <button class="btn btn-success">✅ 启用方案</button>
+                        <button class="btn btn-danger">⏸️ 暂停方案</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧辅助面板 -->
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+            <!-- 最近随机化记录 -->
+            <div class="panel">
+                <div class="panel-header" style="padding: 15px 20px;">
+                    <div class="panel-title" style="font-size: 15px;">🎲 最近随机化记录</div>
+                </div>
+                <div class="panel-body">
+                    <div class="log-list">
+                        <div class="log-item">
+                            <div class="log-time">2024-12-19 14:32:15</div>
+                            <div class="log-content">
+                                <span class="log-subject">受试者 SV024</span> 成功入组<br>
+                                分配方案：<strong>ARM-A (试验药物 200mg)</strong><br>
+                                分层：中心 003, II 期，45 岁
+                            </div>
+                        </div>
+                        <div class="log-item">
+                            <div class="log-time">2024-12-19 14:15:42</div>
+                            <div class="log-content">
+                                <span class="log-subject">受试者 SV023</span> 成功入组<br>
+                                分配方案：<strong>ARM-B (试验药物 100mg)</strong><br>
+                                分层：中心 005, III 期，52 岁
+                            </div>
+                        </div>
+                        <div class="log-item">
+                            <div class="log-time">2024-12-19 13:48:20</div>
+                            <div class="log-content">
+                                <span class="log-subject">受试者 SV022</span> 成功入组<br>
+                                分配方案：<strong>ARM-A (试验药物 200mg)</strong><br>
+                                分层：中心 001, II 期，38 岁
+                            </div>
+                        </div>
+                        <div class="log-item">
+                            <div class="log-time">2024-12-19 13:20:05</div>
+                            <div class="log-content">
+                                <span class="log-subject">受试者 SV021</span> 筛选失败<br>
+                                原因：不符合入排标准<br>
+                                未进行随机化
+                            </div>
+                        </div>
+                        <div class="log-item">
+                            <div class="log-time">2024-12-19 12:55:30</div>
+                            <div class="log-content">
+                                <span class="log-subject">受试者 SV020</span> 成功入组<br>
+                                分配方案：<strong>ARM-B (试验药物 100mg)</strong><br>
+                                分层：中心 002, I 期，29 岁
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn btn-outline" style="width: 100%; margin-top: 15px;">
+                        📋 查看全部记录
+                    </button>
+                </div>
+            </div>
+
+            <!-- 快速入组 -->
+            <div class="panel">
+                <div class="panel-header" style="padding: 15px 20px;">
+                    <div class="panel-title" style="font-size: 15px;">⚡ 快速入组</div>
+                </div>
+                <div class="panel-body">
+                    <div style="display: flex; flex-direction: column; gap: 12px;">
+                        <input type="text" class="config-input" placeholder="请输入受试者编号" value="SV025">
+                        <select class="config-select">
+                            <option>选择研究中心</option>
+                            <option>北京协和医院 (001)</option>
+                            <option>上海瑞金医院 (002)</option>
+                            <option>华西医院 (003)</option>
+                        </select>
+                        <button class="btn btn-primary" style="width: 100%;">
+                            🎲 开始随机化
+                        </button>
+                    </div>
+                    <div style="margin-top: 20px; padding: 15px; background: #e6fffa; border-radius: 8px; border-left: 4px solid #38b2ac;">
+                        <div style="font-size: 13px; color: #234e52; line-height: 1.6;">
+                            <strong>💡 随机化流程：</strong>
+                            <br>1. 确认受试者通过筛选
+                            <br>2. 填写分层因子信息
+                            <br>3. 系统自动分配治疗方案
+                            <br>4. 生成随机化号并记录
+                            <br>5. 药物供应自动更新
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 统计信息 -->
+            <div class="panel">
+                <div class="panel-header" style="padding: 15px 20px;">
+                    <div class="panel-title" style="font-size: 15px;">📊 入组统计</div>
+                </div>
+                <div class="panel-body">
+                    <div style="display: flex; flex-direction: column; gap: 15px;">
+                        <div style="padding: 12px; background: #f7fafc; border-radius: 8px;">
+                            <div style="font-size: 13px; color: #718096; margin-bottom: 5px;">总入组受试者</div>
+                            <div style="font-size: 24px; font-weight: 700; color: #2d3748;">156 / 248</div>
+                            <div style="font-size: 12px; color: #48bb78; margin-top: 5px;">完成率：62.9%</div>
+                        </div>
+                        <div style="padding: 12px; background: #f7fafc; border-radius: 8px;">
+                            <div style="font-size: 13px; color: #718096; margin-bottom: 8px;">各方案入组</div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span style="font-size: 13px;">ARM-A</span>
+                                <span style="font-size: 13px; font-weight: 600;">78 人 (50%)</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span style="font-size: 13px;">ARM-B</span>
+                                <span style="font-size: 13px; font-weight: 600;">47 人 (30%)</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span style="font-size: 13px;">ARM-C</span>
+                                <span style="font-size: 13px; font-weight: 600;">31 人 (20%)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 显示当前时间
+        function updateTime() {
+            const now = new Date();
+            const timeEl = document.getElementById('current-time');
+            if (timeEl) {
+                timeEl.textContent = '🕐 ' + now.toLocaleDateString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    weekday: 'short'
+                }) + ' ' + now.toLocaleTimeString('zh-CN', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            }
+        }
+        
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // 快速入组功能
+        function quickEnroll() {
+            const subjectId = prompt('🔢 请输入受试者编号：', 'SV00' + Math.floor(Math.random() * 900 + 100));
+            if (!subjectId) return;
+            
+            // 模拟随机化过程
+            const btn = document.querySelector('.btn-primary');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '🔄 随机化中...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                const arms = ['ARM-A (实验组)', 'ARM-B (对照组)', 'ARM-C (安慰剂组)'];
+                const assignedArm = arms[Math.floor(Math.random() * arms.length)];
+                const randomId = 'RND' + String(Math.floor(Math.random() * 90000 + 10000));
+                
+                alert('✅ 随机化成功！\n\n' +
+                      '受试者编号：' + subjectId + '\n' +
+                      '随机号：' + randomId + '\n' +
+                      '分配方案：' + assignedArm + '\n' +
+                      '操作时间：' + new Date().toLocaleString('zh-CN') + '\n' +
+                      '操作人：张医生');
+                
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+                
+                // 添加到日志
+                addRandomizationLog(subjectId, randomId, assignedArm);
+            }, 1500);
+        }
+
+        // 添加随机化日志
+        function addRandomizationLog(subjectId, randomId, arm) {
+            const logContainer = document.querySelector('.log-list');
+            if (!logContainer) return;
+            
+            const now = new Date();
+            const newLog = document.createElement('div');
+            newLog.className = 'log-item';
+            newLog.style.animation = 'slideIn 0.3s ease';
+            newLog.innerHTML = `
+                <div class="log-header">
+                    <strong>${subjectId}</strong>
+                    <span style="color: #718096; font-size: 12px;">刚刚</span>
+                </div>
+                <div style="display: flex; gap: 10px; margin-top: 6px;">
+                    <span style="background: #e0e7ff; color: #4338ca; padding: 2px 8px; border-radius: 4px; font-size: 12px;">${randomId}</span>
+                    <span style="background: #c6f6d5; color: #22543d; padding: 2px 8px; border-radius: 4px; font-size: 12px;">${arm}</span>
+                </div>
+            `;
+            
+            logContainer.insertBefore(newLog, logContainer.firstChild);
+            
+            // 限制日志数量
+            while (logContainer.children.length > 10) {
+                logContainer.removeChild(logContainer.lastChild);
+            }
+        }
+
+        // 保存配置
+        function saveConfig() {
+            const btn = event.target;
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '💾 保存中...';
+            btn.disabled = true;
+            
+            setTimeout(() => {
+                alert('✅ 配置保存成功！\n\n随机化方案已更新，即刻生效。');
+                btn.innerHTML = '✅ 已保存';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 1500);
+            }, 1000);
+        }
+
+        // 添加 CSS 动画
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from {
+                    opacity: 0;
+                    transform: translateX(-20px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+            }
+        `;
+        document.head.appendChild(style);
+
+        console.log('🚀 IWRS 随机化配置页面已加载');
+        console.log('🎲 随机化算法：分层区组随机');
+        console.log('📊 治疗组数：3 (ARM-A/B/C)');
+        console.log('💊 可用库存：1,248 份');
+    </script>
+</body>
+</html>

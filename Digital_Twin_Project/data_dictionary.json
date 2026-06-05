@@ -1,0 +1,56 @@
+{
+  "biomechanical_metrics": {
+    "kyphosis_max": {
+      "name": "最大后凸角度 (Thoracic Kyphosis)",
+      "description": "通常指胸椎后凸角。脊柱胸段向后弯曲的角度。过大可能导致驼背。",
+      "normal_range": "20° - 40°",
+      "axis_mapping": "Sagittal (Y)"
+    },
+    "lordosis_max": {
+      "name": "最大前凸角度 (Lumbar Lordosis)",
+      "description": "通常指腰椎前凸角。脊柱腰段向前弯曲的角度。",
+      "normal_range": "30° - 50°",
+      "axis_mapping": "Sagittal (Y)"
+    },
+    "coronal_offset_max": {
+      "name": "冠状面偏移 (Coronal Balance)",
+      "description": "脊柱在左右方向上偏离中心线的最大距离。用于评估身体躯干的侧向平衡。",
+      "normal_range": "< 20mm",
+      "axis_mapping": "Coronal (X)"
+    },
+    "sagittal_offset_max": {
+      "name": "矢状面偏移 (Sagittal Balance)",
+      "description": "脊柱在前后方向上偏离中心垂线的距离 (SVA)。用于评估身体的前倾或后倾状态。",
+      "normal_range": "< 50mm",
+      "axis_mapping": "Sagittal (Y)"
+    },
+    "vertebral_rotation": {
+      "name": "椎体旋转 (Vertebral Rotation)",
+      "description": "椎体绕自身垂直轴旋转的角度。这是脊柱侧弯的三维特征之一。",
+      "normal_range": "0°",
+      "axis_mapping": "Axial Rotation"
+    }
+  },
+  "raw_report_terms": {
+    "ICT": "髂嵴切线 (Iliac Crest Tangent) / 拐点，常作为参考基准线。",
+    "DL-DR (3D Length)": "左右背部高差/长度差，可能指背部左右两侧表面轮廓的三维距离差，常用于评估“剃刀背”畸形 (Rib Hump)。",
+    "KA (Kyphosis Apex)": "后凸顶点，胸椎后凸曲线的最突点位置。",
+    "LA (Lordosis Apex)": "前凸顶点，腰椎前凸曲线的最深点位置。",
+    "VP (Vertebra Prominens)": "隆椎 (C7)，第7颈椎，颈部最突出的骨点。",
+    "SP (Sacral Promontory)": "骶骨岬 / 骶骨点，骶骨上缘的中心点。",
+    "VPDM": "垂直偏离距离，可能指 VP 点相对于 DM (中线) 的偏移。",
+    "Transversal (level)": "横断面 (水平面)，指椎体在水平面上的旋转或位置数据。",
+    "Sagittal": "矢状面 (侧面)，指从侧面观察的脊柱形态数据（前凸/后凸）。",
+    "Coronal": "冠状面 (正面)，指从正面观察的脊柱形态数据（侧弯）。"
+  },
+  "anatomy_abbreviations": {
+    "T1-T12": "胸椎 (Thoracic Vertebrae) 第1至第12节。",
+    "L1-L5": "腰椎 (Lumbar Vertebrae) 第1至第5节。",
+    "C7": "第7颈椎 (Cervical Vertebra 7)。",
+    "S1": "第1骶椎 (Sacral Vertebra 1)。"
+  },
+  "3d_model_colors": {
+    "green": "正常椎体 (旋转 < 5° 且 偏移 < 10mm)",
+    "red": "异常椎体 (旋转 > 5° 或 偏移 > 10mm)"
+  }
+}

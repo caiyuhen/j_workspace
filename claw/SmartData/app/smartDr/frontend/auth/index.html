@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>临床试验管理系统 - 统一登录</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>临床试验管理系统</h1>
+            <p>统一登录入口</p>
+        </div>
+        
+        <div class="login-options">
+            <div class="option-card">
+                <h3>CTMS系统</h3>
+                <p>临床试验管理系统</p>
+                <a href="/ctms/login" class="login-btn">进入CTMS</a>
+            </div>
+            
+            <div class="option-card">
+                <h3>EDC系统</h3>
+                <p>电子数据采集系统</p>
+                <a href="/edc/login" class="login-btn">进入EDC</a>
+            </div>
+            
+            <div class="option-card">
+                <h3>IWRS系统</h3>
+                <p>交互式随机化系统</p>
+                <a href="/iwrs/login" class="login-btn">进入IWRS</a>
+            </div>
+            
+            <div class="option-card">
+                <h3>病历夹系统</h3>
+                <p>医生个人病历夹</p>
+                <a href="/patient-folder/login" class="login-btn">进入病历夹</a>
+            </div>
+        </div>
+        
+        <div class="login-form">
+            <h2>用户登录</h2>
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="text" id="username" name="username" placeholder="用户名或邮箱" required>
+                </div>
+                <div class="form-group">
+                    <input type="password" id="password" name="password" placeholder="密码" required>
+                </div>
+                <button type="submit" class="submit-btn">登录</button>
+            </form>
+            <div id="loginMessage" class="message"></div>
+        </div>
+        
+        <div class="footer">
+            <p>&copy; 2026 临床试验管理系统. 保留所有权利.</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

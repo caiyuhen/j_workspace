@@ -1,0 +1,607 @@
+# CTMS+EDC+IWRS 平台 - Docker Compose 开发环境
+# 包含所有基础设施组件和 12 个微服务
+
+version: '3.8'
+
+services:
+  # ==================== 基础设施组件 ====================
+  
+  # PostgreSQL 主数据库
+  postgres:
+    image: postgres:15-alpine
+    container_name: ctms-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-ctms}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ctms123456}
+      POSTGRES_DB: ${POSTGRES_DB:-ctms_edc_iwrs}
+      TZ: Asia/Shanghai
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./infrastructure/sql/migrations:/migrations
+    networks:
+      - ctms-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ctms} -d ${POSTGRES_DB:-ctms_edc_iwrs}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis 缓存
+  redis:
+    image: redis:7-alpine
+    container_name: ctms-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ctms-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO 对象存储（用于 eTMF 文档、eCRF 附件）
+  minio:
+    image: minio/minio:latest
+    container_name: ctms-minio
+    restart: unless-stopped
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      TZ: Asia/Shanghai
+    ports:
+      - "${MINIO_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
+    networks:
+      - ctms-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # RabbitMQ 消息队列
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: ctms-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
+      TZ: Asia/Shanghai
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - ctms-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Nginx API 网关
+  nginx:
+    image: nginx:alpine
+    container_name: ctms-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_SSL_PORT:-443}:443"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./infrastructure/nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./infrastructure/nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - auth-service
+      - ctms-service
+      - edc-service
+      - iwrs-service
+      - portfolio-service
+      - document-service
+      - reporting-service
+      - notification-service
+      - security-service
+      - integration-service
+      - config-service
+      - validation-service
+    networks:
+      - ctms-network
+
+  # Elasticsearch（日志和搜索）
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: ctms-elasticsearch
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - xpack.security.enabled=false
+      - TZ=Asia/Shanghai
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+    networks:
+      - ctms-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  # Kibana（日志可视化）
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: ctms-kibana
+    restart: unless-stopped
+    environment:
+      ELASTICSEARCH_HOSTS: http://elasticsearch:9200
+      TZ: Asia/Shanghai
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    depends_on:
+      - elasticsearch
+    networks:
+      - ctms-network
+
+  # Prometheus（监控指标）
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: ctms-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./infrastructure/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      - ctms-network
+
+  # Grafana（监控可视化）
+  grafana:
+    image: grafana/grafana:latest
+    container_name: ctms-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      TZ: Asia/Shanghai
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infrastructure/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./infrastructure/grafana/datasources:/etc/grafana/provisioning/datasources:ro
+    depends_on:
+      - prometheus
+    networks:
+      - ctms-network
+
+  # ==================== 微服务 ====================
+  
+  # Auth 服务 - 认证与授权
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: ctms-auth-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ctms}:${POSTGRES_PASSWORD:-ctms123456}@postgres:5432/ctms_edc_iwrs_auth
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:-your-jwt-secret-key-change-in-production}
+      JWT_EXPIRATION: ${JWT_EXPIRATION:-7d}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${AUTH_SERVICE_PORT:-3001}:3001"
+    volumes:
+      - ./services/auth-service:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ctms-network
+
+  # CTMS 服务 - 临床试验管理
+  ctms-service:
+    build:
+      context: ./services/ctms-service
+      dockerfile: Dockerfile
+    container_name: ctms-ctms-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3002
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ctms}:${POSTGRES_PASSWORD:-ctms123456}@postgres:5432/ctms_edc_iwrs_ctms
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${CTMS_SERVICE_PORT:-3002}:3002"
+    volumes:
+      - ./services/ctms-service:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ctms-network
+
+  # EDC 服务 - 电子数据采集
+  edc-service:
+    build:
+      context: ./services/edc-service
+      dockerfile: Dockerfile
+    container_name: ctms-edc-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3003
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ctms}:${POSTGRES_PASSWORD:-ctms123456}@postgres:5432/ctms_edc_iwrs_edc
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-edc-files}
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${EDC_SERVICE_PORT:-3003}:3003"
+    volumes:
+      - ./services/edc-service:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ctms-network
+
+  # IWRS 服务 - 随机化与药物供应
+  iwrs-service:
+    build:
+      context: ./services/iwrs-service
+      dockerfile: Dockerfile
+    container_name: ctms-iwrs-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3004
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ctms}:${POSTGRES_PASSWORD:-ctms123456}@postgres:5432/ctms_edc_iwrs_iwrs
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${IWRS_SERVICE_PORT:-3004}:3004"
+    volumes:
+      - ./services/iwrs-service:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ctms-network
+
+  # Portfolio 服务 - 医生病历夹
+  portfolio-service:
+    build:
+      context: ./services/portfolio-service
+      dockerfile: Dockerfile
+    container_name: ctms-portfolio-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3005
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ctms}:${POSTGRES_PASSWORD:-ctms123456}@postgres:5432/ctms_edc_iwrs_portfolio
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-portfolio-files}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${PORTFOLIO_SERVICE_PORT:-3005}:3005"
+    volumes:
+      - ./services/portfolio-service:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - ctms-network
+
+  # Document 服务 - eTMF 文档管理
+  document-service:
+    build:
+      context: ./services/document-service
+      dockerfile: Dockerfile
+    container_name: ctms-document-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3006
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ctms}:${POSTGRES_PASSWORD:-ctms123456}@postgres:5432/ctms_edc_iwrs_document
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-etmf-docs}
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${DOCUMENT_SERVICE_PORT:-3006}:3006"
+    volumes:
+      - ./services/document-service:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ctms-network
+
+  # Reporting 服务 - 报表生成
+  reporting-service:
+    build:
+      context: ./services/reporting-service
+      dockerfile: Dockerfile
+    container_name: ctms-reporting-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3007
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ctms}:${POSTGRES_PASSWORD:-ctms123456}@postgres:5432/ctms_edc_iwrs_reporting
+      REDIS_URL: redis://redis:6379
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-reports}
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${REPORTING_SERVICE_PORT:-3007}:3007"
+    volumes:
+      - ./services/reporting-service:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ctms-network
+
+  # Notification 服务 - 通知
+  notification-service:
+    build:
+      context: ./services/notification-service
+      dockerfile: Dockerfile
+    container_name: ctms-notification-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3008
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      WECHAT_CORP_ID: ${WECHAT_CORP_ID:-}
+      WECHAT_SECRET: ${WECHAT_SECRET:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${NOTIFICATION_SERVICE_PORT:-3008}:3008"
+    volumes:
+      - ./services/notification-service:/app
+      - /app/node_modules
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ctms-network
+
+  # Security 服务 - 安全审计
+  security-service:
+    build:
+      context: ./services/security-service
+      dockerfile: Dockerfile
+    container_name: ctms-security-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3009
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ctms}:${POSTGRES_PASSWORD:-ctms123456}@postgres:5432/ctms_edc_iwrs_security
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${SECURITY_SERVICE_PORT:-3009}:3009"
+    volumes:
+      - ./services/security-service:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ctms-network
+
+  # Integration 服务 - 系统集成
+  integration-service:
+    build:
+      context: ./services/integration-service
+      dockerfile: Dockerfile
+    container_name: ctms-integration-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3010
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      HL7_ENDPOINT: ${HL7_ENDPOINT:-}
+      FHIR_ENDPOINT: ${FHIR_ENDPOINT:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${INTEGRATION_SERVICE_PORT:-3010}:3010"
+    volumes:
+      - ./services/integration-service:/app
+      - /app/node_modules
+    depends_on:
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - ctms-network
+
+  # Config 服务 - 系统配置
+  config-service:
+    build:
+      context: ./services/config-service
+      dockerfile: Dockerfile
+    container_name: ctms-config-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3011
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ctms}:${POSTGRES_PASSWORD:-ctms123456}@postgres:5432/ctms_edc_iwrs_config
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${CONFIG_SERVICE_PORT:-3011}:3011"
+    volumes:
+      - ./services/config-service:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ctms-network
+
+  # Validation 服务 - 数据验证
+  validation-service:
+    build:
+      context: ./services/validation-service
+      dockerfile: Dockerfile
+    container_name: ctms-validation-service
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      PORT: 3012
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ctms}:${POSTGRES_PASSWORD:-ctms123456}@postgres:5432/ctms_edc_iwrs_validation
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      MINIO_ENDPOINT: minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin123}
+      MINIO_BUCKET: ${MINIO_BUCKET:-validation}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${VALIDATION_SERVICE_PORT:-3012}:3012"
+    volumes:
+      - ./services/validation-service:/app
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - ctms-network
+
+  # ==================== 前端应用 ====================
+  
+  # React 前端
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: ctms-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:80}
+      VITE_AUTH_SERVICE_URL: ${VITE_AUTH_SERVICE_URL:-http://localhost:3001}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - nginx
+    networks:
+      - ctms-network
+
+networks:
+  ctms-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+  rabbitmq_data:
+  elasticsearch_data:
+  prometheus_data:
+  grafana_data:

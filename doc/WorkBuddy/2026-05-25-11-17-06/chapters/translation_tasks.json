@@ -1,0 +1,92 @@
+[
+  {
+    "chapter_number": 1,
+    "title": "Introduction",
+    "start_page": 1,
+    "end_page": 0,
+    "page_count": 0,
+    "file": "C:\\Users\\Administrator\\WorkBuddy\\2026-05-25-11-17-06\\chapters\\Chapter01_Introduction.txt",
+    "status": "extracted"
+  },
+  {
+    "chapter_number": 2,
+    "title": "Fundamentals of the SDTM",
+    "start_page": 1,
+    "end_page": 0,
+    "page_count": 0,
+    "file": "C:\\Users\\Administrator\\WorkBuddy\\2026-05-25-11-17-06\\chapters\\Chapter02_Fundamentals_of_the_SDTM.txt",
+    "status": "extracted"
+  },
+  {
+    "chapter_number": 3,
+    "title": "Submitting Data in Standard Format",
+    "start_page": 1,
+    "end_page": 0,
+    "page_count": 0,
+    "file": "C:\\Users\\Administrator\\WorkBuddy\\2026-05-25-11-17-06\\chapters\\Chapter03_Submitting_Data_in_Standard_Format.txt",
+    "status": "extracted"
+  },
+  {
+    "chapter_number": 4,
+    "title": "Assumptions for Domain Models",
+    "start_page": 1,
+    "end_page": 0,
+    "page_count": 0,
+    "file": "C:\\Users\\Administrator\\WorkBuddy\\2026-05-25-11-17-06\\chapters\\Chapter04_Assumptions_for_Domain_Models.txt",
+    "status": "extracted"
+  },
+  {
+    "chapter_number": 5,
+    "title": "Models for Special-purpose Domains",
+    "start_page": 1,
+    "end_page": 0,
+    "page_count": 0,
+    "file": "C:\\Users\\Administrator\\WorkBuddy\\2026-05-25-11-17-06\\chapters\\Chapter05_Models_for_Special-purpose_Domains.txt",
+    "status": "extracted"
+  },
+  {
+    "chapter_number": 6,
+    "title": "Domain Models Based on the General Observation Classes",
+    "start_page": 1,
+    "end_page": 0,
+    "page_count": 0,
+    "file": "C:\\Users\\Administrator\\WorkBuddy\\2026-05-25-11-17-06\\chapters\\Chapter06_Domain_Models_Based_on_the_General_Observation_Cla.txt",
+    "status": "extracted"
+  },
+  {
+    "chapter_number": 7,
+    "title": "Trial Design Model Datasets",
+    "start_page": 1,
+    "end_page": 0,
+    "page_count": 0,
+    "file": "C:\\Users\\Administrator\\WorkBuddy\\2026-05-25-11-17-06\\chapters\\Chapter07_Trial_Design_Model_Datasets.txt",
+    "status": "extracted"
+  },
+  {
+    "chapter_number": 8,
+    "title": "Representing Relationships and Data",
+    "start_page": 1,
+    "end_page": 0,
+    "page_count": 0,
+    "file": "C:\\Users\\Administrator\\WorkBuddy\\2026-05-25-11-17-06\\chapters\\Chapter08_Representing_Relationships_and_Data.txt",
+    "status": "extracted"
+  },
+  {
+    "chapter_number": 9,
+    "title": "Study References",
+    "start_page": 1,
+    "end_page": 0,
+    "page_count": 0,
+    "file": "C:\\Users\\Administrator\\WorkBuddy\\2026-05-25-11-17-06\\chapters\\Chapter09_Study_References.txt",
+    "status": "extracted"
+  },
+  {
+    "chapter_number": 10,
+    "title": "Appendices",
+    "start_page": 1,
+    "end_page": 461,
+    "page_count": 461,
+    "file": "C:\\Users\\Administrator\\WorkBuddy\\2026-05-25-11-17-06\\chapters\\Chapter10_Appendices.txt",
+    "status": "extracted"
+  }
+]

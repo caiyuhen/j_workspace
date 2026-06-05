@@ -1,0 +1,62 @@
+======================================================================================================================================================
+CDISC SDTM 术语翻译对照报告
+生成时间：2026-05-22 18:22:54
+======================================================================================================================================================
+
+统计信息:
+  总记录数：46,774
+  已翻译 codelist_name: 46,774 (100.0%)
+  已翻译 cdisc_synonyms: 41,630 (89.0%)
+
+序号     原文                                                 中文翻译                                              
+------------------------------------------------------------------------------------------------------------------------------------------------------
+1      10-Meter Walk/Run Functional Test Test Code        10-米 步行/跑 功能 测试 测试代码                              
+2      10-Meter Walk/Run Functional Test Test Code        10-米 步行/跑 功能 测试 测试代码                              
+3      10-Meter Walk/Run Functional Test Test Code        10-米 步行/跑 功能 测试 测试代码                              
+4      10-Meter Walk/Run Functional Test Test Code        10-米 步行/跑 功能 测试 测试代码                              
+5      10-Meter Walk/Run Functional Test Test Code        10-米 步行/跑 功能 测试 测试代码                              
+6      10-Meter Walk/Run Functional Test Test Name        10-米 步行/跑 功能 测试 测试项目                              
+7      10-Meter Walk/Run Functional Test Test Name        10-米 步行/跑 功能 测试 测试项目                              
+8      10-Meter Walk/Run Functional Test Test Name        10-米 步行/跑 功能 测试 测试项目                              
+9      10-Meter Walk/Run Functional Test Test Name        10-米 步行/跑 功能 测试 测试项目                              
+10     10-Meter Walk/Run Functional Test Test Name        10-米 步行/跑 功能 测试 测试项目                              
+11     4-Stair Ascend Functional Test Test Code           4-台阶 上楼 功能 测试 测试代码                                
+12     4-Stair Ascend Functional Test Test Code           4-台阶 上楼 功能 测试 测试代码                                
+13     4-Stair Ascend Functional Test Test Code           4-台阶 上楼 功能 测试 测试代码                                
+14     4-Stair Ascend Functional Test Test Code           4-台阶 上楼 功能 测试 测试代码                                
+15     4-Stair Ascend Functional Test Test Code           4-台阶 上楼 功能 测试 测试代码                                
+16     4-Stair Ascend Functional Test Test Name           4-台阶 上楼 功能 测试 测试项目                                
+17     4-Stair Ascend Functional Test Test Name           4-台阶 上楼 功能 测试 测试项目                                
+18     4-Stair Ascend Functional Test Test Name           4-台阶 上楼 功能 测试 测试项目                                
+19     4-Stair Ascend Functional Test Test Name           4-台阶 上楼 功能 测试 测试项目                                
+20     4-Stair Ascend Functional Test Test Name           4-台阶 上楼 功能 测试 测试项目                                
+21     4-Stair Descend Functional Test Test Code          4-台阶 下楼 功能 测试 测试代码                                
+22     4-Stair Descend Functional Test Test Code          4-台阶 下楼 功能 测试 测试代码                                
+23     4-Stair Descend Functional Test Test Code          4-台阶 下楼 功能 测试 测试代码                                
+24     4-Stair Descend Functional Test Test Code          4-台阶 下楼 功能 测试 测试代码                                
+25     4-Stair Descend Functional Test Test Code          4-台阶 下楼 功能 测试 测试代码                                
+26     4-Stair Descend Functional Test Test Name          4-台阶 下楼 功能 测试 测试项目                                
+27     4-Stair Descend Functional Test Test Name          4-台阶 下楼 功能 测试 测试项目                                
+28     4-Stair Descend Functional Test Test Name          4-台阶 下楼 功能 测试 测试项目                                
+29     4-Stair Descend Functional Test Test Name          4-台阶 下楼 功能 测试 测试项目                                
+30     4-Stair Descend Functional Test Test Name          4-台阶 下楼 功能 测试 测试项目                                
+31     6 Minute Walk Functional Test Test Code            6 分钟 步行 功能 测试 测试代码                                
+32     6 Minute Walk Functional Test Test Code            6 分钟 步行 功能 测试 测试代码                                
+33     6 Minute Walk Functional Test Test Code            6 分钟 步行 功能 测试 测试代码                                
+34     6 Minute Walk Functional Test Test Code            6 分钟 步行 功能 测试 测试代码                                
+35     6 Minute Walk Functional Test Test Code            6 分钟 步行 功能 测试 测试代码                                
+36     6 Minute Walk Functional Test Test Code            6 分钟 步行 功能 测试 测试代码                                
+37     6 Minute Walk Functional Test Test Code            6 分钟 步行 功能 测试 测试代码                                
+38     6 Minute Walk Functional Test Test Name            6 分钟 步行 功能 测试 测试项目                                
+39     6 Minute Walk Functional Test Test Name            6 分钟 步行 功能 测试 测试项目                                
+40     6 Minute Walk Functional Test Test Name            6 分钟 步行 功能 测试 测试项目                                
+41     6 Minute Walk Functional Test Test Name            6 分钟 步行 功能 测试 测试项目                                
+42     6 Minute Walk Functional Test Test Name            6 分钟 步行 功能 测试 测试项目                                
+43     6 Minute Walk Functional Test Test Name            6 分钟 步行 功能 测试 测试项目                                
+44     6 Minute Walk Functional Test Test Name            6 分钟 步行 功能 测试 测试项目                                
+45     Abnormal Involuntary Movement Scale Clinical Class Abnormal Involuntary Movement 量表 Clinical Classifi
+46     Abnormal Involuntary Movement Scale Clinical Class Abnormal Involuntary Movement 量表 Clinical Classifi
+47     Abnormal Involuntary Movement Scale Clinical Class Abnormal Involuntary Movement 量表 Clinical Classifi
+48     Abnormal Involuntary Movement Scale Clinical Class Abnormal Involuntary Movement 量表 Clinical Classifi
+49     Abnormal Involuntary Movement Scale Clinical Class Abnormal Involuntary Movement 量表 Clinical Classifi
+50     Abnormal Involuntary Movement Scale Clinical Class Abnormal Involuntary Movement 量表 Clinical Classifi

@@ -1,0 +1,155 @@
+# Compressed files
+*.zip
+*.tar
+*.gz
+*.rar
+*.7z
+
+# Logs
+*.log
+logs/
+*.out
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv
+venv/
+.env
+*.egg-info/
+dist/
+build/
+*.whl
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-store/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Large Data & Backups
+**/data/
+*.dcm
+*.pth
+Image_project - 副本/
+
+# ML Artifacts
+checkpoint-*/
+output/
+*_cache.pkl
+
+# Nested repos/workspaces
+openclaw-main/workspace/
+
+# Word temp files
+~$*
+*.docx
+*.doc
+*.xlsx
+*.xls
+*.pptx
+*.ppt
+
+# Corrupted files
+projects/clinical-trial-platform/services/auth-service/src/main/java/com/clinical/auth/entity/SysUser.java
+projects/clinical-trial-platform/services/auth-service/src/main/java/com/clinical/auth/AuthServiceApplication.java
+
+# Problematic directories
+.claude/
+doc/.claude/
+doc/产品设计/.claude/
+
+# Nested git repos (submodules)
+ClawX-main/D*/
+.git_backup/
+
+# Build outputs
+ClawX-main/build/
+coze/*/build/
+coze/*/dist/
+**/target/
+
+# WXWork cache (enterprise wechat)
+doc/WXWork/
+
+# OS files
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Audio/Video large files
+*.wav
+*.mp3
+*.mp4
+*.avi
+*.mkv
+*.m4a
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+milvus_medical.db
+.milvus_medical.db.lock
+
+# Coverage
+.coverage
+htmlcov/
+.coverage.*
+
+# Lock files (large)
+pnpm-lock.yaml
+yarn.lock
+package-lock.json
+
+# Large model files
+*.bin
+*.safetensors
+*.onnx
+*.h5
+*.pkl
+
+# Embedded git repos (no commit checked out)
+label-studio-develop/
+agent_ai/
+large _model/
+large_model_git/
+MonkeyCode-main/
+PilotDeck-main/
+openclaw-main/
+openhuman-main/
+chatterbox-master/
+ClawX-main/
+n8n/
+n8n-master/
+hermes/
+coze/
+Newprojects/
+clinicaltrials-saas/
+DISC_DOC/
+disc_content/
+demo/
+med_demo/
+monitor_service/
+node_modules/
+git-hooks/
+.workbuddy/
+10year/
+project/
+ne4j/
+Image_project/
+Image_project_coder1/
+Digital_Human/
+projects/
+
+# Docker volumes
+**/postgres_data/
+**/mysql_data/
+**/redis_data/

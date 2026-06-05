@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据标准培训 | 元数据 · CDM · CDISC · OMOP · 统计导出</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --blue-50:#E6F1FB; --blue-100:#B5D4F4; --blue-200:#85B7EB; --blue-400:#378ADD; --blue-600:#185FA5; --blue-800:#0C447C; --blue-900:#042C53;
+    --teal-50:#E1F5EE; --teal-100:#9FE1CB; --teal-200:#5DCAA5; --teal-400:#1D9E75; --teal-600:#0F6E56; --teal-800:#085041;
+    --purple-50:#EEEDFE; --purple-100:#CECBF6; --purple-200:#AFA9EC; --purple-400:#7F77DD; --purple-600:#534AB7; --purple-800:#3C3489;
+    --amber-50:#FAEEDA; --amber-100:#FAC775; --amber-400:#BA7517; --amber-600:#854F0B;
+    --coral-50:#FAECE7; --coral-100:#F5C4B3; --coral-400:#D85A30; --coral-600:#993C1D;
+    --green-50:#EAF3DE; --green-100:#C0DD97; --green-400:#639922; --green-600:#3B6D11;
+    --gray-50:#F1EFE8; --gray-100:#D3D1C7; --gray-200:#B4B2A9; --gray-400:#888780; --gray-800:#444441;
+    --font: 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', sans-serif;
+  }
+  body {
+    font-family: var(--font);
+    background: #0a0e1a;
+    color: #fff;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+  /* ── SLIDE CONTAINER ── */
+  .deck { width: 100%; height: 100vh; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    display: none; flex-direction: column;
+    opacity: 0; transition: opacity .35s ease;
+  }
+  .slide.active { display: flex; opacity: 1; }
+  /* ── NAV ── */
+  .nav-bar {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 12px; z-index: 100;
+    background: rgba(255,255,255,.08); backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,.14); border-radius: 40px;
+    padding: 10px 20px;
+  }
+  .nav-btn {
+    background: rgba(255,255,255,.12); border: none; color: #fff;
+    width: 36px; height: 36px; border-radius: 50%; cursor: pointer;
+    font-size: 16px; display: flex; align-items: center; justify-content: center;
+    transition: background .2s;
+  }
+  .nav-btn:hover { background: rgba(255,255,255,.25); }
+  .nav-dots { display: flex; gap: 6px; }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(255,255,255,.3); cursor: pointer; transition: all .2s;
+  }
+  .dot.active { background: #fff; width: 20px; border-radius: 4px; }
+  .slide-counter { font-size: 12px; color: rgba(255,255,255,.5); min-width: 40px; text-align: center; }
+  /* ── PROGRESS BAR ── */
+  .progress { position: fixed; top: 0; left: 0; height: 3px; background: var(--blue-400); z-index: 200; transition: width .35s; }
+  /* ── SECTION TAG ── */
+  .section-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 500; letter-spacing: .06em;
+    padding: 4px 12px; border-radius: 20px; margin-bottom: 16px;
+  }
+  /* ── TITLE SLIDE ── */
+  #s0 {
+    background: linear-gradient(135deg, #0a0e1a 0%, #0d1a2e 50%, #0a1624 100%);
+    justify-content: center; align-items: center; text-align: center; padding: 60px;
+  }
+  #s0 .kicker { font-size: 13px; color: var(--blue-200); letter-spacing: .12em; text-transform: uppercase; margin-bottom: 24px; }
+  #s0 h1 { font-size: 52px; font-weight: 600; line-height: 1.15; margin-bottom: 20px;
+    background: linear-gradient(90deg, #fff 0%, var(--blue-200) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  #s0 .subtitle { font-size: 18px; color: rgba(255,255,255,.55); line-height: 1.7; max-width: 640px; }
+  #s0 .toc-pills { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 40px; }
+  #s0 .pill {
+    padding: 8px 18px; border-radius: 24px; font-size: 13px;
+    border: 1px solid rgba(255,255,255,.18); color: rgba(255,255,255,.75);
+    background: rgba(255,255,255,.06);
+  }
+  /* ── CONTENT SLIDES common ── */
+  .slide-inner {
+    flex: 1; display: flex; flex-direction: column;
+    padding: 56px 72px 100px;
+    overflow-y: auto;
+  }
+  .slide-title { font-size: 32px; font-weight: 600; line-height: 1.3; margin-bottom: 8px; }
+  .slide-lead { font-size: 15px; color: rgba(255,255,255,.55); margin-bottom: 36px; line-height: 1.6; }
+  /* ── GRID CARDS ── */
+  .card-grid { display: grid; gap: 16px; }
+  .card-grid.col2 { grid-template-columns: 1fr 1fr; }
+  .card-grid.col3 { grid-template-columns: 1fr 1fr 1fr; }
+  .card {
+    border-radius: 14px; padding: 22px 24px;
+    border: 1px solid rgba(255,255,255,.1);
+  }
+  .card .card-icon { font-size: 22px; margin-bottom: 12px; }
+  .card .card-title { font-size: 15px; font-weight: 500; margin-bottom: 8px; }
+  .card .card-body { font-size: 13px; color: rgba(255,255,255,.6); line-height: 1.65; }
+  /* colors */
+  .bg-blue { background: rgba(55,138,221,.15); border-color: rgba(55,138,221,.3); }
+  .bg-teal { background: rgba(29,158,117,.15); border-color: rgba(29,158,117,.3); }
+  .bg-purple { background: rgba(127,119,221,.15); border-color: rgba(127,119,221,.3); }
+  .bg-amber { background: rgba(186,117,23,.15); border-color: rgba(186,117,23,.3); }
+  .bg-coral { background: rgba(216,90,48,.15); border-color: rgba(216,90,48,.3); }
+  .bg-green { background: rgba(99,153,34,.15); border-color: rgba(99,153,34,.3); }
+  /* ── TABLE ── */
+  .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .data-table th {
+    text-align: left; padding: 10px 14px;
+    background: rgba(255,255,255,.07); font-weight: 500;
+    border-bottom: 1px solid rgba(255,255,255,.12);
+  }
+  .data-table td {
+    padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,.06);
+    color: rgba(255,255,255,.8); vertical-align: top; line-height: 1.5;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .badge {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 500;
+  }
+  .badge-blue { background: rgba(55,138,221,.25); color: #85B7EB; }
+  .badge-teal { background: rgba(29,158,117,.25); color: #5DCAA5; }
+  .badge-amber { background: rgba(186,117,23,.25); color: #FAC775; }
+  .badge-purple { background: rgba(127,119,221,.25); color: #AFA9EC; }
+  /* ── TWO-COLUMN LAYOUT ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; align-items: start; }
+  /* ── LIST ── */
+  .rule-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .rule-list li {
+    display: flex; gap: 12px; align-items: flex-start;
+    font-size: 13px; color: rgba(255,255,255,.75); line-height: 1.55;
+  }
+  .rule-list li .bullet {
+    flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; margin-top: 1px;
+  }
+  /* ── FLOW DIAGRAM ── */
+  .flow { display: flex; align-items: center; gap: 0; flex-wrap: wrap; margin: 24px 0; }
+  .flow-node {
+    flex: 1; min-width: 120px; padding: 14px 16px; border-radius: 10px;
+    text-align: center; font-size: 13px; font-weight: 500;
+    border: 1px solid rgba(255,255,255,.15);
+  }
+  .flow-arrow { color: rgba(255,255,255,.35); font-size: 20px; padding: 0 6px; flex-shrink: 0; }
+  /* ── DOMAIN TABLE ── */
+  .domain-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px; }
+  .domain-item {
+    border-radius: 8px; padding: 12px 14px;
+    background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.09);
+  }
+  .domain-item .d-abbr { font-size: 14px; font-weight: 600; color: var(--blue-200); margin-bottom: 4px; }
+  .domain-item .d-name { font-size: 11px; color: rgba(255,255,255,.5); }
+  /* ── CODE BLOCK ── */
+  .code-block {
+    background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.1);
+    border-radius: 10px; padding: 16px 20px; font-family: 'Cascadia Code','Consolas',monospace;
+    font-size: 12px; line-height: 1.7; color: #a8d8a8; overflow-x: auto;
+    white-space: pre;
+  }
+  .kw { color: #85B7EB; } .str { color: #FAC775; } .cm { color: rgba(255,255,255,.35); }
+  /* ── OMOP ── */
+  .omop-layer {
+    border-radius: 10px; padding: 14px 18px; margin-bottom: 10px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .omop-label { font-size: 13px; font-weight: 500; min-width: 180px; }
+  .omop-desc { font-size: 12px; color: rgba(255,255,255,.6); line-height: 1.5; }
+  /* ── HIGHLIGHT BOX ── */
+  .highlight-box {
+    border-radius: 10px; padding: 16px 20px; margin-top: 16px;
+    border-left: 3px solid;
+  }
+  .highlight-box .hb-title { font-size: 13px; font-weight: 500; margin-bottom: 6px; }
+  .highlight-box .hb-body { font-size: 12px; color: rgba(255,255,255,.65); line-height: 1.6; }
+  /* ── SECTION DIVIDER ── */
+  .section-slide {
+    justify-content: center; align-items: center; text-align: center;
+    padding: 80px;
+  }
+  .section-num {
+    font-size: 80px; font-weight: 700; line-height: 1;
+    opacity: .08; margin-bottom: -20px;
+  }
+  .section-name { font-size: 40px; font-weight: 600; }
+  .section-en { font-size: 16px; color: rgba(255,255,255,.4); margin-top: 10px; letter-spacing: .06em; }
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .card-grid.col3 { grid-template-columns: 1fr 1fr; }
+    .two-col { grid-template-columns: 1fr; }
+    .domain-grid { grid-template-columns: repeat(2,1fr); }
+    #s0 h1 { font-size: 34px; }
+  }
+
+.vocab-mapping { margin: 12px 0; }
+.vocab-mapping .map-row { display: flex; align-items: center; gap: 8px; font-size: 11px; padding: 6px 0; }
+.vocab-mapping .map-source { min-width: 80px; color: rgba(255,255,255,.7); }
+.vocab-mapping .map-arrow { color: rgba(255,255,255,.35); }
+.vocab-mapping .map-target { color: #85B7EB; font-weight: 500; }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<div class="deck" id="deck">
+<div class="slide" id="s0" style="background:linear-gradient(135deg,#0d1a2e,#091424);" class="section-slide">
+  <div class="slide-inner section-slide">
+    <div class="section-num">01</div>
+    <div class="section-name">元数据</div>
+    <div class="section-en">Metadata — Data About Data</div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 1 : 元数据定义 ══════════ -->
+
+
+<div class="slide" id="s1" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(55,138,221,.15);color:#85B7EB;">元数据基础</div>
+    <div class="slide-title">什么是元数据？</div>
+    <div class="slide-lead">元数据是"描述数据的数据"——它为数据提供上下文、结构与语义，使数据可被理解、检索与互操作。</div>
+    <div class="card-grid col3">
+      <div class="card bg-blue">
+        <div class="card-icon">📐</div>
+        <div class="card-title">结构性元数据</div>
+        <div class="card-body">描述数据的组织方式：表结构、字段类型、关系模型、文件格式（CSV、Parquet、DICOM）</div>
+      </div>
+      <div class="card bg-teal">
+        <div class="card-icon">🏷️</div>
+        <div class="card-title">描述性元数据</div>
+        <div class="card-body">描述数据内容：标题、摘要、创建时间、作者、关键词、主题分类</div>
+      </div>
+      <div class="card bg-purple">
+        <div class="card-icon">⚙️</div>
+        <div class="card-title">管理性元数据</div>
+        <div class="card-body">数据的生命周期信息：版本、访问权限、保留期限、数据血缘（Lineage）</div>
+      </div>
+      <div class="card bg-amber">
+        <div class="card-icon">🔬</div>
+        <div class="card-title">技术性元数据</div>
+        <div class="card-body">系统级属性：文件大小、编码格式、校验和、分区键、压缩算法</div>
+      </div>
+      <div class="card bg-coral">
+        <div class="card-icon">🌐</div>
+        <div class="card-title">语义元数据</div>
+        <div class="card-body">赋予数据意义：本体（Ontology）、受控词表、代码字典（Code Dictionary）</div>
+      </div>
+      <div class="card bg-green">
+        <div class="card-icon">🔗</div>
+        <div class="card-title">操作性元数据</div>
+        <div class="card-body">运行时信息：ETL日志、处理时间、数据质量指标、SLA合规记录</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 2 : 元数据三层模型 ══════════ -->
+
+
+<div class="slide" id="s2" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(55,138,221,.15);color:#85B7EB;">元数据基础</div>
+    <div class="slide-title">元数据三层架构模型</div>
+    <div class="slide-lead">从业务语义到物理存储，元数据贯穿数据全生命周期，是数据治理的基础。</div>
+    <div class="two-col">
+      <div>
+        <div class="omop-layer" style="background:rgba(127,119,221,.15);border:1px solid rgba(127,119,221,.3);">
+          <div>
+            <div class="omop-label" style="color:#AFA9EC;">业务层（Business Layer）</div>
+            <div class="omop-desc">业务术语、KPI定义、数据域划分、数据产品目录；面向业务用户，强调语义与可读性</div>
+          </div>
+        </div>
+        <div style="text-align:center;color:rgba(255,255,255,.2);font-size:20px;margin:4px 0;">↓</div>
+        <div class="omop-layer" style="background:rgba(55,138,221,.15);border:1px solid rgba(55,138,221,.3);">
+          <div>
+            <div class="omop-label" style="color:#85B7EB;">逻辑层（Logical Layer）</div>
+            <div class="omop-desc">实体关系模型、数据流图、数据字典、血缘图谱；面向数据架构师和分析师</div>
+          </div>
+        </div>
+        <div style="text-align:center;color:rgba(255,255,255,.2);font-size:20px;margin:4px 0;">↓</div>
+        <div class="omop-layer" style="background:rgba(29,158,117,.15);border:1px solid rgba(29,158,117,.3);">
+          <div>
+            <div class="omop-label" style="color:#5DCAA5;">物理层（Physical Layer）</div>
+            <div class="omop-desc">表结构、索引、分区、压缩格式、存储位置；面向工程师和DBA</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:14px;color:rgba(255,255,255,.7);">核心元数据管理工具</div>
+        <table class="data-table">
+          <thead><tr><th>工具/规范</th><th>适用场景</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-blue">Data Catalog</span></td><td>数据资产发现与检索</td></tr>
+            <tr><td><span class="badge badge-teal">DCAT</span></td><td>数据集元数据标准（W3C）</td></tr>
+            <tr><td><span class="badge badge-amber">Dublin Core</span></td><td>文档级描述元数据</td></tr>
+            <tr><td><span class="badge badge-purple">FHIR Meta</span></td><td>医疗资源元数据</td></tr>
+            <tr><td><span class="badge badge-blue">ISO 11179</span></td><td>数据元素规范标准</td></tr>
+            <tr><td><span class="badge badge-teal">SDTM Define.xml</span></td><td>临床试验数据集元数据</td></tr>
+          </tbody>
+        </table>
+        <div class="highlight-box" style="background:rgba(55,138,221,.1);border-color:var(--blue-400);">
+          <div class="hb-title" style="color:#85B7EB;">💡 在临床试验中的应用</div>
+          <div class="hb-body">Define.xml 是 CDISC 规范的元数据文件，记录每个数据集的变量名、标签、类型、受控术语和来源，是FDA/NMPA电子申报的必要组成部分。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 3 : SECTION — CDM ══════════ -->
+
+
+<div class="slide" id="s3" style="background:linear-gradient(135deg,#0d1a2e,#091424);">
+  <div class="slide-inner section-slide">
+    <div class="section-num">02</div>
+    <div class="section-name">通用数据模型 CDM</div>
+    <div class="section-en">Common Data Model</div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 4 : CDM概述 ══════════ -->
+
+
+<div class="slide" id="s4" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(29,158,117,.15);color:#5DCAA5;">CDM 概述</div>
+    <div class="slide-title">什么是通用数据模型？</div>
+    <div class="slide-lead">CDM 通过统一的结构和语义标准，使来自不同来源的数据能够按照相同的方式进行分析，实现跨机构、跨系统的互操作。</div>
+    <div class="two-col">
+      <div>
+        <ul class="rule-list">
+          <li>
+            <span class="bullet" style="background:rgba(55,138,221,.25);color:#85B7EB;">1</span>
+            <div><strong style="color:#fff;">标准化结构</strong><br>定义统一的表名、字段名和关系，消除命名差异</div>
+          </li>
+          <li>
+            <span class="bullet" style="background:rgba(29,158,117,.25);color:#5DCAA5;">2</span>
+            <div><strong style="color:#fff;">语义规范化</strong><br>使用标准词汇（ICD、SNOMED、RxNorm）对概念进行统一编码</div>
+          </li>
+          <li>
+            <span class="bullet" style="background:rgba(127,119,221,.25);color:#AFA9EC;">3</span>
+            <div><strong style="color:#fff;">可重用分析</strong><br>一套分析代码（SQL、R、Python）可在不同机构的CDM上运行</div>
+          </li>
+          <li>
+            <span class="bullet" style="background:rgba(186,117,23,.25);color:#FAC775;">4</span>
+            <div><strong style="color:#fff;">数据质量保障</strong><br>内置数据质量检核规则，确保数据的完整性与准确性</div>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:14px;color:rgba(255,255,255,.7);">主流 CDM 对比</div>
+        <table class="data-table">
+          <thead><tr><th>CDM</th><th>主导机构</th><th>主要场景</th><th>关注点</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="badge badge-blue">CDISC</span></td>
+              <td>CDISC协会</td>
+              <td>临床试验申报</td>
+              <td>监管合规</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-teal">OMOP CDM</span></td>
+              <td>OHDSI</td>
+              <td>真实世界研究</td>
+              <td>观察性分析</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-amber">i2b2</span></td>
+              <td>哈佛医学院</td>
+              <td>临床研究查询</td>
+              <td>队列发现</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-purple">PCORnet CDM</span></td>
+              <td>PCORI</td>
+              <td>比较效果研究</td>
+              <td>患者中心</td>
+            </tr>
+            <tr>
+              <td><span class="badge badge-blue">HL7 FHIR</span></td>
+              <td>HL7</td>
+              <td>互操作交换</td>
+              <td>API驱动</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 5 : SECTION — CDISC ══════════ -->
+
+
+<div class="slide" id="s5" style="background:linear-gradient(135deg,#0d1a2e,#091424);">
+  <div class="slide-inner section-slide">
+    <div class="section-num">2.1</div>
+    <div class="section-name">CDISC 标准体系</div>
+    <div class="section-en">Clinical Data Interchange Standards Consortium</div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 6 : CDISC介绍 ══════════ -->
+
+
+<div class="slide" id="s6" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(55,138,221,.15);color:#85B7EB;">CDISC 标准</div>
+    <div class="slide-title">CDISC 组织与标准族</div>
+    <div class="slide-lead">CDISC（临床数据交换标准联盟）成立于1997年，其标准是FDA、PMDA、NMPA等全球监管机构要求电子申报的核心规范。</div>
+    <div class="card-grid col2" style="margin-bottom:20px;">
+      <div class="card bg-blue">
+        <div class="card-title">SDTM — 研究数据制表模型</div>
+        <div class="card-body">Study Data Tabulation Model<br>原始临床数据的标准化组织方式，用于向监管机构提交原始研究数据，每个数据集对应一个域（Domain）</div>
+      </div>
+      <div class="card bg-teal">
+        <div class="card-title">ADaM — 分析数据模型</div>
+        <div class="card-body">Analysis Data Model<br>在SDTM基础上派生的分析就绪数据集，直接支持统计分析（如ADSL、ADAE、ADLB），含分析变量与标志变量</div>
+      </div>
+      <div class="card bg-purple">
+        <div class="card-title">CDASH — 数据采集协调标准</div>
+        <div class="card-body">Clinical Data Acquisition Standards Harmonization<br>定义CRF表单字段的标准名称和格式，从源头保证数据与SDTM的对应关系</div>
+      </div>
+      <div class="card bg-amber">
+        <div class="card-title">CDISC CT — 受控术语</div>
+        <div class="card-body">Controlled Terminology<br>标准化代码集（Code List），每季度更新，确保字段值的一致性（如 Y/N/UNK 性别代码 M/F/U 等）</div>
+      </div>
+    </div>
+    <div class="flow">
+      <div class="flow-node" style="background:rgba(127,119,221,.2);border-color:rgba(127,119,221,.4);">CDASH<br><span style="font-size:11px;opacity:.6;">CRF采集</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node" style="background:rgba(55,138,221,.2);border-color:rgba(55,138,221,.4);">SDTM<br><span style="font-size:11px;opacity:.6;">数据制表</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node" style="background:rgba(29,158,117,.2);border-color:rgba(29,158,117,.4);">ADaM<br><span style="font-size:11px;opacity:.6;">分析数据集</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node" style="background:rgba(186,117,23,.2);border-color:rgba(186,117,23,.4);">TLG<br><span style="font-size:11px;opacity:.6;">表格/图/列表</span></div>
+      <div class="flow-arrow">→</div>
+      <div class="flow-node" style="background:rgba(216,90,48,.2);border-color:rgba(216,90,48,.4);">NDA/BLA<br><span style="font-size:11px;opacity:.6;">监管申报</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 7 : SDTM 域结构 ══════════ -->
+
+
+<div class="slide" id="s7" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(55,138,221,.15);color:#85B7EB;">CDISC / SDTM</div>
+    <div class="slide-title">SDTM 域（Domain）体系</div>
+    <div class="slide-lead">SDTM 将研究数据按主题分组为若干标准域。每个域包含固定结构：域标识符（2字母）+ 标准变量集。</div>
+    <div class="domain-grid">
+      <div class="domain-item"><div class="d-abbr">DM</div><div class="d-name">Demographics 人口学</div></div>
+      <div class="domain-item"><div class="d-abbr">AE</div><div class="d-name">Adverse Events 不良事件</div></div>
+      <div class="domain-item"><div class="d-abbr">CM</div><div class="d-name">Concomitant Meds 合并用药</div></div>
+      <div class="domain-item"><div class="d-abbr">DS</div><div class="d-name">Disposition 处置</div></div>
+      <div class="domain-item"><div class="d-abbr">EX</div><div class="d-name">Exposure 暴露/给药</div></div>
+      <div class="domain-item"><div class="d-abbr">LB</div><div class="d-name">Laboratory 实验室</div></div>
+      <div class="domain-item"><div class="d-abbr">MH</div><div class="d-name">Medical History 病史</div></div>
+      <div class="domain-item"><div class="d-abbr">VS</div><div class="d-name">Vital Signs 生命体征</div></div>
+      <div class="domain-item"><div class="d-abbr">PE</div><div class="d-name">Physical Exam 体格检查</div></div>
+      <div class="domain-item"><div class="d-abbr">QS</div><div class="d-name">Questionnaires 问卷量表</div></div>
+      <div class="domain-item"><div class="d-abbr">TU</div><div class="d-name">Tumor Lesions 肿瘤病灶</div></div>
+      <div class="domain-item"><div class="d-abbr">TR</div><div class="d-name">Tumor Results 肿瘤结果</div></div>
+      <div class="domain-item"><div class="d-abbr">RS</div><div class="d-name">Disease Response 疾病应答</div></div>
+      <div class="domain-item"><div class="d-abbr">SV</div><div class="d-name">Subject Visits 受试者访视</div></div>
+      <div class="domain-item"><div class="d-abbr">SE</div><div class="d-name">Subject Elements 试验要素</div></div>
+      <div class="domain-item"><div class="d-abbr">TA</div><div class="d-name">Trial Arms 试验分组</div></div>
+    </div>
+    <div class="highlight-box" style="background:rgba(55,138,221,.08);border-color:var(--blue-400);margin-top:18px;">
+      <div class="hb-title" style="color:#85B7EB;">SDTM 变量命名规则：前缀 = 域标识符</div>
+      <div class="hb-body">每个域的变量以域名缩写为前缀，如 AE 域的变量：<strong>AETERM</strong>（不良事件术语）、<strong>AESTDTC</strong>（开始日期）、<strong>AEENDTC</strong>（结束日期）、<strong>AESER</strong>（是否严重）、<strong>AETOXGR</strong>（毒性分级）。日期格式统一使用 ISO 8601 字符型（YYYY-MM-DD）。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 8 : SDTM 核心规则 ══════════ -->
+
+
+<div class="slide" id="s8" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(55,138,221,.15);color:#85B7EB;">CDISC / SDTM 规则</div>
+    <div class="slide-title">SDTM 核心规则与必选变量</div>
+    <div class="slide-lead">每个 SDTM 数据集必须遵守以下命名、结构与内容规范，违规将导致电子申报被拒绝。</div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">五类必选变量（Required）</div>
+        <table class="data-table">
+          <thead><tr><th>变量</th><th>含义</th><th>示例</th></tr></thead>
+          <tbody>
+            <tr><td style="color:#85B7EB;font-family:monospace;">STUDYID</td><td>研究标识符</td><td>ABC-001</td></tr>
+            <tr><td style="color:#85B7EB;font-family:monospace;">DOMAIN</td><td>域标识符</td><td>AE</td></tr>
+            <tr><td style="color:#85B7EB;font-family:monospace;">USUBJID</td><td>受试者唯一ID</td><td>ABC-001-001-001</td></tr>
+            <tr><td style="color:#85B7EB;font-family:monospace;">--SEQ</td><td>序列号</td><td>AESEQ = 1,2,3</td></tr>
+            <tr><td style="color:#85B7EB;font-family:monospace;">--TERM</td><td>观测事件名称</td><td>AETERM</td></tr>
+          </tbody>
+        </table>
+        <div class="highlight-box" style="background:rgba(216,90,48,.1);border-color:var(--coral-400);margin-top:16px;">
+          <div class="hb-title" style="color:#F0997B;">⚠️ 常见不符合项</div>
+          <div class="hb-body">① 日期用数值而非字符 ② 使用非标准域名 ③ 缺少 Define.xml ④ 受控术语未使用标准代码集 ⑤ SUPPQUAL 补充数据集结构错误</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">受控术语（Controlled Terminology）使用</div>
+        <ul class="rule-list">
+          <li>
+            <span class="bullet" style="background:rgba(29,158,117,.25);color:#5DCAA5;">✓</span>
+            <div>性别：<code style="color:#FAC775;">M</code> / <code style="color:#FAC775;">F</code> / <code style="color:#FAC775;">U</code>（不得使用男/女/0/1）</div>
+          </li>
+          <li>
+            <span class="bullet" style="background:rgba(29,158,117,.25);color:#5DCAA5;">✓</span>
+            <div>是/否标志：<code style="color:#FAC775;">Y</code> / <code style="color:#FAC775;">N</code>（不得使用 Yes/No/1/0）</div>
+          </li>
+          <li>
+            <span class="bullet" style="background:rgba(29,158,117,.25);color:#5DCAA5;">✓</span>
+            <div>不良事件结局：<code style="color:#FAC775;">RECOVERED/RESOLVED</code>、<code style="color:#FAC775;">FATAL</code>等</div>
+          </li>
+          <li>
+            <span class="bullet" style="background:rgba(29,158,117,.25);color:#5DCAA5;">✓</span>
+            <div>AE 编码使用 MedDRA 词库，实验室异常使用 NCI CTCAE 分级</div>
+          </li>
+          <li>
+            <span class="bullet" style="background:rgba(29,158,117,.25);color:#5DCAA5;">✓</span>
+            <div>日期必须用字符型 ISO 8601：<code style="color:#FAC775;">2024-03-15</code>，不完整日期：<code style="color:#FAC775;">2024-03</code></div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 9 : ADaM ══════════ -->
+
+
+<div class="slide" id="s9" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(55,138,221,.15);color:#85B7EB;">CDISC / ADaM</div>
+    <div class="slide-title">ADaM 分析数据模型</div>
+    <div class="slide-lead">ADaM 是从 SDTM 派生的分析就绪数据集，每个分析都能追溯到 SDTM 原始数据，满足 ALCOA 原则（可归因、清晰、同步、原始、准确）。</div>
+    <div class="card-grid col3" style="margin-bottom:20px;">
+      <div class="card bg-blue">
+        <div class="card-title">ADSL — 受试者汇总</div>
+        <div class="card-body">每名受试者一行，包含人口学、分组、安全性人群标志（SAFFL）、ITT人群（ITTFL）、入组日期等</div>
+      </div>
+      <div class="card bg-teal">
+        <div class="card-title">ADAE — 不良事件</div>
+        <div class="card-body">基于 AE 域派生，添加分析标志如 TRTEMFL（治疗期间发生标志）、ANL01FL 等</div>
+      </div>
+      <div class="card bg-purple">
+        <div class="card-title">ADLB — 实验室</div>
+        <div class="card-body">基于 LB 域，包含基线值（BASE）、变化值（CHG）、百分比变化（PCHG）及正常范围标志</div>
+      </div>
+      <div class="card bg-amber">
+        <div class="card-title">ADEFF — 有效性</div>
+        <div class="card-body">疗效终点数据集，含主要终点、次要终点，支持 ANCOVA、Kaplan-Meier 等统计分析</div>
+      </div>
+      <div class="card bg-coral">
+        <div class="card-title">ADTTE — 生存分析</div>
+        <div class="card-body">Time-to-Event 数据集，包含生存时间（AVAL）、删失标志（CNSR）、事件标签（EVNTDESC）</div>
+      </div>
+      <div class="card bg-green">
+        <div class="card-title">ADQS — 问卷量表</div>
+        <div class="card-body">量表评分数据，支持纵向分析，含访视标识（AVISIT/AVISITN）和评分变化</div>
+      </div>
+    </div>
+    <div class="highlight-box" style="background:rgba(55,138,221,.08);border-color:var(--blue-400);">
+      <div class="hb-title" style="color:#85B7EB;">ADaM 三类核心结构</div>
+      <div class="hb-body"><strong>ADSL</strong>（每受试者一行）· <strong>BDS</strong>（基本数据结构，每受试者每参数每时间点一行）· <strong>OCCDS</strong>（事件发生数据结构，用于AE/CM等重复事件记录）</div>
+    </div>
+  </div>
+</div>
+<!-- ══════════ SLIDE 10 : CDISC 数据质量管理 ══════════ -->
+
+
+<div class="slide" id="s10" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(55,138,221,.15);color:#85B7EB;">CDISC 数据质量管理</div>
+    <div class="slide-title">CDISC：侧重于数据管理合规</div>
+    <div class="slide-lead">CDISC 的数据质量要求围绕监管申报展开，强调数据从采集到提交的全过程可追溯性与合规性。</div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">核心质量维度 (ALCOA+)</div>
+        <ul class="rule-list">
+          <li><span class="bullet" style="background:rgba(55,138,221,.25);color:#85B7EB;">A</span><div><strong>Attributable</strong> (可归因)<br>每条数据可追溯到原始记录与录入人</div></li>
+          <li><span class="bullet" style="background:rgba(55,138,221,.25);color:#85B7EB;">L</span><div><strong>Legible</strong> (清晰可辨)<br>数据格式标准化，无歧义表达</div></li>
+          <li><span class="bullet" style="background:rgba(55,138,221,.25);color:#85B7EB;">C</span><div><strong>Contemporaneous</strong> (同步记录)<br>数据采集与试验进程时间同步</div></li>
+          <li><span class="bullet" style="background:rgba(55,138,221,.25);color:#85B7EB;">O</span><div><strong>Original</strong> (原始记录)<br>保留数据最初记录形态</div></li>
+          <li><span class="bullet" style="background:rgba(55,138,221,.25);color:#85B7EB;">A</span><div><strong>Accurate</strong> (准确无误)<br>通过双重录入、逻辑检核确保准确性</div></li>
+        </ul>
+        <div class="highlight-box" style="background:rgba(55,138,221,.1);border-color:#378ADD;margin-top:14px;">
+          <div class="hb-title" style="color:#85B7EB;">数据管理工具链</div>
+          <div class="hb-body">① CDISC Validator 自动检查 SDTM/ADaM 合规性 · ② Define.xml 描述数据集结构 · ③ Data Review Initiative (DRI) 人工审核 · ④ CDMP 流程文档化</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">CDISC 质量检核重点</div>
+        <table class="data-table">
+          <thead><tr><th>检核点</th><th>规则示例</th></tr></thead>
+          <tbody>
+            <tr><td>完整性</td><td>USUBJID、STUDYID 不能缺失</td></tr>
+            <tr><td>一致性</td><td>AESTDTC ≤ AEENDTC</td></tr>
+            <tr><td>受控术语</td><td>AESER 只能用 Y/N</td></tr>
+            <tr><td>日期格式</td><td>YYYY-MM-DD (ISO 8601)</td></tr>
+            <tr><td>派生规则</td><td>ADaM 必须能回溯到 SDTM</td></tr>
+            <tr><td>异常值</td><td>LBORRES 超出正常范围需注释</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 11 : SECTION — OMOP ══════════ -->
+
+
+<div class="slide" id="s11" style="background:linear-gradient(135deg,#0d1a2e,#091424);">
+  <div class="slide-inner section-slide">
+    <div class="section-num">2.2</div>
+    <div class="section-name">OMOP CDM</div>
+    <div class="section-en">Observational Medical Outcomes Partnership</div>
+  </div>
+ </div>
+  <!-- ══════════ SLIDE 12 : omop介绍 ══════════ -->
+
+
+<div class="slide" id="s12" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(29,158,117,.15);color:#5DCAA5;">OMOP CDM</div>
+    <div class="slide-title">OMOP CDM — 真实世界数据基础架构</div>
+    <div class="slide-lead">OMOP CDM（v5.4）由 OHDSI 联盟维护，覆盖全球 800+ 数据库、35亿+患者记录，是真实世界证据（RWE）研究的主流标准。</div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">核心临床表（Clinical Tables）</div>
+        <div class="omop-layer" style="background:rgba(55,138,221,.12);border:1px solid rgba(55,138,221,.25);margin-bottom:8px;">
+          <div class="omop-label" style="color:#85B7EB;font-size:13px;">PERSON</div>
+          <div class="omop-desc">患者人口学信息（性别、生日、种族、出生地），每人一行，唯一标识 person_id</div>
+        </div>
+        <div class="omop-layer" style="background:rgba(29,158,117,.12);border:1px solid rgba(29,158,117,.25);margin-bottom:8px;">
+          <div class="omop-label" style="color:#5DCAA5;font-size:13px;">VISIT_OCCURRENCE</div>
+          <div class="omop-desc">就诊记录（门诊/住院/急诊），包含时间、地点、类型</div>
+        </div>
+        <div class="omop-layer" style="background:rgba(127,119,221,.12);border:1px solid rgba(127,119,221,.25);margin-bottom:8px;">
+          <div class="omop-label" style="color:#AFA9EC;font-size:13px;">CONDITION_OCCURRENCE</div>
+          <div class="omop-desc">诊断记录，ICD 编码统一映射为 SNOMED-CT concept_id</div>
+        </div>
+        <div class="omop-layer" style="background:rgba(186,117,23,.12);border:1px solid rgba(186,117,23,.25);margin-bottom:8px;">
+          <div class="omop-label" style="color:#FAC775;font-size:13px;">DRUG_EXPOSURE</div>
+          <div class="omop-desc">药物暴露记录，RxNorm/ATC 标准编码，含剂量、频次、给药途径</div>
+        </div>
+        <div class="omop-layer" style="background:rgba(99,153,34,.12);border:1px solid rgba(99,153,34,.25);">
+          <div class="omop-label" style="color:#97C459;font-size:13px;">MEASUREMENT / OBSERVATION</div>
+          <div class="omop-desc">检验检查结果及临床观测，LOINC 编码，含数值、单位、正常范围</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">标准词汇体系（Vocabulary Tables）</div>
+        <table class="data-table">
+          <thead><tr><th>词汇</th><th>覆盖领域</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-blue">SNOMED-CT</span></td><td>诊断、临床发现、手术</td></tr>
+            <tr><td><span class="badge badge-teal">LOINC</span></td><td>检验、检查、观测指标</td></tr>
+            <tr><td><span class="badge badge-amber">RxNorm</span></td><td>药物（成分级）</td></tr>
+            <tr><td><span class="badge badge-purple">ATC</span></td><td>药物解剖治疗化学分类</td></tr>
+            <tr><td><span class="badge badge-blue">ICD-9/10</span></td><td>疾病分类（映射至SNOMED）</td></tr>
+            <tr><td><span class="badge badge-teal">CPT4/OPCS</span></td><td>医疗操作与手术编码</td></tr>
+          </tbody>
+        </table>
+        <div class="highlight-box" style="background:rgba(29,158,117,.1);border-color:var(--teal-400);margin-top:14px;">
+          <div class="hb-title" style="color:#5DCAA5;">💡 OMOP 的核心思想：概念映射</div>
+          <div class="hb-body">将源系统中的任意编码（ICD、院内代码）映射到统一的 <strong>concept_id</strong>，所有分析基于 concept_id 而非原始编码运行，实现了跨机构可重复研究。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<!-- ══════════ SLIDE 13 : OMOP 核心规则与分析工具 ══════════ -->
+
+<div class="slide" id="s13" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(29,158,117,.15);color:#5DCAA5;">OMOP CDM 规则</div>
+    <div class="slide-title">OMOP 核心规则与分析工具</div>
+    <div class="slide-lead">OMOP 的规则围绕"每行一个临床事件"展开，配合 OHDSI 开源工具链实现大规模分布式研究。</div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">核心规则</div>
+        <ul class="rule-list">
+          <li>
+            <span class="bullet" style="background:rgba(55,138,221,.25);color:#85B7EB;">R1</span>
+            <div>所有日期使用 <strong>DATE</strong> 类型，时间使用 <strong>DATETIME</strong>，时区统一</div>
+          </li>
+          <li>
+            <span class="bullet" style="background:rgba(55,138,221,.25);color:#85B7EB;">R2</span>
+            <div><strong>concept_id = 0</strong> 表示未知/未映射，不得省略字段，应显式填 0</div>
+          </li>
+          <li>
+            <span class="bullet" style="background:rgba(55,138,221,.25);color:#85B7EB;">R3</span>
+            <div>每个临床事件通过 <strong>visit_occurrence_id</strong> 与就诊关联（可选但推荐）</div>
+          </li>
+          <li>
+            <span class="bullet" style="background:rgba(55,138,221,.25);color:#85B7EB;">R4</span>
+            <div><strong>standard_concept = 'S'</strong> 的 concept 才能用于分析；'C' 为分类概念</div>
+          </li>
+          <li>
+            <span class="bullet" style="background:rgba(55,138,221,.25);color:#85B7EB;">R5</span>
+            <div>PERSON 表的 <strong>person_id</strong> 必须是去标识化主键，不得使用真实患者ID</div>
+          </li>
+        </ul>
+        <div class="highlight-box" style="background:rgba(55,138,221,.08);border-color:var(--blue-400);margin-top:16px;">
+          <div class="hb-title" style="color:#85B7EB;">ETL 转换流程</div>
+          <div class="hb-body">源数据 → 编码映射（Usagi工具）→ 概念关系遍历 → OMOP表填充 → DQD数据质量检查（DataQualityDashboard）→ ACHILLES特征描述</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">OHDSI 工具链</div>
+        <table class="data-table">
+          <thead><tr><th>工具</th><th>功能</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-teal">ATLAS</span></td><td>队列定义、特征化、倾向评分</td></tr>
+            <tr><td><span class="badge badge-blue">ACHILLES</span></td><td>数据特征描述与质量报告</td></tr>
+            <tr><td><span class="badge badge-amber">Usagi</span></td><td>源编码与标准概念映射</td></tr>
+            <tr><td><span class="badge badge-purple">HADES</span></td><td>R包：PatientLevelPrediction, CohortMethod, EvidenceSynthesis</td></tr>
+            <tr><td><span class="badge badge-blue">DQD</span></td><td>DataQualityDashboard 数据质量仪表板</td></tr>
+            <tr><td><span class="badge badge-teal">WhiteRabbit</span></td><td>源数据扫描与ETL设计</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════ SLIDE 14 : 医疗数据标准术语集详解 ══════════ -->
+
+
+<div class="slide" id="s14" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(186,117,23,.15);color:#FAC775;">核心术语集</div>
+    <div class="slide-title">医疗数据标准术语集详解</div>
+    <div class="slide-lead">标准化的术语集是实现跨系统数据互操作的关键。以下介绍 CDISC 与 OMOP 中使用的主流术语集。</div>
+    <div class="card-grid col2">
+      <div class="card bg-blue">
+        <div class="card-title"><span class="badge badge-blue">MedDRA</span></div>
+        <div class="card-body">
+          <strong>Medical Dictionary for Regulatory Activities</strong><br>
+          FDA/EMA 等监管机构要求使用的不良事件编码系统<br>
+          · 层级结构:HLG → PT → LLT (5 层)<br>
+          · 覆盖领域：疾病、手术、检验、药品<br>
+          · CDISC 标准:AE/CM域必用
+        </div>
+      </div>
+      <div class="card bg-teal">
+        <div class="card-title"><span class="badge badge-teal">LOINC</span></div>
+        <div class="card-body">
+          <strong>Logical Observation Identifiers Names and Codes</strong><br>
+          实验室检查、生命体征观测的国际标准编码<br>
+          · 覆盖 58 万 + 观测项目<br>
+          · 包含：名称、成分、性质、时间点、方法<br>
+          · OMOP 核心:MEASUREMENT 表必用
+        </div>
+      </div>
+      <div class="card bg-purple">
+        <div class="card-title"><span class="badge badge-purple">RxNorm</span></div>
+        <div class="card-body">
+          <strong>Drug Name Repository</strong><br>
+          美国国家医学图书馆 (NLM) 维护的标准药物编码<br>
+          · 覆盖 24 万 + 药物概念<br>
+          · 支持：药品成分、剂量、剂型、给药途径<br>
+          · OMOP 核心:DRUG_EXPOSURE 表必用
+        </div>
+      </div>
+      <div class="card bg-amber">
+        <div class="card-title"><span class="badge badge-amber">SNOMED-CT</span></div>
+        <div class="card-body">
+          <strong>Systematized Nomenclature of Medicine Clinical Terms</strong><br>
+          全球最全面的临床医学术语集<br>
+          · 35 万 + 临床概念，82 万 + 术语<br>
+          · 覆盖诊断、症状、手术、设备<br>
+          · OMOP 核心:CONDITION_OCCURRENCE 表必用
+        </div>
+      </div>
+      <div class="card bg-coral">
+        <div class="card-title"><span class="badge badge-amber">ICD-9/10/11</span></div>
+        <div class="card-body">
+          <strong>International Classification of Diseases</strong><br>
+          WHO 发布的疾病分类标准<br>
+          · ICD-10: 1.2 万 + 疾病代码<br>
+          · ICD-11: 2022 年启用，支持电子健康记录<br>
+          · 医保报销、流行病学统计必用
+        </div>
+      </div>
+      <div class="card bg-green">
+        <div class="card-title"><span class="badge badge-teal">NCI CTCAE</span></div>
+        <div class="card-body">
+          <strong>Common Terminology Criteria for Adverse Events</strong><br>
+          美国国家癌症研究所不良事件分级标准<br>
+          · 5 级严重程度分级 (1-5)<br>
+          · 覆盖肿瘤治疗常见不良事件<br>
+          · CDISC 标准：肿瘤试验 AETOXGR 字段
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════ SLIDE 15 : 跨术语集的映射策略与工具 ══════════ -->
+
+
+<div class="slide" id="s15" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(186,117,23,.15);color:#FAC775;">术语集映射机制</div>
+    <div class="slide-title">跨术语集的映射策略与工具</div>
+    <div class="slide-lead">源系统中的本地编码需要通过映射工具转换到标准术语集，这是实现数据互操作的核心环节。</div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">映射层级与关系类型</div>
+        <table class="data-table">
+          <thead><tr><th>关系类型</th><th>含义</th><th>示例</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-blue">EXACT_MATCH</span></td><td>精确匹配，语义完全等价</td><td>ICD-10 J06.9 ↔ SNOMED 199595004</td></tr>
+            <tr><td><span class="badge badge-teal">BROAD_MATCH</span></td><td>源概念范围宽于目标</td><td>"感染"涵盖"肺炎"、"尿路感染"</td></tr>
+            <tr><td><span class="badge badge-amber">NARROW_MATCH</span></td><td>源概念范围窄于目标</td><td>"链球菌肺炎"是"肺炎"的子集</td></tr>
+            <tr><td><span class="badge badge-purple">RELATED_TO</span></td><td>相关但不等价</td><td>"高血压"相关"ACEI 类药物治疗"</td></tr>
+          </tbody>
+        </table>
+        <div class="highlight-box" style="background:rgba(186,117,23,.1);border-color:#BA7517;margin-top:14px;">
+          <div class="hb-title" style="color:#FAC775;">⚠️ 映射原则</div>
+          <div class="hb-body">① 优先保留原始编码 (source_code) ② 映射质量标注 (match_quality) ③ 支持一对多映射 ④ 可追溯映射来源 (mapping_source)</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">常见映射路径</div>
+        <div class="vocab-mapping">
+          <div class="map-row"><span class="map-source">ICD-10</span><span class="map-arrow">→</span><span class="map-target">SNOMED-CT</span></div>
+          <div class="map-row"><span class="map-source">院内代码</span><span class="map-arrow">→</span><span class="map-target">LOINC</span></div>
+          <div class="map-row"><span class="map-source">药品说明书</span><span class="map-arrow">→</span><span class="map-target">RxNorm</span></div>
+          <div class="map-row"><span class="map-source">MedDRA</span><span class="map-arrow">→</span><span class="map-target">SNOMED-CT</span></div>
+        </div>
+        <div style="font-size:13px;font-weight:500;margin:18px 0 12px;color:rgba(255,255,255,.7);">映射工具</div>
+        <table class="data-table">
+          <thead><tr><th>工具</th><th>功能</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-teal">OHDSI Usagi</span></td><td>源编码→OMOP concept 映射</td></tr>
+            <tr><td><span class="badge badge-blue">NCI Metathesaurus</span></td><td>跨词库统一查询</td></tr>
+            <tr><td><span class="badge badge-amber">MapMan</span></td><td>手动映射编辑工具</td></tr>
+            <tr><td><span class="badge badge-purple">IBM Cloud</span></td><td>医学术语映射云服务</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 16 : CDISC vs OMOP：质量管理差异对比 ══════════ -->
+
+
+<div class="slide" id="s16" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(186,117,23,.15);color:#FAC775;">质量管理对比</div>
+    <div class="slide-title">CDISC vs OMOP：质量管理差异对比</div>
+    <div class="slide-lead">两者都重视数据质量，但 CDISC 侧重合规与管理，OMOP 侧重评估与诊断，形成互补。</div>
+    <table class="data-table" style="margin-bottom:16px;">
+      <thead><tr><th>维度</th><th>CDISC (数据管理侧重)</th><th>OMOP (数据评估侧重)</th></tr></thead>
+      <tbody>
+        <tr><td><strong>质量目标</strong></td><td>监管申报合规，确保数据可追溯</td><td>观察性研究可重复，数据可横向对比</td></tr>
+        <tr><td><strong>核心方法</strong></td><td>ALCOA+ 原则 + 人工审核</td><td>DQD 自动检核 + ACHILLES 特征分析</td></tr>
+        <tr><td><strong>检核规则</strong></td><td>CDISC Validator 预定义规则</td><td>360+ DQD 可配置规则</td></tr>
+        <tr><td><strong>问题处理</strong></td><td>数据质疑 (Query)→修复→重新验证</td><td>质量报告→数据源反馈→ETL 修正</td></tr>
+        <tr><td><strong>文档化要求</strong></td><td>Define.xml + 数据管理计划 (CDMP)</td><td>ETL 文档 + ACHILLES 报告</td></tr>
+        <tr><td><strong>适用场景</strong></td><td>临床试验 (RCT) 数据申报</td><td>真实世界 (RWE) 多中心研究</td></tr>
+        <tr><td><strong>可扩展性</strong></td><td>针对单一试验的深度验证</td><td>跨数百数据库的分布式评估</td></tr>
+        <tr><td><strong>技术工具</strong></td><td>SAS、R、CDISC Validator</td><td>ATLAS、DQD、ACHILLES、WhiteRabbit</td></tr>
+      </tbody>
+    </table>
+    <div class="highlight-box" style="background:rgba(186,117,23,.1);border-color:#BA7517;">
+      <div class="hb-title" style="color:#FAC775;">💡 融合趋势</div>
+      <div class="hb-body">FDA Sentinel 项目同时使用 CDISC 和 OMOP 标准：临床试验数据按 CDISC 提交，真实世界数据按 OMOP 建模，两者通过映射实现联合分析。</div>
+    </div>
+  </div>
+</div>
+<!-- /deck -->
+<!-- ══════════ SLIDE 17 : CDISC vs OMOP ══════════ -->
+
+
+<div class="slide" id="s17" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(186,117,23,.15);color:#FAC775;">综合对比</div>
+    <div class="slide-title">CDISC vs OMOP — 选择指南</div>
+    <div class="slide-lead">两种标准并非竞争关系，而是在数据生命周期的不同阶段发挥互补作用。许多机构同时维护两套标准数据集。</div>
+    <table class="data-table" style="margin-bottom:20px;">
+      <thead><tr><th>维度</th><th>CDISC (SDTM/ADaM)</th><th>OMOP CDM</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>主要用途</td>
+          <td>临床试验数据申报（RCT）</td>
+          <td>真实世界观察性研究（RWE）</td>
+        </tr>
+        <tr>
+          <td>监管要求</td>
+          <td>FDA/PMDA/EMA 强制要求</td>
+          <td>无法规强制，科学驱动</td>
+        </tr>
+        <tr>
+          <td>数据来源</td>
+          <td>EDC 临床试验 CRF 表单</td>
+          <td>EHR、HIS、医保、药房</td>
+        </tr>
+        <tr>
+          <td>编码体系</td>
+          <td>MedDRA、CTCAE、NCI CT</td>
+          <td>SNOMED、LOINC、RxNorm</td>
+        </tr>
+        <tr>
+          <td>时间序列</td>
+          <td>以访视为基准（协议驱动）</td>
+          <td>以事件发生时间为基准</td>
+        </tr>
+        <tr>
+          <td>分析工具</td>
+          <td>SAS、R（验证性统计）</td>
+          <td>ATLAS、HADES（探索性）</td>
+        </tr>
+        <tr>
+          <td>互转关系</td>
+          <td colspan="2" style="text-align:center;color:rgba(255,255,255,.6);">CDISC → OMOP 转换工具：OHDSI 的 CDISC2OMOP 项目；FDA Sentinel 项目支持双向映射</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="highlight-box" style="background:rgba(186,117,23,.1);border-color:var(--amber-400);">
+      <div class="hb-title" style="color:#FAC775;">数字化临床试验（DCT）趋势</div>
+      <div class="hb-body">CDISC 与 OMOP 的融合是行业趋势：CDISC CDASH 字段对应 OMOP OBSERVATION/MEASUREMENT，试验后将 SDTM 数据转换为 OMOP 格式，与 RWD 联合分析，形成试验内+真实世界的综合证据。</div>
+    </div>
+  </div>
+
+
+<!-- ── NAVIGATION ── -->
+
+<!-- ══════════ SLIDE 18 : OMOP 数据评估体系 ══════════ -->
+
+
+<div class="slide" id="s18" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(29,158,117,.15);color:#5DCAA5;">OMOP 数据评估体系</div>
+    <div class="slide-title">OMOP：侧重于数据质量评估</div>
+    <div class="slide-lead">OMOP CDM 的数据评估方法更加系统化、自动化，通过 ACHILLES 和 DQD 工具实现大规模数据的快速质量诊断。</div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">数据质量评估五维度</div>
+        <table class="data-table">
+          <thead><tr><th>维度</th><th>指标示例</th></tr></thead>
+          <tbody>
+            <tr><td><span class="badge badge-teal">完整性</span></td><td>NULL 值比例、必填字段缺失率</td></tr>
+            <tr><td><span class="badge badge-blue">有效性</span></td><td>概念编码有效性、外键约束</td></tr>
+            <tr><td><span class="badge badge-amber">一致性</span></td><td>性别与出生性别一致性</td></tr>
+            <tr><td><span class="badge badge-purple">及时性</span></td><td>数据更新延迟天数</td></tr>
+            <tr><td><span class="badge badge-teal">准确性</span></td><td>逻辑矛盾检测 (死亡日期 < 出生日期)</td></tr>
+          </tbody>
+        </table>
+        <div class="highlight-box" style="background:rgba(29,158,117,.1);border-color:#1D9E75;margin-top:14px;">
+          <div class="hb-title" style="color:#5DCAA5;">OHDSI 数据质量工具</div>
+          <div class="hb-body">① <strong>ACHILLES</strong>：数据特征描述，生成数据分布报告 · ② <strong>DQD</strong>：Data Quality Dashboard，自动运行 360+ 质量规则 · ③ <strong>WhiteRabbit</strong>：源数据扫描与映射建议</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">典型 DQD 质量规则</div>
+        <ul class="rule-list">
+          <li><span class="bullet" style="background:rgba(29,158,117,.25);color:#5DCAA5;">✓</span><div><strong>Concept Validity</strong><br>所有 concept_id 必须在 CONCEPT 表中存在</div></li>
+          <li><span class="bullet" style="background:rgba(29,158,117,.25);color:#5DCAA5;">✓</span><div><strong>Visit Consistency</strong><br>visit_end_date ≥ visit_start_date</div></li>
+          <li><span class="bullet" style="background:rgba(29,158,117,.25);color:#5DCAA5;">✓</span><div><strong>Gender Consistency</strong><br>gender_concept_id 必须为 8507 (男) 或 8532 (女)</div></li>
+          <li><span class="bullet" style="background:rgba(29,158,117,.25);color:#5DCAA5;">✓</span><div><strong>Age Plausibility</strong><br>age_at_visit 应在 0-120 岁范围内</div></li>
+          <li><span class="bullet" style="background:rgba(29,158,117,.25);color:#5DCAA5;">✓</span><div><strong>Drug Dosage Validity</strong><br>dosage_unit_concept_id 必须为标准单位</div></li>
+        </ul>
+        <div class="highlight-box" style="background:rgba(29,158,117,.1);border-color:#1D9E75;margin-top:14px;">
+          <div class="hb-title" style="color:#5DCAA5;">分布式评估能力</div>
+          <div class="hb-body">OHDSI 支持跨多个 OMOP 数据库同时运行 DQD，生成对比报告，识别数据源之间的质量差异。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ══════════ SLIDE 19 : SECTION — 统计导出 ══════════ -->
+
+
+<div class="slide" id="s19" style="background:linear-gradient(135deg,#0d1a2e,#091424);">
+  <div class="slide-inner section-slide">
+    <div class="section-num">2.3</div>
+    <div class="section-name">SPSS / SAS 数据集导出</div>
+    <div class="section-en">Statistical Software Compliant Dataset Export</div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 20 : SAS 数据集规范 ══════════ -->
+
+
+<div class="slide" id="s20" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(127,119,221,.15);color:#AFA9EC;">统计软件导出</div>
+    <div class="slide-title">SAS 传输格式（XPT）规范</div>
+    <div class="slide-lead">FDA 要求所有 NDA/BLA 申报的 SDTM 和 ADaM 数据集以 SAS V5 Transport Format（.xpt）提交，该格式有严格的技术限制。</div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">SAS XPT v5 技术限制</div>
+        <table class="data-table">
+          <thead><tr><th>属性</th><th>限制</th></tr></thead>
+          <tbody>
+            <tr><td>数据集名（Dataset Name）</td><td>≤ 8 个字符，大写</td></tr>
+            <tr><td>变量名（Variable Name）</td><td>≤ 8 个字符，无特殊字符</td></tr>
+            <tr><td>变量标签（Label）</td><td>≤ 40 个字符</td></tr>
+            <tr><td>字符型长度（Char Length）</td><td>≤ 200 字节</td></tr>
+            <tr><td>数值型（Numeric）</td><td>IEEE 754 双精度，8字节</td></tr>
+            <tr><td>日期格式</td><td>SAS 日期值（距1960-01-01的天数）</td></tr>
+            <tr><td>文件大小</td><td>单个 .xpt 建议 ≤ 5GB</td></tr>
+          </tbody>
+        </table>
+        <div class="highlight-box" style="background:rgba(127,119,221,.1);border-color:var(--purple-400);margin-top:14px;">
+          <div class="hb-title" style="color:#AFA9EC;">💡 SAS XPT v8 扩展</div>
+          <div class="hb-body">FDA 2023年更新接受 SAS V8 Transport（.xpt8），支持变量名最长 32 字符、标签最长 256 字符，推荐新项目使用 v8 格式。</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">Python 生成 SAS XPT 示例</div>
+        <div class="code-block"><span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> pyreadstat
+
+<span class="cm"># 读取 SDTM AE 数据</span>
+ae_df = pd.read_csv(<span class="str">"ae_sdtm.csv"</span>)
+
+<span class="cm"># 变量标签字典（≤40字符）</span>
+col_labels = {
+    <span class="str">"STUDYID"</span>: <span class="str">"Study Identifier"</span>,
+    <span class="str">"USUBJID"</span>: <span class="str">"Unique Subject Identifier"</span>,
+    <span class="str">"AETERM"</span>:  <span class="str">"Reported Term for AE"</span>,
+    <span class="str">"AESTDTC"</span>: <span class="str">"Start Date/Time of AE"</span>,
+    <span class="str">"AESER"</span>:   <span class="str">"Serious AE"</span>,
+}
+
+<span class="cm"># 导出为 SAS XPT v5</span>
+pyreadstat.write_xport(
+    ae_df, <span class="str">"ae.xpt"</span>,
+    column_labels=col_labels,
+    file_label=<span class="str">"Adverse Events"</span>
+)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 21 : SPSS 数据集规范 ══════════ -->
+
+
+<div class="slide" id="s21" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(127,119,221,.15);color:#AFA9EC;">统计软件导出</div>
+    <div class="slide-title">SPSS .sav 数据集导出规范</div>
+    <div class="slide-lead">SPSS .sav 格式广泛用于医学统计分析，正确的变量类型、值标签和缺失值声明是保证分析准确性的关键。</div>
+    <div class="two-col">
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">SPSS 变量类型规范</div>
+        <table class="data-table">
+          <thead><tr><th>数据类型</th><th>SPSS类型</th><th>注意事项</th></tr></thead>
+          <tbody>
+            <tr><td>分类变量（性别/分组）</td><td>Numeric + 值标签</td><td>1=男,2=女；不得用字符</td></tr>
+            <tr><td>连续变量（年龄/体重）</td><td>Numeric (F8.2)</td><td>保留小数位数一致</td></tr>
+            <tr><td>日期时间</td><td>Date (ADATE8)</td><td>使用 SPSS 日期格式</td></tr>
+            <tr><td>文本/描述</td><td>String (A80)</td><td>长度固定，避免尾随空格</td></tr>
+            <tr><td>系统缺失</td><td>Sysmis (.)</td><td>区分系统缺失与用户缺失</td></tr>
+          </tbody>
+        </table>
+        <div class="highlight-box" style="background:rgba(186,117,23,.1);border-color:var(--amber-400);margin-top:14px;">
+          <div class="hb-title" style="color:#FAC775;">⚠️ 缺失值处理规范</div>
+          <div class="hb-body">应区分：① 系统缺失（Sysmis，未收集）② 用户定义缺失（如 99 = 拒绝回答，-1 = 未知）。在 SPSS 中通过 MISSING VALUES 命令声明用户缺失，确保统计函数正确排除缺失值。</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:rgba(255,255,255,.7);">Python 生成 SPSS .sav 示例</div>
+        <div class="code-block"><span class="kw">import</span> pandas <span class="kw">as</span> pd
+<span class="kw">import</span> pyreadstat
+
+df = pd.DataFrame({
+    <span class="str">'USUBJID'</span>: [<span class="str">'001-001'</span>, <span class="str">'001-002'</span>],
+    <span class="str">'AGE'</span>:     [45, 62],
+    <span class="str">'SEX'</span>:     [1, 2],   <span class="cm"># 1=M 2=F</span>
+    <span class="str">'TRT01P'</span>:  [1, 2],   <span class="cm"># 1=Drug 2=Placebo</span>
+    <span class="str">'AVAL'</span>:    [8.2, 6.5],
+})
+
+<span class="cm"># 值标签</span>
+val_labels = {
+    <span class="str">'SEX'</span>:    {1: <span class="str">'Male'</span>, 2: <span class="str">'Female'</span>},
+    <span class="str">'TRT01P'</span>: {1: <span class="str">'Drug A'</span>, 2: <span class="str">'Placebo'</span>},
+}
+<span class="cm"># 变量标签</span>
+var_labels = {
+    <span class="str">'USUBJID'</span>: <span class="str">'Subject ID'</span>,
+    <span class="str">'AGE'</span>:     <span class="str">'Age (years)'</span>,
+    <span class="str">'SEX'</span>:     <span class="str">'Sex'</span>,
+    <span class="str">'TRT01P'</span>: <span class="str">'Planned Treatment'</span>,
+    <span class="str">'AVAL'</span>:   <span class="str">'Analysis Value'</span>,
+}
+pyreadstat.write_sav(
+    df, <span class="str">"adsl.sav"</span>,
+    variable_value_labels=val_labels,
+    column_labels=var_labels
+)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SLIDE 22 : 导出最佳实践 ══════════ -->
+
+
+<div class="slide" id="s22" style="background:#0d1522;">
+  <div class="slide-inner">
+    <div class="section-tag" style="background:rgba(127,119,221,.15);color:#AFA9EC;">统计软件导出</div>
+    <div class="slide-title">数据集导出质量检查清单</div>
+    <div class="slide-lead">导出前必须完成以下检核，确保统计分析软件正确读取并产生可重现的分析结果。</div>
+    <div class="card-grid col2">
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:#85B7EB;">SAS XPT 检查要点</div>
+        <ul class="rule-list">
+          <li><span class="bullet" style="background:rgba(55,138,221,.2);color:#85B7EB;">✓</span><div>数据集名 ≤ 8 字符，变量名 ≤ 8 字符（v5）</div></li>
+          <li><span class="bullet" style="background:rgba(55,138,221,.2);color:#85B7EB;">✓</span><div>所有变量均有 LABEL，中文标签改为英文</div></li>
+          <li><span class="bullet" style="background:rgba(55,138,221,.2);color:#85B7EB;">✓</span><div>日期变量赋予 SAS 日期 FORMAT（如 DATE9.）</div></li>
+          <li><span class="bullet" style="background:rgba(55,138,221,.2);color:#85B7EB;">✓</span><div>使用 PROC CONTENTS 验证类型与标签</div></li>
+          <li><span class="bullet" style="background:rgba(55,138,221,.2);color:#85B7EB;">✓</span><div>字符变量不含 NULL，替换为空字符串 ""</div></li>
+          <li><span class="bullet" style="background:rgba(55,138,221,.2);color:#85B7EB;">✓</span><div>与 Define.xml 中的变量顺序和类型一致</div></li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-size:13px;font-weight:500;margin-bottom:12px;color:#AFA9EC;">SPSS .sav 检查要点</div>
+        <ul class="rule-list">
+          <li><span class="bullet" style="background:rgba(127,119,221,.2);color:#AFA9EC;">✓</span><div>所有分类变量已设置值标签（Value Labels）</div></li>
+          <li><span class="bullet" style="background:rgba(127,119,221,.2);color:#AFA9EC;">✓</span><div>缺失值已用 Missing Values 命令声明</div></li>
+          <li><span class="bullet" style="background:rgba(127,119,221,.2);color:#AFA9EC;">✓</span><div>变量测量尺度正确（Scale/Ordinal/Nominal）</div></li>
+          <li><span class="bullet" style="background:rgba(127,119,221,.2);color:#AFA9EC;">✓</span><div>字符变量宽度足够，无截断</div></li>
+          <li><span class="bullet" style="background:rgba(127,119,221,.2);color:#AFA9EC;">✓</span><div>使用 CODEBOOK 命令或 Frequencies 验证编码</div></li>
+          <li><span class="bullet" style="background:rgba(127,119,221,.2);color:#AFA9EC;">✓</span><div>文件编码设为 UTF-8（SPSS 29+）</div></li>
+        </ul>
+      </div>
+    </div>
+    <div class="highlight-box" style="background:rgba(29,158,117,.1);border-color:var(--teal-400);margin-top:20px;">
+      <div class="hb-title" style="color:#5DCAA5;">通用最佳实践：数据集文档化三件套</div>
+      <div class="hb-body">① <strong>数据字典</strong>（变量名、标签、类型、单位、受控词表） · ② <strong>编码手册</strong>（值标签对照表，含缺失值说明） · ③ <strong>分析计划书</strong>（SAP，说明每个分析的数据集来源和派生规则）</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════ SLIDE 23 : 总结 ══════════ -->
+
+
+<div class="slide" id="s23" style="background:linear-gradient(135deg,#0a0e1a,#0d1a2e);">
+  <div class="slide-inner" style="justify-content:center;">
+    <div class="section-tag" style="background:rgba(55,138,221,.15);color:#85B7EB;margin:0 auto 24px;">课程总结</div>
+    <div class="slide-title" style="text-align:center;margin-bottom:8px;">核心知识框架回顾</div>
+    <div class="slide-lead" style="text-align:center;max-width:600px;margin:0 auto 36px;">数据标准化是医学研究可信赖、可重复、可互操作的基础。</div>
+    <div class="card-grid col2" style="max-width:900px;margin:0 auto;">
+      <div class="card bg-blue">
+        <div class="card-title">① 元数据</div>
+        <div class="card-body">结构/描述/管理/语义元数据 · 三层架构模型 · Define.xml · ISO 11179 · 数据字典</div>
+      </div>
+      <div class="card bg-teal">
+        <div class="card-title">② CDM 通用数据模型</div>
+        <div class="card-body">统一结构与语义 · CDISC（试验申报）vs OMOP（真实世界）· 可复用分析代码</div>
+      </div>
+      <div class="card bg-purple">
+        <div class="card-title">③ CDISC</div>
+        <div class="card-body">SDTM 域结构 · ADaM 分析数据集 · CDASH 采集 · 受控术语 · MedDRA/CTCAE · FDA申报</div>
+      </div>
+      <div class="card bg-amber">
+        <div class="card-title">④ OMOP CDM</div>
+        <div class="card-body">concept_id 映射 · SNOMED/LOINC/RxNorm · OHDSI工具链 · 分布式网络研究 · ETL规范</div>
+      </div>
+      <div class="card bg-coral" style="grid-column:1/-1;">
+        <div class="card-title">⑤ SPSS / SAS 导出</div>
+        <div class="card-body">SAS XPT v5/v8 技术限制 · 变量标签与格式 · SPSS 值标签与测量尺度 · 缺失值声明 · Python (pyreadstat) 实现 · 质量检查清单</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+</div><!-- /deck -->
+<div class="nav-bar">
+  <button class="nav-btn" id="prevBtn" onclick="navigate(-1)">&#8592;</button>
+  <div class="nav-dots" id="dots"></div>
+  <div class="slide-counter" id="counter">1 / 20</div>
+  <button class="nav-btn" id="nextBtn" onclick="navigate(1)">&#8594;</button>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const dotsEl = document.getElementById('dots');
+const counter = document.getElementById('counter');
+const progress = document.getElementById('progress');
+let current = 0;
+
+slides.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'dot' + (i === 0 ? ' active' : '');
+  d.onclick = () => goTo(i);
+  dotsEl.appendChild(d);
+});
+
+function goTo(n) {
+  slides[current].style.display = 'none';
+  slides[current].classList.remove('active');
+  document.querySelectorAll('.dot')[current].classList.remove('active');
+  current = Math.max(0, Math.min(n, slides.length - 1));
+  slides[current].style.display = 'flex';
+  requestAnimationFrame(() => slides[current].classList.add('active'));
+  document.querySelectorAll('.dot')[current].classList.add('active');
+  counter.textContent = (current + 1) + ' / ' + slides.length;
+  progress.style.width = ((current + 1) / slides.length * 100) + '%';
+}
+
+function navigate(dir) { goTo(current + dir); }
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') navigate(1);
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') navigate(-1);
+});
+
+goTo(0);
+</script>
+</body>
+</html>

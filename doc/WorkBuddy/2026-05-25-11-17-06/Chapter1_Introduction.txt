@@ -1,0 +1,1049 @@
+
+
+[Page 1]
+Study Data Tabulation Model 
+Implementation Guide: Human Clinical Trials
+Version 3.4 (Final)
+Developed by the
+CDISC Submission Data Standards Team
+Revision History
+Date
+Version
+Summary of changes
+2022-07-21
+3.4 Final
+Re-issue of PDF with images updated for clarity
+2021-11-29
+3.4 Final
+See Appendix E
+2018-02-20
+3.3 Final
+See Appendix E
+2013-11-26
+3.2 Final
+See Appendix E
+2012-07-16
+3.1.3 Final
+See SDTMIG v3.2
+2008-11-12
+3.1.2 Final
+See SDTMIG v3.2
+2005-08-26
+3.1.1 Final
+See SDTMIG v3.2
+2004-07-14
+3.1
+See SDTMIG v3.2
+See Appendix F for representations and warranties, limitations of liability, and disclaimers.
+Notes to Readers
+
+This is the implementation guide for human clinical trials corresponding to Version 2.0 of the CDISC
+Study Data Tabulation Model.
+
+
+[Page 2]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved 
+ Page 2 
+2021-11-29 
+CONTENTS 
+1 
+INTRODUCTION ................................................................................................................. 7 
+1.1 PURPOSE ................................................................................................................................................................ 7 
+1.2 ORGANIZATION OF THIS DOCUMENT ..................................................................................................................... 7 
+1.3 RELATIONSHIP TO PRIOR CDISC DOCUMENTS...................................................................................................... 7 
+1.4 HOW TO READ THIS IMPLEMENTATION GUIDE ...................................................................................................... 8 
+1.4.1 
+How to Read a Domain Specification .................................................................................................... 9 
+1.5 KNOWN ISSUES .................................................................................................................................................... 10 
+2 
+FUNDAMENTALS OF THE SDTM ................................................................................. 11 
+2.1 OBSERVATIONS AND VARIABLES ........................................................................................................................ 11 
+2.2 DATASETS AND DOMAINS ................................................................................................................................... 11 
+2.3 THE GENERAL OBSERVATION CLASSES............................................................................................................... 12 
+2.4 DATASETS OTHER THAN GENERAL OBSERVATION CLASS DOMAINS .................................................................. 12 
+2.5 THE SDTM STANDARD DOMAIN MODELS .......................................................................................................... 13 
+2.6 CREATING A NEW DOMAIN ................................................................................................................................. 13 
+2.7 SDTM VARIABLES NOT ALLOWED IN THE SDTMIG .......................................................................................... 15 
+3 
+SUBMITTING DATA IN STANDARD FORMAT ......................................................... 17 
+3.1 STANDARD METADATA FOR DATASET CONTENTS AND ATTRIBUTES .................................................................. 17 
+3.2 USING THE CDISC DOMAIN MODELS IN REGULATORY SUBMISSIONS – DATASET METADATA .......................... 17 
+3.2.1 
+Dataset-level Metadata ......................................................................................................................... 17 
+3.2.1.1 
+Primary Keys ........................................................................................................................................ 20 
+3.2.1.2 
+CDISC Submission Value-level Metadata ........................................................................................... 20 
+3.2.2 
+Conformance ........................................................................................................................................ 21 
+4 
+ASSUMPTIONS FOR DOMAIN MODELS .................................................................... 22 
+4.1 GENERAL DOMAIN ASSUMPTIONS ....................................................................................................................... 22 
+4.1.1 
+Review Study Data Tabulation Model and Implementation Guide ...................................................... 22 
+4.1.2 
+Relationship to Analysis Datasets ........................................................................................................ 22 
+4.1.3 
+Additional Timing Variables ................................................................................................................ 22 
+4.1.3.1 
+EPOCH Variable Guidance .................................................................................................................. 22 
+4.1.4 
+Order of the Variables .......................................................................................................................... 22 
+4.1.5 
+SDTM Core Designations .................................................................................................................... 22 
+4.1.6 
+Additional Guidance on Dataset Naming ............................................................................................. 23 
+4.1.7 
+Splitting Domains ................................................................................................................................. 23 
+4.1.7.1 
+Example of Splitting Questionnaires .................................................................................................... 24 
+4.1.8 
+Origin Metadata .................................................................................................................................... 26 
+4.1.8.1 
+Origin Metadata for Variables .............................................................................................................. 26 
+4.1.8.2 
+Origin Metadata for Records ................................................................................................................ 26 
+4.1.9 
+Assigning Natural Keys in the Metadata .............................................................................................. 26 
+4.2 GENERAL VARIABLE ASSUMPTIONS .................................................................................................................... 28 
+4.2.1 
+Variable-naming Conventions .............................................................................................................. 28 
+4.2.2 
+Two-character Domain Identifier ......................................................................................................... 28 
+4.2.3 
+Use of "Subject" and USUBJID ........................................................................................................... 29 
+4.2.4 
+Text Case in Submitted Data ................................................................................................................ 29 
+4.2.5 
+Convention for Missing Values ............................................................................................................ 29 
+4.2.6 
+Grouping Variables and Categorization ............................................................................................... 29 
+4.2.7 
+Submitting Free Text from the CRF ..................................................................................................... 31 
+4.2.7.1 
+"Specify" Values for Non-result Qualifier Variables ........................................................................... 31 
+4.2.7.2 
+"Specify" Values for Result Qualifier Variables .................................................................................. 33 
+4.2.7.3 
+"Specify" Values for Topic Variables .................................................................................................. 33 
+4.2.7.4 
+"Specify" Values for --OBJ .................................................................................................................. 34 
+
+
+[Page 3]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved 
+ Page 3 
+2021-11-29 
+4.2.8 
+Multiple Values for a Variable ............................................................................................................. 34 
+4.2.8.1 
+Multiple Values for an Intervention or Event Topic Variable .............................................................. 34 
+4.2.8.2 
+Multiple Values for a Findings Result Variable ................................................................................... 34 
+4.2.8.3 
+Multiple Values for a Non-result Qualifier Variable ............................................................................ 35 
+4.2.8.4 
+Multiple Values for a Parameter ........................................................................................................... 36 
+4.2.9 
+Variable Lengths .................................................................................................................................. 36 
+4.3 CODING AND CONTROLLED TERMINOLOGY ASSUMPTIONS ................................................................................. 36 
+4.3.1 
+Controlled Terms, Codelist or Format Column .................................................................................... 36 
+4.3.2 
+Controlled Terminology Text Case ...................................................................................................... 37 
+4.3.3 
+Controlled Terminology Values ........................................................................................................... 37 
+4.3.4 
+Use of Controlled Terminology and Arbitrary Number Codes ............................................................ 37 
+4.3.5 
+Storing Controlled Terminology for Synonym Qualifier Variables ..................................................... 37 
+4.3.6 
+Storing Topic Variables for General Domain Models .......................................................................... 37 
+4.3.7 
+Use of "Yes" and "No" Values ............................................................................................................. 38 
+4.4 ACTUAL AND RELATIVE TIME ASSUMPTIONS ...................................................................................................... 38 
+4.4.1 
+Formats for Date/Time Variables ......................................................................................................... 38 
+4.4.2 
+Date/Time Precision ............................................................................................................................. 39 
+4.4.3 
+Intervals of Time and Use of Duration for --DUR Variables ............................................................... 40 
+4.4.3.1 
+Intervals of Time and Use of Duration ................................................................................................. 40 
+4.4.3.2 
+Interval with Uncertainty ...................................................................................................................... 41 
+4.4.4 
+Use of the Study Day Variables ........................................................................................................... 41 
+4.4.5 
+Clinical Encounters and Visits ............................................................................................................. 42 
+4.4.6 
+Representing Additional Study Days ................................................................................................... 43 
+4.4.7 
+Use of Relative Timing Variables ........................................................................................................ 43 
+4.4.8 
+Date and Time Reported in a Domain Based on Findings ................................................................... 45 
+4.4.9 
+Use of Dates as Result Variables .......................................................................................................... 45 
+4.4.10 
+Representing Time Points .................................................................................................................... 46 
+4.4.11 
+Disease Milestones and Disease Milestone Timing Variables ............................................................. 48 
+4.5 OTHER ASSUMPTIONS ......................................................................................................................................... 51 
+4.5.1 
+Original and Standardized Results of Findings and Tests Not Done .................................................... 51 
+4.5.1.1 
+Original and Standardized Results ....................................................................................................... 51 
+4.5.1.2 
+Tests Not Done ..................................................................................................................................... 52 
+4.5.1.3 
+Examples of Original and Standard Units and Test Not Done ............................................................. 52 
+4.5.2 
+Linking Multiple Observations ............................................................................................................. 54 
+4.5.3 
+Text Strings that Exceed the Maximum Length for General Observation-class Domain Variables .... 54 
+4.5.3.1 
+Test Name (--TEST) Greater than 40 Characters ................................................................................. 54 
+4.5.3.2 
+Text Strings Greater than 200 Characters in Other Variables .............................................................. 55 
+4.5.4 
+Evaluators in the Interventions and Events Observation Classes ......................................................... 56 
+4.5.5 
+Clinical Significance for Findings Observation Class Data ................................................................. 57 
+4.5.6 
+Supplemental Reason Variables ........................................................................................................... 57 
+4.5.7 
+Presence or Absence of Prespecified Interventions and Events ........................................................... 57 
+4.5.8 
+Accounting for Long-term Follow-up .................................................................................................. 58 
+4.5.9 
+Baseline Values .................................................................................................................................... 59 
+5 
+MODELS FOR SPECIAL-PURPOSE DOMAINS .......................................................... 60 
+5.1 COMMENTS (CO)................................................................................................................................................. 60 
+5.2 DEMOGRAPHICS (DM)......................................................................................................................................... 62 
+5.3 SUBJECT ELEMENTS (SE) .................................................................................................................................... 79 
+5.4 SUBJECT DISEASE MILESTONES (SM) ................................................................................................................. 84 
+5.5 SUBJECT VISITS (SV) .......................................................................................................................................... 86 
+6 
+DOMAIN MODELS BASED ON THE GENERAL OBSERVATION CLASSES ....... 92 
+6.1 MODELS FOR INTERVENTIONS DOMAINS ............................................................................................................. 92 
+6.1.1 
+Procedure Agents (AG) ........................................................................................................................ 92 
+6.1.2 
+Concomitant/Prior Medications (CM) .................................................................................................. 98 
+
+
+[Page 4]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved  
+ Page 4 
+2021-11-29 
+6.1.3 
+Exposure Domains ............................................................................................................................. 103 
+6.1.3.1 
+Exposure (EX) .................................................................................................................................... 104 
+6.1.3.2 
+Exposure as Collected (EC)................................................................................................................ 107 
+6.1.3.3 
+Exposure/Exposure as Collected Examples........................................................................................ 111 
+6.1.4 
+Meal Data (ML) ................................................................................................................................. 121 
+6.1.5 
+Procedures (PR) .................................................................................................................................. 125 
+6.1.6 
+Substance Use (SU) ............................................................................................................................ 129 
+6.2 MODELS FOR EVENTS DOMAINS ........................................................................................................................ 133 
+6.2.1 
+Adverse Events (AE) .......................................................................................................................... 133 
+6.2.2 
+Biospecimen Events (BE) .................................................................................................................. 143 
+6.2.3 
+Clinical Events (CE) ........................................................................................................................... 148 
+6.2.4 
+Disposition (DS) ................................................................................................................................. 155 
+6.2.5 
+Healthcare Encounters (HO) .............................................................................................................. 167 
+6.2.6 
+Medical History (MH) ........................................................................................................................ 171 
+6.2.7 
+Protocol Deviations (DV) ................................................................................................................... 178 
+6.3 MODELS FOR FINDINGS DOMAINS ..................................................................................................................... 180 
+6.3.1 
+Product Accountability (DA) ............................................................................................................. 180 
+6.3.2 
+Death Details (DD) ............................................................................................................................. 183 
+6.3.3 
+ECG Test Results (EG) ...................................................................................................................... 185 
+6.3.4 
+Inclusion/Exclusion Criteria Not Met (IE) ......................................................................................... 193 
+6.3.5 
+Specimen-based Findings Domains.................................................................................................... 194 
+6.3.5.1 
+Generic Specimen-based Lab Findings Domain Specification .......................................................... 194 
+6.3.5.2 
+Biospecimen Findings (BS) ................................................................................................................ 196 
+6.3.5.3 
+Cell Phenotype Findings (CP) ............................................................................................................ 199 
+6.3.5.4 
+Genomics Findings (GF) .................................................................................................................... 220 
+6.3.5.5 
+Immunogenicity Specimen Assessments (IS) .................................................................................... 228 
+6.3.5.6 
+Laboratory Test Results (LB) ............................................................................................................. 241 
+6.3.5.7 
+Microbiology Domains ....................................................................................................................... 248 
+6.3.5.8 
+Microscopic Findings (MI)................................................................................................................. 263 
+6.3.5.9 
+Pharmacokinetics Domains ................................................................................................................ 267 
+6.3.6 
+Morphology (MO) .............................................................................................................................. 285 
+6.3.7 
+Morphology/Physiology Domains ...................................................................................................... 285 
+6.3.7.1 
+Generic Morphology/Physiology Specification ................................................................................. 285 
+6.3.7.2 
+Cardiovascular System Findings (CV) ............................................................................................... 286 
+6.3.7.3 
+Musculoskeletal System Findings (MK) ............................................................................................ 290 
+6.3.7.4 
+Nervous System Findings (NV) ......................................................................................................... 294 
+6.3.7.5 
+Ophthalmic Examinations (OE) ......................................................................................................... 298 
+6.3.7.6 
+Reproductive System Findings (RP) .................................................................................................. 305 
+6.3.7.7 
+Respiratory System Findings (RE) ..................................................................................................... 308 
+6.3.7.8 
+Urinary System Findings (UR) ........................................................................................................... 312 
+6.3.8 
+Physical Examination (PE) ................................................................................................................. 315 
+6.3.9 
+Questionnaires, Ratings, and Scales (QRS) Domains (FT, QS, RS) .................................................. 318 
+6.3.9.1 
+Functional Tests (FT) ......................................................................................................................... 319 
+6.3.9.2 
+Questionnaires (QS) ........................................................................................................................... 324 
+6.3.9.3 
+Disease Response and Clin Classification (RS) ................................................................................. 329 
+6.3.10 
+Subject Characteristics (SC) ............................................................................................................... 339 
+6.3.11 
+Subject Status (SS) ............................................................................................................................. 342 
+6.3.12 
+Tumor/Lesion Domains ...................................................................................................................... 344 
+6.3.12.1 Tumor/Lesion Identification (TU) ...................................................................................................... 344 
+6.3.12.2 Tumor/Lesion Results (TR) ................................................................................................................ 350 
+6.3.12.3 Tumor Identification/Tumor Results Examples ................................................................................. 353 
+6.3.13 
+Vital Signs (VS) ................................................................................................................................. 358 
+6.4 FINDINGS ABOUT EVENTS OR INTERVENTIONS.................................................................................................. 361 
+6.4.1 
+When to Use Findings About Events or Interventions ....................................................................... 361 
+6.4.2 
+Naming Findings About Domains ...................................................................................................... 363 
+6.4.3 
+Variables Unique to Findings About .................................................................................................. 364 
+
+
+[Page 5]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved  
+ Page 5 
+2021-11-29 
+6.4.4 
+Findings About Events or Interventions (FA) .................................................................................... 364 
+6.4.5 
+Skin Response (SR) ............................................................................................................................ 375 
+7 
+TRIAL DESIGN MODEL DATASETS .......................................................................... 382 
+7.1 INTRODUCTION TO TRIAL DESIGN MODEL DATASETS ....................................................................................... 382 
+7.1.1 
+Purpose of the Trial Design Model..................................................................................................... 382 
+7.1.2 
+Definitions of Trial Design Concepts ................................................................................................. 382 
+7.1.3 
+Current and Future Contents of the Trial Design Model .................................................................... 383 
+7.2 EXPERIMENTAL DESIGN (TA AND TE) .............................................................................................................. 384 
+7.2.1 
+Trial Arms (TA) ................................................................................................................................. 384 
+7.2.1.1 
+Trial Arms Issues ............................................................................................................................... 402 
+7.2.2 
+Trial Elements (TE) ............................................................................................................................ 402 
+7.2.2.1 
+Trial Elements Issues .......................................................................................................................... 405 
+7.3 SCHEDULE FOR ASSESSMENTS (TV, TD, AND TM) ........................................................................................... 407 
+7.3.1 
+Trial Visits (TV) ................................................................................................................................. 407 
+7.3.1.1 
+Trial Visits Issues ............................................................................................................................... 409 
+7.3.2 
+Trial Disease Assessments (TD) ........................................................................................................ 410 
+7.3.3 
+Trial Disease Milestones (TM) ........................................................................................................... 415 
+7.4 TRIAL ELIGIBILITY AND SUMMARY (TI AND TS) ............................................................................................... 415 
+7.4.1 
+Trial Inclusion/Exclusion Criteria (TI) ............................................................................................... 416 
+7.4.2 
+Trial Summary (TS) ........................................................................................................................... 417 
+7.4.2.1 
+Use of Null Flavor .............................................................................................................................. 424 
+7.5 HOW TO MODEL THE DESIGN OF A CLINICAL TRIAL ......................................................................................... 425 
+8 
+REPRESENTING RELATIONSHIPS AND DATA ...................................................... 427 
+8.1 RELATING GROUPS OF RECORDS WITHIN A DOMAIN USING THE --GRPID VARIABLE ..................................... 428 
+8.1.1 
+--GRPID Example .............................................................................................................................. 428 
+8.2 RELATING PEER RECORDS ................................................................................................................................. 429 
+8.2.1 
+Related Records (RELREC) ............................................................................................................... 429 
+8.2.2 
+RELREC Dataset Examples ............................................................................................................... 430 
+8.3 RELATING DATASETS ........................................................................................................................................ 430 
+8.3.1 
+RELREC Dataset Relationship Example ........................................................................................... 431 
+8.4 RELATING NON-STANDARD VARIABLE VALUES TO A PARENT DOMAIN ........................................................... 431 
+8.4.1 
+Supplemental Qualifiers (SUPP--) ..................................................................................................... 432 
+8.4.2 
+Submitting Supplemental Qualifiers in Separate Datasets ................................................................. 433 
+8.4.3 
+SUPP-- Examples ............................................................................................................................... 433 
+8.4.4 
+When Not to Use Supplemental Qualifiers ........................................................................................ 434 
+8.5 RELATING COMMENTS TO A PARENT DOMAIN .................................................................................................. 434 
+8.6 HOW TO DETERMINE WHERE DATA BELONG IN SDTM-COMPLIANT DATA TABULATIONS .............................. 435 
+8.6.1 
+Guidelines for Determining the General Observation Class .............................................................. 435 
+8.6.2 
+Guidelines for Forming New Domains .............................................................................................. 435 
+8.6.3 
+Guidelines for Differentiating Between Interventions, Events, Findings, and Findings About Events or 
+Interventions .......................................................................................................................................................... 436 
+8.7 RELATED SUBJECTS (RELSUB) ........................................................................................................................ 437 
+8.8 RELATED SPECIMENS (RELSPEC) .................................................................................................................... 439 
+9 
+STUDY REFERENCES .................................................................................................... 441 
+9.1 DEVICE IDENTIFIERS.......................................................................................................................................... 441 
+9.2 NON-HOST ORGANISM IDENTIFIERS (OI) ........................................................................................................... 441 
+10 APPENDICES .................................................................................................................... 444 
+APPENDIX A: CDISC SDS TEAM ............................................................................................................................... 444 
+APPENDIX B: GLOSSARY AND ABBREVIATIONS ......................................................................................................... 446 
+APPENDIX C: CONTROLLED TERMINOLOGY ............................................................................................................... 448 
+APPENDIX D: CDISC VARIABLE-NAMING FRAGMENTS ............................................................................................. 449 
+
+
+[Page 6]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved  
+ Page 6 
+2021-11-29 
+APPENDIX E: REVISION HISTORY ............................................................................................................................... 452 
+APPENDIX F: REPRESENTATIONS AND WARRANTIES, LIMITATIONS OF LIABILITY, AND DISCLAIMERS ...................... 461 
+ 
+
+
+[Page 7]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved  
+ Page 7 
+2021-11-29 
+1 Introduction 
+1.1 Purpose 
+The Study Data Tabulation Model Implementation Guide for Human Clinical Trials (SDTMIG) Version 3.4 has 
+been prepared by the Submissions Data Standards (SDS) team of the Clinical Data Interchange Standards 
+Consortium (CDISC). Like its predecessors, v3.4 is intended to guide the organization, structure, and format of 
+standard clinical trial tabulation datasets submitted to a regulatory authority. Version 3.4 supersedes all prior 
+versions of the SDTMIG. 
+The SDTMIG should be used in close concert with Version 2.0 of the CDISC Study Data Tabulation Model 
+(SDTM, available at https://www.cdisc.org/standards/foundational/sdtm), which describes the general conceptual 
+model for representing clinical study data that is submitted to regulatory authorities and should be read prior to 
+reading the SDTMIG. SDTMIG Version 3.4 provides specific domain models, assumptions, business rules, and 
+examples for preparing standard tabulation datasets that are based on the SDTM. 
+This document is intended for companies and individuals involved in the collection, preparation, and analysis of 
+clinical data that will be submitted to regulatory authorities. 
+1.2 Organization of this Document 
+This document is organized into the following sections: 
+• 
+Section 1, Introduction, provides an overall introduction to the v3.4 models and describes changes from 
+prior versions. 
+• 
+Section 2, Fundamentals of the SDTM, recaps the basic concepts of the SDTM, and describes how this 
+implementation guide should be used in concert with the SDTM. 
+• 
+Section 3, Submitting Data in Standard Format, explains how to describe metadata for regulatory 
+submissions, and how to assess conformance with the standards. 
+• 
+Section 4, Assumptions for Domain Models, describes basic concepts, business rules, and assumptions that 
+should be taken into consideration before applying the domain models. 
+• 
+Section 5, Models for Special-purpose Domains, describes special-purpose domains, including 
+Demographics, Comments, Subject Visits, and Subject Elements. 
+• 
+Section 6, Domain Models Based on the General Observation Classes, provides specific metadata models 
+based on the 3 general observation classes, along with assumptions and example data. 
+• 
+Section 7, Trial Design Model Datasets, describes domains for trial-level data, with assumptions and 
+examples. 
+• 
+Section 8, Representing Relationships and Data, describes how to represent relationships between separate 
+domains, datasets, and/or records, and provides information to help sponsors determine where data belong 
+in the SDTM. 
+• 
+Section 9, Study References, provides structures for representing study-specific terminology used in subject 
+data. 
+• 
+Appendices provide additional background material and describe other supplemental material relevant 
+to implementation. 
+1.3 Relationship to Prior CDISC Documents 
+This document, together with the SDTM, represents the most recent version of the CDISC submission data domain 
+models. All updates are intended to be backward-compatible. The most significant changes since SDTMIG v3.3 
+include: 
+
+
+[Page 8]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved  
+ Page 8 
+2021-11-29 
+• 
+Expanded the scope of the DA domain to include study products in addition to study drugs. See Section 
+6.3.1, Product Accountability. 
+• 
+Grouped specimen-based lab domains (e.g., CP, GF, LB) in Sections 6.3.5.1-6.3.5.9 and added a generic 
+specification for these domains. See Section 6.3.5, Specimen-based Findings Domains. 
+• 
+Expanded the scope of the IS domain for assessments of antigen-induced humoral or cell-mediated immune 
+response. Added 3 new variables (i.e., Binding Agent, Molecule Secreted by Cells, Test Operational 
+Objective). See Section 6.3.5.5, Immunogenicity Specimen Assessments. 
+• 
+Updated the LB domain specification to include the following 10 new variables: Test Condition, Binding 
+Agent, Test Operational Objective, Result Scale, Result Type, Collected Summary Result Type, Lower 
+Limit of Detection, Method Sensitivity, Point in Time Flag, and Planned Duration. See Section 
+6.3.5.6, Laboratory Test Results. 
+• 
+Decommissioned the Morphology (MO) domain. 
+• 
+Added Cell Phenotyping Findings (CP) and Genomics Findings (GF) domains. See Section 6.3.5.3, Cell 
+Phenotype Findings (CP), and Section 6.3.5.4, Genomics Findings (GF). 
+• 
+Copied in Biospecimen Events (BE), Biospecimen Findings (BS), and Related Specimens (RELSPEC) 
+from the provisional SDTMIG-PGx v1.0 in preparation for its eventual retirement. See Section 
+6.2.2, Biospecimen Events (BE); Section 6.3.5.2, Biospecimen Findings (BS); and Section 8.8, Related 
+Specimens (RELSPEC). 
+• 
+Updated QRS specifications and assumptions. Also introduced subsections to separate assumptions and 
+examples describing the RS Disease Response use case and the RS Clinical Classifications use case. See 
+Section 6.3.9, Questionnaires, Ratings, and Scales (QRS) Domains (FT, QS, RS). 
+• 
+Updated the Tumor/Lesion (TU and TR) domain assumptions to describe use of indicator questions, 
+disease recurrence conventions, and modeling of location of interest. See Section 6.3.12, Tumor/Lesion 
+Domains. 
+• 
+Expanded the scope of the SC domain to support collection over time. See Section 6.3.10, Subject 
+Characteristics. 
+• 
+Updated guidance and examples for the FA domain. See Section 6.4, Findings About Events or 
+Interventions. 
+• 
+Corrected Core values for the following variables: DSDY, DSSTDY, LBSTREFC, MILOBXFL, and 
+MIBLFL. 
+• 
+Updated Controlled Terminology for applicable variables across all domains, if available. 
+• 
+Removed Appendix C1, Trial Summary Codes. 
+A detailed list of changes between versions is provided in Appendix E, Revision History. 
+Version 3.1 was the first fully implementation-ready version of the CDISC submission data standards that was 
+directly referenced by the US FDA for use in human clinical studies involving drug products. However, future 
+improvements and enhancements will continue to be made as sponsors gain more experience submitting data in this 
+format. Therefore, CDISC will be preparing regular updates to the implementation guide to provide corrections, 
+clarifications, additional domain models, examples, business rules, and conventions for using the standard domain 
+models. Because CDISC will produce further documentation for Controlled Terminology as separate publications, 
+sponsors are encouraged to check the CDISC website (https://www.cdisc.org/standards/terminology/controlled-
+terminology) frequently for additional information. See Section 4.3, Coding and Controlled Terminology 
+Assumptions, for the most up-to-date information on applying Controlled Terminology. 
+1.4 How to Read this Implementation Guide 
+The SDTMIG is best read online, so the reader can benefit from the many hyperlinks to internal and external 
+references. The following guidelines may be helpful in reading this document: 
+1. First, read the SDTM to gain a general understanding of SDTM concepts. 
+
+
+[Page 9]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved  
+ Page 9 
+2021-11-29 
+2. Next, read Sections 1-3 of this document to review the key concepts for preparing domains and submitting 
+data to regulatory authorities. Refer to Appendix B, Glossary and Abbreviations, as necessary. 
+3. Read Section 4, Assumptions for Domain Models.  
+4. Review Section 5, Models for Special-purpose Domains, and Section 6, Domain Models Based on the 
+General Observation Classes, in detail, referring back to Section 4, Assumptions for Domain Models, as 
+directed. See the implementation examples for each domain to gain an understanding of how to apply the 
+domain models for specific types of data. 
+5. Read Section 7, Trial Design Model Datasets, to understand the fundamentals of the Trial Design Model 
+and consider how to apply the concepts for typical protocols. 
+6. Review Section 8, Representing Relationships and Data, to learn advanced concepts of how to express 
+relationships between datasets, records, and additional variables not specifically defined in the models. 
+7. Review Section 9, Study References, to learn about occasions when it is necessary to establish study-
+specific references that will be used in accordance with subject data. 
+8. Finally, review the appendices as appropriate. Appendix C, Controlled Terminology, in particular, 
+describes how CDISC Terminology is centrally managed by the CDISC Controlled Terminology Team. 
+Efforts are made at publication time to ensure all SDTMIG domain/dataset specification tables and/or 
+examples reflect the latest CDISC Terminology; users, however, should refer to 
+https://www.cancer.gov/research/resources/terminology/cdisc as the authoritative source of controlled 
+terminology, as CDISC Controlled Terminology is updated on a quarterly basis. 
+This implementation guide covers most data collected in human clinical trials, but separate implementation guides 
+provide information about certain data, and should be consulted when needed. The following guides are available 
+at https://www.cdisc.org/standards/foundational/sdtmig: 
+• 
+The SDTM Implementation Guide: Associated Persons (SDTMIG-AP) provides structures for representing 
+data collected about persons who are not study subjects. 
+• 
+The SDTM Implementation Guide for Medical Devices (SDTMIG-MD) provides structures for data about 
+devices. 
+• 
+Historically, the SDTM Implementation Guide for Pharmacogenomics/Genetics (SDTMIG-PGx) has 
+provided structures for pharmacogenetic/genomic data and for data about biospecimens. Much of the 
+content of the SDTMIG-PGx has been incorporated into and/or superseded by the SDTMIG v3.4. 
+1.4.1 How to Read a Domain Specification 
+A domain specification table includes rows for all required and expected variables for a domain and for a set of 
+permissible variables. The permissible variables do not include all the variables that are allowed for the domain; 
+they are a set of variables that the SDS Team considered likely to be included. The columns of the table are: 
+• 
+Variable Name 
+o 
+For variables that do not include a domain prefix, this name is taken directly from the SDTM. 
+o 
+For variables with a "--" placeholder in the SDTM, the "--" is replaced by the 2-character domain code. 
+• 
+Variable Label: A longer name for the variable   
+o 
+This may be the same as the label in the SDTM, or it may be customized for the domain. 
+o 
+Sponsors should create an appropriate label if they include in a dataset an allowable variable not in the 
+domain specification. 
+• 
+Type: One of the 2 SAS datatypes, "Num" or "Char".  These values are taken directly from the SDTM. 
+• 
+Controlled Terms, Codelist, or Format 
+o 
+Controlled Terms 
+▪ 
+As noted in the table note, an asterisk (*) indicates that the variable may be subject to controlled 
+terminology. 
+
+
+[Page 10]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved  
+ Page 10 
+2021-11-29 
+• 
+The controlled terminology might be of a type that would inherently be sponsor-defined. 
+• 
+The controlled terminology might be of a type that could be standardized, but for which a 
+codelist not yet been developed. 
+• 
+The controlled terminology might be terminology specified in value-level metadata. 
+▪ 
+The name of an external code system (e.g., MedDRA) will be listed in plain text. 
+o 
+Codelist  
+▪ 
+A hyperlinked codelist name in parentheses indicates that the variable is subject to the CDISC 
+Controlled Terminology in the named codelist. 
+▪ 
+Multiple hyperlinked codelist names indicate that the variable is subject to 1 or more of the named 
+codelists from CDISC Controlled Terminology. If multiple codelists are in use for a single 
+domain, value-level metadata would indicate where each codelist is applicable. 
+▪ 
+A hyperlinked codelist name and an asterisk (*) indicate that the variable is subject to either the 
+named codelist from the CDISC Controlled Terminology or to an external dictionary. The specific 
+dictionary is identified in the metadata. 
+o 
+Format: "ISO 8601 datetime or interval" or "ISO 8601 duration" in plain text indicates that the variable 
+values should be formatted in conformance with that standard. 
+• 
+Role: This is taken directly from the SDTM. Note that if a variable is either a Variable Qualifier or a 
+Synonym Qualifier, the SDTM includes the qualified variable, but SDTMIG domain specifications do not. 
+• 
+CDISC Notes may include any of the following: 
+o 
+A description of what the variable means 
+o 
+Information about how this variable relates to another variable 
+o 
+Rules for when or how the variable should be populated, or how the contents should be formatted 
+o 
+Examples of values that might appear in the variable. Such examples are only examples, and although 
+they may be CDISC Controlled Terminology values, their presence in a CDISC Note should not be 
+construed as definitive. For authoritative information on CDISC Controlled Terminology, consult 
+https://www.cancer.gov/research/resources/terminology/cdisc. 
+• 
+Core: Contains 1 of the 3 values—"Req", "Exp", or "Perm"—explained further in Section 4.1.5, SDTM 
+Core Designations. 
+1.5 Known Issues 
+Derived Records and the use of --DRVFL 
+Although it is implicit in the general concept of a derived record that there is no collected result (--ORRES should 
+be null), this is not an explicit requirement currently stated in published CDISC material.  This is being evaluated for 
+clarification in a future release of the SDTMIG and/or Model document. 
+Use of --LNKID and --LNKGRP 
+The definition of --LNKID says that it is "used to identify a record," and the definition of --LNKGRP says that it is 
+"used to identify a group of records." This implies that when setting up a relationship in RELREC, a row where 
+RELTYPE = ONE will have an IDVAR of --LNKID (and not --LNKGRP); a row where RELTYPE = MANY will 
+have an IDVAR of --LNKID (and not --LNKGRP). The examples in this version of the SDTMIG have not been 
+systematically reviewed to implement this distinction between --LNKID and --LNKGRP. This distinction between -
+-LNKID and --LNKGRP, and the appropriateness of using other identification variables for linking, will be clarified 
+in a future release of the SDTMIG and/or Model document, and at that time examples in the SDTMIG will be 
+systematically reviewed and updated to reflect that clarification. 
+
+
+[Page 11]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved  
+ Page 11 
+2021-11-29 
+2 Fundamentals of the SDTM 
+2.1 Observations and Variables 
+The SDTMIG for Human Clinical Trials is based on the SDTM’s general framework for organizing clinical trial 
+information that is to be submitted to regulatory authorities. The SDTM is built around the concept of observations 
+collected about subjects who participated in a clinical study. Each observation can be described by a series of 
+variables, corresponding to a row in a dataset. Each variable can be classified according to its role. A role 
+determines the type of information conveyed by the variable about each distinct observation and how it can be used. 
+Variables can be classified into 5 major roles:  
+• 
+Identifier variables, such as those that identify the study, subject, domain, and sequence number of the 
+record 
+• 
+Topic variables, which specify the focus of the observation (e.g., the name of a lab test) 
+• 
+Timing variables, which describe the timing of the observation (e.g., start date and end date) 
+• 
+Qualifier variables, which include additional illustrative text or numeric values that describe the results or 
+additional traits of the observation (e.g., units, descriptive adjectives) 
+• 
+Rule variables, which describe the condition to start, end, branch, or loop in the Trial Design Model 
+The set of Qualifier variables can be further categorized into 5 subclasses: 
+• 
+Grouping Qualifiers are used to group together a collection of observations within the same domain. 
+Examples include --CAT and --SCAT. 
+• 
+Result Qualifiers describe the specific results associated with the topic variable in a Findings dataset. They 
+answer the question raised by the topic variable. Result Qualifiers are --ORRES, --STRESC, and --
+STRESN. 
+• 
+Synonym Qualifiers specify an alternative name for a particular variable in an observation. Examples 
+include ‑‑MODIFY and --DECOD, which are equivalent terms for a --TRT or --TERM topic variable, and -
+-TEST and ‑‑LOINC, which are equivalent terms for a --TESTCD. 
+• 
+Record Qualifiers define additional attributes of the observation record as a whole (rather than describing a 
+particular variable within a record). Examples include --REASND, AESLIFE, and all other serious adverse 
+event (SAE) flag variables in the AE domain; AGE, SEX, and RACE in the DM domain; and --BLFL, --
+POS, --LOC, --SPEC and --NAM in a Findings domain 
+• 
+Variable Qualifiers are used to further modify or describe a specific variable within an observation and are 
+only meaningful in the context of the variable they qualify. Examples include --ORRESU, --ORNRHI, and 
+‑‑ORNRLO, all of which are Variable Qualifiers of --ORRES; and --DOSU, which is a Variable Qualifier 
+of ‑‑DOSE. 
+For example, in the observation, "Subject 101 had mild nausea starting on study day 6," the Topic variable value is 
+the term for the adverse event, "NAUSEA". The Identifier variable is the subject identifier, "101". The Timing 
+variable is the study day of the start of the event, which captures the information, "starting on study day 6," whereas 
+an example of a Record Qualifier is the severity, the value for which is "MILD". Additional Timing and Qualifier 
+variables could be included to provide the necessary detail to adequately describe an observation. 
+2.2 Datasets and Domains 
+Observations about study subjects are normally collected for all subjects in a series of domains. A domain is defined 
+as a collection of logically related observations with a common topic. The logic of the relationship may pertain to 
+the scientific subject matter of the data or to its role in the trial. Each domain is represented by a single dataset. 
+Each domain dataset is distinguished by a unique, 2-character code that should be used consistently throughout the 
+submission. This code, which is stored in the SDTM variable named DOMAIN, is used in 4 ways: as the dataset 
+
+
+[Page 12]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved  
+ Page 12 
+2021-11-29 
+name, as the value of the DOMAIN variable in that dataset, as a prefix for most variable names in that dataset, and 
+as a value in the RDOMAIN variable in relationship tables (see Section 8, Representing Relationships and Data). 
+All datasets are structured as flat files with rows representing observations and columns representing variables. Each 
+dataset is described by metadata definitions that provide information about the variables used in the dataset. The 
+metadata are described in a data definition document (i.e., a Define-XML document) that is submitted with the data 
+to regulatory authorities. The Define-XML standard (available at https://www.cdisc.org/standards/data-
+exchange/define-xml) specifies metadata attributes to describe SDTM data. 
+Data represented in SDTM datasets include data as originally collected or received, data from the protocol, assigned 
+data, and derived data. The SDTM lists only the name, label, and type, with a set of brief CDISC guidelines that 
+provide a general description for each variable. 
+The domain dataset models in Section 5, Models for Special-purpose Domains, and Section 6, Domain Models 
+Based on the General Observation Classes, provide additional information about controlled terms or format, notes 
+on proper usage, and examples. See also Section 1.4.1, How to Read a Domain Specification. 
+2.3 The General Observation Classes 
+Most subject-level observations collected during the study should be represented according to 1 of the 3 SDTM 
+general observation classes: Interventions, Events, or Findings. The lists of variables allowed to be used in each of 
+these can be found in the SDTM. 
+• 
+The Interventions class captures investigational, therapeutic, and other treatments that are administered to 
+the subject (with some actual or expected physiological effect) either as specified by the study protocol 
+(e.g., exposure to study drug), coincident with the study assessment period (e.g., concomitant medications), 
+or self‑administered by the subject (e.g., use of alcohol, tobacco, or caffeine). 
+• 
+The Events class captures planned protocol milestones such as randomization and study completion, and 
+occurrences, conditions, or incidents independent of planned study evaluations occurring during the trial 
+(e.g., adverse events) or prior to the trial (e.g., medical history). 
+• 
+The Findings class captures the observations resulting from planned evaluations to address specific tests or 
+questions (e.g., laboratory tests, ECG testing, questions listed on questionnaires). 
+In most cases, the choice of observation class appropriate to a specific collection of data can be easily determined 
+according to these descriptions. The majority of data, which typically consists of measurements or responses to 
+questions, usually at specific visits or time points, will fit the Findings general observation class. Additional 
+guidance on choosing the appropriate general observation class is provided in Section 8.6.1, Guidelines for 
+Determining the General Observation Class. 
+General assumptions for use with all domain models and custom domains based on the general observation classes 
+are described in Section 4, Assumptions for Domain Models; specific assumptions for individual domains are 
+included with the domain models. 
+2.4 Datasets Other than General Observation Class Domains 
+The SDTM includes 4 types of datasets other than those based on the general observation classes: 
+• 
+Domain datasets with subject-level data that do not conform to 1 of the 3 general observation classes. 
+These include Demographics (DM), Comments (CO), Subject Elements (SE), and Subject Visits (SV), and 
+are described in Section 5, Models for Special-purpose Domains. 
+• 
+Trial Design Model (TDM) datasets, which represent information about the study design but do not contain 
+subject data. These include datasets such as Trial Arms (TA) and Trial Elements (TE) and are described in 
+Section 7, Trial Design Model Datasets. 
+• 
+Relationship datasets, such as the RELREC and SUPP-- datasets. These are described in Section 
+8, Representing Relationships and Data. 
+
+
+[Page 13]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved  
+ Page 13 
+2021-11-29 
+• 
+Study Reference datasets include Device Identifiers (DI) and Non-host Organism Identifiers (OI). These 
+provide structures for representing study-specific terminology used in subject data. These are described 
+in Section 9, Study References. 
+2.5 The SDTM Standard Domain Models 
+A sponsor should only submit domain datasets that were actually collected (or directly derived from the collected 
+data) for a given study. Decisions on what data to collect should be based on the scientific objectives of the study, 
+rather than the SDTM. Note that any data collected that will be submitted in an analysis (ADaM) dataset must be 
+traceable to a source in a tabulation (SDTM) dataset. 
+The collected data for a given study may use standard domains from this and other SDTM implementation guides as 
+well as additional custom domains based on the 3 general observation classes. A list of standard domains is provided 
+in Section 3.2.1, Dataset-level Metadata. Final domains will be published only in an SDTM implementation guide 
+(this guide or another implementation guide, e.g., SDTMIG for Medical Devices). Therapeutic-area standards 
+projects and other projects may develop proposals for additional domains. Draft versions of these domains may be 
+made available in the CDISC wiki in the SDTM Draft Domains space 
+(https://wiki.cdisc.org/display/SDD/SDTM+Draft+Domains+Home). 
+These general rules apply when determining which variables to include in a domain: 
+• 
+The Identifier variables, STUDYID, USUBJID, DOMAIN, and --SEQ are required in all domains based on 
+the general observation classes. Other Identifiers may be added as needed. 
+• 
+Any Timing variables are permissible for use in any submission dataset based on a general observation 
+class except where restricted by specific domain assumptions. 
+• 
+Any additional Qualifier variables from the same general observation class may be added to a domain 
+model except where restricted by specific domain assumptions. 
+• 
+Sponsors may not add any variables other than those described in the preceding 3 bullets. The SDTM 
+allows for the inclusion of a sponsor's non-SDTM variables using the Supplemental Qualifiers special-
+purpose dataset structure, described in Section 8.4, Relating Non-standard Variable Values to a Parent 
+Domain. As the SDTM continues to evolve, certain additional standard variables may be added to the 
+general observation classes.  
+• 
+Standard variables must not be renamed or modified for novel usage. Their metadata should not be 
+changed. 
+• 
+A Permissible variable should be used in an SDTM dataset wherever appropriate.   
+o 
+If a study includes a data item that would be represented in a Permissible variable, then 
+that variable must be included in the SDTM dataset, even if null. Refer to the Define-XML standard 
+(available at https://www.cdisc.org/standards/data-exchange/define-xml) for additional details on how 
+to manage no data availability. 
+o 
+If a study did not include a data item that would be represented in a Permissible variable, then that 
+variable should not be included in the SDTM dataset and should not be declared in the Define-XML 
+document. 
+2.6 Creating a New Domain 
+This section describes the overall process for creating a custom domain, which must be based on 1 of the 3 SDTM 
+general observation classes. The number of domains submitted should be based on the specific requirements of the 
+study. To create a custom domain, 
+1. Confirm that none of the existing published domains will fit the need. A custom domain may only be 
+created if the data are different in nature and do not fit into an existing published domain. 
+o 
+Establish a domain of a common topic; that is, where the nature of the data is the same rather than by a 
+specific method of collection (e.g., electrocardiogram). Group and separate data within the domain 
+using --CAT, --SCAT, --METHOD, --SPEC, --LOC, and so on, as appropriate. Examples of different 
+
+
+[Page 14]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved  
+ Page 14 
+2021-11-29 
+topics are: microbiology, tumor measurements, pathology/histology, vital signs, and physical exam 
+results. 
+o 
+Do not create separate domains based on time; rather, represent both prior and current observations in 
+a domain (e.g., CM for all non-study medications). Note that Adverse Events (AE) and Medical 
+History (MH) are an exception to this best practice because of regulatory reporting needs. 
+o 
+How collected data are used (e.g., to support analyses and/or efficacy endpoints) must not result in the 
+creation of a custom domain. For example, if blood pressure measurements are endpoints in a 
+hypertension study, they must still be represented in the Vital Signs (VS) domain, as opposed to a 
+custom “efficacy” domain. Similarly, if liver function test results are of special interest, they must still 
+be represented in the Laboratory Tests (LB) domain. 
+o 
+Data that were collected on separate CRF modules or pages may fit into an existing domain (e.g., as 
+separate questionnaires into the QS domain, prior and concomitant medications in the CM domain). 
+o 
+If it is necessary to represent relationships between data that are hierarchical in nature (e.g., a parent 
+record must be observed before child records), then establish a domain pair (e.g., MB/MS, PC/PP). 
+Note: Domain pairs have been modeled for microbiology data (MB/MS domains) and 
+pharmacokinetics (PK) data (PC/PP domains) to enable dataset-level relationships to be described 
+using RELREC. The domain pair uses DOMAIN as an identifier to group parent records (e.g., MB) 
+from child records (e.g., MS) and enables a dataset-level relationship to be described in RELREC. 
+Without using DOMAIN to facilitate description of the data relationships, RELREC, as currently 
+defined, could not be used without introducing a variable that would group data like DOMAIN. 
+2. Check the SDTM Draft Domains area of the CDISC wiki 
+(https://wiki.cdisc.org/display/SDD/SDTM+Draft+Domains+Home) for proposed domains developed since 
+the last published version of the SDTMIG. These proposed domains may be used as custom domains in a 
+submission. 
+3. Look for an existing, relevant domain model to serve as a prototype. If no existing model seems 
+appropriate, choose the general observation class (Interventions, Events, or Findings) that best fits the data 
+by considering the topic of the observation. As illustrated in the following figure, the general approach 
+for selecting variables for a custom domain is: 
+a. 
+Select and include the required identifier variables (e.g., STUDYID, DOMAIN, USUBJID, --SEQ) and 
+any permissible Identifier variables from the SDTM.  
+b. Include the topic variable from the identified general observation class (e.g., --TESTCD for Findings) 
+in the SDTM.  
+c. 
+Select and include the relevant qualifier variables from the identified general observation class in the 
+SDTM. Variables belonging to other general observation classes must not be added. 
+d. Select and include the applicable timing variables in the SDTM. 
+e. 
+Determine the domain code, one that is not a domain code in the CDISC Controlled Terminology 
+SDTM Domain Abbreviations codelist (see  https://datascience.cancer.gov/resources/cancer-
+vocabulary/cdisc-terminology). If it is desired to have this domain code be part of CDISC Controlled 
+Terminology, submit a request at https://ncitermform.nci.nih.gov/ncitermform/?version=cdisc. The 
+sponsor-selected, 2‑character domain code should be used consistently throughout the submission. AD, 
+AX, AP, SQ, and SA may not be used as custom domain codes. 
+f. 
+Apply the 2-character domain code to the appropriate variables in the domain. Replace all variable 
+prefixes (shown in the models as “--“) with the domain code. 
+g. Set the order of variables consistent with the order defined in the SDTM for the general observation 
+class. 
+h. Adjust the labels of the variables only as appropriate to properly convey the meaning in the context of 
+the data being submitted in the newly created domain. Use title case for all labels (title case means to 
+capitalize the first letter of every word except for articles, prepositions, and conjunctions). 
+
+
+[Page 15]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved  
+ Page 15 
+2021-11-29 
+i. 
+Ensure that appropriate standard variables are being properly applied by comparing their use in the 
+custom domain to their use in standard domains. 
+j. 
+Describe the dataset within the Define-XML document. See Section 3.2, Using the CDISC Domain 
+Models in Regulatory Submissions — Dataset Metadata. 
+k. Place any non-standard (SDTM) variables in a Supplemental Qualifier dataset. Mechanisms for 
+representing additional non-standard qualifier variables not described in the general observation 
+classes and for defining relationships between separate datasets or records are described in Section 8.4, 
+Relating Non-standard Variable Values to a Parent Domain. 
+ 
+Figure. Creating a New Domain 
+ 
+2.7 SDTM Variables Not Allowed in the SDTMIG 
+This section identifies those SDTM variables that either (1) should not be used in SDTM-compliant data tabulations 
+of clinical trials data or (2) have not yet been evaluated for use in human clinical trials. 
+The following SDTM variables, defined for use in nonclinical studies (SEND), must NEVER be used in the 
+submission of SDTM-based data for human clinical trials: 
+• 
+--USCHFL (Interventions, Events, Findings) 
+• 
+--METHOD (Interventions) 
+• 
+--RSTIND (Interventions, Findings) 
+• 
+--RSTMOD (Interventions, Findings) 
+• 
+--IMPLBL (Findings) 
+• 
+--RESLOC (Findings) 
+• 
+--DTHREL (Findings) 
+• 
+--EXCLFL (Findings) 
+• 
+--REASEX (Findings) 
+• 
+FETUSID (Identifiers) 
+• 
+RPHASE (Timing Variables) 
+• 
+RPPLDY (Timing Variables) 
+• 
+RPPLSTDY (Timing Variables) 
+• 
+RPPLENDY (Timing Variables) 
+
+
+[Page 16]
+CDISC Study Data Tabulation Model Implementation Guide: Human Clinical Trials (3.4 Final) 
+© 2021 Clinical Data Interchange Standards Consortium, Inc. All rights reserved  
+ Page 16 
+2021-11-29 
+• 
+--NOMDY (Timing Variables) 
+• 
+--NOMLBL (Timing Variables) 
+• 
+--RPDY (Timing Variables) 
+• 
+--RPSTDY (Timing Variables) 
+• 
+--RPENDY (Timing Variables) 
+• 
+--DETECT (Timing Variables) 
+The following variables can be used for nonclinical studies (SEND) but must NEVER be used in the Demographics 
+(DM) domain for human clinical trials, where all subjects are human. See Section 9.2, Non-host Organism 
+Identifiers, for information about representing taxonomic information for non-host organisms such as bacteria and 
+viruses. 
+• 
+SPECIES (Demographics) 
+• 
+STRAIN (Demographics) 
+• 
+SBSTRAIN (Demographics) 
+• 
+RPATHCD (Demographics) 
+The following variables have not been evaluated for use in human clinical trials and must therefore be used with 
+extreme caution:    
+• 
+--ANTREG (Findings) 
+• 
+--CHRON (Findings) 
+• 
+--DISTR (Findings) 
+• 
+SETCD (Demographics) 
+The use of SETCD additionally requires the use of the Trials Sets domain. 
+The following identifier variable can be used for nonclinical studies (SEND), and may be used in human clinical 
+trials when appropriate: 
+• 
+POOLID 
+The use of POOLID additionally requires the use of the Pool Definition dataset. 
+Other variables defined in the SDTM are allowed for use as defined in this SDTMIG except when explicitly stated. 
+Custom domains, created following the guidance in Section 2.6, Creating a New Domain, may utilize any 
+appropriate qualifier variables from the selected general observation class. 
+ 
+ 

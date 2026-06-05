@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IWRS系统 - 受试者随机化系统</title>
+  <meta name="description" content="临床试验随机化系统 (IWRS)">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* 额外补充样式 */
+    #header { position: sticky; top: 0; }
+    #sidebar { overflow-y: auto; }
+    .nav-sub-items { display: none; }
+    .nav-item.expanded + .nav-sub-items { display: block; }
+    .collapsed .nav-section-title,
+    .collapsed .nav-label,
+    .collapsed .nav-badge,
+    .collapsed .logo-text,
+    .collapsed .logo-sub { display: none; }
+    .collapsed .nav-item { justify-content: center; padding: 12px; }
+    .collapsed .sidebar-logo { justify-content: center; }
+    /* 登录页特殊样式 */
+    #login-screen { width: 100%; }
+    @media print {
+      #sidebar, #header { display: none; }
+      #main-content { margin: 0; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="login-screen"></div>
+  </div>
+
+  <script src="assets/js/api-client.js?v=8"></script>
+  <!-- 数据层 -->
+  <script src="assets/js/data.js?v=8"></script>
+  <!-- 应用核心 -->
+  <script src="assets/js/app.js?v=8"></script>
+  <!-- 页面模块 -->
+  <script src="assets/js/pages-trials.js?v=10"></script>
+  <script src="assets/js/pages-patients.js?v=28"></script>
+  <script src="assets/js/pages-others.js?v=42"></script>
+  <!-- 登录 -->
+  <script src="assets/js/login.js?v=4"></script>
+
+  <script>
+    // 覆盖登录界面渲染
+    window.renderLogin = function() {
+      document.getElementById('login-screen').innerHTML = `
+        <div class="login-box">
+          <div class="login-logo">
+            <div class="logo-badge" style="background:var(--primary);color:white">🎲</div>
+            <h1>IWRS系统</h1>
+            <p>受试者随机化与试验用药管理系统</p>
+          </div>
+
+          <div id="login-form">
+            <div class="form-group">
+              <label class="form-label">用户名 / 邮箱</label>
+              <input class="form-input" type="text" id="login-user" placeholder="请输入用户名 / 邮箱" value="IWRS@iwrs.com">
+            </div>
+            <div class="form-group">
+              <label class="form-label">密码</label>
+              <input class="form-input" type="password" id="login-pass" placeholder="请输入密码" value="I@123">
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+              <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+                <input type="checkbox" checked> 记住登录状态
+              </label>
+              <span style="font-size:13px;color:var(--primary);cursor:pointer">忘记密码?</span>
+            </div>
+            <button class="btn btn-primary btn-lg" style="width:100%" onclick="doLogin()">
+              🔐 登录系统
+            </button>
+          </div>
+
+          <div style="margin-top:24px;padding-top:16px;border-top:1px solid var(--gray-200);text-align:center">
+            <div style="font-size:11px;color:var(--gray-400)">独立运行版本 · 仅提供随机化功能</div>
+            <div style="font-size:11px;color:var(--gray-400);margin-top:4px">© 2026 CTMS Pro IWRS Subsystem</div>
+          </div>
+        </div>
+      `;
+    };
+
+    // 覆盖侧边栏渲染，使其仅显示随机化系统
+    CTMS.renderSidebar = function() {
+      document.getElementById('sidebar').innerHTML = `
+        <div class="sidebar-logo" onclick="CTMS.toggleSidebar()">
+          <div class="logo-icon" style="background:var(--primary);color:white">🎲</div>
+          <div>
+            <div class="logo-text">IWRS系统</div>
+            <div class="logo-sub">受试者随机化系统</div>
+          </div>
+        </div>
+        <div class="nav-section">
+          <div class="nav-section-title">随机化与分配</div>
+          <div class="nav-item" data-page="iwrs" onclick="CTMS.navigate('iwrs')">
+            <span class="nav-icon">🎲</span><span class="nav-label">随机化系统(IWRS)</span>
+          </div>
+        </div>
+      `;
+    };
+    
+    // 覆盖初始化默认页面
+    const originalInit = CTMS.init;
+    CTMS.init = function() {
+      this.renderSidebar();
+      this.renderHeader();
+      this.navigate('iwrs');
+      this.initDropdowns();
+    };
+
+    async function bootstrapApp() {
+      // 提取 URL 中的 token 并临时保存为 user_token
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlToken = urlParams.get('token');
+      if (urlToken) {
+        sessionStorage.setItem('user_token', urlToken);
+        console.log('--- Debug: URL Token Saved ---');
+        console.log('user_token:', urlToken);
+        // 清理 URL，避免 token 一直显示在地址栏
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+
+      try {
+        if (window.CTMS_API && CTMS_API.Auth.isLoggedIn()) {
+          const me = await CTMS_API.Auth.getMe();
+          CTMS_DATA.currentUser = {
+            name: me.full_name || me.username || '用户',
+            role: me.role_name || me.role || '-',
+            dept: me.department || '-',
+            avatar: (me.full_name || me.username || '用').slice(0, 1),
+          };
+          if (window.syncCTMSDataFromPostgreSQL) {
+            await window.syncCTMSDataFromPostgreSQL();
+          }
+
+          // 在控制台输出临时保存的 user_token（调试用，用于已有登录状态时）
+          const userToken = sessionStorage.getItem('user_token');
+          if (userToken) {
+            console.log('--- Debug: User Auto Login ---');
+            console.log('user_token:', userToken);
+          }
+
+          mountMainLayout();
+          return;
+        }
+      } catch (e) {
+        if (window.CTMS_API) CTMS_API.Token.clearTokens();
+      }
+      renderLogin();
+    }
+
+    bootstrapApp();
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && document.getElementById('login-screen').innerHTML) {
+        doLogin();
+      }
+    });
+  </script>
+</body>
+</html>
