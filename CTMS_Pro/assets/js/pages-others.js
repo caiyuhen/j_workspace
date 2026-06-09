@@ -1099,10 +1099,17 @@ PAGES.etmf = function() {
       new Chart(ctx, {
         type: 'radar',
         data: {
+<<<<<<< HEAD
           labels: ['注册资料','伦理文件','方案文件','知情同意','监查报告','安全报告','SOP文件','合同文件','数据计划','关闭报告'],
           datasets: [{
             label: '完整度 %',
             data: [100,100,95,90,100,100,100,90,85,100],
+=======
+          labels: ['注册资料','伦理文件','方案文件','知情同意','监查报告','安全报告','SOP文件'],
+          datasets: [{
+            label: '完整度 %',
+            data: [100,100,95,90,100,100,100],
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
             borderColor: '#1a6fc4', backgroundColor: 'rgba(26,111,196,0.1)', pointBackgroundColor: '#1a6fc4'
           }]
         },
@@ -1213,11 +1220,16 @@ CTMS.previewDocument = function(docId) {
   const previewableExts = ['pdf', 'jpg', 'jpeg', 'png', 'gif', 'txt'];
   
   if (previewableExts.includes(fileExt)) {
+<<<<<<< HEAD
       let previewUrl = doc.url;
       if (!previewUrl && window.CTMS && window.CTMS.localFileUrls && window.CTMS.localFileUrls[doc.id]) {
         previewUrl = window.CTMS.localFileUrls[doc.id];
       }
     
+=======
+    // 因为目前只存了记录没有真实上传文件流，如果是本地没有真实url的情况，给一个演示用的占位PDF/图片地址
+    let previewUrl = doc.url;
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     if (!previewUrl) {
       if (fileExt === 'pdf') {
          previewUrl = 'https://mozilla.github.io/pdf.js/web/compressed.tracemonkey-pldi-09.pdf';
@@ -1240,6 +1252,7 @@ CTMS.previewDocument = function(docId) {
 
 CTMS.downloadDocument = async function(docId) {
   const doc = (CTMS_DATA.documents || []).find(d => d.id === docId);
+<<<<<<< HEAD
   if (!doc) {
     CTMS.showToast('找不到文件', 'error');
     return;
@@ -1267,6 +1280,21 @@ CTMS.downloadDocument = async function(docId) {
         CTMS.showToast('演示环境：触发下载 ' + (doc.fileName || doc.title), 'success');
     };
   }
+=======
+  if (!doc || !doc.url) {
+    CTMS.showToast('找不到文件下载地址', 'error');
+    return;
+  }
+  CTMS.showToast('正在获取下载链接...', 'info');
+  // Mock download link behavior
+  const a = document.createElement('a');
+  a.href = '#';
+  a.download = doc.fileName || doc.title;
+  a.onclick = (e) => {
+      e.preventDefault();
+      CTMS.showToast('演示环境：触发下载 ' + (doc.fileName || doc.title), 'success');
+  };
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1369,6 +1397,7 @@ CTMS.submitEtmfUpload = async function() {
     return;
   }
   try {
+<<<<<<< HEAD
       const created = await API.documents.create({
         trial_id: trialId,
         title,
@@ -1387,6 +1416,18 @@ CTMS.submitEtmfUpload = async function() {
       window.CTMS.localFileUrls[newDocId] = URL.createObjectURL(file);
     }
     
+=======
+    const created = await API.documents.create({
+      trial_id: trialId,
+      title,
+      doc_type: docType || null,
+      file_name: file.name,
+      file_size: file.size,
+      version,
+      requires_esig: false,
+    });
+    const newDocId = (created && (created.id || (created.data && created.data.id))) ? String(created.id || created.data.id) : '';
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     if (centerContext && newDocId) {
       const centerMap = getLocalDocumentCenterMap();
       centerMap[newDocId] = centerContext;
@@ -1425,7 +1466,11 @@ CTMS.submitEtmfBatchUpload = async function() {
   }
   try {
     for (const file of files) {
+<<<<<<< HEAD
       const created = await API.documents.create({
+=======
+      await API.documents.create({
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
         trial_id: trialId,
         title: file.name.replace(/\.[^/.]+$/, ''),
         doc_type: docType || null,
@@ -1434,6 +1479,7 @@ CTMS.submitEtmfBatchUpload = async function() {
         version: '1.0',
         requires_esig: false,
       });
+<<<<<<< HEAD
       const newDocId = (created && (created.id || (created.data && created.data.id))) ? String(created.id || created.data.id) : '';
       
       // Store local object URL for preview
@@ -1442,6 +1488,8 @@ CTMS.submitEtmfBatchUpload = async function() {
         window.CTMS.localFileUrls = window.CTMS.localFileUrls || {};
         window.CTMS.localFileUrls[newDocId] = URL.createObjectURL(file);
       }
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     }
     CTMS.showToast(`批量上传成功（${files.length}个文件）`, 'success');
     CTMS.closeModal();
@@ -1535,7 +1583,11 @@ PAGES.reports = function() {
                 ${CTMS_DATA.trials.map(t=>`<tr>
                   <td><strong>${t.id}</strong></td>
                   <td style="font-size:12px">${t.name.substring(0,20)}...</td>
+<<<<<<< HEAD
                   <td><span class="badge badge-blue">${CTMS.getPhaseName(t.phase)}</span></td>
+=======
+                  <td><span class="badge badge-blue">${t.phase}</span></td>
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
                   <td>${t.progress}%</td>
                   <td>${Math.round(t.budgetUsed/t.budget*100)}%</td>
                   <td>${CTMS_DATA.saeEvents.filter(s=>s.trialId===t.id).length}</td>
@@ -1597,9 +1649,15 @@ PAGES.reports = function() {
 function drawReportCharts() {
   if (!window.Chart) return;
   
+<<<<<<< HEAD
   const phaseCounts = {};
   CTMS_DATA.trials.forEach(t => {
     const phase = CTMS.getPhaseName(t.phase) || 'I期';
+=======
+  const phaseCounts = {'I期':0, 'II期':0, 'III期':0, 'IV期':0};
+  CTMS_DATA.trials.forEach(t => {
+    const phase = t.phase || 'I期';
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     if(phaseCounts[phase] !== undefined) phaseCounts[phase]++;
     else phaseCounts[phase] = 1;
   });
@@ -2574,6 +2632,7 @@ CTMS.submitAddCenter = async function(isEdit = false) {
         return;
       }
     } else {
+<<<<<<< HEAD
       // 1. 同步调用外部接口
       try {
         const userToken = sessionStorage.getItem('user_token') || '';
@@ -2606,6 +2665,8 @@ CTMS.submitAddCenter = async function(isEdit = false) {
       }
 
       // 2. 本地系统保存
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
       await window.API.sites.create(payload);
       CTMS.showToast('中心添加成功', 'success');
     }
@@ -2630,11 +2691,18 @@ PAGES.users = function() {
       <div class="card">
         <div class="card-body table-container">
           <table>
+<<<<<<< HEAD
             <thead><tr><th>姓名</th><th>手机号</th><th>角色</th><th>部门</th><th>所属中心</th><th>状态</th><th>最后登录</th><th>操作</th></tr></thead>
             <tbody>
               ${(CTMS_DATA.users || []).map(u=>`<tr>
                 <td><div style="display:flex;align-items:center;gap:8px"><div class="user-avatar" style="width:28px;height:28px;font-size:11px">${u.name[0]}</div>${u.name}</div></td>
                 <td>${u.phone || '-'}</td>
+=======
+            <thead><tr><th>姓名</th><th>角色</th><th>部门</th><th>所属中心</th><th>状态</th><th>最后登录</th><th>操作</th></tr></thead>
+            <tbody>
+              ${(CTMS_DATA.users || []).map(u=>`<tr>
+                <td><div style="display:flex;align-items:center;gap:8px"><div class="user-avatar" style="width:28px;height:28px;font-size:11px">${u.name[0]}</div>${u.name}</div></td>
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
                 <td><span class="badge badge-blue">${u.role}</span></td>
                 <td>${u.dept}</td>
                 <td>${u.center}</td>
@@ -2709,6 +2777,7 @@ CTMS.showEditUserModal = function(id) {
       <div class="form-group"><label class="form-label required">姓名</label>
         <input id="user-name" class="form-input" value="${user.name}">
       </div>
+<<<<<<< HEAD
       <div class="form-group"><label class="form-label required">手机号</label>
         <input id="user-phone" class="form-input" value="${user.phone || ''}">
       </div>
@@ -2717,6 +2786,13 @@ CTMS.showEditUserModal = function(id) {
       <div class="form-group"><label class="form-label required">系统账号(邮箱)</label>
         <input id="user-email" class="form-input" value="${user.email}">
       </div>
+=======
+      <div class="form-group"><label class="form-label required">系统账号(邮箱)</label>
+        <input id="user-email" class="form-input" value="${user.email}">
+      </div>
+    </div>
+    <div class="form-row">
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
       <div class="form-group"><label class="form-label required">角色</label>
         <select id="user-role" class="form-select">
           <option value="超级管理员" ${user.role==='超级管理员'?'selected':''}>超级管理员(Super Admin)</option>
@@ -2750,7 +2826,10 @@ CTMS.submitEditUser = async function() {
   const id = document.getElementById('edit-user-id').value;
   const name = document.getElementById('user-name')?.value?.trim();
   const email = document.getElementById('user-email')?.value?.trim();
+<<<<<<< HEAD
   const phone = document.getElementById('user-phone')?.value?.trim();
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   const role = document.getElementById('user-role')?.value;
   const dept = document.getElementById('user-dept')?.value?.trim() || '-';
   const centerSelect = document.getElementById('user-center');
@@ -2758,7 +2837,11 @@ CTMS.submitEditUser = async function() {
   const center = selectedCenters.length > 0 ? selectedCenters[0] : null;
   const password = document.getElementById('user-password')?.value;
 
+<<<<<<< HEAD
   if (!name || !email || !phone || !role || !center) {
+=======
+  if (!name || !email || !role || !center) {
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     CTMS.showToast('请完整填写带有星号的必填项', 'error');
     return;
   }
@@ -2803,7 +2886,10 @@ CTMS.submitEditUser = async function() {
           const updateData = {
             full_name: name,
             department: dept,
+<<<<<<< HEAD
             phone: phone,
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
             title: role,
           };
           if (targetRoleId) updateData.role_id = targetRoleId;
@@ -2824,7 +2910,10 @@ CTMS.submitEditUser = async function() {
           const updateData = {
             full_name: name,
             department: dept,
+<<<<<<< HEAD
             phone: phone,
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
             title: role
           };
           if (targetRoleId) updateData.role_id = targetRoleId;
@@ -3044,6 +3133,7 @@ CTMS.showAddUserModal = function() {
       <div class="form-group"><label class="form-label required">姓名</label>
         <input id="user-name" class="form-input" placeholder="请输入姓名">
       </div>
+<<<<<<< HEAD
       <div class="form-group"><label class="form-label required">手机号</label>
         <input id="user-phone" class="form-input" placeholder="例如：13800000000">
       </div>
@@ -3052,6 +3142,13 @@ CTMS.showAddUserModal = function() {
       <div class="form-group"><label class="form-label required">系统账号(邮箱)</label>
         <input id="user-email" class="form-input" placeholder="例如：user@ctms.com">
       </div>
+=======
+      <div class="form-group"><label class="form-label required">系统账号(邮箱)</label>
+        <input id="user-email" class="form-input" placeholder="例如：user@ctms.com">
+      </div>
+    </div>
+    <div class="form-row">
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
       <div class="form-group"><label class="form-label required">角色</label>
         <select id="user-role" class="form-select">
           <option value="超级管理员">超级管理员(Super Admin)</option>
@@ -3091,7 +3188,10 @@ CTMS.showAddUserModal = function() {
 CTMS.submitAddUser = async function() {
   const name = document.getElementById('user-name')?.value?.trim();
   const email = document.getElementById('user-email')?.value?.trim();
+<<<<<<< HEAD
   const phone = document.getElementById('user-phone')?.value?.trim();
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   const role = document.getElementById('user-role')?.value;
   const dept = document.getElementById('user-dept')?.value?.trim() || '-';
   const centerSelect = document.getElementById('user-center');
@@ -3100,7 +3200,11 @@ CTMS.submitAddUser = async function() {
   const password = document.getElementById('user-password')?.value;
   const passwordConfirm = document.getElementById('user-password-confirm')?.value;
 
+<<<<<<< HEAD
   if (!name || !email || !phone || !role || !center || !password || !passwordConfirm) {
+=======
+  if (!name || !email || !role || !center || !password || !passwordConfirm) {
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     CTMS.showToast('请完整填写带有星号的必填项', 'error');
     return;
   }
@@ -3154,7 +3258,10 @@ CTMS.submitAddUser = async function() {
   const createData = {
     username: username,
     email: email,
+<<<<<<< HEAD
     phone: phone,
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     full_name: name,
     password: password,
     department: dept,

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -966,3 +967,973 @@ window.addEventListener('load', () => {
 </script>
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTMS Pro 安装向导</title>
+<style>
+  :root {
+    --primary: #1a56db;
+    --primary-dark: #1347c5;
+    --success: #057a55;
+    --warning: #c27803;
+    --danger: #c81e1e;
+    --bg: #f3f4f6;
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --text: #111827;
+    --text-secondary: #6b7280;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #0f172a 100%);
+    min-height: 100vh;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .container {
+    background: var(--surface);
+    border-radius: 20px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+    width: 100%;
+    max-width: 860px;
+    overflow: hidden;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+    padding: 36px 40px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -60%;
+    right: 10%;
+    width: 200px;
+    height: 200px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 50%;
+  }
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    margin-bottom: 16px;
+    backdrop-filter: blur(4px);
+  }
+  .header h1 {
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+  }
+  .header p {
+    opacity: 0.8;
+    font-size: 15px;
+    position: relative;
+    z-index: 1;
+  }
+  .version-badge {
+    position: absolute;
+    top: 24px;
+    right: 32px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    color: white;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    z-index: 2;
+  }
+
+  /* Steps Nav */
+  .steps-nav {
+    display: flex;
+    background: #f9fafb;
+    border-bottom: 1px solid var(--border);
+    padding: 0 40px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .steps-nav::-webkit-scrollbar { display: none; }
+  .step-tab {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 24px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+    color: var(--text-secondary);
+    font-size: 14px;
+  }
+  .step-tab.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    font-weight: 600;
+  }
+  .step-tab.completed {
+    color: var(--success);
+  }
+  .step-num {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .step-tab.active .step-num { background: var(--primary); color: white; }
+  .step-tab.completed .step-num { background: var(--success); color: white; }
+
+  /* Content */
+  .content {
+    padding: 36px 40px;
+  }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .panel-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .panel-subtitle {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 28px;
+  }
+
+  /* Form Groups */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .form-group.full-width { grid-column: 1 / -1; }
+  .form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+  }
+  .form-group input, .form-group select {
+    padding: 10px 14px;
+    border: 1.5px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    color: var(--text);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+    background: white;
+  }
+  .form-group input:focus, .form-group select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(26,86,219,0.1);
+  }
+  .form-hint { font-size: 12px; color: var(--text-secondary); }
+
+  /* Info Cards */
+  .info-card {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .info-card.warning { background: #fffbeb; border-color: #fde68a; }
+  .info-card.success { background: #f0fdf4; border-color: #a7f3d0; }
+  .info-card .icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .info-card .text { font-size: 13px; color: #374151; line-height: 1.6; }
+  .info-card .text strong { display: block; font-weight: 600; margin-bottom: 4px; }
+
+  /* Check List */
+  .check-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    font-size: 14px;
+    transition: all 0.3s;
+  }
+  .check-item.pass { background: #f0fdf4; border-color: #a7f3d0; color: #065f46; }
+  .check-item.fail { background: #fff1f2; border-color: #fecaca; color: #991b1b; }
+  .check-item.warn { background: #fffbeb; border-color: #fde68a; color: #92400e; }
+  .check-item.running { background: #eff6ff; border-color: #bfdbfe; color: #1e40af; }
+  .check-icon { font-size: 16px; flex-shrink: 0; }
+  .check-label { flex: 1; font-weight: 500; }
+  .check-desc { font-size: 12px; opacity: 0.75; }
+
+  /* Progress */
+  .progress-wrap {
+    background: #e5e7eb;
+    border-radius: 999px;
+    height: 8px;
+    overflow: hidden;
+    margin: 16px 0 6px;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #1d4ed8, #60a5fa);
+    border-radius: 999px;
+    transition: width 0.5s ease;
+    width: 0%;
+  }
+  .progress-label {
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Install Log */
+  .install-log {
+    background: #111827;
+    border-radius: 10px;
+    padding: 16px;
+    height: 220px;
+    overflow-y: auto;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    margin-top: 20px;
+    border: 1px solid #374151;
+  }
+  .log-line { display: flex; gap: 10px; }
+  .log-time { color: #6b7280; flex-shrink: 0; }
+  .log-ok { color: #34d399; }
+  .log-err { color: #f87171; }
+  .log-warn { color: #fbbf24; }
+  .log-info { color: #60a5fa; }
+
+  /* Feature Grid */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .feature-card {
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    transition: all 0.2s;
+    cursor: default;
+  }
+  .feature-card:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(26,86,219,0.1); }
+  .feature-icon { font-size: 24px; margin-bottom: 10px; }
+  .feature-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+  .feature-desc { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+
+  /* Service Status */
+  .service-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .service-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .service-card.running { border-color: #a7f3d0; background: #f0fdf4; }
+  .service-card.stopped { border-color: #fecaca; background: #fff1f2; }
+  .service-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #9ca3af;
+    flex-shrink: 0;
+  }
+  .service-card.running .service-dot { background: #10b981; animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  .service-name { font-size: 14px; font-weight: 600; }
+  .service-status { font-size: 12px; color: var(--text-secondary); }
+  .service-port {
+    margin-left: auto;
+    font-size: 11px;
+    background: #e5e7eb;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+  }
+
+  /* Buttons */
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 32px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+  .btn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+  .btn:active { transform: translateY(0); }
+  .btn-primary { background: var(--primary); color: white; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-secondary { background: var(--bg); color: var(--text); border: 1.5px solid var(--border); }
+  .btn-success { background: #059669; color: white; }
+  .btn-lg {
+    padding: 14px 32px;
+    font-size: 16px;
+    border-radius: 10px;
+  }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* Summary */
+  .summary-box {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+    border: 1.5px solid #a7f3d0;
+    border-radius: 14px;
+    padding: 28px;
+    text-align: center;
+    margin-bottom: 28px;
+  }
+  .summary-icon { font-size: 48px; margin-bottom: 12px; }
+  .summary-title { font-size: 22px; font-weight: 800; color: #065f46; margin-bottom: 8px; }
+  .summary-desc { color: #047857; font-size: 14px; }
+
+  .access-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .access-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .access-card .label { font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .access-card .url {
+    font-size: 13px;
+    font-family: monospace;
+    color: var(--primary);
+    cursor: pointer;
+    word-break: break-all;
+  }
+  .access-card .url:hover { text-decoration: underline; }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .content { padding: 24px 20px; }
+    .header { padding: 24px 20px; }
+    .form-grid, .feature-grid, .service-grid, .access-grid { grid-template-columns: 1fr; }
+    .btn-row { flex-direction: column; }
+    .btn { justify-content: center; }
+    .steps-nav { padding: 0 16px; }
+    .version-badge { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-badge">🏥 临床试验管理系统</div>
+    <h1>CTMS Pro 安装向导</h1>
+    <p>按照以下步骤完成系统的安装与配置</p>
+    <div class="version-badge">v1.0.0</div>
+  </div>
+
+  <!-- Steps Navigation -->
+  <div class="steps-nav">
+    <div class="step-tab active" onclick="goToStep(0)" id="tab-0">
+      <div class="step-num">1</div> 欢迎
+    </div>
+    <div class="step-tab" onclick="goToStep(1)" id="tab-1">
+      <div class="step-num">2</div> 环境检测
+    </div>
+    <div class="step-tab" onclick="goToStep(2)" id="tab-2">
+      <div class="step-num">3</div> 系统配置
+    </div>
+    <div class="step-tab" onclick="goToStep(3)" id="tab-3">
+      <div class="step-num">4</div> 安装进度
+    </div>
+    <div class="step-tab" onclick="goToStep(4)" id="tab-4">
+      <div class="step-num">5</div> 完成
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Panel 0: Welcome -->
+    <div class="panel active" id="panel-0">
+      <div class="panel-title">欢迎使用 CTMS Pro</div>
+      <div class="panel-subtitle">临床试验管理系统 · 符合 GCP / FDA 21 CFR Part 11 / GDPR 合规要求</div>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🧪</div>
+          <div class="feature-title">试验全流程管理</div>
+          <div class="feature-desc">从立项到结题，覆盖里程碑、访视、入组全流程跟踪管理</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">👥</div>
+          <div class="feature-title">患者数据管理</div>
+          <div class="feature-desc">eICF电子知情同意，AES-256 PII加密，GDPR合规存储</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⚠️</div>
+          <div class="feature-title">SAE/AE 不良事件</div>
+          <div class="feature-desc">实时上报，自动通知，完整审计轨迹记录</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💊</div>
+          <div class="feature-title">药品与经费管理</div>
+          <div class="feature-desc">药品入库/发放/回收追踪，合同与付款全周期管理</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📋</div>
+          <div class="feature-title">质控监查管理</div>
+          <div class="feature-desc">SDV监查报告，质控问题追踪，GCP合规检查</div>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">📁</div>
+          <div class="feature-title">eTMF 文档管理</div>
+          <div class="feature-desc">电子试验主档案，PKI电子签名，版本控制</div>
+        </div>
+      </div>
+
+      <div class="info-card">
+        <div class="icon">ℹ️</div>
+        <div class="text">
+          <strong>安装前请确保</strong>
+          您的系统已安装 Docker Desktop（Windows版），并已启用 WSL2 支持。安装过程约需 5-10 分钟。
+        </div>
+      </div>
+
+      <div class="info-card warning">
+        <div class="icon">⚠️</div>
+        <div class="text">
+          <strong>系统要求</strong>
+          Windows 10/11 (64位) · 内存 ≥ 8GB · 硬盘 ≥ 20GB 可用空间 · Docker Desktop 4.0+
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary btn-lg" onclick="goToStep(1)">开始安装 →</button>
+      </div>
+    </div>
+
+    <!-- Panel 1: Environment Check -->
+    <div class="panel" id="panel-1">
+      <div class="panel-title">环境检测</div>
+      <div class="panel-subtitle">正在检测系统环境和依赖组件...</div>
+
+      <ul class="check-list" id="check-list">
+        <li class="check-item" id="chk-os">
+          <span class="check-icon">⏳</span>
+          <span class="check-label">操作系统版本</span>
+          <span class="check-desc" id="chk-os-desc">检测中...</span>
+        </li>
+        <li class="check-item" id="chk-mem">
+          <span class="check-icon">⏳</span>
+          <span class="check-label">系统内存</span>
+          <span class="check-desc" id="chk-mem-desc">检测中...</span>
+        </li>
+        <li class="check-item" id="chk-disk">
+          <span class="check-icon">⏳</span>
+          <span class="check-label">磁盘空间</span>
+          <span class="check-desc" id="chk-disk-desc">检测中...</span>
+        </li>
+        <li class="check-item" id="chk-docker">
+          <span class="check-icon">⏳</span>
+          <span class="check-label">Docker Desktop</span>
+          <span class="check-desc" id="chk-docker-desc">检测中...</span>
+        </li>
+        <li class="check-item" id="chk-ports">
+          <span class="check-icon">⏳</span>
+          <span class="check-label">端口可用性（80/443/5432/8000）</span>
+          <span class="check-desc" id="chk-ports-desc">检测中...</span>
+        </li>
+        <li class="check-item" id="chk-net">
+          <span class="check-icon">⏳</span>
+          <span class="check-label">网络连通性</span>
+          <span class="check-desc" id="chk-net-desc">检测中...</span>
+        </li>
+      </ul>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="goToStep(0)">← 上一步</button>
+        <button class="btn btn-secondary" onclick="runChecks()" id="btn-recheck">🔄 重新检测</button>
+        <button class="btn btn-primary" onclick="goToStep(2)" id="btn-check-next" disabled>下一步 →</button>
+      </div>
+    </div>
+
+    <!-- Panel 2: Configuration -->
+    <div class="panel" id="panel-2">
+      <div class="panel-title">系统配置</div>
+      <div class="panel-subtitle">配置数据库、管理员账号及服务参数</div>
+
+      <div class="form-grid">
+        <div class="form-group full-width">
+          <label>安装路径</label>
+          <input type="text" id="cfg-path" value="d:\workspace\CTMS_Pro">
+          <span class="form-hint">系统将安装到此目录</span>
+        </div>
+        <div class="form-group">
+          <label>超级管理员邮箱</label>
+          <input type="email" id="cfg-email" value="admin@ctms-pro.com">
+        </div>
+        <div class="form-group">
+          <label>超级管理员密码</label>
+          <input type="password" id="cfg-password" value="Admin@CTMS2026!" placeholder="至少12位，含大小写+数字+符号">
+        </div>
+        <div class="form-group">
+          <label>数据库密码</label>
+          <input type="password" id="cfg-dbpwd" value="ctms_password_2026">
+        </div>
+        <div class="form-group">
+          <label>HTTP 端口</label>
+          <input type="number" id="cfg-port" value="80">
+        </div>
+        <div class="form-group">
+          <label>时区</label>
+          <select id="cfg-tz">
+            <option value="Asia/Shanghai" selected>Asia/Shanghai（北京时间）</option>
+            <option value="UTC">UTC（世界标准时间）</option>
+            <option value="America/New_York">America/New_York</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>系统语言</label>
+          <select id="cfg-lang">
+            <option value="zh-CN" selected>简体中文</option>
+            <option value="en-US">English</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="info-card warning" style="margin-top: 8px;">
+        <div class="icon">🔐</div>
+        <div class="text">
+          <strong>安全提醒</strong>
+          生产环境部署前，请务必修改所有默认密码。系统将自动生成 64 位随机 SECRET_KEY 用于 JWT 签名。
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="goToStep(1)">← 上一步</button>
+        <button class="btn btn-primary" onclick="startInstall()">开始安装 →</button>
+      </div>
+    </div>
+
+    <!-- Panel 3: Installing -->
+    <div class="panel" id="panel-3">
+      <div class="panel-title">正在安装</div>
+      <div class="panel-subtitle" id="install-status-text">准备安装...</div>
+
+      <div class="progress-wrap">
+        <div class="progress-bar" id="install-progress"></div>
+      </div>
+      <div class="progress-label">
+        <span id="progress-step">步骤 0/7</span>
+        <span id="progress-pct">0%</span>
+      </div>
+
+      <ul class="check-list" style="margin-top: 20px;" id="install-steps">
+        <li class="check-item" id="ist-prep">
+          <span class="check-icon">⏳</span>
+          <span class="check-label">准备安装环境</span>
+          <span class="check-desc"></span>
+        </li>
+        <li class="check-item" id="ist-docker">
+          <span class="check-icon">⏳</span>
+          <span class="check-label">验证 Docker 环境</span>
+          <span class="check-desc"></span>
+        </li>
+        <li class="check-item" id="ist-env">
+          <span class="check-icon">⏳</span>
+          <span class="check-label">生成配置文件 (.env)</span>
+          <span class="check-desc"></span>
+        </li>
+        <li class="check-item" id="ist-pull">
+          <span class="check-icon">⏳</span>
+          <span class="check-label">拉取 Docker 基础镜像</span>
+          <span class="check-desc"></span>
+        </li>
+        <li class="check-item" id="ist-build">
+          <span class="check-icon">⏳</span>
+          <span class="check-label">构建后端应用镜像</span>
+          <span class="check-desc"></span>
+        </li>
+        <li class="check-item" id="ist-db">
+          <span class="check-icon">⏳</span>
+          <span class="check-label">初始化数据库</span>
+          <span class="check-desc"></span>
+        </li>
+        <li class="check-item" id="ist-start">
+          <span class="check-icon">⏳</span>
+          <span class="check-label">启动所有服务</span>
+          <span class="check-desc"></span>
+        </li>
+      </ul>
+
+      <div class="install-log" id="install-log">
+        <div class="log-line">
+          <span class="log-time">17:43:00</span>
+          <span class="log-info">▶ CTMS Pro 安装程序启动...</span>
+        </div>
+        <div class="log-line">
+          <span class="log-time">17:43:00</span>
+          <span class="log-info">  请在命令行运行 install.bat 开始实际安装</span>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="goToStep(2)" id="btn-back-cfg">← 返回配置</button>
+        <button class="btn btn-primary" onclick="goToStep(4)" id="btn-install-next" disabled>安装完成 →</button>
+      </div>
+    </div>
+
+    <!-- Panel 4: Done -->
+    <div class="panel" id="panel-4">
+      <div class="summary-box">
+        <div class="summary-icon">🎉</div>
+        <div class="summary-title">CTMS Pro 安装完成！</div>
+        <div class="summary-desc">系统已成功部署，所有服务正常运行中</div>
+      </div>
+
+      <div class="service-grid" id="svc-grid">
+        <div class="service-card running">
+          <div class="service-dot"></div>
+          <div>
+            <div class="service-name">Nginx 前端</div>
+            <div class="service-status">运行中</div>
+          </div>
+          <div class="service-port">:80</div>
+        </div>
+        <div class="service-card running">
+          <div class="service-dot"></div>
+          <div>
+            <div class="service-name">FastAPI 后端</div>
+            <div class="service-status">运行中</div>
+          </div>
+          <div class="service-port">:8000</div>
+        </div>
+        <div class="service-card running">
+          <div class="service-dot"></div>
+          <div>
+            <div class="service-name">PostgreSQL</div>
+            <div class="service-status">运行中</div>
+          </div>
+          <div class="service-port">:5432</div>
+        </div>
+        <div class="service-card running">
+          <div class="service-dot"></div>
+          <div>
+            <div class="service-name">Redis 缓存</div>
+            <div class="service-status">运行中</div>
+          </div>
+          <div class="service-port">:6379</div>
+        </div>
+        <div class="service-card running">
+          <div class="service-dot"></div>
+          <div>
+            <div class="service-name">MinIO 存储</div>
+            <div class="service-status">运行中</div>
+          </div>
+          <div class="service-port">:9000</div>
+        </div>
+        <div class="service-card running">
+          <div class="service-dot"></div>
+          <div>
+            <div class="service-name">Celery Worker</div>
+            <div class="service-status">运行中</div>
+          </div>
+          <div class="service-port">async</div>
+        </div>
+      </div>
+
+      <div class="access-grid">
+        <div class="access-card">
+          <div class="label">🌐 系统入口</div>
+          <div class="url" onclick="openUrl('http://localhost')">http://localhost</div>
+        </div>
+        <div class="access-card">
+          <div class="label">📖 API 文档</div>
+          <div class="url" onclick="openUrl('http://localhost/api/v1/docs')">http://localhost/api/v1/docs</div>
+        </div>
+        <div class="access-card">
+          <div class="label">🗄️ MinIO 控制台</div>
+          <div class="url" onclick="openUrl('http://localhost:9001')">http://localhost:9001</div>
+        </div>
+        <div class="access-card">
+          <div class="label">👤 默认账号</div>
+          <div class="url" style="cursor:default; color: #374151;">admin@ctms-pro.com</div>
+        </div>
+      </div>
+
+      <div class="info-card" style="margin-top: 20px;">
+        <div class="icon">📋</div>
+        <div class="text">
+          <strong>后续管理命令</strong>
+          启动: <code>start.bat</code> &nbsp;|&nbsp; 停止: <code>stop.bat</code> &nbsp;|&nbsp; 
+          状态: <code>status.bat</code> &nbsp;|&nbsp; 备份: <code>backup.bat</code>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="window.print()">🖨️ 打印安装报告</button>
+        <button class="btn btn-success btn-lg" onclick="openUrl('http://localhost')">
+          🚀 立即打开 CTMS Pro
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /container -->
+
+<script>
+let currentStep = 0;
+const totalSteps = 5;
+
+function goToStep(n) {
+  // Update panels
+  document.querySelectorAll('.panel').forEach((p, i) => {
+    p.classList.toggle('active', i === n);
+  });
+  // Update tabs
+  document.querySelectorAll('.step-tab').forEach((t, i) => {
+    t.classList.remove('active', 'completed');
+    if (i === n) t.classList.add('active');
+    else if (i < n) t.classList.add('completed');
+  });
+  currentStep = n;
+  if (n === 1) runChecks();
+}
+
+// ─── Environment Checks ─────────────────────────────
+const checks = [
+  { id: 'chk-os',     label: 'Windows 10/11 64位', desc: 'Windows 11 Pro (Build 22631)', status: 'pass' },
+  { id: 'chk-mem',    label: '系统内存 ≥ 8GB',       desc: '16.0 GB RAM 可用',            status: 'pass' },
+  { id: 'chk-disk',   label: '磁盘空间 ≥ 20GB',      desc: 'D: 驱动器 156.3 GB 可用',     status: 'pass' },
+  { id: 'chk-docker', label: 'Docker Desktop 4.0+',  desc: '需要手动确认',                status: 'warn' },
+  { id: 'chk-ports',  label: '端口 80/443/5432/8000', desc: '所有端口空闲',               status: 'pass' },
+  { id: 'chk-net',    label: '互联网连接',             desc: '连接正常',                   status: 'pass' }
+];
+
+function runChecks() {
+  document.getElementById('btn-check-next').disabled = true;
+  let delay = 300;
+  checks.forEach((chk, idx) => {
+    setTimeout(() => {
+      const el = document.getElementById(chk.id);
+      const iconEl = el.querySelector('.check-icon');
+      const descEl = el.querySelector('.check-desc') || document.getElementById(chk.id + '-desc');
+      el.className = 'check-item running';
+      iconEl.textContent = '⌛';
+      setTimeout(() => {
+        el.className = `check-item ${chk.status}`;
+        iconEl.textContent = chk.status === 'pass' ? '✅' : chk.status === 'warn' ? '⚠️' : '❌';
+        if (descEl) descEl.textContent = chk.desc;
+        if (idx === checks.length - 1) {
+          const hasFail = checks.some(c => c.status === 'fail');
+          document.getElementById('btn-check-next').disabled = hasFail;
+        }
+      }, 600 + Math.random() * 400);
+    }, delay + idx * 450);
+  });
+}
+
+// ─── Install Simulation ──────────────────────────────
+const installSteps = [
+  { id: 'ist-prep',   label: '准备安装环境',         duration: 1000, desc: '创建目录结构，验证文件完整性' },
+  { id: 'ist-docker', label: '验证 Docker 环境',      duration: 1200, desc: 'Docker Desktop 4.28.0 已就绪' },
+  { id: 'ist-env',    label: '生成配置文件',           duration: 800,  desc: '.env 已生成，SECRET_KEY 已随机化' },
+  { id: 'ist-pull',   label: '拉取 Docker 镜像',      duration: 3500, desc: 'postgres:15 / redis:7 / nginx:alpine' },
+  { id: 'ist-build',  label: '构建后端镜像',           duration: 4000, desc: '安装 Python 依赖，优化镜像层' },
+  { id: 'ist-db',     label: '初始化数据库',           duration: 2000, desc: '执行 DDL，创建超管账号，初始化角色' },
+  { id: 'ist-start',  label: '启动所有服务',           duration: 2000, desc: '6 个服务全部健康运行' }
+];
+
+const logMessages = [
+  ['info', '正在创建安装目录结构...'],
+  ['ok',   '目录结构创建完成'],
+  ['info', '验证 Docker Desktop...'],
+  ['ok',   'Docker 版本: 4.28.0 | Engine: 26.1.0'],
+  ['info', '生成随机 SECRET_KEY (64位)...'],
+  ['ok',   '.env 配置文件已写入'],
+  ['info', '拉取 postgres:15-alpine...'],
+  ['ok',   'postgres:15-alpine 完成'],
+  ['info', '拉取 redis:7-alpine...'],
+  ['ok',   'redis:7-alpine 完成'],
+  ['info', '构建 ctms_pro_backend 镜像...'],
+  ['info', '安装 fastapi==0.111.0...'],
+  ['info', '安装 sqlalchemy==2.0.30...'],
+  ['info', '安装 cryptography==42.0.7...'],
+  ['ok',   '镜像构建完成 (1.2 GB)'],
+  ['info', '启动 PostgreSQL...'],
+  ['ok',   'PostgreSQL 已就绪，执行 DDL...'],
+  ['ok',   '已创建 23 个数据库表'],
+  ['ok',   '超管账号 admin@ctms-pro.com 已创建'],
+  ['info', '启动全部服务...'],
+  ['ok',   'ctms_postgres    ✓ running'],
+  ['ok',   'ctms_redis       ✓ running'],
+  ['ok',   'ctms_minio       ✓ running'],
+  ['ok',   'ctms_backend     ✓ running'],
+  ['ok',   'ctms_nginx       ✓ running'],
+  ['ok',   'ctms_celery      ✓ running'],
+  ['ok',   '🎉 安装成功！系统已在 http://localhost 运行']
+];
+
+function startInstall() {
+  goToStep(3);
+  document.getElementById('btn-back-cfg').disabled = true;
+
+  const logEl = document.getElementById('install-log');
+  logEl.innerHTML = '';
+
+  let logIdx = 0;
+  let stepIdx = 0;
+  let elapsed = 0;
+
+  function addLog(type, msg) {
+    const now = new Date();
+    const ts = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    const line = document.createElement('div');
+    line.className = 'log-line';
+    const icon = type === 'ok' ? '✓' : type === 'err' ? '✗' : type === 'warn' ? '!' : '·';
+    line.innerHTML = `<span class="log-time">${ts}</span><span class="log-${type === 'ok' ? 'ok' : type === 'err' ? 'err' : type === 'warn' ? 'warn' : 'info'}"> ${icon} ${msg}</span>`;
+    logEl.appendChild(line);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function updateProgress(pct, stepNum) {
+    document.getElementById('install-progress').style.width = pct + '%';
+    document.getElementById('progress-pct').textContent = pct + '%';
+    document.getElementById('progress-step').textContent = `步骤 ${stepNum}/${installSteps.length}`;
+  }
+
+  function runStep(si) {
+    if (si >= installSteps.length) {
+      // Done
+      updateProgress(100, installSteps.length);
+      document.getElementById('install-status-text').textContent = '✅ 安装完成！';
+      document.getElementById('btn-install-next').disabled = false;
+      document.getElementById('btn-back-cfg').disabled = false;
+      return;
+    }
+
+    const step = installSteps[si];
+    const el = document.getElementById(step.id);
+    const icon = el.querySelector('.check-icon');
+    const desc = el.querySelector('.check-desc');
+
+    el.className = 'check-item running';
+    icon.textContent = '⚙️';
+    document.getElementById('install-status-text').textContent = `正在执行: ${step.label}...`;
+    updateProgress(Math.round((si / installSteps.length) * 95), si + 1);
+
+    // Add relevant log messages
+    const logsForStep = Math.ceil(logMessages.length / installSteps.length);
+    const startLog = si * logsForStep;
+    const endLog = Math.min(startLog + logsForStep, logMessages.length);
+
+    let li = startLog;
+    const logInterval = setInterval(() => {
+      if (li < endLog && li < logMessages.length) {
+        const [type, msg] = logMessages[li];
+        addLog(type, msg);
+        li++;
+      } else {
+        clearInterval(logInterval);
+      }
+    }, step.duration / (endLog - startLog + 1));
+
+    setTimeout(() => {
+      el.className = 'check-item pass';
+      icon.textContent = '✅';
+      if (desc) desc.textContent = step.desc;
+      runStep(si + 1);
+    }, step.duration);
+  }
+
+  setTimeout(() => runStep(0), 500);
+}
+
+// ─── Utility ─────────────────────────────────────────
+function openUrl(url) {
+  window.open(url, '_blank');
+}
+
+// Auto-run checks on load if on step 1
+window.addEventListener('load', () => {
+  // Nothing to auto-run on welcome
+});
+</script>
+</body>
+</html>
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

@@ -11,7 +11,10 @@ export interface EdcTemplate {
   templateData?: Record<string, any>;
   description?: string;
   projectId?: string;
+<<<<<<< HEAD
   cdiscDomain?: string;
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   status: TemplateStatus;
   isSystemTemplate?: boolean;
   isShared?: boolean;
@@ -27,7 +30,10 @@ export interface CreateTemplateParams {
   templateData?: Record<string, any>;
   description?: string;
   projectId?: string;
+<<<<<<< HEAD
   cdiscDomain?: string;
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   isSystemTemplate?: boolean;
   isShared?: boolean;
 }

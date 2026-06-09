@@ -14,9 +14,14 @@
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
+<<<<<<< HEAD
     "adm-zip": "^0.5.17",
     "axios": "^1.16.0",
     "bcryptjs": "^3.0.3",
+=======
+    "axios": "^1.16.0",
+    "bcrypt": "^5.1.1",
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
@@ -28,20 +33,30 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+<<<<<<< HEAD
     "@types/adm-zip": "^0.5.8",
     "@types/bcrypt": "^5.0.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/chai": "^5.2.3",
+=======
+    "@types/bcrypt": "^5.0.2",
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/jest": "^30.0.0",
     "@types/jsonwebtoken": "^9.0.7",
+<<<<<<< HEAD
     "@types/mocha": "^10.0.10",
     "@types/node": "^22.5.0",
     "@types/supertest": "^7.2.0",
     "chai": "^6.2.2",
     "jest": "^30.4.0",
     "mocha": "^11.7.6",
+=======
+    "@types/node": "^22.5.0",
+    "@types/supertest": "^7.2.0",
+    "jest": "^30.4.0",
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     "prisma": "^5.22.0",
     "supertest": "^7.2.2",
     "ts-jest": "^29.4.9",

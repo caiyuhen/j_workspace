@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 [
   {
     "name": "倪欣然_Predicted_Brace",
@@ -33,4 +34,41 @@
       "compliance": 0.9
     }
   }
+=======
+[
+  {
+    "name": "倪欣然_Predicted_Brace",
+    "metrics": {
+      "kyphosis_max": 23.68,
+      "lordosis_max": 17.68,
+      "coronal_offset_max": 239.0,
+      "sagittal_offset_max": 0
+    },
+    "curve_data": {
+      "coronal_offsets": [],
+      "sagittal_angles": [],
+      "vertebral_rotation": [
+        0.0,
+        0.0,
+        -2.7408,
+        -4.568,
+        0.0,
+        -6.3952,
+        -4.568,
+        1.8272,
+        7.3088,
+        16.4448,
+        10.0496,
+        -7.3088,
+        -9.136
+      ]
+    },
+    "original_name": "倪欣然",
+    "treatment_plan": {
+      "type": "Brace",
+      "duration": 12,
+      "compliance": 0.9
+    }
+  }
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 ]

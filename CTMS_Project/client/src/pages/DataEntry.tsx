@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+<<<<<<< HEAD
 import {  Table, Form, Input, Select, Space, Button, Drawer, Tag, Card, Row, Col, Spin, Empty, App } from 'antd';
+=======
+import {  Table, Form, Input, Select, Space, Button, Drawer, Tag, Card, Row, Col, Spin, Empty, List , App } from 'antd';
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 import { SaveOutlined, HistoryOutlined, CheckCircleOutlined, EditOutlined, QuestionCircleOutlined, LockOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import PageHeader from '@/components/PageHeader';
@@ -238,6 +242,7 @@ const DataEntryPage: React.FC = () => {
         {changeHistory.length === 0 ? (
           <Empty description="无变更记录" />
         ) : (
+<<<<<<< HEAD
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {changeHistory.map((h, index) => (
               <Card key={index} size="small" title={h.reason || '数据修改'}>
@@ -250,6 +255,31 @@ const DataEntryPage: React.FC = () => {
               </Card>
             ))}
           </div>
+=======
+          <List
+            dataSource={changeHistory}
+            renderItem={(h) => {
+          
+              return (
+                <List.Item>
+                  <List.Item.Meta
+                    title={h.reason || '数据修改'}
+                    description={
+                      <>
+                        <div>
+                          从 <b>{h.oldValue != null ? JSON.stringify(h.oldValue) : '空'}</b> 修改为 <b>{h.newValue != null ? JSON.stringify(h.newValue) : '空'}</b>
+                        </div>
+                        <div style={{ fontSize: 12, color: '#999', marginTop: 4 }}>
+                          {h.changedBy?.displayName || h.changedBy?.id || '未知用户'} - {h.changedAt ? dayjs(h.changedAt).format('YYYY-MM-DD HH:mm:ss') : ''}
+                        </div>
+                      </>
+                    }
+                  />
+                </List.Item>
+              );
+            }}
+          />
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
         )}
       </Drawer>
     </>

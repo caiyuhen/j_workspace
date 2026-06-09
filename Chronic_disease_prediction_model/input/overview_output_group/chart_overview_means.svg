@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680">
 <rect x="0" y="0" width="1200" height="680" fill="white"/>
 <text x="600.0" y="36" text-anchor="middle" font-size="24" font-family="Arial">Overview Metric Means</text>
@@ -30,4 +31,38 @@
 <rect x="969.0" y="70.0" width="186.0" height="530.0" fill="#4F81BD"/>
 <text x="1062.0" y="64.0" text-anchor="middle" font-size="10" font-family="Arial">0.9525</text>
 <text x="1062.0" y="618" text-anchor="middle" font-size="10" font-family="Arial" transform="rotate(30 1062.0,618)">auroc</text>
+=======
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680">
+<rect x="0" y="0" width="1200" height="680" fill="white"/>
+<text x="600.0" y="36" text-anchor="middle" font-size="24" font-family="Arial">Overview Metric Means</text>
+<line x1="180" y1="600" x2="1160" y2="600" stroke="#333" stroke-width="1"/>
+<line x1="180" y1="70" x2="180" y2="600" stroke="#333" stroke-width="1"/>
+<line x1="180" y1="600.0" x2="1160" y2="600.0" stroke="#eee" stroke-width="1"/>
+<text x="170" y="604.0" text-anchor="end" font-size="11" font-family="Arial">0.000</text>
+<line x1="180" y1="494.0" x2="1160" y2="494.0" stroke="#eee" stroke-width="1"/>
+<text x="170" y="498.0" text-anchor="end" font-size="11" font-family="Arial">0.190</text>
+<line x1="180" y1="388.0" x2="1160" y2="388.0" stroke="#eee" stroke-width="1"/>
+<text x="170" y="392.0" text-anchor="end" font-size="11" font-family="Arial">0.381</text>
+<line x1="180" y1="282.0" x2="1160" y2="282.0" stroke="#eee" stroke-width="1"/>
+<text x="170" y="286.0" text-anchor="end" font-size="11" font-family="Arial">0.571</text>
+<line x1="180" y1="176.0" x2="1160" y2="176.0" stroke="#eee" stroke-width="1"/>
+<text x="170" y="180.0" text-anchor="end" font-size="11" font-family="Arial">0.762</text>
+<line x1="180" y1="70.0" x2="1160" y2="70.0" stroke="#eee" stroke-width="1"/>
+<text x="170" y="74.0" text-anchor="end" font-size="11" font-family="Arial">0.952</text>
+<rect x="185.0" y="94.69861724638065" width="186.0" height="505.30138275361935" fill="#4F81BD"/>
+<text x="278.0" y="88.69861724638065" text-anchor="middle" font-size="10" font-family="Arial">0.9081</text>
+<text x="278.0" y="618" text-anchor="middle" font-size="10" font-family="Arial" transform="rotate(30 278.0,618)">accuracy</text>
+<rect x="381.0" y="99.87044238169528" width="186.0" height="500.1295576183047" fill="#4F81BD"/>
+<text x="474.0" y="93.87044238169528" text-anchor="middle" font-size="10" font-family="Arial">0.8988</text>
+<text x="474.0" y="618" text-anchor="middle" font-size="10" font-family="Arial" transform="rotate(30 474.0,618)">precision</text>
+<rect x="577.0" y="91.5086270223988" width="186.0" height="508.4913729776012" fill="#4F81BD"/>
+<text x="670.0" y="85.5086270223988" text-anchor="middle" font-size="10" font-family="Arial">0.9138</text>
+<text x="670.0" y="618" text-anchor="middle" font-size="10" font-family="Arial" transform="rotate(30 670.0,618)">recall</text>
+<rect x="773.0" y="96.1404128016531" width="186.0" height="503.8595871983469" fill="#4F81BD"/>
+<text x="866.0" y="90.1404128016531" text-anchor="middle" font-size="10" font-family="Arial">0.9055</text>
+<text x="866.0" y="618" text-anchor="middle" font-size="10" font-family="Arial" transform="rotate(30 866.0,618)">f1</text>
+<rect x="969.0" y="70.0" width="186.0" height="530.0" fill="#4F81BD"/>
+<text x="1062.0" y="64.0" text-anchor="middle" font-size="10" font-family="Arial">0.9525</text>
+<text x="1062.0" y="618" text-anchor="middle" font-size="10" font-family="Arial" transform="rotate(30 1062.0,618)">auroc</text>
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 </svg>

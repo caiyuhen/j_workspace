@@ -24,11 +24,16 @@ const siteStatusMap: StatusColorMap = {
 // 伦理/合同状态
 const ethicsStatusMap: StatusColorMap = {
   pending: 'processing',
+<<<<<<< HEAD
   under_review: 'processing',
   approved: 'success',
   conditionally_approved: 'warning',
   rejected: 'error',
   withdrawn: 'default',
+=======
+  approved: 'success',
+  rejected: 'error',
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   not_required: 'default',
 };
 
@@ -136,7 +141,11 @@ const drugStatusMap: StatusColorMap = {
 const statusLabelMap: Record<string, Record<string, string>> = {
   project: { planning: '计划中', recruiting: '招募中', active: '进行中', paused: '暂停', completed: '已完成', terminated: '终止' },
   site: { active: '活跃', inactive: '停用', suspended: '暂停', closed: '关闭' },
+<<<<<<< HEAD
   ethics: { pending: '待审批', under_review: '审查中', approved: '已批准', conditionally_approved: '附条件批准', rejected: '已拒绝', withdrawn: '已撤回', not_required: '不需要' },
+=======
+  ethics: { pending: '待审批', approved: '已批准', rejected: '已拒绝', not_required: '不需要' },
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   contract: { pending: '待签署', signed: '已签署', terminated: '已终止' },
   enrollment: { screening: '筛选中', enrolled: '已入组', randomized: '已随机', ongoing: '进行中', completed: '已完成', discontinued: '退出', withdrawn: '撤回' },
   queryPriority: { low: '低', medium: '中', high: '高', critical: '紧急' },

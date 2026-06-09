@@ -1,6 +1,10 @@
 generator client {
+<<<<<<< HEAD
   provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
+=======
+  provider = "prisma-client-js"
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 }
 
 datasource db {
@@ -30,7 +34,10 @@ model User {
   auditLogs         AuditLog[]          @relation("AuditUser")
   userRoles         UserRole[]
   wechatBindings    WechatUserBinding[]
+<<<<<<< HEAD
   doctorPatients    DoctorPatientRecord[]
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 
   @@map("users")
 }
@@ -1469,6 +1476,7 @@ model SdtmExportConfig {
   @@index([projectId], map: "idx_sdtm_export_configs_project")
   @@map("sdtm_export_configs")
 }
+<<<<<<< HEAD
 
 model SdtmExport {
   id           String   @id @default(uuid())
@@ -1530,3 +1538,5 @@ model DoctorFormTemplate {
 
   @@map("doctor_form_templates")
 }
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

@@ -1,4 +1,11 @@
+<<<<<<< HEAD
 fastapi==0.116.1
 uvicorn==0.35.0
 httpx==0.28.1
 pytest==8.4.1
+=======
+fastapi==0.116.1
+uvicorn==0.35.0
+httpx==0.28.1
+pytest==8.4.1
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

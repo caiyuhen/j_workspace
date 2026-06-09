@@ -605,7 +605,11 @@ describe('Flow 7: 综合模块可用性检查', () => {
     { method: 'get', path: '/api/audit', desc: '审计日志' },
   ];
 
+<<<<<<< HEAD
   test.each(endpoints)('$desc 端点可访问', async ({ method, path }: any) => {
+=======
+  test.each(endpoints)('$desc 端点可访问', async ({ method, path }) => {
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     if (!token) return;
 
     const res = await (request(app) as any)[method](path)
