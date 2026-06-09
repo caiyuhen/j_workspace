@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import {  Table, Modal, Form, Input, Select, Space, Button, Drawer, Descriptions, Tag, Progress , App } from 'antd';
+=======
+import {  Table, Modal, Form, Input, Select, Space, Button, Drawer, Descriptions, Tag, List, Progress , App } from 'antd';
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 import {  Table, Modal, Form, Input, Select, Space, Button, Drawer, Descriptions, Tag, List, Progress , App } from 'antd';
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
@@ -250,6 +254,7 @@ const SdvPage: React.FC = () => {
 
             <h4 style={{ marginBottom: 8 }}>核查项明细</h4>
 <<<<<<< HEAD
+<<<<<<< HEAD
             <Table
               loading={itemsLoading}
               dataSource={items}
@@ -295,6 +300,8 @@ const SdvPage: React.FC = () => {
                 }
               ]}
 =======
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
             <List
               loading={itemsLoading}
               dataSource={items}
@@ -331,6 +338,9 @@ const SdvPage: React.FC = () => {
                   />
                 </List.Item>
               )}
+<<<<<<< HEAD
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
             />
           </>

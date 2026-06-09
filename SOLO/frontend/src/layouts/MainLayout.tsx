@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { Layout, Menu, Avatar, Dropdown, Button, theme } from 'antd'
+import type { MenuProps } from 'antd'
 import {
   DashboardOutlined,
   MessageOutlined,
@@ -17,7 +18,7 @@ import { useAuthStore } from '../stores/authStore'
 
 const { Header, Sider, Content } = Layout
 
-const menuItems = [
+const menuItems: MenuProps['items'] = [
   { key: '/chat', icon: <MessageOutlined />, label: '智能对话' },
   { key: '/agents', icon: <RobotOutlined />, label: '代理管理' },
   { key: '/skills', icon: <ToolOutlined />, label: '技能中心' },
@@ -38,7 +39,7 @@ export default function MainLayout() {
     navigate('/login')
   }
   
-  const userMenuItems = [
+  const userMenuItems: MenuProps['items'] = [
     {
       key: 'profile',
       icon: <UserOutlined />,
@@ -51,7 +52,7 @@ export default function MainLayout() {
       onClick: () => navigate('/settings')
     },
     {
-      type: 'divider'
+      type: 'divider' as const
     },
     {
       key: 'logout',

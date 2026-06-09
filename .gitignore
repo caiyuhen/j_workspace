@@ -4,7 +4,10 @@
 *.gz
 *.rar
 <<<<<<< HEAD
+<<<<<<< HEAD
 *.7z
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 
@@ -21,10 +24,13 @@ __pycache__/
 venv/
 .env
 <<<<<<< HEAD
+<<<<<<< HEAD
 *.egg-info/
 dist/
 build/
 *.whl
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 
@@ -34,7 +40,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 <<<<<<< HEAD
+<<<<<<< HEAD
 .pnpm-store/
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 
@@ -49,13 +58,17 @@ yarn-error.log*
 *.pth
 Image_project - 副本/
 <<<<<<< HEAD
+<<<<<<< HEAD
 
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 # ML Artifacts
 checkpoint-*/
 output/
 *_cache.pkl
+<<<<<<< HEAD
 <<<<<<< HEAD
 
 # Nested repos/workspaces
@@ -166,6 +179,11 @@ projects/
 **/postgres_data/
 **/mysql_data/
 **/redis_data/
+=======
+ 
+# Nested repos/workspaces
+openclaw-main/workspace/
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
  
 # Nested repos/workspaces

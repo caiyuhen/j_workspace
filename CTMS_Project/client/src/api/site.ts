@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import api from '@/api';
 import type {
   Site, CreateSiteParams, UpdateSiteParams,
@@ -33,6 +34,8 @@ export const siteApi = {
     api.delete(`/sites/${siteId}/staff/${staffId}`).then((r) => r.data.data),
 };
 =======
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 import api from '@/api';
 import type {
   Site, CreateSiteParams, UpdateSiteParams,
@@ -66,4 +69,7 @@ export const siteApi = {
   deleteStaff: (siteId: string, staffId: string) =>
     api.delete(`/sites/${siteId}/staff/${staffId}`).then((r) => r.data.data),
 };
+<<<<<<< HEAD
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

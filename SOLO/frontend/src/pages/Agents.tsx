@@ -2,19 +2,14 @@ import { useEffect, useState } from 'react'
 import { Card, Row, Col, List, Tag, Typography, Badge, Descriptions, Empty, Button, Space, Modal, Form, Input, Select, message, Divider, Spin } from 'antd'
 import {
   RobotOutlined,
-  CheckCircleOutlined,
-  SyncOutlined,
-  CloseCircleOutlined,
   ThunderboltOutlined,
   CloudDownloadOutlined,
   UploadOutlined,
-  PlusOutlined,
-  DeleteOutlined,
   PlayCircleOutlined
 } from '@ant-design/icons'
 import { agentApi, Agent } from '../services/api'
 
-const { Title, Text, Paragraph } = Typography
+const { Title, Text } = Typography
 
 const agentDescriptions: Record<string, { desc: string; color: string }> = {
   orchestrator: { desc: '任务编排代理，负责分解和协调复杂任务', color: '#722ed1' },
@@ -126,7 +121,7 @@ export default function Agents() {
     }
   }
   
-  const handleImportLocal = async (values: any) => {
+  const handleImportLocal = async (_values: any) => {
     try {
       // 这里应该调用后端 API 创建代理
       message.success('导入成功')
@@ -351,7 +346,7 @@ export default function Agents() {
               label: '通过 URL 安装',
               icon: <RobotOutlined />,
               children: (
-                <Form layout="vertical" onFinish={(values) => {
+                <Form layout="vertical" onFinish={() => {
                   message.success('安装成功')
                   setInstallModalVisible(false)
                 }}>

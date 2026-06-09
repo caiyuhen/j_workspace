@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import React, { useEffect, useState } from 'react';
 import { DataGrid, type GridColDef, type GridRenderCellParams } from '@mui/x-data-grid';
 import { Typography, Paper, Chip, Tabs, Tab, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Stack } from '@mui/material';
@@ -668,6 +669,8 @@ const Monitoring: React.FC = () => {
 
 export default Monitoring;
 =======
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 import React, { useEffect, useState } from 'react';
 import { DataGrid, type GridColDef, type GridRenderCellParams } from '@mui/x-data-grid';
 import { Typography, Paper, Chip, Tabs, Tab, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Stack } from '@mui/material';
@@ -1336,4 +1339,7 @@ const Monitoring: React.FC = () => {
 };
 
 export default Monitoring;
+<<<<<<< HEAD
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

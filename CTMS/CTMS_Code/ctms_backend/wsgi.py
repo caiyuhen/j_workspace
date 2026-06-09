@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 """
 WSGI config for ctms_backend project.
 
@@ -16,6 +17,8 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ctms_backend.settings")
 
 application = get_wsgi_application()
 =======
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 """
 WSGI config for ctms_backend project.
 
@@ -32,4 +35,7 @@ from django.core.wsgi import get_wsgi_application
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ctms_backend.settings")
 
 application = get_wsgi_application()
+<<<<<<< HEAD
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

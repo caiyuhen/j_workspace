@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -79,6 +80,8 @@ def sensitive_operation(payload: SensitiveOperation) -> dict:
     conn.commit()
     return {"status": "approved"}
 =======
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -158,4 +161,7 @@ def sensitive_operation(payload: SensitiveOperation) -> dict:
     )
     conn.commit()
     return {"status": "approved"}
+<<<<<<< HEAD
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
