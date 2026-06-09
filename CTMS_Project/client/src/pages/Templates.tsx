@@ -172,7 +172,10 @@ const TemplatesPage: React.FC = () => {
       title: '类型', dataIndex: 'templateType', key: 'templateType', width: 110,
       render: (v: string) => templateTypeOptions.find(o => o.value === v)?.label || v },
 <<<<<<< HEAD
+<<<<<<< HEAD
     { title: 'CDISC域', dataIndex: 'cdiscDomain', key: 'cdiscDomain', width: 100, render: (v: string) => v ? <Tag color="cyan">{v}</Tag> : '-' },
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     { title: '版本', dataIndex: 'version', key: 'version', width: 80 },
@@ -265,6 +268,7 @@ const TemplatesPage: React.FC = () => {
             </Form.Item>
           </Space>
 <<<<<<< HEAD
+<<<<<<< HEAD
           <Form.Item name="cdiscDomain" label="CDISC/CDASH域">
             <Select placeholder="请选择CDISC域" allowClear>
               <Select.Option value="DM">Demographics (DM)</Select.Option>
@@ -276,6 +280,8 @@ const TemplatesPage: React.FC = () => {
               <Select.Option value="IE">Inclusion/Exclusion (IE)</Select.Option>
             </Select>
           </Form.Item>
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
           <Form.Item name="projectId" label="适用项目">

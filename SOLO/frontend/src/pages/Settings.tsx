@@ -1,23 +1,21 @@
 import { useState } from 'react'
-import { Card, Form, Input, Button, Switch, Select, Divider, message, Typography, Space, Descriptions, Tag } from 'antd'
+import { Card, Form, Input, Button, Switch, Select, message, Typography, Descriptions, Tag } from 'antd'
 import {
   UserOutlined,
   LockOutlined,
-  BellOutlined,
   ApiOutlined,
   DatabaseOutlined
 } from '@ant-design/icons'
 import { useAuthStore } from '../stores/authStore'
-import { authApi } from '../services/api'
 
-const { Title, Text, Paragraph } = Typography
+const { Title, Text } = Typography
 
 export default function Settings() {
   const [loading, setLoading] = useState(false)
   const { user } = useAuthStore()
   const [form] = Form.useForm()
   
-  const handleUpdateProfile = async (values: Record<string, string>) => {
+  const handleUpdateProfile = async (_values: Record<string, string>) => {
     setLoading(true)
     try {
       // 调用更新API

@@ -270,7 +270,20 @@ async def chat(
     
     conversation = _conversations_db.get(conversation_id)
     if not conversation:
-        raise HTTPException(status_code=404, detail="对话不存在")
+        # 当前项目使用内存存储，对话在服务重启后会丢失。
+        # 为了提升前端体验：如果前端带着旧的 conversation_id 发来消息，这里自动重建对话而不是直接 404。
+        now = datetime.now()
+        _conversations_db[conversation_id] = {
+            "id": conversation_id,
+            "user_id": current_user.user_id,
+            "title": request.message[:50] + ("..." if len(request.message) > 50 else ""),
+            "status": "active",
+            "message_count": 0,
+            "created_at": now,
+            "updated_at": now
+        }
+        _messages_db[conversation_id] = []
+        conversation = _conversations_db[conversation_id]
     
     if conversation.get("user_id") != current_user.user_id:
         raise HTTPException(status_code=403, detail="无权访问此对话")

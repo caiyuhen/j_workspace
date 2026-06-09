@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import api from './index';
 import type { ApiResponse, PaginatedResponse } from '@/types';
 import type { User, CreateUserParams, UpdateUserParams, Role, CreateRoleParams, Organization } from '@/types';
@@ -50,6 +51,8 @@ export const settingsApi = {
     api.delete(`/organizations/${id}`).then((r) => r.data),
 };
 =======
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 import api from './index';
 import type { ApiResponse, PaginatedResponse } from '@/types';
 import type { User, CreateUserParams, UpdateUserParams, Role, CreateRoleParams, Organization } from '@/types';
@@ -100,4 +103,7 @@ export const settingsApi = {
   deleteOrganization: (id: string) =>
     api.delete(`/organizations/${id}`).then((r) => r.data),
 };
+<<<<<<< HEAD
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

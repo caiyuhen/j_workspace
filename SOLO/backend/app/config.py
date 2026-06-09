@@ -24,7 +24,8 @@ class Settings(BaseSettings):
     # LLM服务配置（内置RAG）
     LLM_ENDPOINT: str = "http://192.168.0.214:8802"
     LLM_MODEL: str = "medical-large"
-    LLM_TIMEOUT: int = 300000  # 增加到300秒
+    # 单位：毫秒（LLMService 内部会除以 1000 传给 httpx）
+    LLM_TIMEOUT: int = 3000000  # 3000秒
     
     # JWT配置
     SECRET_KEY: str = "your-super-secret-key-change-in-production"

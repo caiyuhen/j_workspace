@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import api from '@/api';
 import type {
   Project, CreateProjectParams, UpdateProjectParams,
@@ -44,6 +45,8 @@ export const projectApi = {
     api.delete(`/projects/${projectId}/milestones/${milestoneId}`).then((r) => r.data.data),
 };
 =======
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 import api from '@/api';
 import type {
   Project, CreateProjectParams, UpdateProjectParams,
@@ -88,4 +91,7 @@ export const projectApi = {
   deleteMilestone: (projectId: string, milestoneId: string) =>
     api.delete(`/projects/${projectId}/milestones/${milestoneId}`).then((r) => r.data.data),
 };
+<<<<<<< HEAD
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

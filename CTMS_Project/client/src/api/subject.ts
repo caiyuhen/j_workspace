@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import api from '@/api';
 import type {
   Subject, CreateSubjectParams, UpdateSubjectParams,
@@ -27,6 +28,8 @@ export const subjectApi = {
     api.post<ApiResponse<Visit>>(`/edc/subjects/${subjectId}/visits`, data).then((r) => r.data.data),
 };
 =======
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 import api from '@/api';
 import type {
   Subject, CreateSubjectParams, UpdateSubjectParams,
@@ -54,4 +57,7 @@ export const subjectApi = {
   createVisit: (subjectId: string, data: CreateVisitParams) =>
     api.post<ApiResponse<Visit>>(`/edc/subjects/${subjectId}/visits`, data).then((r) => r.data.data),
 };
+<<<<<<< HEAD
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

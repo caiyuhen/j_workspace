@@ -9,7 +9,7 @@ import {
 import { useNavigate } from 'react-router-dom'
 import { conversationApi, Conversation } from '../services/api'
 
-const { Title, Text, Paragraph } = Typography
+const { Title, Text } = Typography
 
 export default function History() {
   const [conversations, setConversations] = useState<Conversation[]>([])

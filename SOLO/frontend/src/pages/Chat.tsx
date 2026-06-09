@@ -64,6 +64,14 @@ export default function Chat() {
         agent_type: m.agent_type
       })))
     } catch (error) {
+      // 后端当前使用内存存储，对话在服务重启后会丢失；此时需要回退到新对话
+      const status = (error as any)?.response?.status
+      if (status === 404) {
+        message.warning('该对话已失效（服务重启后会丢失），已为你回到新对话')
+        clearMessages()
+        navigate('/chat', { replace: true })
+        return
+      }
       console.error('加载对话失败:', error)
     }
   }
@@ -138,15 +146,24 @@ export default function Chat() {
       loading: true
     })
     
+    let retried = false
     try {
-      const res = await conversationApi.sendMessage({
-        message: userMessage,
-        conversation_id: conversationId,
-        agent_type: selectedAgent || undefined
-      })
+      const doSend = (overrideConversationId?: string) =>
+        conversationApi.sendMessage({
+          message: userMessage,
+          conversation_id: overrideConversationId,
+          agent_type: selectedAgent || undefined
+        })
+
+      let res = await doSend(conversationId)
+      // 如果当前对话在后端不存在（常见于后端重启导致内存丢失），自动重试创建新对话
+      if ((res as any)?.response?.status === 404) {
+        throw res
+      }
       
       // 更新助手消息
-      const newMessages = [...messages]
+      const currentMessages = useChatStore.getState().messages
+      const newMessages = [...currentMessages]
       const lastMessage = newMessages[newMessages.length - 1]
       if (lastMessage && lastMessage.id === assistantMessageId) {
         lastMessage.content = res.data.message.content
@@ -160,9 +177,38 @@ export default function Chat() {
         navigate(`/chat/${res.data.conversation_id}`, { replace: true })
       }
     } catch (error) {
+      const status = (error as any)?.response?.status
+      if (status === 404 && conversationId && !retried) {
+        retried = true
+        message.warning('当前对话已失效（服务重启后会丢失），已为你创建新对话并重试')
+        try {
+          const res = await conversationApi.sendMessage({
+            message: userMessage,
+            agent_type: selectedAgent || undefined
+          })
+          // 更新助手消息
+          const currentMessages = useChatStore.getState().messages
+          const newMessages = [...currentMessages]
+          const lastMessage = newMessages[newMessages.length - 1]
+          if (lastMessage && lastMessage.id === assistantMessageId) {
+            lastMessage.content = res.data.message.content
+            lastMessage.agent_type = res.data.agent_used
+            lastMessage.loading = false
+            setMessages(newMessages)
+          }
+          if (res.data.conversation_id) {
+            navigate(`/chat/${res.data.conversation_id}`, { replace: true })
+          }
+          return
+        } catch (_e2) {
+          // fallthrough
+        }
+      }
+
       message.error('发送消息失败')
       // 移除加载中的消息
-      const newMessages = messages.filter(m => m.id !== assistantMessageId)
+      const currentMessages = useChatStore.getState().messages
+      const newMessages = currentMessages.filter(m => m.id !== assistantMessageId)
       setMessages(newMessages)
     } finally {
       setLoading(false)

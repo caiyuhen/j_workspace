@@ -25,11 +25,16 @@ const siteStatusMap: StatusColorMap = {
 const ethicsStatusMap: StatusColorMap = {
   pending: 'processing',
 <<<<<<< HEAD
+<<<<<<< HEAD
   under_review: 'processing',
   approved: 'success',
   conditionally_approved: 'warning',
   rejected: 'error',
   withdrawn: 'default',
+=======
+  approved: 'success',
+  rejected: 'error',
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
   approved: 'success',
   rejected: 'error',
@@ -142,7 +147,11 @@ const statusLabelMap: Record<string, Record<string, string>> = {
   project: { planning: '计划中', recruiting: '招募中', active: '进行中', paused: '暂停', completed: '已完成', terminated: '终止' },
   site: { active: '活跃', inactive: '停用', suspended: '暂停', closed: '关闭' },
 <<<<<<< HEAD
+<<<<<<< HEAD
   ethics: { pending: '待审批', under_review: '审查中', approved: '已批准', conditionally_approved: '附条件批准', rejected: '已拒绝', withdrawn: '已撤回', not_required: '不需要' },
+=======
+  ethics: { pending: '待审批', approved: '已批准', rejected: '已拒绝', not_required: '不需要' },
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
   ethics: { pending: '待审批', approved: '已批准', rejected: '已拒绝', not_required: '不需要' },
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

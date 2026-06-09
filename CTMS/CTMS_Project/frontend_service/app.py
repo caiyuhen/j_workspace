@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
@@ -124,6 +125,8 @@ def index() -> str:
 </html>
 """
 =======
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
@@ -248,4 +251,7 @@ def index() -> str:
 </body>
 </html>
 """
+<<<<<<< HEAD
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

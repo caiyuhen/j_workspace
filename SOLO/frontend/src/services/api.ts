@@ -99,6 +99,7 @@ export interface Skill {
   category: string
   protocol: string
   is_active: boolean
+  is_builtin?: boolean
   usage_count: number
 }
 
@@ -186,7 +187,7 @@ export const agentApi = {
     api.get<Agent[]>('/agents'),
   
   get: (name: string) => 
-    api.get<Agent>(`/agents/${name}`),
+    api.get<Agent>(`/agents/detail/${name}`),
   
   getStatus: () => 
     api.get<Record<string, string>>('/agents/status'),
@@ -207,10 +208,10 @@ export const skillApi = {
     api.get<Skill[]>('/skills'),
   
   get: (id: string) => 
-    api.get<Skill>(`/skills/${id}`),
+    api.get<Skill>(`/skills/detail/${id}`),
   
-  execute: (id: string, params: Record<string, unknown>) => 
-    api.post(`/skills/${id}/execute`, params),
+  execute: (id: string, input: Record<string, unknown>, config?: Record<string, unknown>) => 
+    api.post(`/skills/${id}/execute`, { input, config }),
   
   create: (data: { name: string; display_name: string; description?: string; category?: string; protocol?: string; config?: Record<string, unknown>; input_schema?: Record<string, unknown>; output_schema?: Record<string, unknown> }) =>
     api.post<Skill>('/skills', data),

@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import axios from 'axios';
 
 const api = axios.create({
@@ -59,6 +60,8 @@ api.interceptors.response.use(
 
 export default api;
 =======
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 import axios from 'axios';
 
 const api = axios.create({
@@ -118,4 +121,7 @@ api.interceptors.response.use(
 );
 
 export default api;
+<<<<<<< HEAD
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

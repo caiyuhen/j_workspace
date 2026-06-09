@@ -12,7 +12,10 @@ export interface EdcTemplate {
   description?: string;
   projectId?: string;
 <<<<<<< HEAD
+<<<<<<< HEAD
   cdiscDomain?: string;
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   status: TemplateStatus;
@@ -31,7 +34,10 @@ export interface CreateTemplateParams {
   description?: string;
   projectId?: string;
 <<<<<<< HEAD
+<<<<<<< HEAD
   cdiscDomain?: string;
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   isSystemTemplate?: boolean;

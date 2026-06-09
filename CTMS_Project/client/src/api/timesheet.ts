@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import api from '@/api';
 import type {
   Timesheet, CreateTimesheetParams,
@@ -23,6 +24,8 @@ export const timesheetApi = {
     api.post(`/timesheets/${id}/approve`, data).then((r) => r.data.data),
 };
 =======
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 import api from '@/api';
 import type {
   Timesheet, CreateTimesheetParams,
@@ -46,4 +49,7 @@ export const timesheetApi = {
   approve: (id: string, data: ApproveTimesheetParams) =>
     api.post(`/timesheets/${id}/approve`, data).then((r) => r.data.data),
 };
+<<<<<<< HEAD
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

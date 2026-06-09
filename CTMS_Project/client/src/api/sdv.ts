@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import api from './index';
 import type { ApiResponse, PaginatedResponse } from '@/types';
 import type {
@@ -40,6 +41,8 @@ export const sdvApi = {
     api.post<ApiResponse<SdvRecord>>(`/edc/sdv/${id}/complete`).then((r) => r.data.data),
 };
 =======
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 import api from './index';
 import type { ApiResponse, PaginatedResponse } from '@/types';
 import type {
@@ -80,4 +83,7 @@ export const sdvApi = {
   complete: (id: string) =>
     api.post<ApiResponse<SdvRecord>>(`/edc/sdv/${id}/complete`).then((r) => r.data.data),
 };
+<<<<<<< HEAD
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

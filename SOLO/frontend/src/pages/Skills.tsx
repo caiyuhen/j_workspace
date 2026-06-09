@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Card, Row, Col, List, Tag, Typography, Empty, Input, Select, Button, Space, Modal, Form, message, Tabs, Upload, Divider, Descriptions, Spin } from 'antd'
+import { Card, Row, Col, List, Tag, Typography, Empty, Input, Select, Button, Space, Modal, Form, message, Tabs, Divider, Descriptions, Spin } from 'antd'
 import {
   ToolOutlined,
-  ThunderboltOutlined,
   PlayCircleOutlined,
   ApiOutlined,
   CloudDownloadOutlined,
   UploadOutlined,
-  PlusOutlined,
-  SearchOutlined,
-  DeleteOutlined,
-  CheckCircleOutlined
+  DeleteOutlined
 } from '@ant-design/icons'
 import { skillApi, Skill } from '../services/api'
 
@@ -463,7 +459,7 @@ export default function Skills() {
               label: '通过 URL 安装',
               icon: <ApiOutlined />,
               children: (
-                <Form form={installForm} layout="vertical" onFinish={(values) => {
+                <Form form={installForm} layout="vertical" onFinish={(_values) => {
                   // 通过 URL 安装
                   message.success('安装成功')
                   setInstallModalVisible(false)
