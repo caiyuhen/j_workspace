@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+<<<<<<< HEAD
 import {  Table, Modal, Form, Input, Select, Space, Button, Drawer, Descriptions, Tag, Progress , App } from 'antd';
+=======
+import {  Table, Modal, Form, Input, Select, Space, Button, Drawer, Descriptions, Tag, List, Progress , App } from 'antd';
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 import { CheckCircleOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import PageHeader from '@/components/PageHeader';
@@ -245,6 +249,7 @@ const SdvPage: React.FC = () => {
             </Descriptions>
 
             <h4 style={{ marginBottom: 8 }}>核查项明细</h4>
+<<<<<<< HEAD
             <Table
               loading={itemsLoading}
               dataSource={items}
@@ -289,6 +294,44 @@ const SdvPage: React.FC = () => {
                   )
                 }
               ]}
+=======
+            <List
+              loading={itemsLoading}
+              dataSource={items}
+              size="small"
+              renderItem={(item: SdvItem) => (
+                <List.Item
+                  actions={[
+                    <Button key="v" type="link" size="small" style={{ color: '#52c41a' }}
+                      disabled={item.status === 'verified'}
+                      onClick={() => handleItemUpdate(item.id, 'verified')}>
+                      一致
+                    </Button>,
+                    <Button key="d" type="link" size="small" danger
+                      disabled={item.status === 'discrepancy'}
+                      onClick={() => handleItemUpdate(item.id, 'discrepancy')}>
+                      差异
+                    </Button>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    title={
+                      <Space>
+                        <span>{item.fieldName}</span>
+                        <Tag color={itemStatusMap[item.status]?.color}>{itemStatusMap[item.status]?.label}</Tag>
+                      </Space>
+                    }
+                    description={
+                      <div>
+                        <div>CRF值: <code>{JSON.stringify(item.crfValue)}</code></div>
+                        <div>源数据值: <code>{JSON.stringify(item.sourceValue)}</code></div>
+                        {item.notes && <div style={{ color: '#faad14', marginTop: 4 }}>备注: {item.notes}</div>}
+                      </div>
+                    }
+                  />
+                </List.Item>
+              )}
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
             />
           </>
         )}

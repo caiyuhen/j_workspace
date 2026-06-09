@@ -4,7 +4,11 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+<<<<<<< HEAD
 import bcrypt from 'bcryptjs';
+=======
+import bcrypt from 'bcrypt';
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 
 const prisma = new PrismaClient();
 

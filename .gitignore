@@ -3,7 +3,10 @@
 *.tar
 *.gz
 *.rar
+<<<<<<< HEAD
 *.7z
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 
 # Logs
 *.log
@@ -17,17 +20,23 @@ __pycache__/
 .venv
 venv/
 .env
+<<<<<<< HEAD
 *.egg-info/
 dist/
 build/
 *.whl
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 
 # Node
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+<<<<<<< HEAD
 .pnpm-store/
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 
 # IDE
 .idea/
@@ -39,11 +48,15 @@ yarn-error.log*
 *.dcm
 *.pth
 Image_project - 副本/
+<<<<<<< HEAD
 
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 # ML Artifacts
 checkpoint-*/
 output/
 *_cache.pkl
+<<<<<<< HEAD
 
 # Nested repos/workspaces
 openclaw-main/workspace/
@@ -153,3 +166,8 @@ projects/
 **/postgres_data/
 **/mysql_data/
 **/redis_data/
+=======
+ 
+# Nested repos/workspaces
+openclaw-main/workspace/
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

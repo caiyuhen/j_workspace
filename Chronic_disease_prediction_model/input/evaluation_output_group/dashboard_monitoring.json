@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "accuracy_trend": [
     0.9403669724770642,
@@ -8,4 +9,16 @@
   "performance_drop_ratio": 0.007479674796747978,
   "retrain_trigger": false,
   "drift_alert_count": 16
+=======
+{
+  "accuracy_trend": [
+    0.9403669724770642,
+    0.9333333333333333
+  ],
+  "baseline_accuracy": 0.9403669724770642,
+  "current_accuracy": 0.9333333333333333,
+  "performance_drop_ratio": 0.007479674796747978,
+  "retrain_trigger": false,
+  "drift_alert_count": 16
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 }

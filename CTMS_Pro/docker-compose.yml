@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 version: '3.9'
 
 # ================================================================
@@ -171,3 +172,178 @@ networks:
     ipam:
       config:
         - subnet: 172.20.0.0/16
+=======
+version: '3.9'
+
+# ================================================================
+# CTMS Pro - Docker Compose 部署配置
+# 包含：FastAPI后端 + PostgreSQL + Redis + MinIO + Nginx
+# ================================================================
+
+services:
+
+  # ─── PostgreSQL 数据库 ────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: ctms_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ctms_user
+      POSTGRES_PASSWORD: ctms_password_2026
+      POSTGRES_DB: ctms_pro
+      PGDATA: /var/lib/postgresql/data/pgdata
+      TZ: Asia/Shanghai
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d   # 自动执行初始化SQL
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ctms_user -d ctms_pro"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ctms_network
+
+  # ─── Redis 缓存 & 消息队列 ────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: ctms_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ""
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ctms_network
+
+  # ─── MinIO 文件存储（eTMF文档）────────────────────────────
+  minio:
+    image: minio/minio:latest
+    container_name: ctms_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin123
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"     # MinIO 控制台
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+    networks:
+      - ctms_network
+
+  # ─── FastAPI 后端 ─────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ctms_backend
+    restart: unless-stopped
+    environment:
+      APP_ENV: production
+      DEBUG: "False"
+      SECRET_KEY: ${SECRET_KEY:-ctms-production-secret-key-change-me-immediately}
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: ctms_user
+      POSTGRES_PASSWORD: ctms_password_2026
+      POSTGRES_DB: ctms_pro
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: minioadmin
+      S3_SECRET_KEY: minioadmin123
+      S3_BUCKET_NAME: ctms-documents
+      BACKEND_CORS_ORIGINS: '["http://localhost","http://localhost:8811","http://127.0.0.1:8811","http://ctms-pro.local"]'
+    volumes:
+      - ./backend/logs:/app/logs
+    ports:
+      - "8898:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - ctms_network
+
+  # ─── Nginx 反向代理 ───────────────────────────────────────
+  nginx:
+    image: nginx:alpine
+    container_name: ctms_nginx
+    restart: unless-stopped
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - .:/var/www/html:ro    # 前端静态文件
+      - nginx_logs:/var/log/nginx
+    ports:
+      - "8811:80"
+      - "8443:443"
+    depends_on:
+      - backend
+    networks:
+      - ctms_network
+
+  # ─── Celery Worker（异步任务）────────────────────────────
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ctms_celery
+    restart: unless-stopped
+    command: celery -A app.worker worker --loglevel=info --concurrency=4
+    environment:
+      APP_ENV: production
+      POSTGRES_SERVER: postgres
+      POSTGRES_USER: ctms_user
+      POSTGRES_PASSWORD: ctms_password_2026
+      POSTGRES_DB: ctms_pro
+      REDIS_HOST: redis
+      CELERY_BROKER_URL: redis://redis:6379/1
+    volumes:
+      - ./backend/logs:/app/logs
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - ctms_network
+
+# ─── 数据卷 ────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  minio_data:
+    driver: local
+  nginx_logs:
+    driver: local
+
+# ─── 网络 ──────────────────────────────────────────────────
+networks:
+  ctms_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

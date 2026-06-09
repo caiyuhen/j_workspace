@@ -185,10 +185,15 @@ PAGES.trials = function() {
           <option value="closing">结题中</option>
         </select>
         <select style="padding:7px 12px;border:1px solid var(--gray-300);border-radius:6px;font-size:13px">
+<<<<<<< HEAD
           <option value="">全部阶段</option>
           <option value="8">I期</option><option value="9">II期</option><option value="10">III期</option><option value="11">IV期</option><option value="12">上市后临床研究</option>
           <option value="1">药物临床试验</option><option value="2">中保研究</option><option value="3">医疗器械临床试验</option>
           <option value="4">科研项目其他</option><option value="5">药物上市后再评价</option><option value="6">医疗器械上市后再评价</option><option value="7">其他</option>
+=======
+          <option>全部阶段</option>
+          <option>I期</option><option>II期</option><option>III期</option><option>IV期</option>
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
         </select>
       </div>
       <div id="trials-grid" class="grid2" style="grid-template-columns:1fr 1fr 1fr"></div>
@@ -216,11 +221,23 @@ function mapTrialStatusFromApi(status) {
 
 function mapApiTrialToCard(t) {
   const target = Number(t.target_enrollment || 0);
+<<<<<<< HEAD
   
   // Calculate center count directly from DB extra_data
   let dbCenterCount = 0;
   if (t.extra_data && Array.isArray(t.extra_data.centers)) {
     dbCenterCount = t.extra_data.centers.length;
+=======
+  let localCenterCount = 0;
+  try {
+    const centerMapRaw = localStorage.getItem('ctms_trial_centers_map');
+    const centerMap = centerMapRaw ? JSON.parse(centerMapRaw) : {};
+    const key = t.trial_no || String(t.id || '');
+    const localCenters = Array.isArray(centerMap[key]) ? centerMap[key] : [];
+    localCenterCount = localCenters.length;
+  } catch (e) {
+    localCenterCount = 0;
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   }
   
   // Calculate real enrolled count and center count per trial from patients list
@@ -254,7 +271,11 @@ function mapApiTrialToCard(t) {
     status: mapTrialStatusFromApi(t.status),
     sponsor: t.sponsor || '-',
     indication: t.indication || '-',
+<<<<<<< HEAD
     centerCount: Math.max(dbCenterCount, calculatedCenterCount, t.centerCount || 0),
+=======
+    centerCount: calculatedCenterCount || t.centerCount || localCenterCount || 0,
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     targetPatients: target,
     enrolled,
     startDate: t.planned_start || '-',
@@ -263,8 +284,11 @@ function mapApiTrialToCard(t) {
     budget: calculatedBudget,
     budgetUsed: Number(t.spent_amount || 0) / 10000,
     drugName: t.drug_name || '-',
+<<<<<<< HEAD
     trial_code: t.trial_code || '',
     extra_data: t.extra_data || {} // Pass through extra_data so detail page can use it
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   };
 }
 
@@ -285,7 +309,11 @@ function renderTrialCards(trials) {
     <div class="card" style="cursor:pointer;transition:var(--transition)" onmouseover="this.style.boxShadow='var(--shadow)'" onmouseout="this.style.boxShadow=''" onclick="CTMS.navigate('trial-detail',{trialId:'${t.id}',trialApiId:'${t.apiId || ''}'})">
       <div class="card-body">
         <div class="flex-between mb-8">
+<<<<<<< HEAD
           <span class="badge badge-blue" style="font-size:11px">${CTMS.getPhaseName(t.phase)}</span>
+=======
+          <span class="badge badge-blue" style="font-size:11px">${t.phase}</span>
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
           <span class="badge ${getStatusBadge(t.status)}">${getStatusLabel(t.status)}</span>
         </div>
         <div class="flex-between mb-8">
@@ -429,9 +457,20 @@ function dedupeVisits(visits) {
 }
 
 function loadEditTrialExtraData(trialLike) {
+<<<<<<< HEAD
   const extra = trialLike.extra_data || {};
   
   const protocol = extra.protocol || {
+=======
+  const key = getTrialStorageKey(trialLike);
+  const keys = getTrialStorageKeys(trialLike);
+  const protocolMap = safeReadLocalMap('ctms_trial_protocol_map');
+  const userMap = safeReadLocalMap('ctms_trial_users_map');
+  const centerDetailMap = safeReadLocalMap('ctms_trial_centers_detail_map');
+  const centerNameMap = safeReadLocalMap('ctms_trial_centers_map');
+
+  const protocol = pickFromMapByKeys(protocolMap, keys) || {
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     site_cycle: '30',
     enroll_cycle: '12',
     baseline_days: '7',
@@ -439,6 +478,7 @@ function loadEditTrialExtraData(trialLike) {
     blind: 'open',
     visits: []
   };
+<<<<<<< HEAD
   const users = dedupeUsers(Array.isArray(extra.users) ? extra.users : []);
 
   const key = getTrialStorageKey(trialLike);
@@ -447,6 +487,29 @@ function loadEditTrialExtraData(trialLike) {
   let centers = Array.isArray(extra.centers) ? extra.centers : [];
 
   // 若 API 没有中心明细，则从患者数据中反推该试验已有中心，确保编辑弹窗能回填
+=======
+  const usersRaw = pickFromMapByKeys(userMap, keys);
+  const users = dedupeUsers(Array.isArray(usersRaw) ? usersRaw : []);
+
+  const centersDetailRaw = pickFromMapByKeys(centerDetailMap, keys);
+  let centers = Array.isArray(centersDetailRaw) ? centersDetailRaw : [];
+  if (!centers.length) {
+    const centerNamesRaw = pickFromMapByKeys(centerNameMap, keys);
+    const localCenterNames = Array.isArray(centerNamesRaw) ? centerNamesRaw : [];
+    centers = localCenterNames.map((name, idx) => {
+      const found = (CTMS_DATA.centerStats || []).find(c => c.center === name);
+      return {
+        id: found?.code || `${key}-c-${idx}`,
+        code: found?.code || '-',
+        name,
+        pi: found?.pi || '-',
+        target: 0
+      };
+    });
+  }
+
+  // 若本地缓存没有中心明细，则从患者数据中反推该试验已有中心，确保编辑弹窗能回填
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   if (!centers.length) {
     const patientCenters = new Set();
     (CTMS_DATA.patients || []).forEach(p => {
@@ -484,7 +547,11 @@ CTMS.syncEditTrialDataFromDOM = function() {
   d.basic = {
     full_name: document.getElementById('edit-trial-full-name').value.trim(),
     trial_no: document.getElementById('edit-trial-no').value.trim(),
+<<<<<<< HEAD
     phase: String(document.getElementById('edit-trial-phase').value),
+=======
+    phase: document.getElementById('edit-trial-phase').value,
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     indication: document.getElementById('edit-trial-indication').value.trim(),
     sponsor: document.getElementById('edit-trial-sponsor').value.trim(),
     drug_name: document.getElementById('edit-trial-drug').value.trim(),
@@ -541,7 +608,45 @@ CTMS.syncEditTrialDataFromDOM = function() {
 };
 
 CTMS.saveEditTrialExtraData = function() {
+<<<<<<< HEAD
   // We no longer save extra data to localStorage because it's handled by DB.
+=======
+  const d = window.CTMS_EDIT_TRIAL_DATA;
+  if (!d) return;
+  const keys = Array.from(new Set([d.trialNo, String(d.trialId || '')].filter(Boolean)));
+  if (!keys.length) return;
+
+  d.centers = dedupeCenters(d.centers || []);
+  d.users = dedupeUsers(d.users || []);
+  d.protocol = {
+    ...(d.protocol || {}),
+    visits: dedupeVisits((d.protocol || {}).visits || [])
+  };
+
+  const centerNameMap = safeReadLocalMap('ctms_trial_centers_map');
+  keys.forEach(k => {
+    centerNameMap[k] = (d.centers || []).map(c => c.name).filter(Boolean);
+  });
+  safeWriteLocalMap('ctms_trial_centers_map', centerNameMap);
+
+  const centerDetailMap = safeReadLocalMap('ctms_trial_centers_detail_map');
+  keys.forEach(k => {
+    centerDetailMap[k] = d.centers || [];
+  });
+  safeWriteLocalMap('ctms_trial_centers_detail_map', centerDetailMap);
+
+  const protocolMap = safeReadLocalMap('ctms_trial_protocol_map');
+  keys.forEach(k => {
+    protocolMap[k] = d.protocol || {};
+  });
+  safeWriteLocalMap('ctms_trial_protocol_map', protocolMap);
+
+  const userMap = safeReadLocalMap('ctms_trial_users_map');
+  keys.forEach(k => {
+    userMap[k] = d.users || [];
+  });
+  safeWriteLocalMap('ctms_trial_users_map', userMap);
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 };
 
 CTMS.renderEditTrialModal = function() {
@@ -558,7 +663,10 @@ CTMS.renderEditTrialModal = function() {
   const centers = d.centers || [];
   const users = d.users || [];
 
+<<<<<<< HEAD
   CTMS.closeModal();
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   CTMS.showModal('编辑试验项目', `
     <div class="form-row">
       <div class="form-group"><label class="form-label required">试验名称</label><input id="edit-trial-full-name" class="form-input" value="${b.full_name || ''}"></div>
@@ -567,6 +675,7 @@ CTMS.renderEditTrialModal = function() {
     <div class="form-row col3">
       <div class="form-group"><label class="form-label required">试验阶段</label>
         <select id="edit-trial-phase" class="form-select">
+<<<<<<< HEAD
           <option value="8" ${b.phase === '8' ? 'selected' : ''}>I期</option>
           <option value="9" ${b.phase === '9' ? 'selected' : ''}>II期</option>
           <option value="10" ${b.phase === '10' ? 'selected' : ''}>III期</option>
@@ -579,6 +688,13 @@ CTMS.renderEditTrialModal = function() {
           <option value="5" ${b.phase === '5' ? 'selected' : ''}>药物上市后再评价</option>
           <option value="6" ${b.phase === '6' ? 'selected' : ''}>医疗器械上市后再评价</option>
           <option value="7" ${b.phase === '7' ? 'selected' : ''}>其他</option>
+=======
+          <option value="I期" ${b.phase === 'I期' ? 'selected' : ''}>I期</option>
+          <option value="II期" ${b.phase === 'II期' ? 'selected' : ''}>II期</option>
+          <option value="III期" ${b.phase === 'III期' ? 'selected' : ''}>III期</option>
+          <option value="IV期" ${b.phase === 'IV期' ? 'selected' : ''}>IV期</option>
+          <option value="上市后临床研究" ${b.phase === '上市后临床研究' ? 'selected' : ''}>上市后临床研究</option>
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
         </select>
       </div>
       <div class="form-group"><label class="form-label required">适应症</label><input id="edit-trial-indication" class="form-input" value="${b.indication || ''}"></div>
@@ -862,6 +978,7 @@ CTMS.showNewTrialModal = function(step = 1) {
       desc: document.getElementById('trial-desc').value.trim()
     };
   } else if (document.getElementById('protocol-site-cycle')) {
+<<<<<<< HEAD
     d.protocol.site_cycle = document.getElementById('protocol-site-cycle').value;
     d.protocol.enroll_cycle = document.getElementById('protocol-enroll-cycle').value;
     d.protocol.baseline_days = document.getElementById('protocol-baseline-days').value;
@@ -889,20 +1006,55 @@ CTMS.showNewTrialModal = function(step = 1) {
           existing.target = targetInput ? parseInt(targetInput.value) || 0 : 0;
         }
       });
+=======
+    d.protocol = {
+      site_cycle: document.getElementById('protocol-site-cycle').value,
+      enroll_cycle: document.getElementById('protocol-enroll-cycle').value,
+      baseline_days: document.getElementById('protocol-baseline-days').value,
+      followup_cycle: document.getElementById('protocol-followup-cycle').value,
+      blind: document.querySelector('input[name="blind"]:checked')?.value || 'open',
+      visits: Array.from(document.querySelectorAll('#trial-visits-tbody tr')).filter(tr => tr.id !== 'empty-visit').map(tr => ({
+        id: tr.getAttribute('data-id'),
+        name: tr.querySelector('.visit-name').value,
+        after: tr.querySelector('.visit-after').value,
+        value: tr.querySelector('.visit-value').value,
+        unit: tr.querySelector('.visit-unit').value
+      }))
+    };
+  } else if (document.getElementById('trial-centers-tbody')) {
+    const currentTbodys = document.querySelectorAll('#trial-centers-tbody tr');
+    if (currentTbodys.length > 0 && currentTbodys[0].id !== 'empty-center') {
+      d.centers = Array.from(currentTbodys).map(tr => {
+        const id = tr.getAttribute('data-id');
+        const targetInput = tr.querySelector('.target-input');
+        const target = targetInput ? targetInput.value : 0;
+        const existing = d.centers.find(c => c.id === id);
+        return existing ? { ...existing, target: parseInt(target) || 0 } : null;
+      }).filter(Boolean);
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     }
   } else if (document.getElementById('trial-users-tbody')) {
     const currentTbodys = document.querySelectorAll('#trial-users-tbody tr');
     if (currentTbodys.length > 0 && currentTbodys[0].id !== 'empty-user') {
+<<<<<<< HEAD
       Array.from(currentTbodys).forEach(tr => {
+=======
+      d.users = Array.from(currentTbodys).map(tr => {
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
         const id = tr.getAttribute('data-id');
         const role = tr.querySelector('.role-select')?.value;
         const scope = tr.querySelector('.scope-select')?.value;
         const existing = d.users.find(u => u.id === id);
+<<<<<<< HEAD
         if (existing) {
           existing.role = role;
           existing.scope = scope;
         }
       });
+=======
+        return existing ? { ...existing, role, scope } : null;
+      }).filter(Boolean);
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     }
   }
 
@@ -934,6 +1086,7 @@ CTMS.showNewTrialModal = function(step = 1) {
         </div>
       </div>
       <div class="form-row col3">
+<<<<<<< HEAD
         <div class="form-group"><label class="form-label required">试验阶段</label><select id="trial-phase" class="form-select">
           <option value="8" ${d.basic.phase==='8'?'selected':''}>I期</option>
           <option value="9" ${d.basic.phase==='9'?'selected':''}>II期</option>
@@ -948,6 +1101,9 @@ CTMS.showNewTrialModal = function(step = 1) {
           <option value="6" ${d.basic.phase==='6'?'selected':''}>医疗器械上市后再评价</option>
           <option value="7" ${d.basic.phase==='7'?'selected':''}>其他</option>
         </select></div>
+=======
+        <div class="form-group"><label class="form-label required">试验阶段</label><select id="trial-phase" class="form-select"><option value="I期" ${d.basic.phase==='I期'?'selected':''}>I期</option><option value="II期" ${d.basic.phase==='II期'?'selected':''}>II期</option><option value="III期" ${d.basic.phase==='III期'?'selected':''}>III期</option><option value="IV期" ${d.basic.phase==='IV期'?'selected':''}>IV期</option><option value="上市后临床研究" ${d.basic.phase==='上市后临床研究'?'selected':''}>上市后临床研究</option></select></div>
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
         <div class="form-group"><label class="form-label required">适应症</label><input id="trial-indication" class="form-input" placeholder="如：非小细胞肺癌" value="${d.basic.indication || ''}"></div>
         <div class="form-group"><label class="form-label required">申办方</label><input id="trial-sponsor" class="form-input" placeholder="申办方名称" value="${d.basic.sponsor || ''}"></div>
       </div>
@@ -960,7 +1116,11 @@ CTMS.showNewTrialModal = function(step = 1) {
       </div>
       <div class="form-group"><label class="form-label">试验概述</label><textarea id="trial-desc" class="form-textarea" placeholder="简述试验背景、目的、设计...">${d.basic.desc || ''}</textarea></div>
     `;
+<<<<<<< HEAD
     footerHtml = `<button class="btn btn-secondary" onclick="CTMS.closeModal()">关闭</button><button class="btn btn-primary" onclick="CTMS.showNewTrialModal(2)">下一步</button>`;
+=======
+    footerHtml = `<button class="btn btn-secondary" onclick="CTMS.closeModal()">关闭窗口</button><button class="btn btn-primary" onclick="CTMS.showNewTrialModal(2)">下一步</button>`;
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   } else if (step === 2) {
     // 保存当前步骤(如果是从步骤2跳走的话，由于这里是渲染逻辑，保存逻辑应该在切换时执行)
     // 但目前逻辑是切换时在目标步骤检查上一部的DOM，由于切换是重新调用 showNewTrialModal(N)，
@@ -1023,7 +1183,11 @@ CTMS.showNewTrialModal = function(step = 1) {
         </div>
       </div>
     `;
+<<<<<<< HEAD
     footerHtml = `<button class="btn btn-secondary" onclick="CTMS.closeModal()">关闭</button><button class="btn btn-secondary" onclick="CTMS.showNewTrialModal(1)">上一步</button><button class="btn btn-primary" onclick="CTMS.showNewTrialModal(3)">下一步</button>`;
+=======
+    footerHtml = `<button class="btn btn-secondary" onclick="CTMS.closeModal()">关闭窗口</button><button class="btn btn-secondary" onclick="CTMS.showNewTrialModal(1)">上一步</button><button class="btn btn-primary" onclick="CTMS.showNewTrialModal(3)">下一步</button>`;
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   } else if (step === 3) {
     bodyHtml = `
       ${stepBar}
@@ -1048,7 +1212,11 @@ CTMS.showNewTrialModal = function(step = 1) {
         </table>
       </div>
     `;
+<<<<<<< HEAD
     footerHtml = `<button class="btn btn-secondary" onclick="CTMS.closeModal()">关闭</button><button class="btn btn-secondary" onclick="CTMS.showNewTrialModal(2)">上一步</button><button class="btn btn-primary" onclick="CTMS.showNewTrialModal(4)">下一步</button>`;
+=======
+    footerHtml = `<button class="btn btn-secondary" onclick="CTMS.closeModal()">关闭窗口</button><button class="btn btn-secondary" onclick="CTMS.showNewTrialModal(2)">上一步</button><button class="btn btn-primary" onclick="CTMS.showNewTrialModal(4)">下一步</button>`;
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   } else if (step === 4) {
     bodyHtml = `
       ${stepBar}
@@ -1089,10 +1257,16 @@ CTMS.showNewTrialModal = function(step = 1) {
         ℹ️ 创建试验后，系统将自动为授权人员发送通知邮件及初始密码。
       </div>
     `;
+<<<<<<< HEAD
     footerHtml = `<button class="btn btn-secondary" onclick="CTMS.closeModal()">关闭</button><button class="btn btn-secondary" onclick="CTMS.showNewTrialModal(3)">上一步</button><button class="btn btn-primary" onclick="CTMS.createTrial()">完成并创建</button>`;
   }
 
   CTMS.closeModal();
+=======
+    footerHtml = `<button class="btn btn-secondary" onclick="CTMS.closeModal()">关闭窗口</button><button class="btn btn-secondary" onclick="CTMS.showNewTrialModal(3)">上一步</button><button class="btn btn-primary" onclick="CTMS.createTrial()">完成并创建</button>`;
+  }
+
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   CTMS.showModal('新建试验项目', bodyHtml, footerHtml);
 };
 
@@ -1101,6 +1275,7 @@ CTMS.showTrialCenterSelector = function() {
   if (document.getElementById('trial-centers-tbody')) {
     const currentTbodys = document.querySelectorAll('#trial-centers-tbody tr');
     if (currentTbodys.length > 0 && currentTbodys[0].id !== 'empty-center') {
+<<<<<<< HEAD
       Array.from(currentTbodys).forEach(tr => {
         const id = tr.getAttribute('data-id');
         const targetInput = tr.querySelector('.target-input');
@@ -1109,6 +1284,15 @@ CTMS.showTrialCenterSelector = function() {
           existing.target = targetInput ? parseInt(targetInput.value) || 0 : 0;
         }
       });
+=======
+      window.CTMS_NEW_TRIAL_DATA.centers = Array.from(currentTbodys).map(tr => {
+        const id = tr.getAttribute('data-id');
+        const targetInput = tr.querySelector('.target-input');
+        const target = targetInput ? targetInput.value : 0;
+        const existing = window.CTMS_NEW_TRIAL_DATA.centers.find(c => c.id === id);
+        return existing ? { ...existing, target: parseInt(target) || 0 } : null;
+      }).filter(Boolean);
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     }
   }
 
@@ -1183,16 +1367,25 @@ CTMS.showTrialUserSelector = function() {
   if (document.getElementById('trial-users-tbody')) {
     const currentTbodys = document.querySelectorAll('#trial-users-tbody tr');
     if (currentTbodys.length > 0 && currentTbodys[0].id !== 'empty-user') {
+<<<<<<< HEAD
       Array.from(currentTbodys).forEach(tr => {
+=======
+      window.CTMS_NEW_TRIAL_DATA.users = Array.from(currentTbodys).map(tr => {
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
         const id = tr.getAttribute('data-id');
         const role = tr.querySelector('.role-select')?.value;
         const scope = tr.querySelector('.scope-select')?.value;
         const existing = window.CTMS_NEW_TRIAL_DATA.users.find(u => u.id === id);
+<<<<<<< HEAD
         if (existing) {
           existing.role = role;
           existing.scope = scope;
         }
       });
+=======
+        return existing ? { ...existing, role, scope } : null;
+      }).filter(Boolean);
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     }
   }
 
@@ -1310,6 +1503,7 @@ CTMS.removeTrialVisit = function(id) {
 
 // 创建试验 - 调用API保存到数据库
 CTMS.createTrial = async function() {
+<<<<<<< HEAD
   // 如果当前在第四步页面，先触发一次保存
   if (document.getElementById('trial-users-tbody')) {
     const currentTbodys = document.querySelectorAll('#trial-users-tbody tr');
@@ -1327,6 +1521,8 @@ CTMS.createTrial = async function() {
     }
   }
 
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   const d = window.CTMS_NEW_TRIAL_DATA.basic;
   const selectedCenters = (window.CTMS_NEW_TRIAL_DATA.centers || []).map(c => c.name).filter(Boolean);
   const trialData = {
@@ -1334,12 +1530,16 @@ CTMS.createTrial = async function() {
     short_name: (d.full_name || '').slice(0, 50),
     full_name: d.full_name,
     phase: d.phase,
+<<<<<<< HEAD
     type: d.type,
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     indication: d.indication,
     sponsor: d.sponsor,
     drug_name: d.drug_name || null,
     target_enrollment: parseInt(d.target) || 100,
     planned_start: d.start_date || null,
+<<<<<<< HEAD
     centers: window.CTMS_NEW_TRIAL_DATA.centers || [],
     users: window.CTMS_NEW_TRIAL_DATA.users || [],
     user_token: sessionStorage.getItem('user_token'),
@@ -1348,6 +1548,8 @@ CTMS.createTrial = async function() {
       users: window.CTMS_NEW_TRIAL_DATA.users || [],
       protocol: window.CTMS_NEW_TRIAL_DATA.protocol || {}
     }
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   };
   
   // 验证必填字段
@@ -1363,9 +1565,12 @@ CTMS.createTrial = async function() {
     if (!createdId) {
       throw new Error('创建接口未返回有效ID');
     }
+<<<<<<< HEAD
 
     // Removed localStorage extra data saving logic since it's now saved in DB via extra_data field
 
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     let visible = false;
     for (let i = 0; i < 6; i++) {
       const listRes = await API.trials.list({ page: 1, page_size: 100, keyword: trialData.trial_no });
@@ -1379,6 +1584,7 @@ CTMS.createTrial = async function() {
     if (!visible) {
       throw new Error('创建成功但列表暂不可见，请稍后刷新');
     }
+<<<<<<< HEAD
     
     // 如果返回数据中包含 trial_code（外部接口同步结果），进行差异化提示
     if (result && result.data && result.data.trial_code) {
@@ -1393,11 +1599,27 @@ CTMS.createTrial = async function() {
     // 清理全局状态，以便下次新建
     window.CTMS_NEW_TRIAL_DATA = { step: 1, basic: {}, protocol: {}, centers: [], users: [] };
     
+=======
+    // 暂存新建时选择的中心，供前端卡片统计显示（后端暂未提供 trial-sites 绑定接口）
+    try {
+      const centerMapRaw = localStorage.getItem('ctms_trial_centers_map');
+      const centerMap = centerMapRaw ? JSON.parse(centerMapRaw) : {};
+      centerMap[trialData.trial_no] = selectedCenters;
+      localStorage.setItem('ctms_trial_centers_map', JSON.stringify(centerMap));
+    } catch (e) {
+      console.warn('save trial center map failed', e);
+    }
+    CTMS.showToast('试验创建成功！', 'success');
+    CTMS.closeModal();
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     CTMS.navigate('trials');
   } catch (error) {
     console.error('创建试验失败:', error);
     CTMS.showToast(error.message || '创建失败，请重试', 'error');
+<<<<<<< HEAD
     // 出现错误不关闭窗口
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   }
 };
 
@@ -1414,7 +1636,11 @@ CTMS.editTrial = async function(trialId) {
       basic: {
         full_name: t.full_name || '',
         trial_no: t.trial_no || '',
+<<<<<<< HEAD
         phase: t.phase || '9',
+=======
+        phase: t.phase || 'II期',
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
         indication: t.indication || '',
         sponsor: t.sponsor || '',
         drug_name: t.drug_name || '',
@@ -1453,11 +1679,14 @@ CTMS.updateTrial = async function(trialId) {
     target_enrollment: isNaN(targetEnrollment) ? 100 : targetEnrollment,
     planned_start: d.basic.planned_start || null,
     status: d.basic.status,
+<<<<<<< HEAD
     extra_data: {
       centers: d.centers || [],
       users: d.users || [],
       protocol: d.protocol || {}
     }
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   };
   
   // 验证必填字段
@@ -1499,7 +1728,11 @@ PAGES['trial-detail'] = function(params) {
   const currentGroup = params.group === 'center' ? 'center' : 'trial';
   const navTrialId = params.trialId || t.id;
   const navTrialApiId = editTrialId || '';
+<<<<<<< HEAD
   const extras = loadEditTrialExtraData(t); // Changed from { trial_no: t.id, id: editTrialId } to pass the full trial object t so extra_data is available
+=======
+  const extras = loadEditTrialExtraData({ trial_no: t.id, id: editTrialId });
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
   const centerNames = Array.from(new Set([
     ...(extras.centers || []).map(c => c.name).filter(Boolean),
     ...patients.map(p => p.center).filter(c => c && c !== '-')
@@ -1541,7 +1774,11 @@ PAGES['trial-detail'] = function(params) {
     <div class="page-section">
       <div class="flex-center gap-8 mb-16">
         <button class="btn btn-secondary btn-sm" onclick="CTMS.navigate('trials')">← 返回列表</button>
+<<<<<<< HEAD
         <span class="badge badge-blue">${CTMS.getPhaseName(t.phase)}</span>
+=======
+        <span class="badge badge-blue">${t.phase}</span>
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
         <span class="badge ${getStatusBadge(t.status)}">${getStatusLabel(t.status)}</span>
         <div style="flex:1"></div>
         <button class="btn btn-secondary btn-sm">📤 导出报告</button>
@@ -1595,7 +1832,10 @@ PAGES['trial-detail'] = function(params) {
         <div class="tab-item" onclick="switchTab(this,'tab-sae')">SAE(${scopedSaes.length})</div>
         <div class="tab-item" onclick="switchTab(this,'tab-qc')">质控记录</div>
         <div class="tab-item" onclick="switchTab(this,'tab-files')">资料归档</div>
+<<<<<<< HEAD
         ${currentGroup === 'center' ? `<div class="tab-item" onclick="switchTab(this,'tab-remote-subjects'); loadRemoteSubjects('${t.trial_code || ''}', '${t.id}', '${selectedCenter}')">受试者信息</div>` : ''}
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
       </div>
 
       <!-- 项目概况 -->
@@ -1692,7 +1932,11 @@ PAGES['trial-detail'] = function(params) {
         <div class="card">
           <div class="card-header"><div class="card-title">🗄️ eTMF 文档归档</div><button class="btn btn-sm btn-primary" onclick="CTMS.showEtmfUploadModal('${editTrialId}', '${t.id}', '${currentGroup === 'center' ? selectedCenter : ''}')">＋ 上传文件</button></div>
           <div class="card-body">
+<<<<<<< HEAD
             ${['注册资料', '伦理文件', '方案文件', '知情同意书', '监查报告', '安全性报告', 'SOP文件', '合同文件', '数据管理计划', '关闭报告'].map((cat,i)=>{
+=======
+            ${['注册资料', '伦理文件', '方案文件', '知情同意书', '监查报告', '安全性报告', 'SOP文件'].map((cat,i)=>{
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
               const docs = scopedDocuments.filter(d => (d.docType === cat || (!d.docType && cat === '注册资料')));
               return `
               <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--gray-100)">
@@ -1712,6 +1956,7 @@ PAGES['trial-detail'] = function(params) {
           </div>
         </div>
       </div>
+<<<<<<< HEAD
 
       <!-- 受试者信息(远程嵌入) -->
       ${currentGroup === 'center' ? `
@@ -1730,6 +1975,8 @@ PAGES['trial-detail'] = function(params) {
         </div>
       </div>
       ` : ''}
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
     </div>
   `;
   CTMS.refreshMilestones(editTrialId, currentGroup === 'center' ? selectedCenter : '', t.id);
@@ -2254,6 +2501,7 @@ function switchTab(el, tabId) {
   el.classList.add('active');
   document.getElementById(tabId).classList.add('active');
 }
+<<<<<<< HEAD
 
 window.loadRemoteSubjects = function(trialCode, trialId, hospitalName) {
   const iframe = document.getElementById('remote-subjects-iframe');
@@ -2300,3 +2548,5 @@ window.loadRemoteSubjects = function(trialCode, trialId, hospitalName) {
     }
   }, 10000);
 };
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

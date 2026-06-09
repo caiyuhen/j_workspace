@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """
 通知消息 API
 """
@@ -60,6 +61,70 @@ async def list_notifications(
     }
 
 
+=======
+"""
+通知消息 API
+"""
+from fastapi import APIRouter, Depends, Query, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func, update, desc, and_
+from typing import Optional
+from uuid import UUID
+
+from app.db.session import get_db
+from app.models.models import Notification, User
+from app.core.dependencies import get_current_active_user
+
+router = APIRouter()
+
+
+@router.get("", summary="我的通知列表")
+async def list_notifications(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    is_read: Optional[bool] = Query(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    query = select(Notification).where(Notification.user_id == current_user.id)
+    count_query = select(func.count(Notification.id)).where(Notification.user_id == current_user.id)
+
+    if is_read is not None:
+        query = query.where(Notification.is_read == is_read)
+        count_query = count_query.where(Notification.is_read == is_read)
+
+    total = (await db.execute(count_query)).scalar()
+    unread = (await db.execute(
+        select(func.count(Notification.id)).where(
+            and_(Notification.user_id == current_user.id, Notification.is_read == False)
+        )
+    )).scalar()
+
+    offset = (page - 1) * page_size
+    result = await db.execute(
+        query.order_by(desc(Notification.created_at)).offset(offset).limit(page_size)
+    )
+    notifications = result.scalars().all()
+
+    return {
+        "total": total,
+        "unread": unread,
+        "page": page,
+        "page_size": page_size,
+        "items": [{
+            "id": str(n.id),
+            "type": n.type,
+            "priority": n.priority,
+            "title": n.title,
+            "content": n.content,
+            "is_read": n.is_read,
+            "read_at": n.read_at.isoformat() if n.read_at else None,
+            "created_at": n.created_at.isoformat() if n.created_at else None,
+        } for n in notifications]
+    }
+
+
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 from pydantic import BaseModel, EmailStr
 from app.core.config import settings
 import smtplib
@@ -106,6 +171,7 @@ async def send_email(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"发送邮件失败: {str(e)}")
 
+<<<<<<< HEAD
 @router.put("/{notification_id}/read", summary="标记为已读")
 async def mark_as_read(
     notification_id: UUID,
@@ -135,3 +201,34 @@ async def mark_all_read(
     )
     await db.commit()
     return {"message": "全部已读"}
+=======
+@router.put("/{notification_id}/read", summary="标记为已读")
+async def mark_as_read(
+    notification_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    from datetime import datetime, timezone
+    await db.execute(
+        update(Notification)
+        .where(and_(Notification.id == notification_id, Notification.user_id == current_user.id))
+        .values(is_read=True, read_at=datetime.now(timezone.utc))
+    )
+    await db.commit()
+    return {"message": "已标记为已读"}
+
+
+@router.put("/read-all", summary="全部标记为已读")
+async def mark_all_read(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    from datetime import datetime, timezone
+    await db.execute(
+        update(Notification)
+        .where(and_(Notification.user_id == current_user.id, Notification.is_read == False))
+        .values(is_read=True, read_at=datetime.now(timezone.utc))
+    )
+    await db.commit()
+    return {"message": "全部已读"}
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

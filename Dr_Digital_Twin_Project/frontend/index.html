@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -101,3 +102,108 @@
 <script src="js/app.js"></script>
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数字孪生全息医生工作站</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.staticfile.net/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+<body class="bg-dark text-light">
+<div class="container-fluid vh-100 d-flex flex-column p-0">
+    <!-- Header -->
+    <header class="navbar navbar-dark bg-dark border-bottom border-secondary px-3 py-2">
+        <a class="navbar-brand fs-4" href="#">
+            <i class="fas fa-heartbeat text-info"></i> 数字孪生医生工作站
+        </a>
+        <div class="d-flex align-items-center">
+            <!-- 医生性别选择 -->
+            <div class="btn-group me-3" role="group">
+                <input type="radio" class="btn-check" name="doctorGender" id="btn-male" value="male" autocomplete="off" checked>
+                <label class="btn btn-outline-info btn-sm" for="btn-male"><i class="fas fa-user-md"></i> 男医生</label>
+              
+                <input type="radio" class="btn-check" name="doctorGender" id="btn-female" value="female" autocomplete="off">
+                <label class="btn btn-outline-info btn-sm" for="btn-female"><i class="fas fa-user-nurse"></i> 女医生</label>
+            </div>
+            <span class="badge bg-success me-2">系统在线</span>
+            <span class="badge bg-info">MACE 模型已加载</span>
+        </div>
+    </header>
+
+    <div class="row flex-grow-1 m-0" style="min-height: 0;">
+        <!-- Left Panel: Avatar Video Stream -->
+        <div class="col-md-6 col-lg-7 p-0 position-relative border-end border-secondary bg-black" id="avatar-container" style="min-height: 0;">
+            <div class="w-100 h-100 d-flex justify-content-center align-items-center" style="background-color: #0b0f14;">
+                <img id="doctor-static-image" src="images/3f38645a-9a34-4539-835e-a0138327f26d.jpg" style="max-height: 90%; max-width: 90%; object-fit: contain; border-radius: 12px;" alt="Doctor Static Avatar">
+                <video id="doctor-video-stream" style="max-height: 90%; max-width: 90%; object-fit: contain; border-radius: 12px; display: none;" autoplay playsinline></video>
+            </div>
+            
+            <div class="position-absolute top-0 start-0 p-3 pointer-events-none">
+                <h5 class="text-info"><i class="fas fa-video"></i> 全息渲染引擎 (SadTalker)</h5>
+                <p class="small text-white mb-0">Gradio Client | Real-time Lip Sync</p>
+                <div id="avatar-status" class="badge bg-dark mt-2">待机中</div>
+            </div>
+        </div>
+
+        <!-- Right Panel: Chat -->
+        <div class="col-md-6 col-lg-5 d-flex flex-column p-0 bg-darker" style="min-height: 0;">
+            <div class="p-3 border-bottom border-secondary">
+                <h6 class="text-uppercase text-white mb-3"><i class="fas fa-chart-line"></i> 数字孪生生理状态</h6>
+                <div class="row g-2 text-center">
+                    <div class="col-4">
+                        <div class="p-2 bg-dark rounded border border-secondary">
+                            <div class="small text-white">空腹血糖 (FBG)</div>
+                            <div class="fs-4 text-info"><span id="metric-fbg">--</span> <small class="fs-6">mmol/L</small></div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2 bg-dark rounded border border-secondary">
+                            <div class="small text-white">收缩压 (SBP)</div>
+                            <div class="fs-4 text-warning"><span id="metric-sbp">--</span> <small class="fs-6">mmHg</small></div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="p-2 bg-dark rounded border border-secondary">
+                            <div class="small text-white">ASCVD 风险</div>
+                            <div class="fs-4" id="metric-risk">--</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- KG Reasoning Alerts -->
+                <div class="mt-3 text-start">
+                    <div class="small text-muted mb-1"><i class="fas fa-project-diagram"></i> 医学知识图谱推理路径</div>
+                    <div id="kg-reasoning-box" class="p-2 bg-dark rounded border border-secondary small text-light" style="min-height: 60px; overflow-y: auto; max-height: 120px;">
+                        等待诊断推演...
+                    </div>
+                </div>
+            </div>
+
+            <div id="chat-history" class="flex-grow-1 p-3 overflow-auto" style="background-color: #121820;">
+                <div class="message doctor">
+                    <strong>数字孪生医生:</strong><br>您好，我是您的专属数字孪生医生。请问您今天感觉哪里不舒服？
+                </div>
+            </div>
+
+            <div class="p-3 border-top border-secondary bg-dark">
+                <div class="input-group">
+                    <button class="btn btn-outline-info" type="button" id="btn-record" title="语音输入">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <input type="text" id="input-text" class="form-control bg-dark text-light border-secondary" placeholder="描述您的症状...">
+                    <button class="btn btn-info" type="button" id="btn-send"><i class="fas fa-paper-plane"></i> 发送</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="js/jquery.min.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

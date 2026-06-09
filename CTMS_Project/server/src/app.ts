@@ -207,10 +207,13 @@ apiRouter.use('/audit', authMiddleware() as any, auditRoutes as any);
 import notificationRoutes from './modules/notification/notification.routes';
 apiRouter.use('/notifications', authMiddleware() as any, notificationRoutes as any);
 
+<<<<<<< HEAD
 // 医生日历夹
 import doctorFolderRoutes from './modules/doctor-patient-folder/routes/doctor-folder.routes';
 apiRouter.use('/doctor-folder', authMiddleware() as any, doctorFolderRoutes as any);
 
+=======
+>>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 app.use('/api', apiRouter);
 
 // =========== 错误处理 ===========
