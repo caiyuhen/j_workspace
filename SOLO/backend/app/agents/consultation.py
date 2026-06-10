@@ -17,7 +17,7 @@ class ConsultationAgent(BaseAgent):
     咨询代理 - 健康咨询顾问
     
     面向患者和公众提供健康咨询服务。
-    通过调用大模型服务(192.168.0.214:8802/chat/)获取RAG增强的响应。
+    通过调用大模型服务 `/chat` 接口获取RAG增强的响应。
     """
     
     name = "咨询代理"
@@ -83,7 +83,7 @@ class ConsultationAgent(BaseAgent):
                 "role": "user",
                 "content": f"用户问题: {question}\n用户信息: {user_info}"
             }
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -119,7 +119,7 @@ class ConsultationAgent(BaseAgent):
                 "role": "user",
                 "content": f"症状: {symptoms}\n持续时间: {duration}"
             }
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -150,7 +150,7 @@ class ConsultationAgent(BaseAgent):
                 "role": "user",
                 "content": f"情况: {condition}\n症状: {symptoms}"
             }
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -184,7 +184,7 @@ class ConsultationAgent(BaseAgent):
 请以JSON格式返回用药指导。"""
             },
             {"role": "user", "content": f"药物: {medication}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -216,7 +216,7 @@ class ConsultationAgent(BaseAgent):
 请以JSON格式返回科普内容。"""
             },
             {"role": "user", "content": f"科普主题: {topic}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,

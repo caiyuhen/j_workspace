@@ -20,12 +20,11 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379/0"
     
     # LLM服务配置（内置RAG）
-    # 大模型服务地址: 192.168.0.214:8802/chat/
-    # LLM服务配置（内置RAG）
-    LLM_ENDPOINT: str = "http://192.168.0.214:8802"
+    # 基础地址，实际对话接口为 POST {LLM_ENDPOINT}/chat
+    LLM_ENDPOINT: str = "http://127.0.0.1:8802"
     LLM_MODEL: str = "medical-large"
     # 单位：毫秒（LLMService 内部会除以 1000 传给 httpx）
-    LLM_TIMEOUT: int = 3000000  # 3000秒
+    LLM_TIMEOUT: int = 300000  # 300秒
     
     # JWT配置
     SECRET_KEY: str = "your-super-secret-key-change-in-production"

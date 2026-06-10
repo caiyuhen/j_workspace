@@ -44,7 +44,7 @@ services:
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/medical_agent
       - REDIS_URL=redis://redis:6379/0
-      - LLM_ENDPOINT=http://192.168.0.214:8802/chat/
+      - LLM_ENDPOINT=http://127.0.0.1:8802
       - LLM_MODEL=medical-large
     depends_on:
       postgres:

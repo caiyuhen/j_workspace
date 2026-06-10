@@ -16,7 +16,7 @@ class ResearchAgent(BaseAgent):
     """
     研究代理 - 医学研究助手
     
-    通过调用大模型服务(192.168.0.214:8802/chat/)获取RAG增强的研究支持。
+    通过调用大模型服务 `/chat` 接口获取RAG增强的研究支持。
     大模型内置的RAG会自动检索相关医学文献和知识。
     """
     
@@ -81,7 +81,7 @@ class ResearchAgent(BaseAgent):
                 "role": "user",
                 "content": f"检索主题: {query}\n筛选条件: {filters}"
             }
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -110,7 +110,7 @@ class ResearchAgent(BaseAgent):
 请以JSON格式返回结构化摘要。"""
             },
             {"role": "user", "content": f"文献内容:\n{content}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -142,7 +142,7 @@ class ResearchAgent(BaseAgent):
                 "role": "user",
                 "content": f"数据:\n{data}\n分析类型: {analysis_type}"
             }
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -170,7 +170,7 @@ class ResearchAgent(BaseAgent):
                 "content": f"你是一位医学论文写作专家。请协助{section_prompts.get(section, '撰写论文')}。"
             },
             {"role": "user", "content": f"论文主题: {topic}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -197,7 +197,7 @@ class ResearchAgent(BaseAgent):
 请以JSON格式返回趋势分析报告。"""
             },
             {"role": "user", "content": f"研究领域: {field}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,

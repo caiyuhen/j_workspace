@@ -1,7 +1,7 @@
 """
 大模型服务连接测试脚本
 
-测试大模型服务(192.168.0.214:8802/chat/)的连接和RAG功能
+测试医疗大模型 `/chat` 接口与 `/health` 健康检查。
 """
 import asyncio
 import httpx
@@ -10,7 +10,7 @@ from datetime import datetime
 
 
 # 大模型服务配置
-LLM_ENDPOINT = "http://192.168.0.214:8802/chat/"
+LLM_ENDPOINT = "http://127.0.0.1:8802"
 LLM_MODEL = "medical-large"
 TIMEOUT = 30
 
@@ -25,13 +25,13 @@ async def test_connection():
         async with httpx.AsyncClient(timeout=5) as client:
             # 尝试访问健康检查端点
             try:
-                response = await client.get(f"{LLM_ENDPOINT.replace('/chat/', '')}/health")
+                response = await client.get(f"{LLM_ENDPOINT}/health")
                 print(f"✅ 服务健康检查: {response.status_code}")
             except:
                 print("⚠️ 健康检查端点不可用，尝试直接调用API...")
             
             # 测试基本连通性
-            response = await client.get(LLM_ENDPOINT.replace('/chat/', ''))
+            response = await client.get(LLM_ENDPOINT)
             print(f"✅ 服务连接成功: {LLM_ENDPOINT}")
             return True
             
@@ -53,26 +53,23 @@ async def test_chat_completion():
     print("2. 测试聊天补全API")
     print("=" * 60)
     
-    test_messages = [
-        {"role": "user", "content": "你好，请介绍一下你自己。"}
-    ]
-    
     payload = {
-        "model": LLM_MODEL,
-        "messages": test_messages,
+        "prompt": "你好，请介绍一下你自己。",
+        "use_rag": True,
+        "use_adapter": True,
         "temperature": 0.7,
-        "max_tokens": 100
+        "max_new_tokens": 100
     }
     
     try:
         async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            print(f"📤 发送请求到: {LLM_ENDPOINT}chat/completions")
-            print(f"📝 请求内容: {test_messages[0]['content']}")
+            print(f"📤 发送请求到: {LLM_ENDPOINT}/chat")
+            print(f"📝 请求内容: {payload['prompt']}")
             
             start_time = datetime.now()
             
             response = await client.post(
-                f"{LLM_ENDPOINT}chat/completions",
+                f"{LLM_ENDPOINT}/chat",
                 json=payload
             )
             
@@ -83,11 +80,8 @@ async def test_chat_completion():
                 print(f"✅ 请求成功 (耗时: {elapsed:.2f}s)")
                 
                 # 解析响应
-                if "choices" in result:
-                    content = result["choices"][0].get("message", {}).get("content", "")
-                    print(f"📥 响应内容: {content[:200]}...")
-                elif "content" in result:
-                    print(f"📥 响应内容: {result['content'][:200]}...")
+                if "response" in result:
+                    print(f"📥 响应内容: {result['response'][:200]}...")
                 else:
                     print(f"📥 响应: {result}")
                 
@@ -123,10 +117,11 @@ async def test_rag_query():
         print(f"\n📝 查询: {query}")
         
         payload = {
-            "model": LLM_MODEL,
-            "messages": [{"role": "user", "content": query}],
+            "prompt": query,
+            "use_rag": True,
+            "use_adapter": True,
             "temperature": 0.5,
-            "max_tokens": 500
+            "max_new_tokens": 500
         }
         
         try:
@@ -134,7 +129,7 @@ async def test_rag_query():
                 start_time = datetime.now()
                 
                 response = await client.post(
-                    f"{LLM_ENDPOINT}chat/completions",
+                    f"{LLM_ENDPOINT}/chat",
                     json=payload
                 )
                 
@@ -144,10 +139,8 @@ async def test_rag_query():
                     result = response.json()
                     
                     # 提取响应内容
-                    if "choices" in result:
-                        content = result["choices"][0].get("message", {}).get("content", "")
-                    elif "content" in result:
-                        content = result["content"]
+                    if "response" in result:
+                        content = result["response"]
                     else:
                         content = str(result)
                     
@@ -165,50 +158,12 @@ async def test_rag_query():
 
 
 async def test_stream_chat():
-    """测试流式响应"""
+    """当前接口文档未提供流式端点，跳过该测试"""
     print("\n" + "=" * 60)
     print("4. 测试流式响应")
     print("=" * 60)
-    
-    payload = {
-        "model": LLM_MODEL,
-        "messages": [{"role": "user", "content": "请简要介绍糖尿病的类型。"}],
-        "stream": True,
-        "max_tokens": 200
-    }
-    
-    try:
-        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-            print(f"📤 发送流式请求...")
-            
-            async with client.stream(
-                "POST",
-                f"{LLM_ENDPOINT}chat/completions",
-                json=payload
-            ) as response:
-                if response.status_code == 200:
-                    print("✅ 流式连接成功")
-                    print("📥 流式响应: ", end="")
-                    
-                    chunk_count = 0
-                    async for line in response.aiter_lines():
-                        if line.startswith("data: "):
-                            data = line[6:]
-                            if data == "[DONE]":
-                                break
-                            chunk_count += 1
-                            if chunk_count <= 5:  # 只显示前5个chunk
-                                print(f"[chunk {chunk_count}]", end=" ")
-                    
-                    print(f"\n   共接收 {chunk_count} 个数据块")
-                    return True
-                else:
-                    print(f"❌ 流式请求失败: HTTP {response.status_code}")
-                    return False
-                    
-    except Exception as e:
-        print(f"⚠️ 流式响应测试跳过: {e}")
-        return None
+    print("⚠️ 附件文档仅定义普通 `/chat` 接口，未定义服务端流式输出协议，已跳过。")
+    return None
 
 
 async def main():

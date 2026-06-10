@@ -76,7 +76,7 @@ class LearningAgent(BaseAgent):
                 "role": "user",
                 "content": f"反馈类型: {feedback_type}\n反馈内容: {content}\n评分: {rating}"
             }
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -107,7 +107,7 @@ class LearningAgent(BaseAgent):
                 "role": "user",
                 "content": f"更新类型: {update_type}\n知识内容: {knowledge}"
             }
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -142,7 +142,7 @@ class LearningAgent(BaseAgent):
                 "role": "user",
                 "content": f"评估周期: {period}\n指标数据: {metrics}"
             }
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -173,7 +173,7 @@ class LearningAgent(BaseAgent):
                 "role": "user",
                 "content": f"数据类型: {data_type}\n时间范围: {time_range}"
             }
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,

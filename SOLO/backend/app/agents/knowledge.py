@@ -16,7 +16,7 @@ class KnowledgeAgent(BaseAgent):
     """
     知识代理 - 医学知识查询专家
     
-    通过调用大模型服务(192.168.0.214:8802/chat/)获取RAG增强的知识查询。
+    通过调用大模型服务 `/chat` 接口获取RAG增强的知识查询。
     大模型内置的RAG会自动检索医学知识库。
     """
     
@@ -90,7 +90,7 @@ class KnowledgeAgent(BaseAgent):
 请以JSON格式返回知识查询结果。"""
             },
             {"role": "user", "content": f"查询: {query}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -117,7 +117,7 @@ class KnowledgeAgent(BaseAgent):
 请以JSON格式返回术语解释。"""
             },
             {"role": "user", "content": f"术语: {term}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -151,7 +151,7 @@ class KnowledgeAgent(BaseAgent):
 请以JSON格式返回药物信息。"""
             },
             {"role": "user", "content": f"药物: {drug}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -185,7 +185,7 @@ class KnowledgeAgent(BaseAgent):
 请以JSON格式返回疾病百科。"""
             },
             {"role": "user", "content": f"疾病: {disease}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -215,7 +215,7 @@ class KnowledgeAgent(BaseAgent):
 请以JSON格式返回指南检索结果。"""
             },
             {"role": "user", "content": f"关键词: {keyword}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,

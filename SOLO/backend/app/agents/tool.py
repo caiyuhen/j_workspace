@@ -148,11 +148,11 @@ class ToolAgent(BaseAgent):
         
         # 根据协议调用不同的服务
         if skill["protocol"] == "skillhub":
-            result = await self._invoke_skillhub(skill, params)
+            result = await self._invoke_skillhub(skill, params, session_id=context.conversation_id)
         elif skill["protocol"] == "mcp":
-            result = await self._invoke_mcp(skill, params)
+            result = await self._invoke_mcp(skill, params, session_id=context.conversation_id)
         else:
-            result = await self._invoke_local(skill, params)
+            result = await self._invoke_local(skill, params, session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -164,40 +164,49 @@ class ToolAgent(BaseAgent):
             }
         )
     
-    async def _invoke_skillhub(self, skill: Dict, params: Dict) -> Dict:
+    async def _invoke_skillhub(self, skill: Dict, params: Dict, session_id: str) -> Dict:
         """调用SkillHub Skill"""
         # TODO: 实现实际的SkillHub调用
         # 这里使用LLM模拟Skill功能
-        response = await self.call_llm([
-            {
-                "role": "system",
-                "content": f"你是{skill['name']}工具。请处理用户的请求。"
-            },
-            {"role": "user", "content": str(params)}
-        ])
+        response = await self.call_llm(
+            [
+                {
+                    "role": "system",
+                    "content": f"你是{skill['name']}工具。请处理用户的请求。"
+                },
+                {"role": "user", "content": str(params)}
+            ],
+            session_id=session_id
+        )
         return response
     
-    async def _invoke_mcp(self, skill: Dict, params: Dict) -> Dict:
+    async def _invoke_mcp(self, skill: Dict, params: Dict, session_id: str) -> Dict:
         """调用MCP工具"""
         # TODO: 实现实际的MCP调用
-        response = await self.call_llm([
-            {
-                "role": "system",
-                "content": f"你是MCP工具{skill['name']}。请处理用户的请求。"
-            },
-            {"role": "user", "content": str(params)}
-        ])
+        response = await self.call_llm(
+            [
+                {
+                    "role": "system",
+                    "content": f"你是MCP工具{skill['name']}。请处理用户的请求。"
+                },
+                {"role": "user", "content": str(params)}
+            ],
+            session_id=session_id
+        )
         return response
     
-    async def _invoke_local(self, skill: Dict, params: Dict) -> Dict:
+    async def _invoke_local(self, skill: Dict, params: Dict, session_id: str) -> Dict:
         """调用本地工具"""
-        response = await self.call_llm([
-            {
-                "role": "system",
-                "content": f"你是本地工具{skill['name']}。请处理用户的请求。"
-            },
-            {"role": "user", "content": str(params)}
-        ])
+        response = await self.call_llm(
+            [
+                {
+                    "role": "system",
+                    "content": f"你是本地工具{skill['name']}。请处理用户的请求。"
+                },
+                {"role": "user", "content": str(params)}
+            ],
+            session_id=session_id
+        )
         return response
     
     async def _mcp_adapter(self, context: TaskContext) -> TaskResult:
@@ -222,7 +231,7 @@ class ToolAgent(BaseAgent):
                 "content": f"请将以下结果转换为{target_format}格式。"
             },
             {"role": "user", "content": str(result)}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,

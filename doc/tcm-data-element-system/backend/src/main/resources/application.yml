@@ -1,0 +1,181 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+spring:
+  application:
+    name: tcm-data-element-system
+  
+  profiles:
+    active: dev
+  
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/tcm_data?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    druid:
+      initial-size: 5
+      min-idle: 5
+      max-active: 20
+      max-wait: 60000
+      time-between-eviction-runs-millis: 60000
+      min-evictable-idle-time-millis: 300000
+      validation-query: SELECT 1
+      test-while-idle: true
+      test-on-borrow: false
+      test-on-return: false
+      pool-prepared-statements: true
+      max-pool-prepared-statement-per-connection-size: 20
+      filters: stat,wall,slf4j
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+  
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: 0
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+  
+  neo4j:
+    uri: ${NEO4J_URI:bolt://localhost:7687}
+    authentication:
+      username: ${NEO4J_USERNAME:neo4j}
+      password: ${NEO4J_PASSWORD:password}
+  
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+    clean-disabled: true
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    map-underscore-to-camel-case: true
+  global-config:
+    db-config:
+      id-type: auto
+      logic-delete-field: deleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+  mapper-locations: classpath*:/mapper/**/*.xml
+
+# JWT配置
+jwt:
+  secret: ${JWT_SECRET:tcm-data-element-system-secret-key-2024}
+  expiration: 86400000  # 24小时
+  refresh-expiration: 604800000  # 7天
+
+# 数据分类分级配置
+data-classification:
+  levels:
+    - code: L1
+      name: 一般数据
+      description: 公开或内部数据
+      color: '#52c41a'
+    - code: L2
+      name: 敏感数据
+      description: 个人信息与隐私数据
+      color: '#faad14'
+    - code: L3
+      name: 重要数据
+      description: 重要业务数据
+      color: '#f5222d'
+    - code: L4
+      name: 核心数据
+      description: 国家核心中医药数据
+      color: '#722ed1'
+
+# AI大模型配置
+ai:
+  model:
+    provider: openai  # openai, qwen, baichuan, deepseek
+    api-key: ${AI_API_KEY:}
+    api-url: ${AI_API_URL:https://api.openai.com/v1/chat/completions}
+    model-name: ${AI_MODEL_NAME:gpt-4}
+    timeout: 30000
+    max-tokens: 4096
+    temperature: 0.7
+  knowledge-graph:
+    enabled: true
+    neo4j-enabled: true
+  rag:
+    enabled: true
+    vector-store: elasticsearch
+    top-k: 5
+    similarity-threshold: 0.7
+
+# Elasticsearch配置
+elasticsearch:
+  uris: ${ES_URIS:http://localhost:9200}
+  username: ${ES_USERNAME:}
+  password: ${ES_PASSWORD:}
+
+# 文件上传配置
+file:
+  upload:
+    path: ${FILE_UPLOAD_PATH:./uploads}
+    max-size: 104857600  # 100MB
+    allowed-types: jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,csv,json,xml,mp4,mp3,wav
+
+# 日志配置
+logging:
+  level:
+    com.tcm.data: DEBUG
+    org.springframework.security: DEBUG
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Actuator配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+  
+  datasource:
+    druid:
+      filters: stat,wall,slf4j
+      connection-properties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=2000
+  
+  jpa:
+    show-sql: false
+
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+logging:
+  level:
+    com.tcm.data: INFO
+    org.springframework.security: WARN
+  file:
+    name: logs/tcm-data-element-system.log
+    max-size: 100MB
+    max-history: 30
