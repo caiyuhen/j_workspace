@@ -2,7 +2,7 @@
 对话管理API - 完整实现
 
 提供对话创建、消息发送、历史查询等功能
-大模型服务(192.168.0.214:8802/chat/)已内置RAG能力
+大模型服务通过 `/chat` 接口提供内置RAG能力
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
 from fastapi.responses import StreamingResponse
@@ -249,7 +249,7 @@ async def chat(
     4. LLM处理（自动RAG增强）
     5. 结果整合
     
-    大模型服务(192.168.0.214:8802/chat/)会自动进行RAG检索增强
+    大模型服务会通过 `/chat` 接口自动进行RAG检索增强
     """
     # 获取或创建对话
     conversation_id = request.conversation_id
@@ -328,7 +328,10 @@ async def chat(
                 response_content = result.output.get("content", str(result.output)) if result.output else "处理失败"
             else:
                 # 代理不存在，使用LLM直接处理
-                response = await llm_service.chat(chat_messages)
+                response = await llm_service.chat(
+                    chat_messages,
+                    session_id=conversation_id
+                )
                 response_content = _extract_content(response)
         else:
             # 使用编排代理处理（智能分配专业代理）
@@ -355,18 +358,27 @@ async def chat(
                     else:
                         # 编排失败，直接调用LLM
                         logger.warning(f"编排失败: {result.error}, 使用LLM直接处理")
-                        response = await llm_service.chat(chat_messages)
+                        response = await llm_service.chat(
+                            chat_messages,
+                            session_id=conversation_id
+                        )
                         response_content = _extract_content(response)
                         agent_used = "llm"
                 except Exception as e:
                     logger.error(f"编排代理执行失败: {e}")
-                    response = await llm_service.chat(chat_messages)
+                    response = await llm_service.chat(
+                        chat_messages,
+                        session_id=conversation_id
+                    )
                     response_content = _extract_content(response)
                     agent_used = "llm"
             else:
                 # 无编排代理，直接调用LLM
                 logger.warning("无编排代理，使用LLM直接处理")
-                response = await llm_service.chat(chat_messages)
+                response = await llm_service.chat(
+                    chat_messages,
+                    session_id=conversation_id
+                )
                 response_content = _extract_content(response)
                 agent_used = "llm"
         
@@ -451,7 +463,10 @@ async def chat_stream(
             full_content = ""
             
             # 流式调用LLM
-            async for chunk in llm_service.stream_chat(chat_messages):
+            async for chunk in llm_service.stream_chat(
+                chat_messages,
+                session_id=conversation_id
+            ):
                 full_content += chunk
                 yield f"data: {json.dumps({'content': chunk, 'conversation_id': conversation_id})}\n\n"
             
@@ -527,7 +542,10 @@ async def send_message(
         ]
         
         # 调用LLM
-        response = await llm_service.chat(chat_messages)
+        response = await llm_service.chat(
+            chat_messages,
+            session_id=conversation_id
+        )
         response_content = _extract_content(response)
         
         # 计算token

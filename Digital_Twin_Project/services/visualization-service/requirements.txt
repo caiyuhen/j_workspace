@@ -1,13 +1,5 @@
-<<<<<<< HEAD
 fastapi
 uvicorn
 plotly
 numpy
 pandas
-=======
-fastapi
-uvicorn
-plotly
-numpy
-pandas
->>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8

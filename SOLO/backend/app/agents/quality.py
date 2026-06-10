@@ -97,7 +97,7 @@ class QualityAgent(BaseAgent):
                 "role": "user",
                 "content": f"来源代理: {agent_name}\n内容: {content}"
             }
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -132,7 +132,7 @@ class QualityAgent(BaseAgent):
 请以JSON格式返回安全检查报告。"""
             },
             {"role": "user", "content": f"内容: {content}"}
-        ])
+        ], session_id=context.conversation_id)
         
         result = response
         result["sensitive_words_found"] = found_sensitive
@@ -165,7 +165,7 @@ class QualityAgent(BaseAgent):
 请以JSON格式返回合规验证报告。"""
             },
             {"role": "user", "content": f"内容: {content}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -194,7 +194,7 @@ class QualityAgent(BaseAgent):
 请以JSON格式返回偏见检测报告。"""
             },
             {"role": "user", "content": f"内容: {content}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -222,7 +222,7 @@ class QualityAgent(BaseAgent):
 请以JSON格式返回引用验证报告。"""
             },
             {"role": "user", "content": f"引用列表: {citations}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,

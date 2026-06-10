@@ -1,7 +1,7 @@
 """
 大模型服务客户端
 
-大模型服务地址: 192.168.0.214:8802/chat/
+大模型服务地址默认使用 `http://127.0.0.1:8802`
 该服务已内置RAG（检索增强生成）能力，包含医学知识向量库。
 
 调用时会自动：
@@ -32,9 +32,68 @@ class LLMService:
         model: str = None,
         timeout: int = None
     ):
-        self.endpoint = endpoint or settings.LLM_ENDPOINT
+        self.endpoint = self._normalize_endpoint(endpoint or settings.LLM_ENDPOINT)
         self.model = model or settings.LLM_MODEL
         self.timeout = timeout or settings.LLM_TIMEOUT
+
+    @staticmethod
+    def _normalize_endpoint(endpoint: str) -> str:
+        """
+        规范化服务地址。
+
+        兼容旧配置中以 `/chat/` 结尾的写法，统一转换为基础地址。
+        """
+        normalized = (endpoint or "").strip().rstrip("/")
+        if normalized.endswith("/chat"):
+            normalized = normalized[:-5]
+        return normalized
+
+    @staticmethod
+    def _build_payload(
+        messages: List[Dict],
+        temperature: float,
+        max_tokens: int,
+        **kwargs
+    ) -> Dict:
+        """将消息列表转换为医疗大模型 `/chat` 接口所需格式"""
+        # 提取最后一条用户消息作为 prompt
+        prompt = ""
+        for msg in reversed(messages):
+            if msg["role"] == "user":
+                prompt = msg["content"]
+                break
+
+        # 构建历史消息（排除最后一条用户消息和系统消息）
+        history = []
+        user_msg_count = 0
+        for msg in messages:
+            if msg["role"] == "user":
+                user_msg_count += 1
+
+        if user_msg_count > 1:
+            for msg in messages[:-1]:
+                if msg["role"] != "system":
+                    history.append({
+                        "role": msg["role"],
+                        "content": msg["content"]
+                    })
+
+        payload = {
+            "prompt": prompt,
+            "use_rag": kwargs.get("use_rag", True),
+            "return_rag_info": kwargs.get("return_rag_info", True),
+            "use_adapter": kwargs.get("use_adapter", True),
+            "history": kwargs.get("history", history),
+            "temperature": temperature,
+            "max_new_tokens": max_tokens,
+            "repetition_penalty": kwargs.get("repetition_penalty", 1.1)
+        }
+
+        session_id = kwargs.get("session_id")
+        if session_id:
+            payload["session_id"] = session_id
+
+        return payload
     
     async def chat(
         self,
@@ -62,39 +121,14 @@ class LLMService:
         Returns:
             Dict: 大模型响应，包含content、tokens、sources等字段
         """
-        # 提取最后一条用户消息作为 prompt
-        prompt = ""
-        for msg in reversed(messages):
-            if msg["role"] == "user":
-                prompt = msg["content"]
-                break
-        
-        # 构建历史消息（排除最后一条用户消息和系统消息）
-        history = []
-        user_msg_count = 0
-        for msg in messages:
-            if msg["role"] == "user":
-                user_msg_count += 1
-        # 如果有多条用户消息，前面的作为 history
-        if user_msg_count > 1:
-            for msg in messages[:-1]:
-                if msg["role"] != "system":
-                    history.append({
-                        "role": msg["role"],
-                        "content": msg["content"]
-                    })
-        
-        # 构建符合 LLM 服务 API 的请求格式
-        # 启用 RAG 检索增强（超时已增加到 300 秒）
-        payload = {
-            "prompt": prompt,
-            "use_rag": True,
-            "use_adapter": True,
-            "history": history,
-            "temperature": temperature,
-            "max_new_tokens": max_tokens
-        }
-        
+        payload = self._build_payload(
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs
+        )
+        prompt = payload.get("prompt", "")
+
         logger.info(f"LLM 请求: prompt长度={len(prompt)}, use_rag=True")
         
         try:
@@ -181,30 +215,18 @@ class LLMService:
         Yields:
             str: 流式响应内容块
         """
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "stream": True,
-            **kwargs
-        }
-        
         try:
-            async with httpx.AsyncClient(timeout=self.timeout / 1000) as client:
-                async with client.stream(
-                    "POST",
-                    f"{self.endpoint}/chat/completions",
-                    json=payload
-                ) as response:
-                    response.raise_for_status()
-                    async for line in response.aiter_lines():
-                        if line.startswith("data: "):
-                            data = line[6:]
-                            if data == "[DONE]":
-                                break
-                            yield data
-                            
+            result = await self.chat(
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                stream=False,
+                **kwargs
+            )
+            content = result.get("content", "")
+            chunk_size = 20
+            for i in range(0, len(content), chunk_size):
+                yield content[i:i + chunk_size]
         except Exception as e:
             logger.error(f"流式请求失败: {e}")
             raise

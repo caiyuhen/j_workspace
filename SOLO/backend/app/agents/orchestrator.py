@@ -19,7 +19,7 @@ class OrchestratorAgent(BaseAgent):
     编排代理 - 系统核心大脑
     
     负责任务的解析、分解、调度和结果整合。
-    通过调用大模型服务(192.168.0.214:8802/chat/)获取RAG增强的响应。
+    通过调用大模型服务 `/chat` 接口获取RAG增强的响应。
     """
     
     name = "编排专家"
@@ -58,7 +58,7 @@ class OrchestratorAgent(BaseAgent):
         """
         try:
             # Step 1: 解析意图
-            intent = await self._parse_intent(context.input)
+            intent = await self._parse_intent(context.input, context)
             logger.info(f"解析意图结果: {intent}")
             
             # Step 2: 分解任务
@@ -70,7 +70,7 @@ class OrchestratorAgent(BaseAgent):
             logger.info(f"执行结果数量: {len(results)}, 成功: {sum(1 for r in results if r.success)}")
             
             # Step 4: 整合结果
-            final_result = await self._aggregate_results(results)
+            final_result = await self._aggregate_results(results, context)
             logger.info(f"最终结果: {final_result}")
             
             return TaskResult(
@@ -88,7 +88,7 @@ class OrchestratorAgent(BaseAgent):
                 error=str(e)
             )
     
-    async def _parse_intent(self, user_input: str) -> Dict:
+    async def _parse_intent(self, user_input: str, context: TaskContext) -> Dict:
         """
         解析用户意图
         
@@ -96,19 +96,22 @@ class OrchestratorAgent(BaseAgent):
         大模型服务会自动进行RAG检索增强。
         """
         try:
-            response = await self.call_llm([
-                {
-                    "role": "system", 
-                    "content": """你是一个医学意图识别专家。分析用户输入，识别以下信息：
+            response = await self.call_llm(
+                [
+                    {
+                        "role": "system",
+                        "content": """你是一个医学意图识别专家。分析用户输入，识别以下信息：
 1. intent_type: 意图类型(diagnosis/research/consultation/knowledge)
 2. entities: 关键实体列表
 3. confidence: 置信度(0-1)
 4. task_complexity: 任务复杂度(simple/medium/complex)
 
 请以JSON格式返回结果。"""
-                },
-                {"role": "user", "content": f"分析以下医学输入：\n{user_input}"}
-            ])
+                    },
+                    {"role": "user", "content": f"分析以下医学输入：\n{user_input}"}
+                ],
+                session_id=context.conversation_id
+            )
             
             # 处理响应
             if isinstance(response, dict):
@@ -175,7 +178,7 @@ class OrchestratorAgent(BaseAgent):
 请以JSON数组格式返回子任务列表。"""
                 },
                 {"role": "user", "content": f"分解以下任务：\n意图: {intent}\n原始输入: {context.input}"}
-            ])
+            ], session_id=context.conversation_id)
             
             # 处理响应
             if isinstance(response, dict):
@@ -308,10 +311,13 @@ class OrchestratorAgent(BaseAgent):
         context: TaskContext
     ) -> TaskResult:
         """使用LLM直接处理任务"""
-        response = await self.call_llm([
-            {"role": "system", "content": "你是一个医学AI助手。"},
-            {"role": "user", "content": str(subtask.get("input", context.input))}
-        ])
+        response = await self.call_llm(
+            [
+                {"role": "system", "content": "你是一个医学AI助手。"},
+                {"role": "user", "content": str(subtask.get("input", context.input))}
+            ],
+            session_id=context.conversation_id
+        )
         
         return TaskResult(
             task_id=subtask.get("task_id", context.task_id),
@@ -319,7 +325,7 @@ class OrchestratorAgent(BaseAgent):
             output=response
         )
     
-    async def _aggregate_results(self, results: List[TaskResult]) -> Dict:
+    async def _aggregate_results(self, results: List[TaskResult], context: TaskContext) -> Dict:
         """
         整合结果
         
@@ -348,13 +354,16 @@ class OrchestratorAgent(BaseAgent):
             return {"content": str(result)}
         
         # 多个结果需要整合
-        response = await self.call_llm([
-            {
-                "role": "system",
-                "content": "你是一个结果整合专家。将多个医学分析结果整合为一个完整、连贯的响应。"
-            },
-            {"role": "user", "content": f"整合以下结果：\n{successful_results}"}
-        ])
+        response = await self.call_llm(
+            [
+                {
+                    "role": "system",
+                    "content": "你是一个结果整合专家。将多个医学分析结果整合为一个完整、连贯的响应。"
+                },
+                {"role": "user", "content": f"整合以下结果：\n{successful_results}"}
+            ],
+            session_id=context.conversation_id
+        )
         
         # 确保响应格式正确
         if isinstance(response, dict):

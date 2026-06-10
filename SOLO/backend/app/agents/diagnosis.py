@@ -16,7 +16,7 @@ class DiagnosisAgent(BaseAgent):
     """
     诊断代理 - 临床诊断辅助专家
     
-    通过调用大模型服务(192.168.0.214:8802/chat/)获取RAG增强的诊断建议。
+    通过调用大模型服务 `/chat` 接口获取RAG增强的诊断建议。
     大模型内置的RAG会自动检索相关医学知识增强生成效果。
     """
     
@@ -84,7 +84,7 @@ class DiagnosisAgent(BaseAgent):
 请以JSON格式返回结构化结果。"""
             },
             {"role": "user", "content": f"请分析以下病历：\n\n{record}"}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -127,7 +127,7 @@ class DiagnosisAgent(BaseAgent):
 请以JSON格式返回结果。注意：你的诊断仅供参考，不能替代医生的专业诊断。"""
             },
             {"role": "user", "content": "\n".join(prompt_parts)}
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -162,7 +162,7 @@ class DiagnosisAgent(BaseAgent):
                 "role": "user", 
                 "content": f"初步诊断: {primary_diagnosis}\n症状: {symptoms}\n\n请给出鉴别诊断。"
             }
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -199,7 +199,7 @@ class DiagnosisAgent(BaseAgent):
                 "role": "user",
                 "content": f"诊断: {diagnosis}\n患者信息: {patient_info}\n\n请给出用药建议。"
             }
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,
@@ -234,7 +234,7 @@ class DiagnosisAgent(BaseAgent):
                 "role": "user",
                 "content": f"患者信息: {patient_info}\n诊断: {diagnosis}\n\n请进行风险评估。"
             }
-        ])
+        ], session_id=context.conversation_id)
         
         return TaskResult(
             task_id=context.task_id,

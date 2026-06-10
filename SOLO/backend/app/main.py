@@ -33,7 +33,7 @@ app = FastAPI(
     
     ## 核心特性
     - 多代理协同架构
-    - 大模型服务内置RAG（192.168.0.214:8802/chat/）
+    - 大模型服务内置RAG（通过 `/chat` 接口提供）
     - Skill集成（skillhub.cn + MCP）
     """,
     lifespan=lifespan

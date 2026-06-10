@@ -636,7 +636,7 @@ async def _execute_builtin(skill: Dict, input_data: Dict) -> Dict:
         {"role": "user", "content": prompt}
     ])
     
-    content = response.get("choices", [{}])[0].get("message", {}).get("content", "")
+    content = response.get("content", "")
     
     return {
         "skill": skill_name,
