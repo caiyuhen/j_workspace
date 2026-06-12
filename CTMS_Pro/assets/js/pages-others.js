@@ -2582,7 +2582,7 @@ CTMS.submitAddCenter = async function(isEdit = false) {
           projectLeader: "ccc",
           hospitalName: name
         };
-        const extRes = await fetch('https://synctest-test.jdhhealth.cn//rws/rwsProject/saveProjectHospital', {
+        const extRes = await fetch('https://syncsim-test.jdhhealth.cn//rws/rwsProject/saveProjectHospital', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

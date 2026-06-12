@@ -105,7 +105,9 @@ class AgentRegistry:
         self.orchestrator.register_agent(consultation_agent)
         self.orchestrator.register_agent(knowledge_agent)
         self.orchestrator.register_agent(tool_agent)
-        # 注意：质控代理和学习代理由编排代理直接调用，不参与任务调度
+        # 质控/学习也注册到编排代理，便于统一路由（task_type 通过 capabilities 映射）
+        self.orchestrator.register_agent(quality_agent)
+        self.orchestrator.register_agent(learning_agent)
     
     def register_agent(self, agent: BaseAgent):
         """

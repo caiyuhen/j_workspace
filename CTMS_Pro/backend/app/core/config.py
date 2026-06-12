@@ -35,10 +35,10 @@ class Settings(BaseSettings):
         raise ValueError(v)
 
     # ─── 数据库配置 ────────────────────────────────────────
-    POSTGRES_SERVER: str = "localhost"
+    POSTGRES_SERVER: str = "postgres"
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "ctms_user"
-    POSTGRES_PASSWORD: str = "ctms2026"
+    POSTGRES_PASSWORD: str = "ctms_password_2026"
     POSTGRES_DB: str = "ctms_pro"
     DATABASE_URL: Optional[str] = None
 
@@ -46,14 +46,20 @@ class Settings(BaseSettings):
     def assemble_db_connection(cls, v, values):
         if v:
             return v
+        
+        # 从 values 中获取，如果不存在则使用默认值
+        user = values.get('POSTGRES_USER', 'ctms_user')
+        password = values.get('POSTGRES_PASSWORD', 'ctms_password_2026')
+        server = values.get('POSTGRES_SERVER', 'postgres')
+        port = values.get('POSTGRES_PORT', 5432)
+        db = values.get('POSTGRES_DB', 'ctms_pro')
+        
         return (
-            f"postgresql+asyncpg://{values['POSTGRES_USER']}:"
-            f"{values['POSTGRES_PASSWORD']}@{values['POSTGRES_SERVER']}:"
-            f"{values['POSTGRES_PORT']}/{values['POSTGRES_DB']}"
+            f"postgresql+asyncpg://{user}:{password}@{server}:{port}/{db}"
         )
 
     # ─── Redis 配置 ────────────────────────────────────────
-    REDIS_HOST: str = "localhost"
+    REDIS_HOST: str = "redis"
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: str = ""
     REDIS_DB: int = 0
@@ -89,8 +95,8 @@ class Settings(BaseSettings):
     S3_REGION: str = "us-east-1"
 
     # ─── Celery ────────────────────────────────────────────
-    CELERY_BROKER_URL: str = "redis://localhost:6379/1"
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/2"
+    CELERY_BROKER_URL: str = "redis://redis:6379/1"
+    CELERY_RESULT_BACKEND: str = "redis://redis:6379/2"
 
     # ─── 业务配置 ──────────────────────────────────────────
     AUDIT_LOG_RETENTION_DAYS: int = 180
@@ -105,8 +111,8 @@ class Settings(BaseSettings):
     FIRST_SUPERUSER_PASSWORD: str = "Admin@CTMS2026!"
 
     # ─── 外部系统 IWRS API 配置 ────────────────────────────
-    IWRS_SAVE_PROJECT_ALL_URL: str = "https://synctest-test.jdhhealth.cn/rws/rwsProject/saveRwsProjectAll"
-    IWRS_SAVE_PROJECT_HOSPITAL_URL: str = "https://synctest-test.jdhhealth.cn/rws/rwsProject/saveProjectHospital"
+    IWRS_SAVE_PROJECT_ALL_URL: str = "https://syncsim-test.jdhhealth.cn/rws/rwsProject/saveRwsProjectAll"
+    IWRS_SAVE_PROJECT_HOSPITAL_URL: str = "https://syncsim-test.jdhhealth.cn/rws/rwsProject/saveProjectHospital"
 
     class Config:
         env_file = ".env"

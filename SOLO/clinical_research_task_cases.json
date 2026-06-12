@@ -1,0 +1,27 @@
+{
+  "project": "临床研究项目验收用例",
+  "description": "用于验证：在“临床研究项目”场景下，系统是否能通过代理/Skill 自动路由并执行 Task（含医学后端 clinical_trial / write / clinical 等）。",
+  "cases": [
+    {
+      "name": "临床试验方案设计（应触发 clinical_trial）",
+      "text": "我准备开展一项关于新型降糖药与二甲双胍头对头比较的随机对照试验(RCT)，主要终点是HbA1c下降的非劣效性。请帮我设计试验方案，并提供样本量计算的建议及所需的参数设定。",
+      "expect_skill_id": "skill_medical_api_clinical_trial"
+    },
+    {
+      "name": "统计分析计划要点（建议触发 clinical_trial 或 write）",
+      "text": "基于上面的RCT，请输出统计分析计划(SAP)要点：主要/次要终点分析方法、协变量、缺失值处理、敏感性分析、亚组分析、显著性水平与多重性控制建议。",
+      "expect_skill_id": "skill_medical_api_clinical_trial"
+    },
+    {
+      "name": "纳排标准草案（建议触发 write）",
+      "text": "请为该糖尿病RCT输出纳入标准/排除标准草案，要求符合临床研究写法，条目化输出。",
+      "expect_skill_id": "skill_medical_api_write"
+    },
+    {
+      "name": "受试者风险与安全监测（建议触发 clinical）",
+      "text": "针对2型糖尿病用药RCT，请给出受试者风险评估、安全性监测指标、不良事件分级与上报建议，以及何时需要停药/退出试验的原则。",
+      "expect_skill_id": "skill_medical_api_clinical"
+    }
+  ]
+}
+

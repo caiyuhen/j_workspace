@@ -187,7 +187,7 @@ export const agentApi = {
     api.get<Agent[]>('/agents'),
   
   get: (name: string) => 
-    api.get<Agent>(`/agents/detail/${name}`),
+    api.get<Agent>(`/agents/${encodeURIComponent(name)}`),
   
   getStatus: () => 
     api.get<Record<string, string>>('/agents/status'),
@@ -208,7 +208,7 @@ export const skillApi = {
     api.get<Skill[]>('/skills'),
   
   get: (id: string) => 
-    api.get<Skill>(`/skills/detail/${id}`),
+    api.get<Skill>(`/skills/${encodeURIComponent(id)}`),
   
   execute: (id: string, input: Record<string, unknown>, config?: Record<string, unknown>) => 
     api.post(`/skills/${id}/execute`, { input, config }),

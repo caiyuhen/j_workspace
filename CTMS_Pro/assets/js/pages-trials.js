@@ -2275,11 +2275,11 @@ window.loadRemoteSubjects = function(trialCode, trialId, hospitalName) {
   const finalProjectId = trialCode || trialId;
 
   // Construct the remote URL using URL and URLSearchParams to ensure proper parameter joining
-  const remoteUrlObj = new URL('http://icrptest.jdhhealth.cn/Back/subject-list/index.html');
+  const remoteUrlObj = new URL('https://icrpsim.jdhhealth.cn/Back/subject-list/index.html');
   remoteUrlObj.searchParams.append('token', token);
   remoteUrlObj.searchParams.append('projectId', finalProjectId);
   remoteUrlObj.searchParams.append('hospitalName', hospitalName);
-  remoteUrlObj.searchParams.append('apiBase', 'https://synctest-prod.jdhhealth.cn');
+  remoteUrlObj.searchParams.append('apiBase', 'https://syncsim-prod.jdhhealth.cn');
   const targetUrl = remoteUrlObj.toString();
 
   // Show loading state
