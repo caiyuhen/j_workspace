@@ -1,3 +1,5 @@
+version: '3.9'
+
 # ================================================================
 # CTMS Pro - Docker Compose 部署配置
 # 包含：FastAPI后端 + PostgreSQL + Redis + MinIO + Nginx
@@ -52,17 +54,17 @@ services:
     image: minio/minio:latest
     container_name: ctms_minio
     restart: unless-stopped
-    command: server /data --console-address ":9001"
+    command: server /data --address ":7000" --console-address ":7001"
     environment:
       MINIO_ROOT_USER: minioadmin
       MINIO_ROOT_PASSWORD: minioadmin123
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"     # MinIO 控制台
+      - "7000:7000"
+      - "7001:7001"     # MinIO 控制台
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-f", "http://localhost:7000/minio/health/live"]
       interval: 30s
       timeout: 20s
       retries: 3
@@ -87,7 +89,7 @@ services:
       POSTGRES_DB: ctms_pro
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      S3_ENDPOINT_URL: http://minio:9000
+      S3_ENDPOINT_URL: http://minio:7000
       S3_ACCESS_KEY: minioadmin
       S3_SECRET_KEY: minioadmin123
       S3_BUCKET_NAME: ctms-documents
@@ -95,14 +97,14 @@ services:
     volumes:
       - ./backend/logs:/app/logs
     ports:
-      - "8898:8000"
+      - "8898:8443"
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8443/health"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -134,7 +136,7 @@ services:
       dockerfile: Dockerfile
     container_name: ctms_celery
     restart: unless-stopped
-    command: celery -A app.worker worker --loglevel=info --concurrency=4
+    command: python -c "import time; print('Celery is temporarily disabled because worker.py is missing'); time.sleep(86400)"
     environment:
       APP_ENV: production
       POSTGRES_SERVER: postgres
@@ -166,6 +168,3 @@ volumes:
 networks:
   ctms_network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16

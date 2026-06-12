@@ -24,6 +24,7 @@ class QualityAgent(BaseAgent):
     type = "quality"
     description = "质量与安全守护者，确保输出质量和合规性"
     capabilities = [
+        "quality_check",
         "result_review",
         "safety_check",
         "compliance_verification",
@@ -52,6 +53,8 @@ class QualityAgent(BaseAgent):
     async def execute(self, context: TaskContext) -> TaskResult:
         """执行质控任务"""
         task_type = context.metadata.get("task_type", "result_review")
+        if task_type == "quality_check":
+            task_type = "result_review"
         
         handlers = {
             "result_review": self._result_review,
