@@ -10,6 +10,7 @@ Skill 注册与执行中心（单例）
 from __future__ import annotations
 
 import logging
+import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
