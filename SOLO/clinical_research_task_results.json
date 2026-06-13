@@ -1,0 +1,68 @@
+{
+  "api": "http://127.0.0.1:8000",
+  "user": "admin@medical.ai",
+  "project": "临床研究项目验收用例",
+  "description": "用于验证：在“临床研究项目”场景下，系统是否能通过代理/Skill 自动路由并执行 Task（含医学后端 clinical_trial / write / clinical 等）。",
+  "cases": [
+    {
+      "name": "临床试验方案设计（应触发 clinical_trial）",
+      "task_id": "1327c05a-d71b-464e-87c5-8b014c3d133a",
+      "status": "completed",
+      "expect_skill_id": "skill_medical_api_clinical_trial",
+      "result": {
+        "content": "技能执行失败：All connection attempts failed",
+        "skill_id": "skill_medical_api_clinical_trial",
+        "execution_id": "2b758d72-9516-4ff3-b000-5bfed2d42cf3"
+      },
+      "error": null,
+      "actual_skill_id": "skill_medical_api_clinical_trial",
+      "quality_gate": null,
+      "content_preview": "技能执行失败：All connection attempts failed"
+    },
+    {
+      "name": "统计分析计划要点（建议触发 clinical_trial 或 write）",
+      "task_id": "9dbed62a-832e-4faa-9f63-d19ccb2cf9b4",
+      "status": "completed",
+      "expect_skill_id": "skill_medical_api_clinical_trial",
+      "result": {
+        "content": "技能执行失败：All connection attempts failed",
+        "skill_id": "skill_medical_api_clinical_trial",
+        "execution_id": "4185b6f9-c0a7-4976-82c6-7762d47bfefe"
+      },
+      "error": null,
+      "actual_skill_id": "skill_medical_api_clinical_trial",
+      "quality_gate": null,
+      "content_preview": "技能执行失败：All connection attempts failed"
+    },
+    {
+      "name": "纳排标准草案（建议触发 write）",
+      "task_id": "24b5c3af-5fa4-4191-996e-23ca2a4132d5",
+      "status": "completed",
+      "expect_skill_id": "skill_medical_api_write",
+      "result": {
+        "content": "技能执行失败：All connection attempts failed",
+        "skill_id": "skill_medical_api_clinical_trial",
+        "execution_id": "ee335e60-11f0-4a41-adaf-1230abd42806"
+      },
+      "error": null,
+      "actual_skill_id": "skill_medical_api_clinical_trial",
+      "quality_gate": null,
+      "content_preview": "技能执行失败：All connection attempts failed"
+    },
+    {
+      "name": "受试者风险与安全监测（建议触发 clinical）",
+      "task_id": "3d3f203e-757c-465c-865d-cd6a3d55e7a1",
+      "status": "completed",
+      "expect_skill_id": "skill_medical_api_clinical",
+      "result": {
+        "content": "技能执行失败：All connection attempts failed",
+        "skill_id": "skill_medical_api_clinical_trial",
+        "execution_id": "2eea00d6-0162-4655-951c-abcc7447a445"
+      },
+      "error": null,
+      "actual_skill_id": "skill_medical_api_clinical_trial",
+      "quality_gate": null,
+      "content_preview": "技能执行失败：All connection attempts failed"
+    }
+  ]
+}
