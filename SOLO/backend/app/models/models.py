@@ -39,6 +39,7 @@ class TaskStatus(str, enum.Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    WAITING_FOR_SKILL = "waiting_for_skill"
 
 
 class AgentType(str, enum.Enum):
@@ -126,7 +127,7 @@ class Message(Base):
     # 元数据
     agent_type = Column(Enum(AgentType), nullable=True)
     tokens = Column(Integer, default=0)
-    metadata = Column(JSON, default=dict)
+    meta = Column("metadata", JSON, default=dict)
     
     # 引用的知识
     references = Column(JSON, default=list)
@@ -277,7 +278,7 @@ class KnowledgeItem(Base):
     vector_id = Column(String(100), nullable=True)
     
     # 元数据
-    metadata = Column(JSON, default=dict)
+    meta = Column("metadata", JSON, default=dict)
     
     created_at = Column(DateTime, default=func.now(), nullable=False)
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)

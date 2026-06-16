@@ -79,6 +79,34 @@ class SkillCreate(BaseModel):
     output_schema: Optional[Dict[str, Any]] = None
 
 
+class SkillCandidate(BaseModel):
+    """候选Skill信息"""
+    id: str
+    target_skill_id: str
+    name: str
+    display_name: str
+    description: Optional[str] = None
+    category: str
+    protocol: str
+    source: Optional[str] = None
+    install_requires_confirmation: bool = True
+    input_schema: Dict[str, Any] = {}
+
+
+class SkillDiscoveryResponse(BaseModel):
+    """候选Skill发现响应"""
+    installed: bool = False
+    required_skill_id: Optional[str] = None
+    query: Optional[str] = None
+    candidates: List[SkillCandidate]
+    message: str
+
+
+class SkillInstallCandidateRequest(BaseModel):
+    """安装候选Skill请求"""
+    candidate_id: str
+
+
 class SkillUpdate(BaseModel):
     """更新Skill请求"""
     display_name: Optional[str] = None
@@ -88,6 +116,43 @@ class SkillUpdate(BaseModel):
 
 
 # ============== API端点 ==============
+
+@router.get("/discover", response_model=SkillDiscoveryResponse)
+async def discover_skill_candidates(
+    query: Optional[str] = None,
+    required_skill_id: Optional[str] = None,
+    category: Optional[str] = None,
+    current_user: TokenData = Depends(get_current_active_user)
+):
+    """
+    发现可安装的候选Skill。
+
+    方案B：只返回候选，不自动安装；必须由用户/管理员确认后再调用安装接口。
+    """
+    result = skill_registry.discover_skill_candidates(
+        query=query,
+        required_skill_id=required_skill_id,
+        category=category,
+    )
+    return SkillDiscoveryResponse(**result)
+
+
+@router.post("/install-candidate", response_model=SkillInfo)
+async def install_skill_candidate(
+    request: SkillInstallCandidateRequest,
+    current_user: TokenData = Depends(get_current_active_user)
+):
+    """确认安装候选Skill。"""
+    if current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="需要管理员权限")
+
+    try:
+        skill = skill_registry.install_candidate(request.candidate_id)
+        logger.info(f"安装候选技能: {request.candidate_id} -> {skill['id']}, 用户: {current_user.user_id}")
+        return SkillInfo(**skill)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 
 @router.get("", response_model=List[SkillInfo])
 async def list_skills(

@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.config import settings
-from app.api.v1 import conversations, agents, skills, auth
+from app.api.v1 import conversations, agents, skills, auth, files, artifacts
 from app.agents.registry import agent_registry
 
 
@@ -71,6 +71,18 @@ app.include_router(
     auth.router,
     prefix="/api/v1/auth",
     tags=["认证管理"]
+)
+
+app.include_router(
+    files.router,
+    prefix="/api/v1/files",
+    tags=["附件管理"]
+)
+
+app.include_router(
+    artifacts.router,
+    prefix="/api/v1/artifacts",
+    tags=["交付物管理"]
 )
 
 

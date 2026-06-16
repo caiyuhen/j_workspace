@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { User, Token } from '../services/api'
+import { User, Token, ReferenceItem } from '../services/api'
 
 interface AuthState {
   user: User | null
@@ -84,6 +84,7 @@ interface ChatState {
     role: 'user' | 'assistant' | 'system'
     content: string
     agent_type?: string
+    references?: ReferenceItem[]
     loading?: boolean
   }>
   isLoading: boolean

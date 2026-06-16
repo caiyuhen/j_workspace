@@ -8,7 +8,7 @@ import {
   UploadOutlined,
   DeleteOutlined
 } from '@ant-design/icons'
-import { skillApi, Skill } from '../services/api'
+import { skillApi, Skill, SkillCandidate } from '../services/api'
 
 const { Title, Text, Paragraph } = Typography
 const { Search } = Input
@@ -33,7 +33,7 @@ export default function Skills() {
   const [executeModalVisible, setExecuteModalVisible] = useState(false)
   const [installModalVisible, setInstallModalVisible] = useState(false)
   const [importModalVisible, setImportModalVisible] = useState(false)
-  const [onlineSkills, setOnlineSkills] = useState<any[]>([])
+  const [onlineSkills, setOnlineSkills] = useState<SkillCandidate[]>([])
   const [onlineLoading, setOnlineLoading] = useState(false)
   const [form] = Form.useForm()
   const [installForm] = Form.useForm()
@@ -75,81 +75,36 @@ export default function Skills() {
     setFilteredSkills(filtered)
   }
   
-  // 从 ClawHub.ai 获取在线技能列表
+  // 方案B：发现候选技能，但不自动安装
   const loadOnlineSkills = async () => {
     setOnlineLoading(true)
     try {
-      // 模拟从 clawhub.ai 获取技能列表
-      // 实际实现需要调用 clawhub.ai API
-      const mockSkills = [
-        {
-          id: 'clawhub_medical_ner',
-          name: 'medical_ner',
-          display_name: '医学实体识别',
-          description: '从医学文本中提取疾病、症状、药物等实体',
-          category: 'diagnosis',
-          protocol: 'skillhub',
-          author: 'ClawHub',
-          downloads: 1500,
-          rating: 4.8
-        },
-        {
-          id: 'clawhub_drug_recommend',
-          name: 'drug_recommend',
-          display_name: '用药推荐',
-          description: '根据诊断结果推荐合适的药物方案',
-          category: 'pharmacy',
-          protocol: 'skillhub',
-          author: 'ClawHub',
-          downloads: 2300,
-          rating: 4.6
-        },
-        {
-          id: 'clawhub_ecg_analysis',
-          name: 'ecg_analysis',
-          display_name: '心电图分析',
-          description: '分析心电图数据，识别心律异常',
-          category: 'imaging',
-          protocol: 'skillhub',
-          author: 'ClawHub',
-          downloads: 890,
-          rating: 4.5
-        },
-        {
-          id: 'clawhub_clinical_trial',
-          name: 'clinical_trial',
-          display_name: '临床试验匹配',
-          description: '根据患者信息匹配合适的临床试验',
-          category: 'research',
-          protocol: 'skillhub',
-          author: 'ClawHub',
-          downloads: 560,
-          rating: 4.3
-        }
-      ]
-      setOnlineSkills(mockSkills)
+      const res = await skillApi.discover({ query: searchText || undefined })
+      setOnlineSkills(res.data.candidates)
     } catch (error) {
-      message.error('获取在线技能失败')
+      message.error('发现候选技能失败')
     } finally {
       setOnlineLoading(false)
     }
   }
   
-  const handleInstallFromOnline = async (skill: any) => {
-    try {
-      await skillApi.create({
-        name: skill.name,
-        display_name: skill.display_name,
-        description: skill.description,
-        category: skill.category,
-        protocol: 'skillhub',
-        config: { endpoint: `https://api.clawhub.ai/skills/${skill.id}` }
-      })
-      message.success(`技能 "${skill.display_name}" 安装成功`)
-      loadSkills()
-    } catch (error) {
-      message.error('安装失败')
-    }
+  const handleInstallFromOnline = async (skill: SkillCandidate) => {
+    Modal.confirm({
+      title: '确认安装候选技能？',
+      content: `将安装「${skill.display_name}」。系统不会自动安装技能，只有确认后才会加入可用技能列表。`,
+      okText: '确认安装',
+      cancelText: '取消',
+      onOk: async () => {
+        try {
+          await skillApi.installCandidate(skill.id)
+          message.success(`技能 "${skill.display_name}" 安装成功`)
+          setInstallModalVisible(false)
+          loadSkills()
+        } catch (error) {
+          message.error('安装失败')
+        }
+      }
+    })
   }
   
   const handleImportLocal = async (values: any) => {
@@ -401,7 +356,7 @@ export default function Skills() {
       
       {/* 在线安装弹窗 */}
       <Modal
-        title="从 ClawHub.ai 安装技能"
+        title="发现并确认安装候选技能"
         open={installModalVisible}
         onCancel={() => setInstallModalVisible(false)}
         footer={null}
@@ -411,7 +366,7 @@ export default function Skills() {
           items={[
             {
               key: 'online',
-              label: '在线技能库',
+              label: '候选技能库',
               icon: <CloudDownloadOutlined />,
               children: (
                 <Spin spinning={onlineLoading}>
@@ -426,7 +381,7 @@ export default function Skills() {
                             icon={<CloudDownloadOutlined />}
                             onClick={() => handleInstallFromOnline(skill)}
                           >
-                            安装
+                            确认安装
                           </Button>
                         ]}
                       >
@@ -435,15 +390,16 @@ export default function Skills() {
                           title={
                             <Space>
                               <Text strong>{skill.display_name}</Text>
-                              <Tag color="blue">{skill.author}</Tag>
+                              <Tag color="blue">候选</Tag>
                             </Space>
                           }
                           description={
                             <Space direction="vertical" size={0}>
                               <Text type="secondary">{skill.description}</Text>
                               <Space size="small">
-                                <Text type="secondary">下载: {skill.downloads}</Text>
-                                <Text type="secondary">评分: {skill.rating}</Text>
+                                <Tag>{categoryNames[skill.category] || skill.category}</Tag>
+                                <Tag color="green">{skill.protocol}</Tag>
+                                {skill.source && <Text type="secondary">来源: {skill.source}</Text>}
                               </Space>
                             </Space>
                           }

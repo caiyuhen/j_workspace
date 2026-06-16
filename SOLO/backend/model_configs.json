@@ -1,0 +1,28 @@
+[
+  {
+    "name": "cherryin-qwen3.5-35b-free",
+    "display_name": "CherryIn Qwen3.5-35b-a3b (免费)",
+    "type": "openai",
+    "endpoint": "https://open.cherryin.cc/v1",
+    "api_key": "sk-WfQTm2EfCEY5F46QxaxMDnMPapjxDBzweimd9ouR9NQ28Qsi",
+    "model": "qwen/qwen3.5-35b-a3b(free)",
+    "default": true
+  },
+  {
+    "name": "cherryin-qwen3.6-plus",
+    "display_name": "CherryIn Qwen3.6 Plus",
+    "type": "openai",
+    "endpoint": "https://open.cherryin.cc/v1",
+    "api_key": "sk-WfQTm2EfCEY5F46QxaxMDnMPapjxDBzweimd9ouR9NQ28Qsi",
+    "model": "agent/qwen3.6-plus",
+    "default": false
+  },
+  {
+    "name": "medical-rag-198",
+    "display_name": "198.168.0.214 医疗 RAG",
+    "type": "medical_rag",
+    "endpoint": "http://198.168.0.214:8802",
+    "model": "medical-large",
+    "default": false
+  }
+]

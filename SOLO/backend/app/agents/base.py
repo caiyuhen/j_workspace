@@ -113,6 +113,11 @@ class BaseAgent(ABC):
         """
         self.status = AgentStatus.BUSY
         try:
+            if "model" not in kwargs:
+                context = kwargs.get("context")
+                if context and getattr(context, "metadata", None):
+                    kwargs["model"] = context.metadata.get("model")
+
             result = await self.llm.chat(
                 messages=messages,
                 temperature=temperature,
