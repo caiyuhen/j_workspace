@@ -347,11 +347,16 @@ async def submit_task(
         try:
             result = await orchestrator.execute(context)
             
+            # 安全获取agents_used
+            assigned_agents = ["orchestrator"]
+            if result.output and isinstance(result.output, dict):
+                assigned_agents = result.output.get("agents_used", ["orchestrator"])
+            
             _tasks_db[task_id].update({
                 "status": "completed" if result.success else "failed",
                 "result": result.output,
                 "error": result.error,
-                "assigned_agents": result.output.get("agents_used", ["orchestrator"]) if result.output else ["orchestrator"],
+                "assigned_agents": assigned_agents,
                 "completed_at": datetime.now()
             })
             

@@ -11,6 +11,7 @@ import logging
 from typing import Dict, List, Optional, Any
 from app.agents.base import BaseAgent, TaskContext, TaskResult
 import re
+import json
 
 logger = logging.getLogger(__name__)
 
@@ -52,16 +53,37 @@ class OrchestratorAgent(BaseAgent):
         return None
 
     @staticmethod
-    def _extract_json_from_text(text: str) -> Optional[Dict[str, Any]]:
+    def _extract_json_from_text(text: str, expect_type: type = None) -> Optional[Any]:
+        """从文本中提取JSON对象或数组
+        
+        Args:
+            text: 包含JSON的文本
+            expect_type: 期望的类型 (dict 或 list)
+        """
         if not text:
             return None
         try:
             if "```json" in text:
                 json_str = text.split("```json")[1].split("```")[0].strip()
-                return json.loads(json_str)
-            if "{" in text and "}" in text:
-                json_str = text[text.find("{"): text.rfind("}") + 1]
-                return json.loads(json_str)
+                result = json.loads(json_str)
+                if expect_type is None or isinstance(result, expect_type):
+                    return result
+            
+            # 如果期望对象，优先尝试提取对象
+            if expect_type == dict or expect_type is None:
+                if "{" in text and "}" in text:
+                    json_str = text[text.find("{"): text.rfind("}") + 1]
+                    result = json.loads(json_str)
+                    if expect_type is None or isinstance(result, expect_type):
+                        return result
+            
+            # 如果期望数组，或没有特定期望，尝试提取数组
+            if expect_type == list or expect_type is None:
+                if "[" in text and "]" in text:
+                    json_str = text[text.find("["): text.rfind("]") + 1]
+                    result = json.loads(json_str)
+                    if expect_type is None or isinstance(result, expect_type):
+                        return result
         except Exception:
             return None
         return None
@@ -98,7 +120,7 @@ class OrchestratorAgent(BaseAgent):
             user_id=context.user_id,
             conversation_id=context.conversation_id,
             input={"content": content, "agent": source},
-            metadata={"task_type": "safety_check"},
+            metadata={"task_type": "safety_check", "model": context.metadata.get("model")},
         )
         safety_res = await quality_agent.execute(safety_ctx)
         safety_json = None
@@ -114,7 +136,7 @@ class OrchestratorAgent(BaseAgent):
             user_id=context.user_id,
             conversation_id=context.conversation_id,
             input={"content": content},
-            metadata={"task_type": "compliance_verification"},
+            metadata={"task_type": "compliance_verification", "model": context.metadata.get("model")},
         )
         comp_res = await quality_agent.execute(comp_ctx)
         comp_json = None
@@ -143,8 +165,12 @@ class OrchestratorAgent(BaseAgent):
                     {"role": "user", "content": content},
                 ],
                 session_id=context.conversation_id,
+                model=context.metadata.get("model"),
             )
-            return {"action": "rewrite", "content": rewritten.get("content", content)}
+            if isinstance(rewritten, dict):
+                return {"action": "rewrite", "content": rewritten.get("content", content)}
+            else:
+                return {"action": "rewrite", "content": str(rewritten)}
 
         return {"action": "pass", "content": content}
 
@@ -246,7 +272,9 @@ class OrchestratorAgent(BaseAgent):
             )
             
         except Exception as e:
+            import traceback
             logger.error(f"编排执行失败: {e}")
+            logger.error(f" traceback: {traceback.format_exc()}")
             return TaskResult(
                 task_id=context.task_id,
                 success=False,
@@ -281,7 +309,8 @@ class OrchestratorAgent(BaseAgent):
                     },
                     {"role": "user", "content": f"分析以下医学输入：\n{user_input}"}
                 ],
-                session_id=context.conversation_id
+                session_id=context.conversation_id,
+                model=context.metadata.get("model")
             )
             
             # 处理响应
@@ -289,20 +318,12 @@ class OrchestratorAgent(BaseAgent):
                 # 如果响应包含 content 字段，提取内容
                 if "content" in response:
                     content = response["content"]
-                    # 尝试解析 JSON
-                    try:
-                        import json
-                        # 查找 JSON 块
-                        if "```json" in content:
-                            json_str = content.split("```json")[1].split("```")[0].strip()
-                            return json.loads(json_str)
-                        elif "{" in content and "}" in content:
-                            json_str = content[content.find("{"):content.rfind("}")+1]
-                            return json.loads(json_str)
-                    except:
-                        pass
-                # 直接返回响应
-                return response
+                    parsed = self._extract_json_from_text(content, expect_type=dict)
+                    if parsed is not None:
+                        return parsed
+                # 直接返回响应（确保是字典）
+                if "intent_type" in response:
+                    return response
             
             # 默认返回
             return {
@@ -411,7 +432,8 @@ class OrchestratorAgent(BaseAgent):
                         "content": f"分解以下任务：\n意图: {intent}\n原始输入: {context.input}\n\n可用技能列表: {available_skills}"
                     }
                 ],
-                session_id=context.conversation_id
+                session_id=context.conversation_id,
+                model=context.metadata.get("model")
             )
             
             # 处理响应
@@ -420,16 +442,19 @@ class OrchestratorAgent(BaseAgent):
                     return response["subtasks"]
                 if "content" in response:
                     content = response["content"]
-                    try:
-                        import json
-                        if "```json" in content:
-                            json_str = content.split("```json")[1].split("```")[0].strip()
-                            return json.loads(json_str)
-                        elif "[" in content and "]" in content:
-                            json_str = content[content.find("["):content.rfind("]")+1]
-                            return json.loads(json_str)
-                    except:
-                        pass
+                    logger.info(f"任务分解LLM响应内容: {content[:200]}")
+                    parsed = self._extract_json_from_text(content, expect_type=list)
+                    if parsed is not None:
+                        logger.info(f"解析到子任务列表: {parsed}")
+                        # 确保所有子任务都是字典
+                        valid_subtasks = []
+                        for i, st in enumerate(parsed):
+                            if isinstance(st, dict):
+                                valid_subtasks.append(st)
+                            else:
+                                logger.warning(f"子任务{i}不是字典: {st}")
+                        if valid_subtasks:
+                            return valid_subtasks
             
             # 默认返回简单任务
             return [{
@@ -484,7 +509,7 @@ class OrchestratorAgent(BaseAgent):
                     user_id=context.user_id,
                     conversation_id=context.conversation_id,
                     input=subtask.get("input", context.input),
-                    metadata={"task_type": capability}  # 使用映射后的能力类型
+                    metadata={"task_type": capability, "model": context.metadata.get("model")}  # 使用映射后的能力类型
                 )
                 
                 result = await agent.execute(subtask_context)
@@ -550,7 +575,8 @@ class OrchestratorAgent(BaseAgent):
                 {"role": "system", "content": "你是一个医学AI助手。"},
                 {"role": "user", "content": str(subtask.get("input", context.input))}
             ],
-            session_id=context.conversation_id
+            session_id=context.conversation_id,
+            model=context.metadata.get("model")
         )
         
         return TaskResult(
@@ -663,7 +689,8 @@ class OrchestratorAgent(BaseAgent):
                 },
                 {"role": "user", "content": f"整合以下结果：\n{normalized_for_merge}"}
             ],
-            session_id=context.conversation_id
+            session_id=context.conversation_id,
+            model=context.metadata.get("model")
         )
         
         # 确保响应格式正确

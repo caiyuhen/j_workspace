@@ -5,6 +5,7 @@
 大模型服务通过 `/chat` 接口提供内置RAG能力
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
+import threading
 from fastapi.responses import StreamingResponse
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
@@ -15,8 +16,17 @@ import logging
 
 from app.agents.registry import agent_registry
 from app.agents.base import TaskContext
+from sqlalchemy import select, func
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.services.llm_service import llm_service
 from app.api.v1.auth import get_current_active_user, TokenData
+from app.core.auth import fake_users_db, get_password_hash
+from app.core.database import AsyncSessionLocal, get_db
+from app.models import AgentType, Conversation, ConversationStatus, Message, SubTask, Task, TaskStatus, User, UserRole
+from app.services.task_background_service import build_task_started_result, launch_task_in_background
+from app.services.task_execution_service import task_runner
+from app.services.task_progress_service import build_task_progress
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -53,6 +63,7 @@ class MessageCreate(BaseModel):
     content: str = Field(..., description="消息内容", min_length=1)
     input_type: str = Field(default="text", description="输入类型: text/voice")
     agent_type: Optional[str] = Field(default=None, description="指定代理类型")
+    model: Optional[str] = Field(default=None, description="指定LLM模型")
     metadata: Optional[Dict[str, Any]] = None
 
 
@@ -73,7 +84,32 @@ class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1)
     conversation_id: Optional[str] = None
     agent_type: Optional[str] = None
+    model: Optional[str] = None
+    execution_mode: str = "chat"
+    deliverable_format: str = "md"
     stream: bool = False
+
+
+class ArtifactResponse(BaseModel):
+    """交付物响应"""
+    artifact_id: str
+    task_id: str
+    filename: str
+    format: str
+    download_url: str
+    created_at: datetime
+
+
+class SubTaskResponse(BaseModel):
+    """子任务响应"""
+    id: str
+    name: str
+    description: Optional[str] = None
+    agent_type: Optional[str] = None
+    status: str
+    input_data: Dict[str, Any] = {}
+    output_data: Dict[str, Any] = {}
+    error_message: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
@@ -81,48 +117,162 @@ class ChatResponse(BaseModel):
     conversation_id: str
     message: MessageResponse
     agent_used: str
+    task_id: Optional[str] = None
+    task_status: Optional[str] = None
+    async_execution: bool = False
+    waiting_for_skill: bool = False
+    skill_resolution: Optional[Dict[str, Any]] = None
+    subtasks: List[SubTaskResponse] = []
+    artifacts: List[ArtifactResponse] = []
 
 
-# ============== 模拟数据存储（实际应使用数据库） ==============
+class TaskProgressResponse(BaseModel):
+    """任务进度响应"""
+    task_id: str
+    conversation_id: Optional[str] = None
+    title: Optional[str] = None
+    description: Optional[str] = None
+    task_type: str
+    status: str
+    progress_percent: int
+    summary: Dict[str, int]
+    subtasks: List[Dict[str, Any]]
+    artifacts: List[Dict[str, Any]] = []
+    result: Dict[str, Any] = {}
+    waiting_for_skill: bool = False
+    skill_resolution: Optional[Dict[str, Any]] = None
+    error_message: Optional[str] = None
+    duration_seconds: Optional[int] = None
+    started_at: Optional[Any] = None
+    completed_at: Optional[Any] = None
+    created_at: Optional[Any] = None
+    updated_at: Optional[Any] = None
 
-# 对话存储
-_conversations_db: Dict[str, Dict] = {}
-# 消息存储
-_messages_db: Dict[str, List[Dict]] = {}
+
+class LLMModelResponse(BaseModel):
+    """LLM模型配置响应（不包含密钥）"""
+    name: str
+    display_name: str
+    type: str = "openai"
+    default: bool = False
+
+
+# ============== 引用内容处理 ==============
+
+REFERENCE_SOURCE_ALIASES = {
+    "milvus": "Milvus",
+    "pubmed": "PubMed",
+    "pmid": "PubMed",
+    "ensembl": "Ensembl",
+    "chembl": "ChEMBL",
+    "fda": "FDA",
+    "clinicaltrials": "ClinicalTrials",
+    "clinicaltrials.gov": "ClinicalTrials",
+    "clinical_trials": "ClinicalTrials",
+    "clinical-trials": "ClinicalTrials",
+}
 
 
 # ============== API端点 ==============
+
+@router.get("/llm-models", response_model=List[LLMModelResponse])
+async def list_llm_models(
+    current_user: TokenData = Depends(get_current_active_user),
+):
+    """获取可在聊天页面选择的LLM模型列表。"""
+    return llm_service.get_model_configs()
+
+
+@router.get("/tasks/{task_id}/progress", response_model=TaskProgressResponse)
+async def get_task_progress(
+    task_id: str,
+    current_user: TokenData = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """获取 Chat 任务执行进度、子任务详情和交付物列表。"""
+    result = await db.execute(select(Task).where(Task.id == task_id))
+    task = result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    if task.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="无权访问此任务")
+
+    subtask_result = await db.execute(
+        select(SubTask).where(SubTask.task_id == task_id).order_by(SubTask.created_at.asc())
+    )
+    subtasks = list(subtask_result.scalars().all())
+    return TaskProgressResponse(**build_task_progress(task, subtasks))
+
+
+@router.post("/tasks/{task_id}/resume", response_model=TaskProgressResponse)
+async def resume_waiting_task(
+    task_id: str,
+    current_user: TokenData = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """安装缺失 Skill 后继续执行等待中的 Chat 任务。"""
+    result = await db.execute(select(Task).where(Task.id == task_id))
+    task = result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    if task.user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail="无权访问此任务")
+    if task.status != TaskStatus.WAITING_FOR_SKILL:
+        raise HTTPException(status_code=400, detail="任务当前不在等待 Skill 状态")
+
+    config = task.config or {}
+    await task_runner.execute(
+        db=db,
+        task=task,
+        user_id=current_user.user_id,
+        conversation_id=task.conversation_id or "",
+        prompt=task.description or task.title or "继续执行任务",
+        model=config.get("model"),
+        deliverable_format=config.get("deliverable_format") or "md",
+    )
+
+    subtask_result = await db.execute(
+        select(SubTask).where(SubTask.task_id == task_id).order_by(SubTask.created_at.asc())
+    )
+    subtasks = list(subtask_result.scalars().all())
+    return TaskProgressResponse(**build_task_progress(task, subtasks))
+
 
 @router.get("", response_model=ConversationListResponse)
 async def list_conversations(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     status: Optional[str] = None,
-    current_user: TokenData = Depends(get_current_active_user)
+    current_user: TokenData = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     获取对话列表
     
     支持分页和状态过滤
     """
-    # 过滤用户的对话
-    user_conversations = [
-        conv for conv in _conversations_db.values()
-        if conv.get("user_id") == current_user.user_id
-        and (status is None or conv.get("status") == status)
-    ]
-    
-    # 按更新时间排序
-    user_conversations.sort(key=lambda x: x.get("updated_at", datetime.min), reverse=True)
-    
-    # 分页
-    total = len(user_conversations)
-    start = (page - 1) * page_size
-    end = start + page_size
-    items = user_conversations[start:end]
+    await _ensure_current_user_exists(db, current_user)
+
+    conditions = [Conversation.user_id == current_user.user_id]
+    if status:
+        conditions.append(Conversation.status == _conversation_status(status))
+
+    total_result = await db.execute(
+        select(func.count()).select_from(Conversation).where(*conditions)
+    )
+    total = total_result.scalar_one()
+
+    result = await db.execute(
+        select(Conversation)
+        .where(*conditions)
+        .order_by(Conversation.updated_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    items = result.scalars().all()
     
     return ConversationListResponse(
-        items=[ConversationResponse(**item) for item in items],
+        items=[_conversation_to_response(item) for item in items],
         total=total,
         page=page,
         page_size=page_size
@@ -132,65 +282,50 @@ async def list_conversations(
 @router.post("", response_model=ConversationResponse)
 async def create_conversation(
     request: ConversationCreate,
-    current_user: TokenData = Depends(get_current_active_user)
+    current_user: TokenData = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """创建新对话"""
-    conversation_id = str(uuid.uuid4())
-    now = datetime.now()
+    await _ensure_current_user_exists(db, current_user)
+    conversation = Conversation(
+        id=str(uuid.uuid4()),
+        user_id=current_user.user_id,
+        title=request.title or "新对话",
+        status=ConversationStatus.ACTIVE,
+        message_count=0,
+        context=request.context or {},
+        total_tokens=0,
+    )
+    db.add(conversation)
+    await db.flush()
     
-    conversation = {
-        "id": conversation_id,
-        "user_id": current_user.user_id,
-        "title": request.title or "新对话",
-        "status": "active",
-        "message_count": 0,
-        "context": request.context or {},
-        "created_at": now,
-        "updated_at": now
-    }
+    logger.info(f"创建对话: {conversation.id}, 用户: {current_user.user_id}")
     
-    _conversations_db[conversation_id] = conversation
-    _messages_db[conversation_id] = []
-    
-    logger.info(f"创建对话: {conversation_id}, 用户: {current_user.user_id}")
-    
-    return ConversationResponse(**conversation)
+    return _conversation_to_response(conversation)
 
 
 @router.get("/{conversation_id}", response_model=ConversationResponse)
 async def get_conversation(
     conversation_id: str,
-    current_user: TokenData = Depends(get_current_active_user)
+    current_user: TokenData = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """获取对话详情"""
-    conversation = _conversations_db.get(conversation_id)
-    
-    if not conversation:
-        raise HTTPException(status_code=404, detail="对话不存在")
-    
-    if conversation.get("user_id") != current_user.user_id:
-        raise HTTPException(status_code=403, detail="无权访问此对话")
-    
-    return ConversationResponse(**conversation)
+    conversation = await _get_owned_conversation(db, conversation_id, current_user.user_id)
+    return _conversation_to_response(conversation)
 
 
 @router.delete("/{conversation_id}")
 async def delete_conversation(
     conversation_id: str,
-    current_user: TokenData = Depends(get_current_active_user)
+    current_user: TokenData = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """删除对话"""
-    conversation = _conversations_db.get(conversation_id)
-    
-    if not conversation:
-        raise HTTPException(status_code=404, detail="对话不存在")
-    
-    if conversation.get("user_id") != current_user.user_id:
-        raise HTTPException(status_code=403, detail="无权删除此对话")
-    
-    # 软删除
-    conversation["status"] = "deleted"
-    conversation["updated_at"] = datetime.now()
+    conversation = await _get_owned_conversation(db, conversation_id, current_user.user_id)
+    conversation.status = ConversationStatus.DELETED
+    conversation.updated_at = datetime.now()
+    await db.flush()
     
     logger.info(f"删除对话: {conversation_id}")
     
@@ -202,210 +337,152 @@ async def get_messages(
     conversation_id: str,
     limit: int = Query(50, ge=1, le=200),
     before: Optional[str] = None,
-    current_user: TokenData = Depends(get_current_active_user)
+    current_user: TokenData = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """获取对话消息列表"""
-    conversation = _conversations_db.get(conversation_id)
-    
-    if not conversation:
-        raise HTTPException(status_code=404, detail="对话不存在")
-    
-    if conversation.get("user_id") != current_user.user_id:
-        raise HTTPException(status_code=403, detail="无权访问此对话")
-    
-    messages = _messages_db.get(conversation_id, [])
-    
-    # 如果指定了before参数，获取该消息之前的消息
+    await _get_owned_conversation(db, conversation_id, current_user.user_id)
+
+    query = select(Message).where(Message.conversation_id == conversation_id)
     if before:
-        found = False
-        filtered = []
-        for msg in reversed(messages):
-            if msg["id"] == before:
-                found = True
-                continue
-            if found:
-                filtered.append(msg)
-                if len(filtered) >= limit:
-                    break
-        messages = list(reversed(filtered))
-    else:
-        messages = messages[-limit:]
+        before_message = await db.get(Message, before)
+        if before_message and before_message.conversation_id == conversation_id:
+            query = query.where(Message.created_at < before_message.created_at)
+
+    result = await db.execute(
+        query.order_by(Message.created_at.desc()).limit(limit)
+    )
+    messages = list(reversed(result.scalars().all()))
     
-    return [MessageResponse(**msg) for msg in messages]
+    return [_message_to_response(msg) for msg in messages]
 
 
 @router.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    current_user: TokenData = Depends(get_current_active_user)
+    current_user: TokenData = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """
-    发送消息并获取响应
-    
-    消息将通过编排代理处理：
-    1. 意图识别
-    2. 任务分解
-    3. 代理调度
-    4. LLM处理（自动RAG增强）
-    5. 结果整合
-    
-    大模型服务会通过 `/chat` 接口自动进行RAG检索增强
+    发送消息并获取响应。
+
+    页面选择哪个LLM模型，就只调用该LLM模型；不再自动进入编排代理或技能链路。
     """
-    # 获取或创建对话
-    conversation_id = request.conversation_id
-    if not conversation_id:
-        # 创建新对话
-        conversation_id = str(uuid.uuid4())
-        now = datetime.now()
-        _conversations_db[conversation_id] = {
-            "id": conversation_id,
-            "user_id": current_user.user_id,
-            "title": request.message[:50] + ("..." if len(request.message) > 50 else ""),
-            "status": "active",
-            "message_count": 0,
-            "created_at": now,
-            "updated_at": now
-        }
-        _messages_db[conversation_id] = []
+    await _ensure_current_user_exists(db, current_user)
+    conversation = await _get_or_create_conversation(
+        db,
+        current_user.user_id,
+        request.message,
+        request.conversation_id,
+    )
+    conversation_id = conversation.id
     
-    conversation = _conversations_db.get(conversation_id)
-    if not conversation:
-        # 当前项目使用内存存储，对话在服务重启后会丢失。
-        # 为了提升前端体验：如果前端带着旧的 conversation_id 发来消息，这里自动重建对话而不是直接 404。
-        now = datetime.now()
-        _conversations_db[conversation_id] = {
-            "id": conversation_id,
-            "user_id": current_user.user_id,
-            "title": request.message[:50] + ("..." if len(request.message) > 50 else ""),
-            "status": "active",
-            "message_count": 0,
-            "created_at": now,
-            "updated_at": now
-        }
-        _messages_db[conversation_id] = []
-        conversation = _conversations_db[conversation_id]
-    
-    if conversation.get("user_id") != current_user.user_id:
-        raise HTTPException(status_code=403, detail="无权访问此对话")
-    
-    messages = _messages_db.get(conversation_id, [])
-    
-    # 添加用户消息
-    user_message_id = str(uuid.uuid4())
-    user_message = {
-        "id": user_message_id,
-        "conversation_id": conversation_id,
-        "role": "user",
-        "content": request.message,
-        "created_at": datetime.now()
-    }
-    messages.append(user_message)
+    user_message = Message(
+        id=str(uuid.uuid4()),
+        conversation_id=conversation_id,
+        role="user",
+        content=request.message,
+        tokens=0,
+        references=[],
+    )
+    db.add(user_message)
+    await db.flush()
     
     try:
         # 构建消息历史
+        history_messages = await _get_recent_messages(db, conversation_id, limit=20)
         chat_messages = [
-            {"role": msg["role"], "content": msg["content"]}
-            for msg in messages[-20:]  # 保留最近20条消息作为上下文
+            {"role": msg.role, "content": msg.content}
+            for msg in history_messages
         ]
         
-        # 确定使用的代理
-        agent_type = request.agent_type or "orchestrator"
-        agent_used = agent_type
-        
-        # 如果指定了特定代理，直接调用
-        if agent_type != "orchestrator":
-            agent = agent_registry.get_agent(agent_type)
-            if agent:
-                # 创建任务上下文
-                context = TaskContext(
-                    task_id=str(uuid.uuid4()),
-                    user_id=current_user.user_id,
-                    conversation_id=conversation_id,
-                    input=request.message,
-                    metadata={"agent_type": agent_type}
-                )
-                result = await agent.execute(context)
-                response_content = result.output.get("content", str(result.output)) if result.output else "处理失败"
-            else:
-                # 代理不存在，使用LLM直接处理
-                response = await llm_service.chat(
-                    chat_messages,
-                    session_id=conversation_id
-                )
-                response_content = _extract_content(response)
+        execution_mode = (request.execution_mode or "chat").lower()
+        artifacts: List[Dict[str, Any]] = []
+        subtasks: List[Dict[str, Any]] = []
+        async_execution = False
+        waiting_for_skill = False
+        skill_resolution: Optional[Dict[str, Any]] = None
+        task_id: Optional[str] = None
+        task_status: Optional[str] = None
+
+        if execution_mode == "task":
+            task_id = str(uuid.uuid4())
+            task = Task(
+                id=task_id,
+                user_id=current_user.user_id,
+                conversation_id=conversation_id,
+                title=request.message[:80],
+                description=request.message,
+                task_type="chat_task",
+                status=TaskStatus.RUNNING,
+                config={
+                    "model": request.model,
+                    "deliverable_format": request.deliverable_format,
+                    "source": "chat",
+                },
+                assigned_agents=["llm"],
+                started_at=datetime.now(),
+            )
+            db.add(task)
+            await db.flush()
+
+            deliverable_format = (request.deliverable_format or "md").lower()
+            logger.info("=== 开始启动后台线程: task_id=%s, user=%s ===", task_id, current_user.user_id)
+            launch_task_in_background(
+                task_id=task_id,
+                user_id=current_user.user_id,
+                conversation_id=conversation_id,
+                prompt=request.message,
+                model=request.model,
+                deliverable_format=deliverable_format,
+            )
+            logger.info("=== 后台线程已启动: task_id=%s ===", task_id)
+
+            result = build_task_started_result(task_id)
+            response_content = result["content"]
+            response_references = []
+            async_execution = True
+            task_status = result["task_status"]
+            agent_used = "task"
         else:
-            # 使用编排代理处理（智能分配专业代理）
-            logger.info(f"使用编排代理处理消息: {request.message[:50]}...")
-            orchestrator = agent_registry.orchestrator
-            if orchestrator:
-                try:
-                    context = TaskContext(
-                        task_id=str(uuid.uuid4()),
-                        user_id=current_user.user_id,
-                        conversation_id=conversation_id,
-                        input=request.message,
-                        metadata={"task_type": "chat"}
-                    )
-                    result = await orchestrator.execute(context)
-                    
-                    if result.success and result.output:
-                        if isinstance(result.output, dict):
-                            response_content = result.output.get("content", str(result.output))
-                        else:
-                            response_content = str(result.output)
-                        agent_used = "orchestrator"
-                        logger.info(f"编排代理响应成功: {response_content[:100]}...")
-                    else:
-                        # 编排失败，直接调用LLM
-                        logger.warning(f"编排失败: {result.error}, 使用LLM直接处理")
-                        response = await llm_service.chat(
-                            chat_messages,
-                            session_id=conversation_id
-                        )
-                        response_content = _extract_content(response)
-                        agent_used = "llm"
-                except Exception as e:
-                    logger.error(f"编排代理执行失败: {e}")
-                    response = await llm_service.chat(
-                        chat_messages,
-                        session_id=conversation_id
-                    )
-                    response_content = _extract_content(response)
-                    agent_used = "llm"
-            else:
-                # 无编排代理，直接调用LLM
-                logger.warning("无编排代理，使用LLM直接处理")
-                response = await llm_service.chat(
-                    chat_messages,
-                    session_id=conversation_id
-                )
-                response_content = _extract_content(response)
-                agent_used = "llm"
+            # 页面选择哪个LLM模型，就只调用该LLM模型；不再经过编排代理或技能链路。
+            logger.info("直接调用所选LLM模型: model=%s", request.model)
+            response = await llm_service.chat(
+                chat_messages,
+                session_id=conversation_id,
+                model=request.model
+            )
+            response_content = _extract_content(response)
+            response_references = _extract_references(response)
+            agent_used = "llm"
         
         # 计算token
         tokens = llm_service.count_messages_tokens(chat_messages)
         
-        # 添加助手消息
-        assistant_message_id = str(uuid.uuid4())
-        assistant_message = {
-            "id": assistant_message_id,
-            "conversation_id": conversation_id,
-            "role": "assistant",
-            "content": response_content,
-            "agent_type": agent_used,
-            "tokens": tokens,
-            "created_at": datetime.now()
-        }
-        messages.append(assistant_message)
-        
-        # 更新对话
-        conversation["message_count"] = len(messages)
-        conversation["updated_at"] = datetime.now()
+        assistant_message = Message(
+            id=str(uuid.uuid4()),
+            conversation_id=conversation_id,
+            role="assistant",
+            content=response_content,
+            agent_type=_agent_type_value(agent_used),
+            tokens=tokens,
+            references=response_references,
+        )
+        db.add(assistant_message)
+        await db.flush()
+        await _refresh_conversation_stats(db, conversation)
         
         return ChatResponse(
             conversation_id=conversation_id,
-            message=MessageResponse(**assistant_message),
-            agent_used=agent_used
+            message=_message_to_response(assistant_message),
+            agent_used=agent_used,
+            task_id=task_id,
+            task_status=task_status,
+            async_execution=async_execution,
+            waiting_for_skill=waiting_for_skill,
+            skill_resolution=skill_resolution,
+            subtasks=[SubTaskResponse(**subtask) for subtask in subtasks],
+            artifacts=[ArtifactResponse(**artifact) for artifact in artifacts],
         )
         
     except Exception as e:
@@ -416,75 +493,69 @@ async def chat(
 @router.post("/chat/stream")
 async def chat_stream(
     request: ChatRequest,
-    current_user: TokenData = Depends(get_current_active_user)
+    current_user: TokenData = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     流式聊天接口
     
     返回SSE格式的流式响应
     """
-    # 获取或创建对话
-    conversation_id = request.conversation_id
-    if not conversation_id:
-        conversation_id = str(uuid.uuid4())
-        now = datetime.now()
-        _conversations_db[conversation_id] = {
-            "id": conversation_id,
-            "user_id": current_user.user_id,
-            "title": request.message[:50] + ("..." if len(request.message) > 50 else ""),
-            "status": "active",
-            "message_count": 0,
-            "created_at": now,
-            "updated_at": now
-        }
-        _messages_db[conversation_id] = []
-    
-    messages = _messages_db.get(conversation_id, [])
-    
-    # 添加用户消息
-    user_message = {
-        "id": str(uuid.uuid4()),
-        "conversation_id": conversation_id,
-        "role": "user",
-        "content": request.message,
-        "created_at": datetime.now()
-    }
-    messages.append(user_message)
+    await _ensure_current_user_exists(db, current_user)
+    conversation = await _get_or_create_conversation(
+        db,
+        current_user.user_id,
+        request.message,
+        request.conversation_id,
+    )
+    conversation_id = conversation.id
+
+    user_message = Message(
+        id=str(uuid.uuid4()),
+        conversation_id=conversation_id,
+        role="user",
+        content=request.message,
+        tokens=0,
+        references=[],
+    )
+    db.add(user_message)
+    await db.flush()
+    history_messages = await _get_recent_messages(db, conversation_id, limit=20)
+    chat_messages = [
+        {"role": msg.role, "content": msg.content}
+        for msg in history_messages
+    ]
+    await db.commit()
     
     async def generate():
         """生成流式响应"""
         try:
-            # 构建消息历史
-            chat_messages = [
-                {"role": msg["role"], "content": msg["content"]}
-                for msg in messages[-20:]
-            ]
-            
             full_content = ""
             
             # 流式调用LLM
             async for chunk in llm_service.stream_chat(
                 chat_messages,
-                session_id=conversation_id
+                session_id=conversation_id,
+                model=request.model
             ):
                 full_content += chunk
                 yield f"data: {json.dumps({'content': chunk, 'conversation_id': conversation_id})}\n\n"
             
-            # 添加助手消息
-            assistant_message = {
-                "id": str(uuid.uuid4()),
-                "conversation_id": conversation_id,
-                "role": "assistant",
-                "content": full_content,
-                "created_at": datetime.now()
-            }
-            messages.append(assistant_message)
-            
-            # 更新对话
-            conversation = _conversations_db.get(conversation_id)
-            if conversation:
-                conversation["message_count"] = len(messages)
-                conversation["updated_at"] = datetime.now()
+            async with AsyncSessionLocal() as stream_db:
+                stream_conversation = await stream_db.get(Conversation, conversation_id)
+                assistant_message = Message(
+                    id=str(uuid.uuid4()),
+                    conversation_id=conversation_id,
+                    role="assistant",
+                    content=full_content,
+                    tokens=llm_service.count_messages_tokens(chat_messages),
+                    references=[],
+                )
+                stream_db.add(assistant_message)
+                await stream_db.flush()
+                if stream_conversation:
+                    await _refresh_conversation_stats(stream_db, stream_conversation)
+                await stream_db.commit()
             
             yield f"data: {json.dumps({'done': True, 'conversation_id': conversation_id})}\n\n"
             
@@ -506,69 +577,61 @@ async def chat_stream(
 async def send_message(
     conversation_id: str,
     request: MessageCreate,
-    current_user: TokenData = Depends(get_current_active_user)
+    current_user: TokenData = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     发送消息到指定对话
     
     消息将通过编排代理处理，自动进行意图识别、任务分解、代理调度
     """
-    conversation = _conversations_db.get(conversation_id)
-    
-    if not conversation:
-        raise HTTPException(status_code=404, detail="对话不存在")
-    
-    if conversation.get("user_id") != current_user.user_id:
-        raise HTTPException(status_code=403, detail="无权访问此对话")
-    
-    messages = _messages_db.get(conversation_id, [])
-    
-    # 添加用户消息
-    user_message_id = str(uuid.uuid4())
-    user_message = {
-        "id": user_message_id,
-        "conversation_id": conversation_id,
-        "role": "user",
-        "content": request.content,
-        "created_at": datetime.now()
-    }
-    messages.append(user_message)
+    conversation = await _get_owned_conversation(db, conversation_id, current_user.user_id)
+    user_message = Message(
+        id=str(uuid.uuid4()),
+        conversation_id=conversation_id,
+        role="user",
+        content=request.content,
+        tokens=0,
+        references=[],
+        meta=request.metadata or {},
+    )
+    db.add(user_message)
+    await db.flush()
     
     try:
         # 构建消息历史
+        history_messages = await _get_recent_messages(db, conversation_id, limit=20)
         chat_messages = [
-            {"role": msg["role"], "content": msg["content"]}
-            for msg in messages[-20:]
+            {"role": msg.role, "content": msg.content}
+            for msg in history_messages
         ]
         
         # 调用LLM
         response = await llm_service.chat(
             chat_messages,
-            session_id=conversation_id
+            session_id=conversation_id,
+            model=request.model
         )
         response_content = _extract_content(response)
+        response_references = _extract_references(response)
         
         # 计算token
         tokens = llm_service.count_messages_tokens(chat_messages)
         
-        # 添加助手消息
-        assistant_message_id = str(uuid.uuid4())
-        assistant_message = {
-            "id": assistant_message_id,
-            "conversation_id": conversation_id,
-            "role": "assistant",
-            "content": response_content,
-            "agent_type": request.agent_type,
-            "tokens": tokens,
-            "created_at": datetime.now()
-        }
-        messages.append(assistant_message)
+        assistant_message = Message(
+            id=str(uuid.uuid4()),
+            conversation_id=conversation_id,
+            role="assistant",
+            content=response_content,
+            agent_type=_agent_type_value(request.agent_type),
+            tokens=tokens,
+            references=response_references,
+        )
+        db.add(assistant_message)
+        await db.flush()
+        await _refresh_conversation_stats(db, conversation)
         
-        # 更新对话
-        conversation["message_count"] = len(messages)
-        conversation["updated_at"] = datetime.now()
-        
-        return MessageResponse(**assistant_message)
+        return _message_to_response(assistant_message)
         
     except Exception as e:
         logger.error(f"消息处理失败: {e}")
@@ -578,19 +641,14 @@ async def send_message(
 @router.post("/{conversation_id}/archive")
 async def archive_conversation(
     conversation_id: str,
-    current_user: TokenData = Depends(get_current_active_user)
+    current_user: TokenData = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """归档对话"""
-    conversation = _conversations_db.get(conversation_id)
-    
-    if not conversation:
-        raise HTTPException(status_code=404, detail="对话不存在")
-    
-    if conversation.get("user_id") != current_user.user_id:
-        raise HTTPException(status_code=403, detail="无权操作此对话")
-    
-    conversation["status"] = "archived"
-    conversation["updated_at"] = datetime.now()
+    conversation = await _get_owned_conversation(db, conversation_id, current_user.user_id)
+    conversation.status = ConversationStatus.ARCHIVED
+    conversation.updated_at = datetime.now()
+    await db.flush()
     
     return {"message": "归档成功", "conversation_id": conversation_id}
 
@@ -599,28 +657,18 @@ async def archive_conversation(
 async def optimize_prompt(
     conversation_id: str,
     message_id: str,
-    current_user: TokenData = Depends(get_current_active_user)
+    current_user: TokenData = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
 ):
     """
     一键优化提示词
     
     使用学习代理优化用户输入的提示词
     """
-    conversation = _conversations_db.get(conversation_id)
+    await _get_owned_conversation(db, conversation_id, current_user.user_id)
+    target_message = await db.get(Message, message_id)
     
-    if not conversation:
-        raise HTTPException(status_code=404, detail="对话不存在")
-    
-    messages = _messages_db.get(conversation_id, [])
-    
-    # 查找要优化的消息
-    target_message = None
-    for msg in messages:
-        if msg["id"] == message_id and msg["role"] == "user":
-            target_message = msg
-            break
-    
-    if not target_message:
+    if not target_message or target_message.conversation_id != conversation_id or target_message.role != "user":
         raise HTTPException(status_code=404, detail="消息不存在或不是用户消息")
     
     # 使用学习代理优化提示词
@@ -630,23 +678,176 @@ async def optimize_prompt(
             task_id=str(uuid.uuid4()),
             user_id=current_user.user_id,
             conversation_id=conversation_id,
-            input=target_message["content"],
+            input=target_message.content,
             metadata={"task_type": "optimize_prompt"}
         )
         result = await learning_agent.execute(context)
-        optimized_prompt = result.output.get("optimized_prompt", target_message["content"]) if result.output else target_message["content"]
+        optimized_prompt = result.output.get("optimized_prompt", target_message.content) if result.output else target_message.content
     else:
         # 简单优化：添加医学上下文
-        optimized_prompt = f"作为医学专家，请详细分析：{target_message['content']}"
+        optimized_prompt = f"作为医学专家，请详细分析：{target_message.content}"
     
     return {
-        "original_prompt": target_message["content"],
+        "original_prompt": target_message.content,
         "optimized_prompt": optimized_prompt,
         "message_id": message_id
     }
 
 
 # ============== 辅助函数 ==============
+
+def _enum_value(value: Any) -> Any:
+    """返回枚举或普通值的可序列化值。"""
+    return getattr(value, "value", value)
+
+
+def _conversation_status(status: str) -> ConversationStatus:
+    """将请求中的状态字符串转换为对话状态枚举。"""
+    try:
+        return ConversationStatus(status)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"不支持的对话状态: {status}")
+
+
+def _agent_type_value(agent_type: Optional[str]) -> Optional[AgentType]:
+    """将代理类型字符串转换为模型枚举，不支持的代理类型不写入数据库。"""
+    if not agent_type:
+        return None
+    try:
+        return AgentType(agent_type)
+    except ValueError:
+        return None
+
+
+def _conversation_to_response(conversation: Conversation) -> ConversationResponse:
+    """将数据库对话模型转换为接口响应。"""
+    return ConversationResponse(
+        id=conversation.id,
+        title=conversation.title,
+        status=_enum_value(conversation.status),
+        message_count=conversation.message_count or 0,
+        created_at=conversation.created_at,
+        updated_at=conversation.updated_at,
+    )
+
+
+def _message_to_response(message: Message) -> MessageResponse:
+    """将数据库消息模型转换为接口响应。"""
+    return MessageResponse(
+        id=message.id,
+        conversation_id=message.conversation_id,
+        role=message.role,
+        content=message.content,
+        agent_type=_enum_value(message.agent_type),
+        tokens=message.tokens or 0,
+        references=message.references or [],
+        created_at=message.created_at,
+    )
+
+
+async def _ensure_current_user_exists(db: AsyncSession, current_user: TokenData) -> None:
+    """确保认证系统中的内存用户在数据库中存在，满足对话外键约束。"""
+    if not current_user.user_id:
+        raise HTTPException(status_code=401, detail="无效的用户信息")
+
+    existing_user = await db.get(User, current_user.user_id)
+    if existing_user:
+        return
+
+    fake_user = fake_users_db.get(current_user.email or "", {})
+    role = fake_user.get("role") or current_user.role or UserRole.USER.value
+    try:
+        user_role = UserRole(role)
+    except ValueError:
+        user_role = UserRole.USER
+
+    email = current_user.email or f"{current_user.user_id}@local"
+    email_result = await db.execute(select(User).where(User.email == email))
+    if email_result.scalar_one_or_none():
+        email = f"{current_user.user_id}-{email}"
+
+    user = User(
+        id=current_user.user_id,
+        email=email,
+        hashed_password=fake_user.get("hashed_password") or get_password_hash(str(uuid.uuid4())),
+        name=fake_user.get("name") or current_user.email or current_user.user_id,
+        role=user_role,
+        is_active=True,
+    )
+    db.add(user)
+    await db.flush()
+
+
+async def _get_owned_conversation(
+    db: AsyncSession,
+    conversation_id: str,
+    user_id: str,
+) -> Conversation:
+    """获取当前用户拥有的对话。"""
+    conversation = await db.get(Conversation, conversation_id)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="对话不存在")
+    if conversation.user_id != user_id:
+        raise HTTPException(status_code=403, detail="无权访问此对话")
+    return conversation
+
+
+async def _get_or_create_conversation(
+    db: AsyncSession,
+    user_id: str,
+    first_message: str,
+    conversation_id: Optional[str] = None,
+) -> Conversation:
+    """获取已有对话，或在新会话/旧 ID 丢失时创建对话。"""
+    if conversation_id:
+        conversation = await db.get(Conversation, conversation_id)
+        if conversation:
+            if conversation.user_id != user_id:
+                raise HTTPException(status_code=403, detail="无权访问此对话")
+            return conversation
+
+    conversation = Conversation(
+        id=conversation_id or str(uuid.uuid4()),
+        user_id=user_id,
+        title=first_message[:50] + ("..." if len(first_message) > 50 else ""),
+        status=ConversationStatus.ACTIVE,
+        message_count=0,
+        context={},
+        total_tokens=0,
+    )
+    db.add(conversation)
+    await db.flush()
+    return conversation
+
+
+async def _get_recent_messages(
+    db: AsyncSession,
+    conversation_id: str,
+    limit: int = 20,
+) -> List[Message]:
+    """读取最近若干条消息，并按时间正序返回。"""
+    result = await db.execute(
+        select(Message)
+        .where(Message.conversation_id == conversation_id)
+        .order_by(Message.created_at.desc())
+        .limit(limit)
+    )
+    return list(reversed(result.scalars().all()))
+
+
+async def _refresh_conversation_stats(db: AsyncSession, conversation: Conversation) -> None:
+    """刷新对话消息数、token 数和更新时间。"""
+    count_result = await db.execute(
+        select(func.count()).select_from(Message).where(Message.conversation_id == conversation.id)
+    )
+    tokens_result = await db.execute(
+        select(func.coalesce(func.sum(Message.tokens), 0)).where(Message.conversation_id == conversation.id)
+    )
+    conversation.message_count = count_result.scalar_one()
+    conversation.total_tokens = tokens_result.scalar_one()
+    conversation.updated_at = datetime.now()
+    await db.flush()
+
 
 def _extract_content(response: Dict) -> str:
     """从LLM响应中提取内容"""
@@ -656,3 +857,123 @@ def _extract_content(response: Dict) -> str:
         return response["content"]
     else:
         return str(response)
+
+
+def _normalize_reference_source(raw_source: Any) -> str:
+    """规范化引用来源名称。"""
+    source = str(raw_source or "").strip()
+    if not source:
+        return "Unknown"
+    key = source.lower().replace(" ", "")
+    return REFERENCE_SOURCE_ALIASES.get(key, source)
+
+
+def _first_present(data: Dict, keys: List[str], default: Any = None) -> Any:
+    """按顺序返回字典中第一个存在且非空的值。"""
+    for key in keys:
+        value = data.get(key)
+        if value not in (None, "", [], {}):
+            return value
+    return default
+
+
+def _infer_reference_source(item: Dict) -> str:
+    """从引用条目的字段推断来源类型。"""
+    explicit_source = _first_present(
+        item,
+        ["source_type", "source", "database", "db", "provider", "origin", "collection"],
+    )
+    if explicit_source:
+        return _normalize_reference_source(explicit_source)
+
+    if _first_present(item, ["pmid", "pubmed_id"]):
+        return "PubMed"
+    if _first_present(item, ["nct_id", "nctId", "clinical_trial_id"]):
+        return "ClinicalTrials"
+    if _first_present(item, ["chembl_id", "molecule_chembl_id", "assay_chembl_id"]):
+        return "ChEMBL"
+    if _first_present(item, ["ensembl_id", "gene_id", "transcript_id"]):
+        return "Ensembl"
+    if _first_present(item, ["fda_application_number", "application_number", "label_url"]):
+        return "FDA"
+    if _first_present(item, ["score", "distance", "similarity"]):
+        return "Milvus"
+    return "Unknown"
+
+
+def _normalize_reference_item(item: Any, index: int) -> Optional[Dict[str, Any]]:
+    """将不同接口返回的引用条目统一为前端可展示结构。"""
+    if item is None:
+        return None
+
+    if not isinstance(item, dict):
+        return {
+            "id": f"ref-{index}",
+            "source_type": "Unknown",
+            "title": f"引用 {index + 1}",
+            "content": str(item),
+            "metadata": {},
+        }
+
+    source_type = _infer_reference_source(item)
+    title = _first_present(
+        item,
+        ["title", "name", "article_title", "study_title", "brief_title", "drug_name", "gene_symbol", "symbol"],
+        f"{source_type} 引用 {index + 1}",
+    )
+    content = _first_present(
+        item,
+        ["content", "text", "abstract", "summary", "snippet", "chunk", "description", "label", "result"],
+        "",
+    )
+    url = _first_present(item, ["url", "link", "href", "source_url"])
+    identifier = _first_present(
+        item,
+        ["pmid", "pubmed_id", "nct_id", "nctId", "chembl_id", "ensembl_id", "gene_id", "id", "document_id"],
+    )
+    score = _first_present(item, ["score", "similarity", "distance", "rank_score"])
+
+    normalized = {
+        "id": str(identifier or f"ref-{index}"),
+        "source_type": source_type,
+        "title": str(title),
+        "content": str(content) if content is not None else "",
+        "url": url,
+        "score": score,
+        "metadata": item,
+    }
+
+    # 去掉空值，减少前端判断复杂度。
+    return {k: v for k, v in normalized.items() if v not in (None, "", [], {})}
+
+
+def _extract_references(response: Any) -> List[Dict[str, Any]]:
+    """从 LLM / agent 响应中提取并标准化引用内容。"""
+    if not isinstance(response, dict):
+        return []
+
+    raw_references = _first_present(
+        response,
+        ["references", "sources", "retrieved_knowledge", "citations"],
+        [],
+    )
+
+    raw_response = response.get("raw_response")
+    if not raw_references and isinstance(raw_response, dict):
+        raw_references = _first_present(
+            raw_response,
+            ["references", "sources", "retrieved_knowledge", "citations"],
+            [],
+        )
+
+    if isinstance(raw_references, dict):
+        raw_references = [raw_references]
+    if not isinstance(raw_references, list):
+        return []
+
+    normalized = []
+    for index, item in enumerate(raw_references):
+        ref = _normalize_reference_item(item, index)
+        if ref:
+            normalized.append(ref)
+    return normalized

@@ -1,17 +1,12 @@
 """
 大模型服务客户端
 
-大模型服务地址默认使用 `http://127.0.0.1:8802`
-该服务已内置RAG（检索增强生成）能力，包含医学知识向量库。
-
-调用时会自动：
-1. 解析用户查询意图
-2. 向量检索相关医学知识
-3. 知识增强生成响应
-4. 返回结果及知识来源引用
+默认兼容原有医疗大模型 `/chat` 接口；当请求指定的模型命中
+`model_configs.json` 中的 OpenAI-compatible 配置时，改走 `/chat/completions`。
 """
-import httpx
-from typing import List, Dict, AsyncGenerator, Optional
+from pathlib import Path
+from typing import AsyncGenerator, Dict, List, Optional
+import json
 import logging
 
 from app.config import settings
@@ -21,32 +16,86 @@ logger = logging.getLogger(__name__)
 
 class LLMService:
     """
-    大模型服务客户端（内置RAG）
-    
-    大模型服务已内置RAG能力，无需单独管理知识库。
+    大模型服务客户端。
+
+    - 默认模式：调用原有 `{LLM_ENDPOINT}/chat`，保留内置 RAG 能力。
+    - OpenAI 兼容模式：按模型配置调用 `{endpoint}/chat/completions`。
     """
-    
+
     def __init__(
         self,
         endpoint: str = None,
         model: str = None,
-        timeout: int = None
+        timeout: int = None,
+        config_path: Optional[Path] = None,
     ):
         self.endpoint = self._normalize_endpoint(endpoint or settings.LLM_ENDPOINT)
         self.model = model or settings.LLM_MODEL
         self.timeout = timeout or settings.LLM_TIMEOUT
+        self.config_path = Path(config_path) if config_path else Path(__file__).resolve().parents[2] / "model_configs.json"
+        self._model_configs = self._load_model_configs()
 
     @staticmethod
     def _normalize_endpoint(endpoint: str) -> str:
         """
         规范化服务地址。
 
-        兼容旧配置中以 `/chat/` 结尾的写法，统一转换为基础地址。
+        兼容旧配置中以 `/chat/` 或 OpenAI `/chat/completions` 结尾的写法，统一转换为基础地址。
         """
         normalized = (endpoint or "").strip().rstrip("/")
+        if normalized.endswith("/chat/completions"):
+            normalized = normalized[: -len("/chat/completions")]
         if normalized.endswith("/chat"):
             normalized = normalized[:-5]
         return normalized
+
+    def _load_model_configs(self) -> List[Dict]:
+        """读取模型配置；读取失败时保持原有单模型行为。"""
+        if not self.config_path.exists():
+            return []
+        try:
+            with self.config_path.open("r", encoding="utf-8") as f:
+                configs = json.load(f)
+            if isinstance(configs, list):
+                return configs
+            logger.warning("模型配置文件格式不是列表: %s", self.config_path)
+        except Exception as e:
+            logger.warning("读取模型配置失败: %s, path=%s", e, self.config_path)
+        return []
+
+    def reload_model_configs(self) -> None:
+        """重新加载模型配置，便于运行中更新配置后生效。"""
+        self._model_configs = self._load_model_configs()
+
+    def get_model_configs(self) -> List[Dict]:
+        """返回可展示给前端的模型列表，不暴露 api_key。"""
+        return [
+            {
+                "name": cfg.get("name"),
+                "display_name": cfg.get("display_name") or cfg.get("name"),
+                "type": cfg.get("type", "openai"),
+                "default": bool(cfg.get("default", False)),
+            }
+            for cfg in self._model_configs
+            if cfg.get("name")
+        ]
+
+    def _resolve_model_config(self, model_name: Optional[str]) -> Optional[Dict]:
+        """根据请求模型名找到配置；未传模型时使用 default 配置。"""
+        if not self._model_configs:
+            return None
+
+        if model_name:
+            for cfg in self._model_configs:
+                if cfg.get("name") == model_name:
+                    return cfg
+            logger.warning("未找到请求的模型配置: %s，将回退到默认 LLM 配置", model_name)
+            return None
+
+        for cfg in self._model_configs:
+            if cfg.get("default"):
+                return cfg
+        return None
 
     @staticmethod
     def _build_payload(
@@ -55,15 +104,13 @@ class LLMService:
         max_tokens: int,
         **kwargs
     ) -> Dict:
-        """将消息列表转换为医疗大模型 `/chat` 接口所需格式"""
-        # 提取最后一条用户消息作为 prompt
+        """将消息列表转换为医疗大模型 `/chat` 接口所需格式。"""
         prompt = ""
         for msg in reversed(messages):
             if msg["role"] == "user":
                 prompt = msg["content"]
                 break
 
-        # 构建历史消息（排除最后一条用户消息和系统消息）
         history = []
         user_msg_count = 0
         for msg in messages:
@@ -94,33 +141,119 @@ class LLMService:
             payload["session_id"] = session_id
 
         return payload
-    
+
+    @staticmethod
+    def _openai_payload(messages: List[Dict], model: str, temperature: float, max_tokens: int) -> Dict:
+        """构造 OpenAI-compatible chat/completions 请求体。"""
+        return {
+            "model": model,
+            "messages": messages,
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+
     async def chat(
         self,
         messages: List[Dict],
         temperature: float = 0.7,
         max_tokens: int = 4096,
         stream: bool = False,
+        model: Optional[str] = None,
         **kwargs
     ) -> Dict:
         """
-        发送聊天请求（自动触发RAG检索增强）
-        
-        适配 LLM API 格式：
-        - Endpoint: POST /chat
-        - 请求: {"prompt": "...", "use_rag": true, "history": [...], ...}
-        - 响应: {"response": "...", "retrieved_knowledge": [...], ...}
-        
+        发送聊天请求。
+
         Args:
             messages: 消息列表，格式: [{"role": "user/assistant/system", "content": "..."}]
             temperature: 温度参数，控制随机性
-            max_tokens: 最大生成token数
+            max_tokens: 最大生成 token 数
             stream: 是否流式返回
+            model: 前端选择的模型名称，对应 `model_configs.json` 的 name
             **kwargs: 其他参数
-            
-        Returns:
-            Dict: 大模型响应，包含content、tokens、sources等字段
         """
+        model_config = self._resolve_model_config(model)
+        if model_config and model_config.get("type") == "openai":
+            return await self._chat_openai_compatible(
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                model_config=model_config,
+            )
+        if model_config and model_config.get("type") in {"medical_rag", "medical-rag", "rag", "chat"}:
+            return await self._chat_medical_rag(
+                messages=messages,
+                temperature=temperature,
+                max_tokens=max_tokens,
+                model_config=model_config,
+                **kwargs,
+            )
+        return await self._chat_medical_rag(
+            messages=messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            **kwargs,
+        )
+
+    async def _chat_openai_compatible(
+        self,
+        messages: List[Dict],
+        temperature: float,
+        max_tokens: int,
+        model_config: Dict,
+    ) -> Dict:
+        """调用 OpenAI-compatible `/chat/completions` 接口。"""
+        endpoint = self._normalize_endpoint(model_config.get("endpoint", ""))
+        raw_model = model_config.get("model") or model_config.get("name")
+        selected_name = model_config.get("name") or raw_model
+        payload = self._openai_payload(messages, raw_model, temperature, max_tokens)
+        headers = {"Content-Type": "application/json"}
+        api_key = model_config.get("api_key")
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        logger.info("OpenAI兼容LLM请求: endpoint=%s, model=%s", endpoint, selected_name)
+
+        try:
+            import urllib.request
+            req = urllib.request.Request(
+                f"{endpoint}/chat/completions",
+                data=json.dumps(payload).encode("utf-8"),
+                headers=headers,
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=self.timeout / 1000) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+
+            content = ""
+            choices = result.get("choices") or []
+            if choices:
+                message = choices[0].get("message") or {}
+                content = message.get("content") or choices[0].get("text") or ""
+
+            usage = result.get("usage") or {}
+            return {
+                "content": content,
+                "tokens": usage.get("total_tokens") or len(content) // 4,
+                "model": selected_name,
+                "raw_model": raw_model,
+                "sources": [],
+                "analysis": {},
+                "raw_response": result,
+            }
+        except Exception as e:
+            logger.error("OpenAI兼容LLM请求失败: %s, endpoint=%s, model=%s", e, endpoint, selected_name)
+            return self._fallback_response(messages, model=selected_name)
+
+    async def _chat_medical_rag(
+        self,
+        messages: List[Dict],
+        temperature: float,
+        max_tokens: int,
+        model_config: Optional[Dict] = None,
+        **kwargs,
+    ) -> Dict:
+        """调用医疗大模型 `/chat` 接口。"""
         payload = self._build_payload(
             messages=messages,
             temperature=temperature,
@@ -128,50 +261,45 @@ class LLMService:
             **kwargs
         )
         prompt = payload.get("prompt", "")
+        endpoint = self._normalize_endpoint(model_config.get("endpoint")) if model_config else self.endpoint
+        selected_name = model_config.get("name") if model_config else self.model
+        raw_model = model_config.get("model") if model_config else self.model
 
-        logger.info(f"LLM 请求: prompt长度={len(prompt)}, use_rag=True")
-        
+        logger.info("医疗RAG LLM请求: endpoint=%s, model=%s, prompt长度=%s", endpoint, selected_name, len(prompt))
+
         try:
-            async with httpx.AsyncClient(timeout=self.timeout / 1000) as client:
-                response = await client.post(
-                    f"{self.endpoint}/chat",
-                    json=payload
-                )
-                response.raise_for_status()
-                result = response.json()
-                
-                # 转换响应格式为统一格式
+            import urllib.request
+            req = urllib.request.Request(
+                f"{endpoint}/chat",
+                data=json.dumps(payload).encode("utf-8"),
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=self.timeout / 1000) as resp:
+                result = json.loads(resp.read().decode("utf-8"))
+
                 return {
                     "content": result.get("response", ""),
                     "tokens": len(result.get("response", "")) // 4,
-                    "model": self.model,
+                    "model": selected_name,
+                    "raw_model": raw_model,
                     "sources": result.get("retrieved_knowledge", []),
                     "analysis": result.get("analysis", {}),
                     "raw_response": result
                 }
-                
-        except httpx.TimeoutException:
-            logger.error(f"LLM服务请求超时: {self.endpoint}")
-            return self._fallback_response(messages)
-        except httpx.HTTPStatusError as e:
-            logger.error(f"LLM服务HTTP错误: {e}")
-            return self._fallback_response(messages)
+
         except Exception as e:
-            logger.error(f"LLM服务请求失败: {e}")
-            return self._fallback_response(messages)
-    
-    def _fallback_response(self, messages: List[Dict]) -> Dict:
-        """
-        备用响应：当 LLM 服务不可用时返回模拟响应
-        """
-        # 获取最后一条用户消息
+            logger.error("医疗RAG LLM请求失败: %s, endpoint=%s, model=%s", e, endpoint, selected_name)
+            return self._fallback_response(messages, model=selected_name)
+
+    def _fallback_response(self, messages: List[Dict], model: str = "fallback") -> Dict:
+        """备用响应：当 LLM 服务不可用时返回模拟响应。"""
         user_message = ""
         for msg in reversed(messages):
             if msg["role"] == "user":
                 user_message = msg["content"]
                 break
-        
-        # 生成模拟响应
+
         response_text = f"""我理解您的问题是：{user_message[:100]}...
 
 由于大模型服务暂时不可用，我无法提供完整的医学分析。以下是基本建议：
@@ -193,10 +321,10 @@ class LLMService:
         return {
             "content": response_text,
             "tokens": len(response_text) // 4,
-            "model": "fallback",
+            "model": model,
             "sources": []
         }
-    
+
     async def stream_chat(
         self,
         messages: List[Dict],
@@ -204,17 +332,7 @@ class LLMService:
         max_tokens: int = 4096,
         **kwargs
     ) -> AsyncGenerator[str, None]:
-        """
-        流式聊天（自动RAG增强）
-        
-        Args:
-            messages: 消息列表
-            temperature: 温度参数
-            max_tokens: 最大token数
-            
-        Yields:
-            str: 流式响应内容块
-        """
+        """流式聊天：当前通过非流式调用后分块返回，保持现有前端兼容。"""
         try:
             result = await self.chat(
                 messages=messages,
@@ -228,61 +346,34 @@ class LLMService:
             for i in range(0, len(content), chunk_size):
                 yield content[i:i + chunk_size]
         except Exception as e:
-            logger.error(f"流式请求失败: {e}")
+            logger.error("流式请求失败: %s", e)
             raise
-    
+
     async def health_check(self) -> bool:
-        """
-        检查大模型服务健康状态
-        
-        Returns:
-            bool: 服务是否健康
-        """
+        """检查原有医疗大模型服务健康状态。"""
         try:
-            async with httpx.AsyncClient(timeout=5) as client:
-                response = await client.get(f"{self.endpoint}/health")
-                return response.status_code == 200
+            import urllib.request
+            req = urllib.request.Request(f"{self.endpoint}/health", method="GET")
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                return resp.status == 200
         except Exception:
             return False
-    
+
     def count_tokens(self, text: str) -> int:
-        """
-        计算文本Token数量（估算）
-        
-        简化实现：
-        - 中文约1.5字符/token
-        - 英文约4字符/token
-        
-        Args:
-            text: 输入文本
-            
-        Returns:
-            int: Token数量估算
-        """
+        """计算文本 Token 数量（估算）。"""
         chinese_chars = sum(1 for c in text if '\u4e00' <= c <= '\u9fff')
         other_chars = len(text) - chinese_chars
         return int(chinese_chars / 1.5 + other_chars / 4)
-    
+
     def count_messages_tokens(self, messages: List[Dict]) -> int:
-        """
-        计算消息列表Token数量
-        
-        Args:
-            messages: 消息列表
-            
-        Returns:
-            int: Token数量
-        """
+        """计算消息列表 Token 数量。"""
         total = 0
         for msg in messages:
-            # 消息格式开销
             total += 4
             total += self.count_tokens(msg.get("role", ""))
             total += self.count_tokens(msg.get("content", ""))
-        # 对话开始标记
         total += 2
         return total
 
 
-# 全局单例实例
 llm_service = LLMService()

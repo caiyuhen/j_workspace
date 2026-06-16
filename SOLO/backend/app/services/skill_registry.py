@@ -24,7 +24,144 @@ class SkillRegistry:
     def __init__(self):
         self._skills: Dict[str, Dict[str, Any]] = {}
         self._executions: Dict[str, Dict[str, Any]] = {}
+        self._candidate_skills: Dict[str, Dict[str, Any]] = {}
         self._init_builtin_skills()
+        self._init_candidate_skills()
+
+    # --------- candidate discovery / explicit install ----------
+    def _init_candidate_skills(self) -> None:
+        """初始化可发现但不会自动安装的候选技能。"""
+        self._candidate_skills = {
+            "candidate_pubmed_search": {
+                "id": "candidate_pubmed_search",
+                "target_skill_id": "skill_pubmed_search",
+                "name": "pubmed_search",
+                "display_name": "PubMed 文献检索",
+                "description": "基于 PubMed 的医学文献检索候选技能，需要用户确认后安装。",
+                "category": "research",
+                "protocol": "skillhub",
+                "source": "trusted_catalog",
+                "install_requires_confirmation": True,
+                "config": {"endpoint": "https://api.skillhub.cn/skills/pubmed_search"},
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "limit": {"type": "integer", "default": 10}
+                    },
+                    "required": ["query"],
+                },
+                "output_schema": {},
+            },
+            "candidate_clinical_guideline_search": {
+                "id": "candidate_clinical_guideline_search",
+                "target_skill_id": "skill_guideline_search",
+                "name": "guideline_search",
+                "display_name": "临床指南检索",
+                "description": "检索临床指南、专家共识和诊疗规范的候选技能，需要用户确认后安装。",
+                "category": "reference",
+                "protocol": "skillhub",
+                "source": "trusted_catalog",
+                "install_requires_confirmation": True,
+                "config": {"endpoint": "https://api.skillhub.cn/skills/guideline_search"},
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "disease": {"type": "string"},
+                        "query": {"type": "string"},
+                        "limit": {"type": "integer", "default": 10}
+                    },
+                    "required": ["query"],
+                },
+                "output_schema": {},
+            },
+            "candidate_semantic_scholar_search": {
+                "id": "candidate_semantic_scholar_search",
+                "target_skill_id": "skill_semantic_scholar_search",
+                "name": "semantic_scholar_search",
+                "display_name": "Semantic Scholar 文献检索",
+                "description": "基于 Semantic Scholar 的论文检索候选技能，需要用户确认后安装。",
+                "category": "research",
+                "protocol": "skillhub",
+                "source": "trusted_catalog",
+                "install_requires_confirmation": True,
+                "config": {"endpoint": "https://api.skillhub.cn/skills/semantic_scholar_search"},
+                "input_schema": {
+                    "type": "object",
+                    "properties": {
+                        "query": {"type": "string"},
+                        "limit": {"type": "integer", "default": 10}
+                    },
+                    "required": ["query"],
+                },
+                "output_schema": {},
+            },
+        }
+
+    def discover_skill_candidates(
+        self,
+        query: Optional[str] = None,
+        required_skill_id: Optional[str] = None,
+        category: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """发现候选技能，但不自动安装。"""
+        q = (query or "").lower()
+        candidates = list(self._candidate_skills.values())
+
+        if required_skill_id:
+            candidates = [
+                c for c in candidates
+                if c.get("target_skill_id") == required_skill_id or c.get("id") == required_skill_id
+            ]
+        if category:
+            candidates = [c for c in candidates if c.get("category") == category]
+        if q:
+            candidates = [
+                c for c in candidates
+                if q in c.get("name", "").lower()
+                or q in c.get("display_name", "").lower()
+                or q in (c.get("description") or "").lower()
+                or any(token and token in (c.get("description") or "").lower() for token in q.split())
+                or any(token and token in c.get("name", "").lower() for token in q.split())
+            ]
+
+        return {
+            "installed": False,
+            "required_skill_id": required_skill_id,
+            "query": query,
+            "candidates": candidates,
+            "message": "已发现候选技能，但不会自动安装；请确认后调用安装接口。"
+        }
+
+    def install_candidate(self, candidate_id: str) -> Dict[str, Any]:
+        """显式安装候选技能。调用此方法代表用户/管理员已确认安装。"""
+        candidate = self._candidate_skills.get(candidate_id)
+        if not candidate:
+            raise ValueError(f"候选技能不存在: {candidate_id}")
+
+        target_skill_id = candidate["target_skill_id"]
+        if target_skill_id in self._skills:
+            raise ValueError(f"技能已安装: {target_skill_id}")
+
+        skill = {
+            "id": target_skill_id,
+            "name": candidate["name"],
+            "display_name": candidate["display_name"],
+            "description": candidate.get("description"),
+            "category": candidate.get("category") or "general",
+            "protocol": candidate.get("protocol") or "skillhub",
+            "is_active": True,
+            "is_builtin": False,
+            "config": candidate.get("config") or {},
+            "input_schema": candidate.get("input_schema") or {},
+            "output_schema": candidate.get("output_schema") or {},
+            "usage_count": 0,
+            "created_at": datetime.now(),
+            "installed_from_candidate": candidate_id,
+            "source": candidate.get("source"),
+        }
+        self._skills[target_skill_id] = skill
+        return skill
 
     # --------- skills CRUD ----------
     def list_skills(

@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     # LLM服务配置（内置RAG）
     # 基础地址，实际对话接口为 POST {LLM_ENDPOINT}/chat
     LLM_ENDPOINT: str = "http://127.0.0.1:8802"
+    LLM_API_KEY: Optional[str] = None
     LLM_MODEL: str = "medical-large"
     # 单位：毫秒（LLMService 内部会除以 1000 传给 httpx）
     LLM_TIMEOUT: int = 300000  # 300秒
