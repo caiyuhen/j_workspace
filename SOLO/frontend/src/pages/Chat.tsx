@@ -36,7 +36,6 @@ export default function Chat() {
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
   const [agents, setAgents] = useState<Agent[]>([])
-  const [selectedAgent, setSelectedAgent] = useState<string>('')
   const [llmModels, setLlmModels] = useState<LLMModel[]>([])
   const [selectedModel, setSelectedModel] = useState<string>('')
   const [executionMode, setExecutionMode] = useState<'chat' | 'task'>('chat')
@@ -165,7 +164,6 @@ export default function Chat() {
         id: m.id,
         role: m.role,
         content: m.content,
-        agent_type: m.agent_type,
         references: m.references
       })))
     } catch (error) {
@@ -346,7 +344,6 @@ export default function Chat() {
         return conversationApi.sendMessage({
           message: userMessage,
           conversation_id: overrideConversationId,
-          agent_type: selectedAgent || undefined,
           model: selectedModel || undefined,
           execution_mode: executionMode,
           deliverable_format: deliverableFormat
@@ -366,7 +363,6 @@ export default function Chat() {
       if (lastMessage && lastMessage.id === assistantMessageId) {
         lastMessage.id = res.data.message.id
         lastMessage.content = res.data.message.content
-        lastMessage.agent_type = res.data.agent_used
         lastMessage.references = res.data.message.references
         lastMessage.loading = false
         setMessages(newMessages)
@@ -388,7 +384,6 @@ export default function Chat() {
         try {
           const res = await conversationApi.sendMessage({
             message: userMessage,
-            agent_type: selectedAgent || undefined,
             model: selectedModel || undefined,
             execution_mode: executionMode,
             deliverable_format: deliverableFormat
@@ -400,7 +395,6 @@ export default function Chat() {
           if (lastMessage && lastMessage.id === assistantMessageId) {
             lastMessage.id = res.data.message.id
             lastMessage.content = res.data.message.content
-            lastMessage.agent_type = res.data.agent_used
             lastMessage.references = res.data.message.references
             lastMessage.loading = false
             setMessages(newMessages)
@@ -466,25 +460,6 @@ export default function Chat() {
     }
   }
   
-  const getAgentIcon = (agentType?: string) => {
-    if (!agentType) return <RobotOutlined />
-    return <RobotOutlined />
-  }
-  
-  const getAgentColor = (agentType?: string) => {
-    const colors: Record<string, string> = {
-      orchestrator: '#722ed1',
-      diagnosis: '#1890ff',
-      research: '#52c41a',
-      consultation: '#fa8c16',
-      knowledge: '#13c2c2',
-      tool: '#eb2f96',
-      quality: '#faad14',
-      learning: '#2f54eb'
-    }
-    return colors[agentType || ''] || '#1890ff'
-  }
-
   const getReferenceColor = (sourceType?: string) => {
     const colors: Record<string, string> = {
       Milvus: 'purple',
@@ -676,9 +651,45 @@ export default function Chat() {
                 <Space direction="vertical" size={2}>
                   {subtask.description && <Text type="secondary">{subtask.description}</Text>}
                   <Space size={4} wrap>
-                    {subtask.agent_type && <Tag>{subtask.agent_type}</Tag>}
+                    {(subtask.input_data as any)?.step_type === 'tool' && (
+                      <Tag color="purple">Skill</Tag>
+                    )}
+                    {(() => {
+                      const fb = (subtask.output_data as any)?.fallback
+                      if (fb === 'llm_after_skill_error') return <Tag color="cyan">已重试为 LLM</Tag>
+                      if (fb === 'llm_fallback_empty' || fb === 'llm_fallback_also_failed') return <Tag color="red">兜底也失败</Tag>
+                      return null
+                    })()}
+                    {(() => {
+                      const rstatus = (subtask.input_data as any)?.resolver_status || (subtask.output_data as any)?.resolver_status
+                      if (rstatus === 'auto_installed') return <Tag color="gold">已自动安装</Tag>
+                      if (rstatus === 'local') return <Tag color="green">本地匹配</Tag>
+                      if (rstatus === 'not_available') return <Tag color="orange">已降级</Tag>
+                      return null
+                    })()}
+                    {(() => {
+                      const skillId = (subtask.output_data as any)?.skill_id || (subtask.input_data as any)?.skill_id
+                      return skillId ? <Tag color="geekblue">{skillId}</Tag> : null
+                    })()}
                     {renderStatusBadge(subtask.status)}
+                    {typeof (subtask.output_data as any)?.duration_seconds === 'number' && (
+                      <Tag color="default">{((subtask.output_data as any).duration_seconds as number).toFixed(2)}s</Tag>
+                    )}
                   </Space>
+                  {(subtask.input_data as any)?.step_type === 'tool' && (subtask.input_data as any)?.input && (
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      输入：{JSON.stringify((subtask.input_data as any).input).slice(0, 120)}
+                    </Text>
+                  )}
+                  {(subtask.output_data as any)?.result !== undefined && (
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      输出：{(() => {
+                        const r = (subtask.output_data as any).result
+                        const s = typeof r === 'string' ? r : JSON.stringify(r)
+                        return s.length > 160 ? `${s.slice(0, 160)}…` : s
+                      })()}
+                    </Text>
+                  )}
                   {subtask.error_message && <Text type="danger">{subtask.error_message}</Text>}
                 </Space>
               ),
@@ -765,14 +776,6 @@ export default function Chat() {
             />
           )}
           <Select
-            placeholder="选择代理"
-            allowClear
-            style={{ width: 150 }}
-            value={selectedAgent || undefined}
-            onChange={setSelectedAgent}
-            options={agents.map(a => ({ label: a.name, value: a.type }))}
-          />
-          <Select
             placeholder="选择LLM模型"
             style={{ width: 180 }}
             value={selectedModel || undefined}
@@ -831,16 +834,11 @@ export default function Chat() {
                 }}>
                   <Avatar 
                     style={{ 
-                      backgroundColor: item.role === 'user' ? '#1890ff' : getAgentColor(item.agent_type)
+                      backgroundColor: item.role === 'user' ? '#1890ff' : '#1890ff'
                     }}
-                    icon={item.role === 'user' ? <UserOutlined /> : getAgentIcon(item.agent_type)}
+                    icon={item.role === 'user' ? <UserOutlined /> : <RobotOutlined />}
                   />
                   <div>
-                    {item.agent_type && (
-                      <Tag color={getAgentColor(item.agent_type)} style={{ marginBottom: 4 }}>
-                        {item.agent_type}
-                      </Tag>
-                    )}
                     <div className={`chat-message ${item.role}`}>
                       {item.loading ? (
                         <Spin size="small" />

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from app.models import AgentType, SubTask, Task, TaskStatus
+from app.models import SubTask, Task, TaskStatus
 from app.services.task_progress_service import build_task_progress
 
 
@@ -22,7 +22,6 @@ def test_build_task_progress_calculates_progress_and_summary():
             task_id="task-1",
             name="理解任务",
             description="解析目标",
-            agent_type=AgentType.ORCHESTRATOR,
             status=TaskStatus.COMPLETED,
             output_data={"goal": "生成研究方案"},
         ),
@@ -31,7 +30,6 @@ def test_build_task_progress_calculates_progress_and_summary():
             task_id="task-1",
             name="生成大纲",
             description="生成结构化大纲",
-            agent_type=AgentType.RESEARCH,
             status=TaskStatus.RUNNING,
             input_data={"order": 2},
         ),
@@ -40,7 +38,6 @@ def test_build_task_progress_calculates_progress_and_summary():
             task_id="task-1",
             name="生成交付物",
             description="生成 Word 文件",
-            agent_type=AgentType.TOOL,
             status=TaskStatus.PENDING,
         ),
     ]
@@ -55,7 +52,7 @@ def test_build_task_progress_calculates_progress_and_summary():
     assert progress["summary"]["running"] == 1
     assert progress["summary"]["failed"] == 0
     assert progress["subtasks"][0]["status"] == "completed"
-    assert progress["subtasks"][1]["agent_type"] == "research"
+    assert "agent_type" not in progress["subtasks"][1], "agent_type 字段已彻底删除"
     assert progress["artifacts"][0]["artifact_id"] == "artifact-1"
 
 
@@ -73,7 +70,6 @@ def test_build_task_progress_reports_failed_status_and_error():
             id="sub-1",
             task_id="task-2",
             name="生成正文",
-            agent_type=AgentType.RESEARCH,
             status=TaskStatus.FAILED,
             error_message="模型超时",
         )

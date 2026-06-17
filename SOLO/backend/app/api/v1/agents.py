@@ -166,24 +166,6 @@ async def list_capabilities(
     }
 
 
-@router.get("/types")
-async def list_agent_types(
-    current_user: TokenData = Depends(get_current_active_user)
-):
-    """列出所有代理类型"""
-    types = [
-        {"type": "orchestrator", "name": "编排代理", "description": "任务分解和协调"},
-        {"type": "diagnosis", "name": "诊断代理", "description": "临床诊断支持"},
-        {"type": "research", "name": "研究代理", "description": "医学文献检索"},
-        {"type": "consultation", "name": "咨询代理", "description": "健康咨询服务"},
-        {"type": "knowledge", "name": "知识代理", "description": "知识库查询"},
-        {"type": "tool", "name": "工具代理", "description": "工具和Skill集成"},
-        {"type": "quality", "name": "质量代理", "description": "质量控制"},
-        {"type": "learning", "name": "学习代理", "description": "学习和优化"}
-    ]
-    return {"types": types}
-
-
 @router.get("/{agent_name}", response_model=AgentDetail)
 async def get_agent(
     agent_name: str,

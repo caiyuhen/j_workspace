@@ -21,7 +21,6 @@ def build_subtask_progress(subtask) -> Dict[str, Any]:
         "id": subtask.id,
         "name": subtask.name,
         "description": subtask.description,
-        "agent_type": _enum_value(subtask.agent_type),
         "status": _enum_value(subtask.status),
         "input_data": subtask.input_data or {},
         "output_data": subtask.output_data or {},

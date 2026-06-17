@@ -88,7 +88,6 @@ export interface Message {
   id: string
   role: 'user' | 'assistant' | 'system'
   content: string
-  agent_type?: string
   tokens: number
   references?: ReferenceItem[]
   created_at: string
@@ -153,7 +152,6 @@ export interface SkillResolution {
 export interface ChatRequest {
   message: string
   conversation_id?: string
-  agent_type?: string
   model?: string
   execution_mode?: 'chat' | 'task'
   deliverable_format?: 'md' | 'docx' | 'xlsx' | 'pptx'
@@ -195,7 +193,6 @@ export interface SubTaskProgress {
   id: string
   name: string
   description?: string
-  agent_type?: string
   status: string
   input_data?: Record<string, unknown>
   output_data?: Record<string, unknown>
@@ -374,6 +371,17 @@ export const skillApi = {
 
   installCandidate: (candidateId: string) =>
     api.post<Skill>('/skills/install-candidate', { candidate_id: candidateId }),
+
+  installByUrl: (url: string) =>
+    api.post<Skill>('/skills/install-by-url', { url }),
+
+  search: (q: string, description?: string) =>
+    api.post<{
+      local: Array<{ source: string; skill_id: string | null; title: string; description?: string | null; url?: string | null }>
+      remote: Array<{ source: string; skill_id: string | null; title: string; description?: string | null; url?: string | null }>
+      remote_status: 'ok' | 'unavailable' | 'disabled'
+      remote_message: string
+    }>('/skills/search', { q, description: description || '' }),
   
   execute: (id: string, input: Record<string, unknown>, config?: Record<string, unknown>) => 
     api.post(`/skills/${id}/execute`, { input, config }),
