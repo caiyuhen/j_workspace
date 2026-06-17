@@ -23,13 +23,25 @@ from app.services.llm_service import llm_service
 from app.api.v1.auth import get_current_active_user, TokenData
 from app.core.auth import fake_users_db, get_password_hash
 from app.core.database import AsyncSessionLocal, get_db
-from app.models import AgentType, Conversation, ConversationStatus, Message, SubTask, Task, TaskStatus, User, UserRole
+from app.models import Conversation, ConversationStatus, Message, SubTask, Task, TaskStatus, User, UserRole
 from app.services.task_background_service import build_task_started_result, launch_task_in_background
 from app.services.task_execution_service import task_runner
 from app.services.task_progress_service import build_task_progress
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+_MESSAGE_ROLE_ORDER = {"user": 0, "assistant": 1, "system": 2}
+
+
+def _message_display_sort_key(message: Message):
+    """消息展示排序：同一时间戳时，用户提示词必须排在助手状态消息之前。"""
+    return (
+        message.created_at or datetime.min,
+        _MESSAGE_ROLE_ORDER.get(message.role, 9),
+        message.id,
+    )
 
 
 # ============== 数据模型 ==============
@@ -62,7 +74,6 @@ class MessageCreate(BaseModel):
     """创建消息请求"""
     content: str = Field(..., description="消息内容", min_length=1)
     input_type: str = Field(default="text", description="输入类型: text/voice")
-    agent_type: Optional[str] = Field(default=None, description="指定代理类型")
     model: Optional[str] = Field(default=None, description="指定LLM模型")
     metadata: Optional[Dict[str, Any]] = None
 
@@ -73,7 +84,6 @@ class MessageResponse(BaseModel):
     conversation_id: str
     role: str
     content: str
-    agent_type: Optional[str] = None
     tokens: Optional[int] = None
     references: Optional[List[Dict]] = None
     created_at: datetime
@@ -83,7 +93,6 @@ class ChatRequest(BaseModel):
     """聊天请求"""
     message: str = Field(..., min_length=1)
     conversation_id: Optional[str] = None
-    agent_type: Optional[str] = None
     model: Optional[str] = None
     execution_mode: str = "chat"
     deliverable_format: str = "md"
@@ -105,7 +114,6 @@ class SubTaskResponse(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
-    agent_type: Optional[str] = None
     status: str
     input_data: Dict[str, Any] = {}
     output_data: Dict[str, Any] = {}
@@ -350,9 +358,9 @@ async def get_messages(
             query = query.where(Message.created_at < before_message.created_at)
 
     result = await db.execute(
-        query.order_by(Message.created_at.desc()).limit(limit)
+        query.order_by(Message.created_at.desc(), Message.id.desc()).limit(limit)
     )
-    messages = list(reversed(result.scalars().all()))
+    messages = sorted(result.scalars().all(), key=_message_display_sort_key)
     
     return [_message_to_response(msg) for msg in messages]
 
@@ -425,6 +433,8 @@ async def chat(
             )
             db.add(task)
             await db.flush()
+            # 后台线程使用独立数据库连接；必须先提交，否则线程查询不到刚创建的任务。
+            await db.commit()
 
             deliverable_format = (request.deliverable_format or "md").lower()
             logger.info("=== 开始启动后台线程: task_id=%s, user=%s ===", task_id, current_user.user_id)
@@ -464,7 +474,6 @@ async def chat(
             conversation_id=conversation_id,
             role="assistant",
             content=response_content,
-            agent_type=_agent_type_value(agent_used),
             tokens=tokens,
             references=response_references,
         )
@@ -623,7 +632,6 @@ async def send_message(
             conversation_id=conversation_id,
             role="assistant",
             content=response_content,
-            agent_type=_agent_type_value(request.agent_type),
             tokens=tokens,
             references=response_references,
         )
@@ -709,14 +717,6 @@ def _conversation_status(status: str) -> ConversationStatus:
         raise HTTPException(status_code=400, detail=f"不支持的对话状态: {status}")
 
 
-def _agent_type_value(agent_type: Optional[str]) -> Optional[AgentType]:
-    """将代理类型字符串转换为模型枚举，不支持的代理类型不写入数据库。"""
-    if not agent_type:
-        return None
-    try:
-        return AgentType(agent_type)
-    except ValueError:
-        return None
 
 
 def _conversation_to_response(conversation: Conversation) -> ConversationResponse:
@@ -738,7 +738,6 @@ def _message_to_response(message: Message) -> MessageResponse:
         conversation_id=message.conversation_id,
         role=message.role,
         content=message.content,
-        agent_type=_enum_value(message.agent_type),
         tokens=message.tokens or 0,
         references=message.references or [],
         created_at=message.created_at,

@@ -10,6 +10,11 @@ from datetime import datetime
 import logging
 
 from app.services.skill_registry import skill_registry
+from app.services.skill_resolver import (
+    ClawhubSearchStrategy,
+    RemoteSearchUnavailable,
+    skill_resolver,
+)
 from app.api.v1.auth import get_current_active_user, TokenData
 
 logger = logging.getLogger(__name__)
@@ -107,6 +112,17 @@ class SkillInstallCandidateRequest(BaseModel):
     candidate_id: str
 
 
+class SkillInstallByUrlRequest(BaseModel):
+    """通过 URL 安装外部技能"""
+    url: str = Field(..., description="技能 URL，必须是 http/https")
+
+
+class SkillSearchRequest(BaseModel):
+    """技能搜索（先本地，再尝试远程）请求"""
+    q: str = Field(..., description="关键词")
+    description: Optional[str] = Field(default="", description="可选补充描述")
+
+
 class SkillUpdate(BaseModel):
     """更新Skill请求"""
     display_name: Optional[str] = None
@@ -152,6 +168,70 @@ async def install_skill_candidate(
         return SkillInfo(**skill)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/install-by-url", response_model=SkillInfo)
+async def install_skill_by_url(
+    request: SkillInstallByUrlRequest,
+    current_user: TokenData = Depends(get_current_active_user)
+):
+    """通过 URL 真实安装一个外部技能；失败时返回 4xx，不会写入。"""
+    try:
+        skill = skill_registry.install_by_url(request.url)
+        logger.info(
+            "通过 URL 安装技能成功: url=%s, skill_id=%s, 用户=%s",
+            request.url, skill["id"], current_user.user_id,
+        )
+        return SkillInfo(**skill)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/search")
+async def search_skills(
+    request: SkillSearchRequest,
+    current_user: TokenData = Depends(get_current_active_user),
+):
+    """技能搜索：先返回本地匹配，再附加远程仓库结果（远程未配置时返回明确占位提示，不发任何 HTTP）。"""
+    local_results = []
+    for skill in skill_resolver.search_local(request.q, request.description or ""):
+        local_results.append({
+            "source": "local",
+            "skill_id": skill.get("id"),
+            "title": skill.get("display_name") or skill.get("name") or skill.get("id"),
+            "description": skill.get("description"),
+            "url": skill.get("source_url"),
+        })
+
+    remote_status = "disabled"
+    remote_results: List[Dict[str, Any]] = []
+    remote_message = "远程技能搜索未启用，请管理员配置 SOLO_CLAWHUB_API_BASE 后再使用。"
+
+    strategy = skill_resolver.remote_strategy
+    if strategy is not None:
+        try:
+            results = strategy.search(request.q, request.description or "") or []
+            remote_status = "ok"
+            remote_message = ""
+            for item in results:
+                remote_results.append({
+                    "source": "clawhub",
+                    "skill_id": None,
+                    "title": item.get("title") or item.get("name") or item.get("url"),
+                    "description": item.get("description") or "",
+                    "url": item.get("url"),
+                })
+        except RemoteSearchUnavailable as exc:
+            remote_status = "unavailable"
+            remote_message = str(exc)
+
+    return {
+        "local": local_results,
+        "remote": remote_results,
+        "remote_status": remote_status,
+        "remote_message": remote_message,
+    }
+
 
 
 @router.get("", response_model=List[SkillInfo])

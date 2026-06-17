@@ -1,6 +1,7 @@
 """交付物生成与下载记录服务。"""
 from __future__ import annotations
 
+import json
 import re
 import uuid
 from datetime import datetime
@@ -22,7 +23,31 @@ class ArtifactService:
     def __init__(self, base_dir: Optional[Path] = None):
         self.base_dir = Path(base_dir or "deliverables").resolve()
         self.base_dir.mkdir(parents=True, exist_ok=True)
-        self._artifacts: Dict[str, Dict] = {}
+        self.index_path = self.base_dir / "artifacts_index.json"
+        self._artifacts: Dict[str, Dict] = self._load_index()
+
+    def _load_index(self) -> Dict[str, Dict]:
+        """从磁盘加载交付物索引，避免服务重启后下载链接失效。"""
+        if not self.index_path.exists():
+            return {}
+        try:
+            data = json.loads(self.index_path.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                return {}
+            return data
+        except Exception:
+            return {}
+
+    def _save_index(self) -> None:
+        """保存交付物索引到磁盘。"""
+        serializable = {}
+        for artifact_id, artifact in self._artifacts.items():
+            item = dict(artifact)
+            created_at = item.get("created_at")
+            if hasattr(created_at, "isoformat"):
+                item["created_at"] = created_at.isoformat()
+            serializable[artifact_id] = item
+        self.index_path.write_text(json.dumps(serializable, ensure_ascii=False, indent=2), encoding="utf-8")
 
     @staticmethod
     def _safe_title(title: str) -> str:
@@ -37,6 +62,19 @@ class ArtifactService:
         line = re.sub(r"^\d+[.)]\s+", "", line)
         line = line.replace("**", "").replace("__", "").replace("`", "")
         return line.strip()
+
+    @staticmethod
+    def _is_markdown_table_line(line: str) -> bool:
+        raw = (line or "").strip()
+        return raw.startswith("|") and raw.endswith("|") and raw.count("|") >= 2
+
+    @staticmethod
+    def _is_markdown_table_separator(cells: List[str]) -> bool:
+        return bool(cells) and all(re.fullmatch(r":?-{3,}:?", (cell or "").strip()) for cell in cells)
+
+    @staticmethod
+    def _parse_markdown_table_row(line: str) -> List[str]:
+        return [cell.strip() for cell in (line or "").strip().strip("|").split("|")]
 
     def _artifact_path(self, user_id: str, title: str, artifact_format: str) -> tuple[str, Path]:
         safe_title = self._safe_title(title)
@@ -69,6 +107,7 @@ class ArtifactService:
             "download_url": f"/api/v1/artifacts/{artifact_id}/download",
         }
         self._artifacts[artifact_id] = artifact
+        self._save_index()
         return artifact
 
     def create_artifact(
@@ -113,8 +152,58 @@ class ArtifactService:
 
     def _write_docx(self, path: Path, title: str, content: str) -> None:
         from docx import Document
+        from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+        from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+        from docx.oxml import OxmlElement
         from docx.oxml.ns import qn
-        from docx.shared import Pt
+        from docx.shared import Inches, Pt
+
+        def set_cell_shading(cell, fill: str) -> None:
+            tc_pr = cell._tc.get_or_add_tcPr()
+            shd = OxmlElement("w:shd")
+            shd.set(qn("w:fill"), fill)
+            tc_pr.append(shd)
+
+        def set_cell_width(cell, width_inches: float) -> None:
+            cell.width = Inches(width_inches)
+            tc_pr = cell._tc.get_or_add_tcPr()
+            tc_w = tc_pr.first_child_found_in("w:tcW")
+            if tc_w is None:
+                tc_w = OxmlElement("w:tcW")
+                tc_pr.append(tc_w)
+            tc_w.set(qn("w:w"), str(int(width_inches * 1440)))
+            tc_w.set(qn("w:type"), "dxa")
+
+        def add_markdown_table(rows: List[List[str]]) -> None:
+            if not rows:
+                return
+            col_count = max(len(row) for row in rows)
+            normalized_rows = [row + [""] * (col_count - len(row)) for row in rows]
+            table = doc.add_table(rows=len(normalized_rows), cols=col_count)
+            table.style = "Table Grid"
+            table.autofit = True
+            widths = self._docx_table_widths(col_count)
+            for row_idx, row in enumerate(normalized_rows):
+                tr = table.rows[row_idx]
+                tr._tr.get_or_add_trPr().append(OxmlElement("w:cantSplit"))
+                for col_idx, value in enumerate(row):
+                    cell = tr.cells[col_idx]
+                    cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
+                    set_cell_width(cell, widths[col_idx])
+                    for para in cell.paragraphs:
+                        para.alignment = WD_PARAGRAPH_ALIGNMENT.LEFT
+                        para.paragraph_format.space_after = Pt(0)
+                    cell.text = self._plain_text(value)
+                    for para in cell.paragraphs:
+                        for run in para.runs:
+                            run.font.name = "Arial"
+                            run._element.rPr.rFonts.set(qn("w:eastAsia"), "Microsoft YaHei")
+                            run.font.size = Pt(9)
+                            if row_idx == 0:
+                                run.bold = True
+                    if row_idx == 0:
+                        set_cell_shading(cell, "D9EAF7")
+            doc.add_paragraph("")
 
         doc = Document()
         styles = doc.styles
@@ -123,9 +212,21 @@ class ArtifactService:
         styles["Normal"].font.size = Pt(11)
         doc.add_heading(self._plain_text(title), level=1)
 
-        for line in (content or "").splitlines():
-            raw = line.strip()
+        lines = (content or "").splitlines()
+        idx = 0
+        while idx < len(lines):
+            raw = lines[idx].strip()
             if not raw:
+                idx += 1
+                continue
+            if self._is_markdown_table_line(raw):
+                table_rows: List[List[str]] = []
+                while idx < len(lines) and self._is_markdown_table_line(lines[idx].strip()):
+                    cells = self._parse_markdown_table_row(lines[idx].strip())
+                    if not self._is_markdown_table_separator(cells):
+                        table_rows.append(cells)
+                    idx += 1
+                add_markdown_table(table_rows)
                 continue
             if raw.startswith("# "):
                 doc.add_heading(self._plain_text(raw), level=1)
@@ -135,11 +236,25 @@ class ArtifactService:
                 doc.add_heading(self._plain_text(raw), level=3)
             elif raw.startswith(("- ", "* ")):
                 doc.add_paragraph(self._plain_text(raw), style="List Bullet")
-            elif raw.startswith("|") and raw.endswith("|"):
-                doc.add_paragraph(self._plain_text(raw.replace("|", "  ")))
             else:
                 doc.add_paragraph(self._plain_text(raw))
+            idx += 1
         doc.save(path)
+
+    @staticmethod
+    def _docx_table_widths(col_count: int) -> List[float]:
+        """按列数给 Word 表格分配更适合中文研究方案的列宽。"""
+        presets = {
+            1: [6.4],
+            2: [1.9, 4.5],
+            3: [1.6, 2.3, 2.5],
+            4: [1.3, 1.7, 1.7, 1.7],
+            5: [1.1, 1.3, 1.3, 1.3, 1.4],
+        }
+        if col_count in presets:
+            return presets[col_count]
+        width = 6.4 / max(col_count, 1)
+        return [width] * col_count
 
     def _extract_table_rows(self, content: str) -> List[List[str]]:
         rows: List[List[str]] = []

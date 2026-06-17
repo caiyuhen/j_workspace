@@ -83,7 +83,6 @@ interface ChatState {
     id: string
     role: 'user' | 'assistant' | 'system'
     content: string
-    agent_type?: string
     references?: ReferenceItem[]
     loading?: boolean
   }>

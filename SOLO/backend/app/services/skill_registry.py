@@ -10,14 +10,31 @@ Skill 注册与执行中心（单例）
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 import httpx
 from app.config import settings
 
 logger = logging.getLogger(__name__)
+
+
+# LLM-only 域名（仅允许作为 LLM 网关，不允许当 skill 工具 endpoint）。
+# 之所以做这层硬屏蔽：cherryin/v1 是 OpenAI 兼容 LLM 网关；192.168.0.214:8802 是内网 LLM 网关。
+# 它们都不是"医疗工具 API"，过去多次出现把它们填进 skill endpoint 然后 404/405 的问题，统一在这里阻止。
+_LLM_ONLY_HOST_SUFFIXES = (
+    "cherryin.cc",
+    "192.168.0.214:8802",
+)
+
+
+def _host_is_llm_only(netloc: str) -> bool:
+    netloc = (netloc or "").strip().lower()
+    return any(netloc == suffix or netloc.endswith("." + suffix) or netloc == suffix
+               for suffix in _LLM_ONLY_HOST_SUFFIXES)
 
 
 class SkillRegistry:
@@ -161,6 +178,58 @@ class SkillRegistry:
             "source": candidate.get("source"),
         }
         self._skills[target_skill_id] = skill
+        return skill
+
+    def install_by_url(self, url: str) -> Dict[str, Any]:
+        """通过 URL 真实安装一个外部技能。"""
+        if not isinstance(url, str) or not url.strip():
+            raise ValueError("URL 不能为空")
+
+        parsed = urlparse(url.strip())
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            raise ValueError("URL 必须是合法的 http/https 地址")
+
+        # 屏蔽 LLM-only 域名：cherryin.cc 与内网 192.168.0.214:8802，仅允许做 LLM 网关
+        if _host_is_llm_only(parsed.netloc):
+            raise ValueError(
+                f"该 URL 仅作为 LLM 网关，禁止注册为 skill 工具 endpoint: {parsed.netloc}"
+            )
+
+        normalized_url = parsed.geturl()
+        for existing in self._skills.values():
+            if existing.get("source_url") == normalized_url:
+                raise ValueError(f"该 URL 对应的技能已安装: {existing.get('id')}")
+
+        path_parts = [p for p in parsed.path.split("/") if p]
+        slug = path_parts[-1] if path_parts else parsed.netloc.replace(".", "_")
+        skill_name = re.sub(r"[^a-zA-Z0-9_]+", "_", slug).strip("_") or "external_skill"
+
+        base_skill_id = f"skill_{skill_name}"
+        skill_id = base_skill_id
+        suffix = 2
+        while skill_id in self._skills:
+            skill_id = f"{base_skill_id}_{suffix}"
+            suffix += 1
+
+        display_name = slug.replace("-", " ").replace("_", " ").strip().title() or skill_name
+        skill = {
+            "id": skill_id,
+            "name": skill_name,
+            "display_name": display_name,
+            "description": f"通过 URL 安装的外部技能：{normalized_url}",
+            "category": "external",
+            "protocol": "skillhub",
+            "is_active": True,
+            "is_builtin": False,
+            "config": {"endpoint": normalized_url},
+            "input_schema": {},
+            "output_schema": {},
+            "usage_count": 0,
+            "created_at": datetime.now(),
+            "source": "url",
+            "source_url": normalized_url,
+        }
+        self._skills[skill_id] = skill
         return skill
 
     # --------- skills CRUD ----------
@@ -373,7 +442,7 @@ class SkillRegistry:
                 "protocol": "skillhub",
                 "is_active": True,
                 "is_builtin": False,
-                "config": {"endpoint": "https://api.skillhub.cn/skills/literature"},
+                "config": {"endpoint": "https://skillhub.cn/skills/literature"},
                 "input_schema": {
                     "type": "object",
                     "properties": {"query": {"type": "string"}, "sources": {"type": "array", "items": {"type": "string"}}, "limit": {"type": "integer", "default": 10}},
@@ -442,78 +511,6 @@ class SkillRegistry:
                 "is_builtin": True,
                 "config": {"path": "/health", "method": "GET"},
                 "input_schema": {"type": "object", "properties": {}, "required": []},
-                "output_schema": {"type": "object"},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-            {
-                "id": "skill_medical_api_triage",
-                "name": "medical_api_triage",
-                "display_name": "智能分诊",
-                "description": "多轮分诊（POST /triage），支持 session_id 上下文",
-                "category": "triage",
-                "protocol": "medical_api",
-                "is_active": True,
-                "is_builtin": True,
-                "config": {"path": "/triage", "method": "POST"},
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "prompt": {"type": "string"},
-                        "session_id": {"type": "string"},
-                        "use_rag": {"type": "boolean"},
-                    },
-                    "required": ["prompt"],
-                },
-                "output_schema": {"type": "object"},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-            {
-                "id": "skill_medical_api_write",
-                "name": "medical_api_write",
-                "display_name": "医学写作",
-                "description": "医学写作（POST /write），输出偏 Markdown",
-                "category": "writing",
-                "protocol": "medical_api",
-                "is_active": True,
-                "is_builtin": True,
-                "config": {"path": "/write", "method": "POST"},
-                "input_schema": {"type": "object", "properties": {"prompt": {"type": "string"}, "use_rag": {"type": "boolean"}}, "required": ["prompt"]},
-                "output_schema": {"type": "object"},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-            {
-                "id": "skill_medical_api_clinical",
-                "name": "medical_api_clinical",
-                "display_name": "临床建议",
-                "description": "循证临床建议（POST /clinical）",
-                "category": "clinical",
-                "protocol": "medical_api",
-                "is_active": True,
-                "is_builtin": True,
-                "config": {"path": "/clinical", "method": "POST"},
-                "input_schema": {"type": "object", "properties": {"prompt": {"type": "string"}, "use_rag": {"type": "boolean"}}, "required": ["prompt"]},
-                "output_schema": {"type": "object"},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-            {
-                "id": "skill_medical_api_management_plan",
-                "name": "medical_api_management_plan",
-                "display_name": "个案管理计划",
-                "description": "患者个案管理计划（POST /management_plan），支持 session_id",
-                "category": "management",
-                "protocol": "medical_api",
-                "is_active": True,
-                "is_builtin": True,
-                "config": {"path": "/management_plan", "method": "POST"},
-                "input_schema": {
-                    "type": "object",
-                    "properties": {"prompt": {"type": "string"}, "session_id": {"type": "string"}, "use_rag": {"type": "boolean"}, "return_rag_info": {"type": "boolean"}},
-                    "required": ["prompt"],
-                },
                 "output_schema": {"type": "object"},
                 "usage_count": 0,
                 "created_at": datetime.now(),

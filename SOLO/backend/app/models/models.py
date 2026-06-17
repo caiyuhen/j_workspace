@@ -125,7 +125,6 @@ class Message(Base):
     content = Column(Text, nullable=False)
     
     # 元数据
-    agent_type = Column(Enum(AgentType), nullable=True)
     tokens = Column(Integer, default=0)
     meta = Column("metadata", JSON, default=dict)
     
@@ -195,7 +194,6 @@ class SubTask(Base):
     # 子任务信息
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
-    agent_type = Column(Enum(AgentType), nullable=False)
     status = Column(Enum(TaskStatus), default=TaskStatus.PENDING, nullable=False)
     
     # 执行信息
@@ -217,7 +215,7 @@ class SubTask(Base):
     task = relationship("Task", back_populates="subtasks")
     
     def __repr__(self):
-        return f"<SubTask {self.id} [{self.agent_type}]>"
+        return f"<SubTask {self.id} {self.name}>"
 
 
 # ============== 技能模型 ==============

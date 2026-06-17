@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Card, Row, Col, List, Tag, Typography, Empty, Input, Select, Button, Space, Modal, Form, message, Tabs, Divider, Descriptions, Spin } from 'antd'
+import { Card, Row, Col, List, Tag, Typography, Empty, Input, Select, Button, Space, Modal, Form, message, Tabs, Divider, Descriptions, Spin, Alert } from 'antd'
 import {
   ToolOutlined,
   PlayCircleOutlined,
@@ -35,6 +35,13 @@ export default function Skills() {
   const [importModalVisible, setImportModalVisible] = useState(false)
   const [onlineSkills, setOnlineSkills] = useState<SkillCandidate[]>([])
   const [onlineLoading, setOnlineLoading] = useState(false)
+  // 在线搜索（POST /skills/search）状态
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [searchLoading, setSearchLoading] = useState(false)
+  const [searchLocal, setSearchLocal] = useState<Array<{ skill_id: string | null; title: string; description?: string | null; url?: string | null }>>([])
+  const [searchRemote, setSearchRemote] = useState<Array<{ skill_id: string | null; title: string; description?: string | null; url?: string | null }>>([])
+  const [searchRemoteStatus, setSearchRemoteStatus] = useState<'ok' | 'unavailable' | 'disabled' | ''>('')
+  const [searchRemoteMessage, setSearchRemoteMessage] = useState<string>('')
   const [form] = Form.useForm()
   const [installForm] = Form.useForm()
   
@@ -415,15 +422,31 @@ export default function Skills() {
               label: '通过 URL 安装',
               icon: <ApiOutlined />,
               children: (
-                <Form form={installForm} layout="vertical" onFinish={(_values) => {
-                  // 通过 URL 安装
-                  message.success('安装成功')
-                  setInstallModalVisible(false)
+                <Form form={installForm} layout="vertical" onFinish={async (values) => {
+                  const url = (values?.url || '').trim()
+                  if (!url) {
+                    message.error('请输入合法的技能 URL')
+                    return
+                  }
+                  try {
+                    // 通过 URL 真实调用后端安装接口；失败时不显示成功
+                    const res = await skillApi.installByUrl(url)
+                    message.success(`技能 "${res.data.display_name}" 安装成功`)
+                    installForm.resetFields()
+                    setInstallModalVisible(false)
+                    loadSkills()
+                  } catch (err: any) {
+                    const detail = err?.response?.data?.detail || '安装失败'
+                    message.error(detail)
+                  }
                 }}>
                   <Form.Item
                     name="url"
                     label="技能 URL"
-                    rules={[{ required: true, message: '请输入技能 URL' }]}
+                    rules={[
+                      { required: true, message: '请输入技能 URL' },
+                      { type: 'url', message: '请输入合法的 http/https URL' }
+                    ]}
                   >
                     <Input placeholder="https://clawhub.ai/skills/xxx" />
                   </Form.Item>
@@ -433,6 +456,141 @@ export default function Skills() {
                     </Button>
                   </Form.Item>
                 </Form>
+              )
+            },
+            {
+              key: 'search',
+              label: '在线搜索',
+              icon: <ApiOutlined />,
+              children: (
+                <Spin spinning={searchLoading}>
+                  <Space.Compact style={{ width: '100%', marginBottom: 12 }}>
+                    <Input
+                      placeholder="输入技能关键词，例如：ecrf 表单、症状自查"
+                      value={searchKeyword}
+                      onChange={(e) => setSearchKeyword(e.target.value)}
+                      onPressEnter={async () => {
+                        const q = searchKeyword.trim()
+                        if (!q) {
+                          message.error('请输入搜索关键词')
+                          return
+                        }
+                        setSearchLoading(true)
+                        try {
+                          const res = await skillApi.search(q)
+                          setSearchLocal(res.data.local || [])
+                          setSearchRemote(res.data.remote || [])
+                          setSearchRemoteStatus(res.data.remote_status)
+                          setSearchRemoteMessage(res.data.remote_message || '')
+                        } catch (err: any) {
+                          message.error(err?.response?.data?.detail || '搜索失败')
+                        } finally {
+                          setSearchLoading(false)
+                        }
+                      }}
+                    />
+                    <Button
+                      type="primary"
+                      onClick={async () => {
+                        const q = searchKeyword.trim()
+                        if (!q) {
+                          message.error('请输入搜索关键词')
+                          return
+                        }
+                        setSearchLoading(true)
+                        try {
+                          const res = await skillApi.search(q)
+                          setSearchLocal(res.data.local || [])
+                          setSearchRemote(res.data.remote || [])
+                          setSearchRemoteStatus(res.data.remote_status)
+                          setSearchRemoteMessage(res.data.remote_message || '')
+                        } catch (err: any) {
+                          message.error(err?.response?.data?.detail || '搜索失败')
+                        } finally {
+                          setSearchLoading(false)
+                        }
+                      }}
+                    >
+                      搜索
+                    </Button>
+                  </Space.Compact>
+
+                  {searchRemoteStatus && searchRemoteStatus !== 'ok' && (
+                    <Alert
+                      style={{ marginBottom: 12 }}
+                      type={searchRemoteStatus === 'disabled' ? 'info' : 'warning'}
+                      showIcon
+                      message={searchRemoteStatus === 'disabled' ? '远程技能搜索未启用' : '远程技能仓库暂不可用'}
+                      description={searchRemoteMessage || '请联系管理员配置远程技能仓库后重试。'}
+                    />
+                  )}
+
+                  <Text strong>本地匹配</Text>
+                  <List
+                    style={{ marginBottom: 12 }}
+                    locale={{ emptyText: '没有匹配的本地技能' }}
+                    dataSource={searchLocal}
+                    renderItem={(item) => (
+                      <List.Item>
+                        <List.Item.Meta
+                          title={
+                            <Space>
+                              <Text strong>{item.title}</Text>
+                              <Tag color="green">本地</Tag>
+                              {item.skill_id && <Tag color="geekblue">{item.skill_id}</Tag>}
+                            </Space>
+                          }
+                          description={item.description}
+                        />
+                      </List.Item>
+                    )}
+                  />
+
+                  <Text strong>远程候选</Text>
+                  <List
+                    locale={{ emptyText: '没有远程候选（远程未启用或本次未返回结果）' }}
+                    dataSource={searchRemote}
+                    renderItem={(item) => (
+                      <List.Item
+                        actions={[
+                          item.url ? (
+                            <Button
+                              key="install"
+                              type="primary"
+                              size="small"
+                              onClick={async () => {
+                                try {
+                                  const res = await skillApi.installByUrl(item.url!)
+                                  message.success(`已安装：${res.data.display_name}`)
+                                  loadSkills()
+                                } catch (err: any) {
+                                  message.error(err?.response?.data?.detail || '安装失败')
+                                }
+                              }}
+                            >
+                              安装
+                            </Button>
+                          ) : null
+                        ]}
+                      >
+                        <List.Item.Meta
+                          title={
+                            <Space>
+                              <Text strong>{item.title}</Text>
+                              <Tag color="purple">clawhub</Tag>
+                            </Space>
+                          }
+                          description={
+                            <Space direction="vertical" size={0}>
+                              <Text type="secondary">{item.description}</Text>
+                              {item.url && <Text type="secondary">{item.url}</Text>}
+                            </Space>
+                          }
+                        />
+                      </List.Item>
+                    )}
+                  />
+                </Spin>
               )
             }
           ]}
