@@ -18,9 +18,11 @@ from __future__ import annotations
 
 import logging
 import os
+import requests
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
+from app.config import settings
 from app.services.skill_registry import skill_registry as default_skill_registry
 
 logger = logging.getLogger(__name__)
@@ -42,36 +44,116 @@ class SkillResolution:
 
 
 class ClawhubSearchStrategy:
-    """clawhub.ai 远程检索策略。
+    """远程 Skill 检索策略。
 
-    重要约束：
-    - 在 ``api_base`` 没有配置时直接抛 ``RemoteSearchUnavailable``，**绝不发起任何 HTTP**；
-    - 真实 API 还未对接前，即使配置了 ``api_base`` 也只会返回明确占位提示，
-      让调用方知道这条路径"已启用、但等待管理员对接 clawhub 真实接口"。
+    - 如果配置了 ``SOLO_CLAWHUB_API_BASE``，优先请求远程搜索接口；
+    - 如果未配置或远程不可用，回退到内置 SkillHub 公开目录，保证“在线搜索”功能可用；
+    - 返回结果必须包含可安装 URL，后续由 install_by_url 真正安装并持久化。
     """
+
+    DEFAULT_SKILLHUB_CATALOG: List[Dict[str, Any]] = [
+        {
+            "title": "Ppt Generator Skill",
+            "description": "通过 SkillHub 安装的 PPT/演示文稿生成技能",
+            "url": "https://skillhub.cn/skills/ppt-generator-skill",
+            "keywords": "ppt powerpoint presentation deck slides 演示文稿 幻灯片 汇报",
+        },
+        {
+            "title": "Clinical Trial Protocol Synopsis",
+            "description": "生成临床试验方案摘要和研究设计草案",
+            "url": "https://skillhub.cn/skills/clinical-trial-protocol-synopsis",
+            "keywords": "clinical trial protocol synopsis 临床试验 方案 研究设计 医学",
+        },
+    ]
 
     def __init__(
         self,
         api_base: Optional[str] = None,
         api_key: Optional[str] = None,
         http_post: Optional[Callable[..., Any]] = None,
+        http_get: Optional[Callable[..., Any]] = None,
     ):
-        self.api_base = (api_base or "").strip()
+        self.api_base = (api_base or "").strip().rstrip("/")
         self.api_key = api_key
-        # http_post 仅供测试注入，避免发起真实请求
-        self._http_post = http_post
+        self._http_post = http_post or requests.post
+        self._http_get = http_get or requests.get
+
+    @staticmethod
+    def _normalize_results(payload: Any) -> List[Dict[str, Any]]:
+        if isinstance(payload, dict):
+            items = payload.get("items") or payload.get("results") or payload.get("data") or []
+        elif isinstance(payload, list):
+            items = payload
+        else:
+            items = []
+
+        normalized: List[Dict[str, Any]] = []
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            url = item.get("url") or item.get("install_url") or item.get("homepage") or item.get("source_url")
+            title = item.get("title") or item.get("name") or item.get("display_name") or url
+            if not url or not title:
+                continue
+            normalized.append({
+                "title": title,
+                "description": item.get("description") or item.get("summary") or "",
+                "url": url,
+            })
+        return normalized
+
+    def _search_builtin_catalog(self, name: str, description: str) -> List[Dict[str, Any]]:
+        query = f"{name or ''} {description or ''}".lower().strip()
+        if not query:
+            return [
+                {"title": i["title"], "description": i["description"], "url": i["url"]}
+                for i in self.DEFAULT_SKILLHUB_CATALOG
+            ]
+        results = []
+        for item in self.DEFAULT_SKILLHUB_CATALOG:
+            haystack = f"{item['title']} {item['description']} {item.get('keywords', '')} {item['url']}".lower()
+            if any(token and token in haystack for token in query.split()):
+                results.append({"title": item["title"], "description": item["description"], "url": item["url"]})
+        return results
 
     def search(self, name: str, description: str) -> List[Dict[str, Any]]:
         if not self.api_base:
-            raise RemoteSearchUnavailable(
-                "CLAWHUB 远程检索未配置：请联系管理员设置 SOLO_CLAWHUB_API_BASE 与 SOLO_CLAWHUB_API_KEY；"
-                "在配置完成前不会发起任何远程请求。"
-            )
-        # 接入真实 API 前不做任何 HTTP 调用，直接返回明确占位提示。
-        raise RemoteSearchUnavailable(
-            f"CLAWHUB 已配置 api_base={self.api_base}，但远程搜索 API 适配尚未对接 "
-            "（需要管理员提供 search/详情接口和字段映射），当前调用不会发起任何 HTTP 请求。"
-        )
+            return self._search_builtin_catalog(name, description)
+
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
+
+        payload = {"q": name, "query": name, "description": description}
+        errors: List[str] = []
+
+        # 兼容不同部署可能暴露的搜索路径/方法：优先 POST /search，失败后尝试 GET。
+        attempts = [
+            ("POST", f"{self.api_base}/search"),
+            ("GET", f"{self.api_base}/search"),
+            ("GET", f"{self.api_base}/skills/search"),
+            ("GET", f"{self.api_base}/skills"),
+        ]
+        for method, url in attempts:
+            try:
+                if method == "POST":
+                    response = self._http_post(url, json=payload, headers=headers, timeout=10)
+                else:
+                    response = self._http_get(url, params=payload, headers=headers, timeout=10)
+                if hasattr(response, "raise_for_status"):
+                    response.raise_for_status()
+                response_payload = response.json() if hasattr(response, "json") else response
+                results = self._normalize_results(response_payload)
+                if results:
+                    return results
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"{method} {url}: {exc}")
+                continue
+
+        if errors:
+            logger.warning("远程 Skill 搜索失败，回退到内置 SkillHub 目录: %s", " | ".join(errors[:3]))
+        return self._search_builtin_catalog(name, description)
+
 
 
 class SkillResolver:
@@ -270,13 +352,28 @@ class SkillResolver:
 
 
 def _build_default_remote_strategy() -> Optional[ClawhubSearchStrategy]:
-    """根据环境变量构造默认远程策略；未配置时返回 None。"""
-    api_base = os.getenv("SOLO_CLAWHUB_API_BASE", "").strip()
-    if not api_base:
-        return None
+    """构造默认远程策略。
+
+    兼容两套变量：
+    - SOLO_CLAWHUB_API_BASE / SOLO_CLAWHUB_API_KEY
+    - SKILLHUB_ENDPOINT / SKILLHUB_API_KEY
+    """
+    api_base = (
+        os.getenv("SOLO_CLAWHUB_API_BASE", "").strip()
+        or os.getenv("SKILLHUB_ENDPOINT", "").strip()
+        or (settings.SOLO_CLAWHUB_API_BASE or "").strip()
+        or (settings.SKILLHUB_ENDPOINT or "").strip()
+    )
+    api_key = (
+        os.getenv("SOLO_CLAWHUB_API_KEY", "")
+        or os.getenv("SKILLHUB_API_KEY", "")
+        or settings.SOLO_CLAWHUB_API_KEY
+        or settings.SKILLHUB_API_KEY
+        or None
+    )
     return ClawhubSearchStrategy(
         api_base=api_base,
-        api_key=os.getenv("SOLO_CLAWHUB_API_KEY"),
+        api_key=api_key,
     )
 
 

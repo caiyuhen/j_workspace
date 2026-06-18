@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     # Skill配置
     SKILLHUB_API_KEY: Optional[str] = None
     SKILLHUB_ENDPOINT: str = "https://api.skillhub.cn"
+    # 兼容在线 Skill 搜索使用的 ClawHub/SOLO 命名
+    SOLO_CLAWHUB_API_KEY: Optional[str] = None
+    SOLO_CLAWHUB_API_BASE: Optional[str] = None
     
     # 日志配置
     LOG_LEVEL: str = "INFO"

@@ -1,0 +1,124 @@
+{
+  "version": 1,
+  "skills": {
+    "medical-literature-review": {
+      "name": "医学文献综述助手",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=medical-literature-review",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-18T06:09:53Z"
+    },
+    "medical-master-router": {
+      "name": "医学智能分诊台-OpenClaw Medical Skills",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=medical-master-router",
+      "source": "community",
+      "version": "1.0.1",
+      "installedAt": "2026-06-18T06:09:56Z"
+    },
+    "clinical-trial-protocol-synopsis": {
+      "name": "Clinical Trial Protocol Synopsis",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=clinical-trial-protocol-synopsis",
+      "source": "community",
+      "version": "0.1.2",
+      "installedAt": "2026-06-18T06:09:59Z"
+    },
+    "clinical-data-cleaner": {
+      "name": "Clinical Data Cleaner",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=clinical-data-cleaner",
+      "source": "community",
+      "version": "0.1.1",
+      "installedAt": "2026-06-18T06:10:02Z"
+    },
+    "medical-research-toolkit": {
+      "name": "Medical Research Toolkit",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=medical-research-toolkit",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-18T06:10:06Z"
+    },
+    "uplo-clinical": {
+      "name": "Uplo Clinical",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=uplo-clinical",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-18T06:10:09Z"
+    },
+    "ecrf-designer": {
+      "name": "eCRF Designer",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=ecrf-designer",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-18T06:10:13Z"
+    },
+    "r-stats": {
+      "name": "R Stats",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=r-stats",
+      "source": "community",
+      "version": "1.1.0",
+      "installedAt": "2026-06-18T06:10:17Z"
+    },
+    "pubmed-literature-search": {
+      "name": "PubMed临床医学文献检索系统",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=pubmed-literature-search",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-18T06:13:39Z"
+    },
+    "redcap-data-dictionary-generator": {
+      "name": "REDCap Data Dictionary Generator",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=redcap-data-dictionary-generator",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-18T06:13:56Z"
+    },
+    "clinical-decoder": {
+      "name": "临床知识深度解码专家",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=clinical-decoder",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-18T06:21:16Z"
+    },
+    "ppt-generator-skill": {
+      "name": "ppt-generator-skill",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=ppt-generator-skill",
+      "source": "community",
+      "version": "1.0.2",
+      "installedAt": "2026-06-18T06:21:54Z"
+    },
+    "research-paper-to-ppt-v1": {
+      "name": "医学文献ppt生成skill",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=research-paper-to-ppt-v1",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-18T06:22:07Z"
+    },
+    "medical-guidelines-hub": {
+      "name": "医学指南共识",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=medical-guidelines-hub",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-18T07:09:40Z"
+    },
+    "md2docx": {
+      "name": "markdown转word",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=md2docx",
+      "source": "community",
+      "version": "2.0.0",
+      "installedAt": "2026-06-18T07:10:46Z"
+    },
+    "ppt-optimizer": {
+      "name": "PPT智能优化助手",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=ppt-optimizer",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-18T08:18:08Z"
+    },
+    "real-world-evidence-study-designer": {
+      "name": "Real World Evidence Study Designer",
+      "zip_url": "https://api.skillhub.cn/api/v1/download?slug=real-world-evidence-study-designer",
+      "source": "community",
+      "version": "1.0.0",
+      "installedAt": "2026-06-18T08:53:36Z"
+    }
+  }
+}

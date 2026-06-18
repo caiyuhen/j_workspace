@@ -27,6 +27,8 @@ from app.models import Conversation, ConversationStatus, Message, SubTask, Task,
 from app.services.task_background_service import build_task_started_result, launch_task_in_background
 from app.services.task_execution_service import task_runner
 from app.services.task_progress_service import build_task_progress
+from app.services.chat_skill_installer import chat_skill_installer
+from app.services.deliverable_format import infer_deliverable_format
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -130,6 +132,7 @@ class ChatResponse(BaseModel):
     async_execution: bool = False
     waiting_for_skill: bool = False
     skill_resolution: Optional[Dict[str, Any]] = None
+    skill_install_candidates: List[Dict[str, Any]] = []
     subtasks: List[SubTaskResponse] = []
     artifacts: List[ArtifactResponse] = []
 
@@ -412,8 +415,21 @@ async def chat(
         skill_resolution: Optional[Dict[str, Any]] = None
         task_id: Optional[str] = None
         task_status: Optional[str] = None
+        skill_install_candidates: List[Dict[str, Any]] = []
 
-        if execution_mode == "task":
+        install_result = chat_skill_installer.handle(request.message)
+        if install_result:
+            response_content = install_result.get("content") or "Skill 安装请求已处理。"
+            response_references = []
+            skill_resolution = {
+                "status": install_result.get("status"),
+                "skill": install_result.get("skill"),
+                "message": response_content,
+            }
+            skill_install_candidates = install_result.get("skill_install_candidates") or []
+            agent_used = "skill_installer"
+        elif execution_mode == "task":
+            deliverable_format = infer_deliverable_format(request.message, request.deliverable_format)
             task_id = str(uuid.uuid4())
             task = Task(
                 id=task_id,
@@ -425,7 +441,8 @@ async def chat(
                 status=TaskStatus.RUNNING,
                 config={
                     "model": request.model,
-                    "deliverable_format": request.deliverable_format,
+                    "deliverable_format": deliverable_format,
+                    "requested_deliverable_format": request.deliverable_format,
                     "source": "chat",
                 },
                 assigned_agents=["llm"],
@@ -436,8 +453,7 @@ async def chat(
             # 后台线程使用独立数据库连接；必须先提交，否则线程查询不到刚创建的任务。
             await db.commit()
 
-            deliverable_format = (request.deliverable_format or "md").lower()
-            logger.info("=== 开始启动后台线程: task_id=%s, user=%s ===", task_id, current_user.user_id)
+            logger.info("=== 开始启动后台线程: task_id=%s, user=%s, deliverable_format=%s ===", task_id, current_user.user_id, deliverable_format)
             launch_task_in_background(
                 task_id=task_id,
                 user_id=current_user.user_id,
@@ -490,6 +506,7 @@ async def chat(
             async_execution=async_execution,
             waiting_for_skill=waiting_for_skill,
             skill_resolution=skill_resolution,
+            skill_install_candidates=skill_install_candidates,
             subtasks=[SubTaskResponse(**subtask) for subtask in subtasks],
             artifacts=[ArtifactResponse(**artifact) for artifact in artifacts],
         )

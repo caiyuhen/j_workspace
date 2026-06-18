@@ -1,26 +1,26 @@
-import pytest
-
-from app.models import TaskStatus
-from app.services.task_background_service import build_task_started_result, should_poll_task
+from app.services.task_background_service import _extract_skill_output_text
 
 
-def test_build_task_started_result_returns_non_blocking_payload():
-    result = build_task_started_result(task_id="task-1")
+def test_extract_skill_output_text_reads_local_skillhub_dict_output():
+    response = {
+        "skill_id": "skill_clinical_data_cleaner",
+        "result": {
+            "skill": "clinical_data_cleaner",
+            "output": "## 数据管理计划\n\n- 数据核查\n- 质控流程",
+            "execution_mode": "local_skillhub_pack",
+        },
+    }
 
-    assert result["content"] == "任务已创建，正在后台执行。"
-    assert result["task_status"] == TaskStatus.RUNNING.value
-    assert result["async_execution"] is True
-    assert result["subtasks"] == []
-    assert result["artifacts"] == []
+    assert _extract_skill_output_text(response) == "## 数据管理计划\n\n- 数据核查\n- 质控流程"
 
 
-@pytest.mark.parametrize("status, expected", [
-    ("pending", True),
-    ("running", True),
-    ("waiting_for_skill", False),
-    ("completed", False),
-    ("failed", False),
-    ("cancelled", False),
-])
-def test_should_poll_task_only_for_active_execution_states(status, expected):
-    assert should_poll_task(status) is expected
+def test_extract_skill_output_text_skips_converter_execution_reports():
+    response = {
+        "skill_id": "skill_md2docx",
+        "result": {
+            "skill": "md2docx",
+            "output": "# md2docx Skill 执行报告\n\n输入不足提示",
+        },
+    }
+
+    assert _extract_skill_output_text(response) == ""

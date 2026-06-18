@@ -19,9 +19,8 @@ import {
 } from '@ant-design/icons'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { conversationApi, Agent, fileApi, FileUploadResponse, ReferenceItem, LLMModel, Artifact, ChatResponse, artifactApi, TaskProgress, skillApi, SkillCandidate } from '../services/api'
+import { conversationApi, fileApi, FileUploadResponse, ReferenceItem, LLMModel, Artifact, ChatResponse, artifactApi, TaskProgress, skillApi, SkillCandidate, ChatSkillInstallCandidate } from '../services/api'
 import { useChatStore } from '../stores/authStore'
-import { agentApi } from '../services/api'
 
 const { TextArea } = Input
 const { Text, Title } = Typography
@@ -35,13 +34,12 @@ export default function Chat() {
 
   const [inputValue, setInputValue] = useState('')
   const [loading, setLoading] = useState(false)
-  const [agents, setAgents] = useState<Agent[]>([])
   const [llmModels, setLlmModels] = useState<LLMModel[]>([])
   const [selectedModel, setSelectedModel] = useState<string>('')
   const [executionMode, setExecutionMode] = useState<'chat' | 'task'>('chat')
-  const [deliverableFormat, setDeliverableFormat] = useState<'md' | 'docx' | 'xlsx' | 'pptx'>('docx')
   const [messageArtifacts, setMessageArtifacts] = useState<Record<string, Artifact[]>>({})
   const [messageTaskProgress, setMessageTaskProgress] = useState<Record<string, TaskProgress>>({})
+  const [messageSkillInstallCandidates, setMessageSkillInstallCandidates] = useState<Record<string, ChatSkillInstallCandidate[]>>({})
   const [pollingTasks, setPollingTasks] = useState<Record<string, string>>({})
   const [taskElapsed, setTaskElapsed] = useState<Record<string, number>>({})
   const [taskStartTime, setTaskStartTime] = useState<Record<string, number>>({})
@@ -57,7 +55,6 @@ export default function Chat() {
   const [isListening, setIsListening] = useState(false)
   
   useEffect(() => {
-    loadAgents()
     loadLLMModels()
     if (conversationId) {
       loadConversation(conversationId)
@@ -135,15 +132,6 @@ export default function Chat() {
   }, [pollingTasks, taskStartTime])
 
   
-  const loadAgents = async () => {
-    try {
-      const res = await agentApi.list()
-      setAgents(res.data)
-    } catch (error) {
-      console.error('加载代理失败:', error)
-    }
-  }
-
   const loadLLMModels = async () => {
     try {
       const res = await conversationApi.listLLMModels()
@@ -241,6 +229,9 @@ export default function Chat() {
   }
 
   const rememberTaskResult = (messageId: string, response: ChatResponse) => {
+    if (response.skill_install_candidates?.length) {
+      setMessageSkillInstallCandidates(prev => ({ ...prev, [messageId]: response.skill_install_candidates || [] }))
+    }
     if (response.artifacts?.length) {
       setMessageArtifacts(prev => ({ ...prev, [messageId]: response.artifacts || [] }))
     }
@@ -268,6 +259,24 @@ export default function Chat() {
         }
       }))
     }
+  }
+
+  const installSkillFromChat = async (candidate: ChatSkillInstallCandidate) => {
+    Modal.confirm({
+      title: '确认安装 Skill',
+      content: `将安装「${candidate.title}」。`,
+      okText: '确认安装',
+      cancelText: '取消',
+      async onOk() {
+        try {
+          await skillApi.installByUrl(candidate.url)
+          message.success('Skill 已安装')
+        } catch (error: unknown) {
+          const err = error as { response?: { data?: { detail?: string } } }
+          message.error(err.response?.data?.detail || '安装 Skill 失败')
+        }
+      }
+    })
   }
 
   const installSkillAndResume = async (candidate: SkillCandidate, progress: TaskProgress) => {
@@ -346,7 +355,7 @@ export default function Chat() {
           conversation_id: overrideConversationId,
           model: selectedModel || undefined,
           execution_mode: executionMode,
-          deliverable_format: deliverableFormat
+          deliverable_format: 'docx'
         })
       }
 
@@ -386,7 +395,7 @@ export default function Chat() {
             message: userMessage,
             model: selectedModel || undefined,
             execution_mode: executionMode,
-            deliverable_format: deliverableFormat
+            deliverable_format: 'docx'
           })
           // 更新助手消息
           const currentMessages = useChatStore.getState().messages
@@ -715,6 +724,33 @@ export default function Chat() {
     )
   }
 
+  const renderSkillInstallCandidates = (candidates?: ChatSkillInstallCandidate[]) => {
+    if (!candidates || candidates.length === 0) return null
+    return (
+      <Card size="small" style={{ marginTop: 8, background: '#fffbe6' }}>
+        <Space direction="vertical" size={8} style={{ width: '100%' }}>
+          <Text strong>请选择要安装的 Skill</Text>
+          {candidates.map(candidate => (
+            <Card key={candidate.url} size="small" bodyStyle={{ padding: 8 }}>
+              <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                <Text strong>{candidate.title}</Text>
+                {candidate.description && <Text type="secondary">{candidate.description}</Text>}
+                <Space>
+                  <Button size="small" type="primary" onClick={() => installSkillFromChat(candidate)}>
+                    安装
+                  </Button>
+                  <Button size="small" type="link" href={candidate.url} target="_blank">
+                    查看来源
+                  </Button>
+                </Space>
+              </Space>
+            </Card>
+          ))}
+        </Space>
+      </Card>
+    )
+  }
+
   const renderReferences = (references?: ReferenceItem[]) => {
     if (!references || references.length === 0) return null
     return (
@@ -762,19 +798,6 @@ export default function Chat() {
               { label: '任务执行', value: 'task' }
             ]}
           />
-          {executionMode === 'task' && (
-            <Select
-              value={deliverableFormat}
-              onChange={setDeliverableFormat}
-              style={{ width: 150 }}
-              options={[
-                { label: 'Word', value: 'docx' },
-                { label: 'Excel', value: 'xlsx' },
-                { label: 'PPT', value: 'pptx' },
-                { label: 'Markdown', value: 'md' }
-              ]}
-            />
-          )}
           <Select
             placeholder="选择LLM模型"
             style={{ width: 180 }}
@@ -849,6 +872,7 @@ export default function Chat() {
                       )}
                     </div>
                     {item.role === 'assistant' && !item.loading && renderTaskProgress(messageTaskProgress[item.id])}
+                    {item.role === 'assistant' && !item.loading && renderSkillInstallCandidates(messageSkillInstallCandidates[item.id])}
                     {item.role === 'assistant' && !item.loading && !messageTaskProgress[item.id] && messageArtifacts[item.id]?.length > 0 && (
                       <div style={{ marginTop: 8 }}>
                         <Space direction="vertical" size={4}>

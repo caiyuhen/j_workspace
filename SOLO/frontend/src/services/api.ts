@@ -93,14 +93,6 @@ export interface Message {
   created_at: string
 }
 
-export interface Agent {
-  name: string
-  type: string
-  description: string
-  capabilities: string[]
-  status: 'idle' | 'busy' | 'error'
-}
-
 export interface Skill {
   id: string
   name: string
@@ -124,6 +116,13 @@ export interface SkillCandidate {
   source?: string
   install_requires_confirmation: boolean
   input_schema?: Record<string, unknown>
+}
+
+export interface ChatSkillInstallCandidate {
+  title: string
+  description?: string
+  url: string
+  source?: string
 }
 
 export interface SkillDiscoveryResponse {
@@ -236,6 +235,7 @@ export interface ChatResponse {
   async_execution?: boolean
   waiting_for_skill?: boolean
   skill_resolution?: SkillResolution
+  skill_install_candidates?: ChatSkillInstallCandidate[]
   subtasks?: SubTaskProgress[]
   artifacts?: Artifact[]
 }
@@ -318,27 +318,6 @@ export const conversationApi = {
       }
     }
   }
-}
-
-// 代理相关
-export const agentApi = {
-  list: () => 
-    api.get<Agent[]>('/agents'),
-  
-  get: (name: string) => 
-    api.get<Agent>(`/agents/${encodeURIComponent(name)}`),
-  
-  getStatus: () => 
-    api.get<Record<string, string>>('/agents/status'),
-  
-  register: (data: { name: string; type: string; description?: string; config?: Record<string, unknown>; capabilities?: string[] }) =>
-    api.post<Agent>('/agents/register', data),
-  
-  listCustom: () =>
-    api.get<{ total: number; agents: Agent[] }>('/agents/custom'),
-  
-  deleteCustom: (agentId: string) =>
-    api.delete(`/agents/custom/${agentId}`)
 }
 
 // 附件相关
