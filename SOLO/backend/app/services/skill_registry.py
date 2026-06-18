@@ -9,15 +9,24 @@ Skill 注册与执行中心（单例）
 
 from __future__ import annotations
 
+import asyncio
+import json
 import logging
+import os
 import re
+import subprocess
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
 
 import httpx
+from sqlalchemy.orm import sessionmaker
+
 from app.config import settings
+from app.core.database import engine
+from app.models.models import Skill as SkillModel
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +51,78 @@ class SkillRegistry:
         self._skills: Dict[str, Dict[str, Any]] = {}
         self._executions: Dict[str, Dict[str, Any]] = {}
         self._candidate_skills: Dict[str, Dict[str, Any]] = {}
+        self._db_session_factory = sessionmaker(bind=engine, autocommit=False, autoflush=False)
+        self._skillhub_store_dir = Path(os.getenv("SOLO_SKILLHUB_STORE_DIR", r"d:\workspace\SOLO\backend\skillhub_skills"))
         self._init_builtin_skills()
         self._init_candidate_skills()
+        self._load_installed_skills_from_db()
+
+    def _skill_to_dict(self, row: SkillModel) -> Dict[str, Any]:
+        return {
+            "id": row.id,
+            "name": row.name,
+            "display_name": row.display_name,
+            "description": row.description,
+            "category": row.category,
+            "protocol": row.protocol,
+            "config": row.config or {},
+            "input_schema": row.input_schema or {},
+            "output_schema": row.output_schema or {},
+            "is_active": bool(row.is_active),
+            "is_builtin": bool(row.is_builtin),
+            "usage_count": row.usage_count or 0,
+            "created_at": row.created_at or datetime.now(),
+            "updated_at": row.updated_at,
+            "last_used_at": row.last_used_at,
+        }
+
+    def _load_installed_skills_from_db(self) -> None:
+        """把数据库中已安装的 Skill 加载进运行时 registry。"""
+        session = self._db_session_factory()
+        try:
+            for row in session.query(SkillModel).all():
+                self._skills[row.id] = self._skill_to_dict(row)
+        finally:
+            session.close()
+
+    def _persist_skill_to_db(self, skill: Dict[str, Any]) -> None:
+        """把运行时 Skill 写入数据库，保证重启后仍然安装。"""
+        session = self._db_session_factory()
+        try:
+            row = session.get(SkillModel, skill["id"])
+            if row is None:
+                row = SkillModel(id=skill["id"], name=skill["name"], display_name=skill["display_name"], protocol=skill["protocol"])
+                session.add(row)
+            row.name = skill["name"]
+            row.display_name = skill.get("display_name") or skill["name"]
+            row.description = skill.get("description")
+            row.category = skill.get("category")
+            row.protocol = skill.get("protocol") or "skillhub"
+            row.config = skill.get("config") or {}
+            row.input_schema = skill.get("input_schema") or {}
+            row.output_schema = skill.get("output_schema") or {}
+            row.is_active = bool(skill.get("is_active", True))
+            row.is_builtin = bool(skill.get("is_builtin", False))
+            row.usage_count = int(skill.get("usage_count") or 0)
+            session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
+
+    def _delete_skill_from_db(self, skill_id: str) -> None:
+        session = self._db_session_factory()
+        try:
+            row = session.get(SkillModel, skill_id)
+            if row is not None:
+                session.delete(row)
+                session.commit()
+        except Exception:
+            session.rollback()
+            raise
+        finally:
+            session.close()
 
     # --------- candidate discovery / explicit install ----------
     def _init_candidate_skills(self) -> None:
@@ -178,6 +257,7 @@ class SkillRegistry:
             "source": candidate.get("source"),
         }
         self._skills[target_skill_id] = skill
+        self._persist_skill_to_db(skill)
         return skill
 
     def install_by_url(self, url: str) -> Dict[str, Any]:
@@ -197,7 +277,7 @@ class SkillRegistry:
 
         normalized_url = parsed.geturl()
         for existing in self._skills.values():
-            if existing.get("source_url") == normalized_url:
+            if existing.get("source_url") == normalized_url or (existing.get("config") or {}).get("endpoint") == normalized_url:
                 raise ValueError(f"该 URL 对应的技能已安装: {existing.get('id')}")
 
         path_parts = [p for p in parsed.path.split("/") if p]
@@ -230,6 +310,7 @@ class SkillRegistry:
             "source_url": normalized_url,
         }
         self._skills[skill_id] = skill
+        self._persist_skill_to_db(skill)
         return skill
 
     # --------- skills CRUD ----------
@@ -286,6 +367,7 @@ class SkillRegistry:
             "created_at": datetime.now(),
         }
         self._skills[skill_id] = skill
+        self._persist_skill_to_db(skill)
         return skill
 
     def update_skill(self, skill_id: str, updates: Dict[str, Any]) -> Dict[str, Any]:
@@ -297,6 +379,7 @@ class SkillRegistry:
             if k in updates and updates[k] is not None:
                 skill[k] = updates[k]
         skill["updated_at"] = datetime.now()
+        self._persist_skill_to_db(skill)
         return skill
 
     def delete_skill(self, skill_id: str) -> None:
@@ -306,6 +389,7 @@ class SkillRegistry:
         if skill.get("is_builtin"):
             raise ValueError("内置技能不能删除")
         del self._skills[skill_id]
+        self._delete_skill_from_db(skill_id)
 
     # --------- executions ----------
     def get_execution(self, execution_id: str) -> Optional[Dict[str, Any]]:
@@ -395,212 +479,11 @@ class SkillRegistry:
 
     # --------- builtins ----------
     def _init_builtin_skills(self) -> None:
-        builtin_skills: List[Dict[str, Any]] = [
-            {
-                "id": "skill_medical_diagnosis",
-                "name": "medical_diagnosis",
-                "display_name": "医学诊断",
-                "description": "基于症状进行疾病诊断分析，提供可能的诊断结果和建议",
-                "category": "diagnosis",
-                "protocol": "builtin",
-                "is_active": True,
-                "is_builtin": True,
-                "config": {},
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "symptoms": {"type": "array", "items": {"type": "string"}},
-                        "patient_info": {"type": "object"},
-                    },
-                    "required": ["symptoms"],
-                },
-                "output_schema": {"type": "object", "properties": {"diagnoses": {"type": "array"}, "recommendations": {"type": "array"}}},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-            {
-                "id": "skill_drug_interaction",
-                "name": "drug_interaction",
-                "display_name": "药物相互作用检查",
-                "description": "检查多种药物之间的相互作用，提供用药安全建议",
-                "category": "pharmacy",
-                "protocol": "builtin",
-                "is_active": True,
-                "is_builtin": True,
-                "config": {},
-                "input_schema": {"type": "object", "properties": {"drugs": {"type": "array", "items": {"type": "string"}}}, "required": ["drugs"]},
-                "output_schema": {"type": "object", "properties": {"interactions": {"type": "array"}, "recommendations": {"type": "array"}}},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-            {
-                "id": "skill_literature_search",
-                "name": "literature_search",
-                "display_name": "医学文献检索",
-                "description": "检索PubMed、知网等医学文献数据库",
-                "category": "research",
-                "protocol": "skillhub",
-                "is_active": True,
-                "is_builtin": False,
-                "config": {"endpoint": "https://skillhub.cn/skills/literature"},
-                "input_schema": {
-                    "type": "object",
-                    "properties": {"query": {"type": "string"}, "sources": {"type": "array", "items": {"type": "string"}}, "limit": {"type": "integer", "default": 10}},
-                    "required": ["query"],
-                },
-                "output_schema": {},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-            {
-                "id": "skill_clinical_guideline",
-                "name": "clinical_guideline",
-                "display_name": "临床指南查询",
-                "description": "查询临床诊疗指南和专家共识",
-                "category": "reference",
-                "protocol": "skillhub",
-                "is_active": True,
-                "is_builtin": False,
-                "config": {"endpoint": "https://api.skillhub.cn/skills/guideline"},
-                "input_schema": {"type": "object", "properties": {"disease": {"type": "string"}, "type": {"type": "string", "enum": ["guideline", "consensus", "all"]}}, "required": ["disease"]},
-                "output_schema": {},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-            {
-                "id": "skill_lab_interpretation",
-                "name": "lab_interpretation",
-                "display_name": "检验结果解读",
-                "description": "解读临床检验报告，提供异常指标分析和建议",
-                "category": "diagnosis",
-                "protocol": "builtin",
-                "is_active": True,
-                "is_builtin": True,
-                "config": {},
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "text": {"type": "string"},
-                        "lab_results": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "name": {"type": "string"},
-                                    "value": {"type": "number"},
-                                    "unit": {"type": "string"},
-                                    "ref_range": {"type": "string"}
-                                }
-                            }
-                        }
-                    },
-                    "required": []
-                },
-                "output_schema": {},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-            {
-                "id": "skill_medical_api_health",
-                "name": "medical_api_health",
-                "display_name": "医学服务健康检查",
-                "description": "检查医学大模型后端服务健康状态（GET /health）",
-                "category": "system",
-                "protocol": "medical_api",
-                "is_active": True,
-                "is_builtin": True,
-                "config": {"path": "/health", "method": "GET"},
-                "input_schema": {"type": "object", "properties": {}, "required": []},
-                "output_schema": {"type": "object"},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-            {
-                "id": "skill_medical_api_clinical_trial",
-                "name": "medical_api_clinical_trial",
-                "display_name": "临床实验设计",
-                "description": "临床实验设计建议（POST /clinical_trial）",
-                "category": "research",
-                "protocol": "medical_api",
-                "is_active": True,
-                "is_builtin": True,
-                "config": {"path": "/clinical_trial", "method": "POST"},
-                "input_schema": {"type": "object", "properties": {"prompt": {"type": "string"}, "use_rag": {"type": "boolean"}}, "required": ["prompt"]},
-                "output_schema": {"type": "object"},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-            {
-                "id": "skill_image_analysis",
-                "name": "image_analysis",
-                "display_name": "医学影像分析",
-                "description": "分析X光、CT、MRI等医学影像（需要配置 MCP endpoint）",
-                "category": "imaging",
-                "protocol": "mcp",
-                "is_active": True,
-                "is_builtin": False,
-                "config": {
-                    "mcp_server": "medical-imaging-mcp",
-                    # 真实 MCP/工具服务地址需部署后填写，例如：http://127.0.0.1:9001/invoke
-                    # "endpoint": "http://127.0.0.1:9001/invoke"
-                },
-                "input_schema": {"type": "object", "properties": {"image_url": {"type": "string"}, "image_type": {"type": "string"}}, "required": ["image_url", "image_type"]},
-                "output_schema": {},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-            {
-                "id": "skill_symptom_checker",
-                "name": "symptom_checker",
-                "display_name": "症状自查",
-                "description": "根据症状进行初步健康评估",
-                "category": "consultation",
-                "protocol": "builtin",
-                "is_active": True,
-                "is_builtin": True,
-                "config": {},
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "text": {"type": "string"},
-                        "symptoms": {"type": "array", "items": {"type": "string"}},
-                        "duration": {"type": "string"}
-                    },
-                    "required": []
-                },
-                "output_schema": {},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-            {
-                "id": "skill_dosage_calculator",
-                "name": "dosage_calculator",
-                "display_name": "用药剂量计算",
-                "description": "根据患者信息计算药物剂量",
-                "category": "pharmacy",
-                "protocol": "builtin",
-                "is_active": True,
-                "is_builtin": True,
-                "config": {},
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "text": {"type": "string"},
-                        "drug_name": {"type": "string"},
-                        "patient_weight": {"type": "number"},
-                        "patient_age": {"type": "integer"},
-                        "indication": {"type": "string"}
-                    },
-                    "required": []
-                },
-                "output_schema": {},
-                "usage_count": 0,
-                "created_at": datetime.now(),
-            },
-        ]
+        """默认不再内置安装任何 Skill。
 
-        for s in builtin_skills:
-            self._skills[s["id"]] = s
+        用户需要在 Skills 页面通过在线发现、候选安装或 URL 手动安装所需 Skill。
+        """
+        return
 
     @staticmethod
     def _build_skill_prompt(skill_name: str, input_data: Dict[str, Any]) -> str:
@@ -626,14 +509,101 @@ class SkillRegistry:
         )
         return {"skill": skill.get("name"), "output": response.get("content", ""), "raw_response": response}
 
+    @staticmethod
+    def _skillhub_slug_from_skill(skill: Dict[str, Any]) -> str:
+        config = skill.get("config") or {}
+        explicit_slug = config.get("slug") or skill.get("slug")
+        if explicit_slug:
+            return str(explicit_slug).strip()
+        endpoint = config.get("endpoint") or skill.get("source_url") or ""
+        if endpoint:
+            parsed = urlparse(endpoint)
+            parts = [p for p in parsed.path.split("/") if p]
+            if parts:
+                return parts[-1]
+        return str(skill.get("name") or skill.get("id") or "").replace("skill_", "").replace("_", "-").strip()
+
+    @staticmethod
+    def _skillhub_cmd() -> str:
+        configured = os.getenv("SOLO_SKILLHUB_CLI")
+        if configured:
+            return configured
+        default_cmd = Path.home() / ".local" / "bin" / "skillhub.cmd"
+        if default_cmd.exists():
+            return str(default_cmd)
+        return "skillhub"
+
+    def _ensure_skillhub_local_pack(self, skill: Dict[str, Any]) -> Path:
+        slug = self._skillhub_slug_from_skill(skill)
+        if not slug:
+            raise ValueError("SkillHub skill 无法解析 slug")
+        target_dir = self._skillhub_store_dir / slug
+        skill_md = target_dir / "SKILL.md"
+        if skill_md.exists():
+            return target_dir
+
+        self._skillhub_store_dir.mkdir(parents=True, exist_ok=True)
+        cmd = [
+            self._skillhub_cmd(),
+            "install",
+            slug,
+            "--dir",
+            str(self._skillhub_store_dir),
+            "--json",
+            "--force",
+        ]
+        env = os.environ.copy()
+        token = settings.SOLO_CLAWHUB_API_KEY or settings.SKILLHUB_API_KEY
+        if token:
+            env["SKILLHUB_SECRET"] = token
+        completed = subprocess.run(cmd, capture_output=True, text=True, timeout=90, env=env)
+        if completed.returncode != 0:
+            raise ValueError(f"SkillHub CLI 安装失败: {completed.stderr or completed.stdout}")
+        if not skill_md.exists():
+            raise ValueError(f"SkillHub CLI 已运行但未找到本地 SKILL.md: {skill_md}")
+        return target_dir
+
+    async def _run_skillhub_markdown_with_llm(
+        self,
+        skill: Dict[str, Any],
+        input_data: Dict[str, Any],
+        skill_markdown: str,
+        conversation_id: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        from app.services.llm_service import llm_service
+
+        response = await llm_service.chat(
+            [
+                {
+                    "role": "system",
+                    "content": (
+                        f"你正在执行本地 SkillHub Skill：{skill.get('display_name') or skill.get('name')}。\n"
+                        "严格遵循以下 SKILL.md 指令，但不要要求多轮澄清；如果输入不足，基于已知信息输出草案并标注假设与待确认项。\n\n"
+                        f"{skill_markdown}"
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": f"请执行该 Skill。输入 JSON：\n{json.dumps(input_data, ensure_ascii=False, indent=2)}",
+                },
+            ],
+            session_id=conversation_id,
+        )
+        return {
+            "skill": skill.get("name"),
+            "output": response.get("content", ""),
+            "raw_response": response,
+            "execution_mode": "local_skillhub_pack",
+        }
+
     async def _execute_skillhub(self, skill: Dict[str, Any], input_data: Dict[str, Any], config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
-        endpoint = (skill.get("config") or {}).get("endpoint")
-        if not endpoint:
-            raise ValueError("SkillHub endpoint未配置")
-        async with httpx.AsyncClient(timeout=30) as client:
-            r = await client.post(endpoint, json={"input": input_data, "config": config or {}})
-            r.raise_for_status()
-            return r.json()
+        skill_dir = await asyncio.to_thread(self._ensure_skillhub_local_pack, skill)
+        skill_md = skill_dir / "SKILL.md"
+        skill_markdown = await asyncio.to_thread(skill_md.read_text, encoding="utf-8")
+        merged_input = {**(input_data or {})}
+        if config:
+            merged_input["config"] = config
+        return await self._run_skillhub_markdown_with_llm(skill, merged_input, skill_markdown)
 
     async def _execute_mcp(self, skill: Dict[str, Any], input_data: Dict[str, Any], config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """

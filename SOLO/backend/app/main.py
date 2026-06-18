@@ -6,8 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
 from app.config import settings
-from app.api.v1 import conversations, agents, skills, auth, files, artifacts
-from app.agents.registry import agent_registry
+from app.api.v1 import conversations, skills, auth, files, artifacts
 
 
 @asynccontextmanager
@@ -16,7 +15,6 @@ async def lifespan(app: FastAPI):
     # 启动时初始化
     print(f"🚀 {settings.APP_NAME} v{settings.APP_VERSION} 启动中...")
     print(f"📡 LLM服务: {settings.LLM_ENDPOINT}")
-    print(f"🤖 已注册代理: {agent_registry.list_agents()}")
     
     yield
     
@@ -32,7 +30,6 @@ app = FastAPI(
     医学专业智能体协同系统 API
     
     ## 核心特性
-    - 多代理协同架构
     - 大模型服务内置RAG（通过 `/chat` 接口提供）
     - Skill集成（skillhub.cn + MCP）
     """,
@@ -53,12 +50,6 @@ app.include_router(
     conversations.router,
     prefix="/api/v1/conversations",
     tags=["对话管理"]
-)
-
-app.include_router(
-    agents.router,
-    prefix="/api/v1/agents",
-    tags=["代理管理"]
 )
 
 app.include_router(

@@ -1,0 +1,56 @@
+{
+  "skill_name": "medical-literature-review",
+  "version": "1.0.0",
+  "description": "医学文献综述助手 — 基于循证医学框架的自动化文献检索、筛选、评价与综述生成",
+  "defaults": {
+    "databases": ["PubMed", "Embase", "Cochrane Library"],
+    "date_range_years": 10,
+    "languages": ["zh", "en"],
+    "study_types": ["RCT", "systematic_review", "meta_analysis"],
+    "output_format": "markdown"
+  },
+  "grade_levels": {
+    "high": {"label": "高", "symbol": "⊕⊕⊕⊕", "unicode": "⭫"},
+    "moderate": {"label": "中", "symbol": "⊕⊕⊕◯", "unicode": "⭬"},
+    "low": {"label": "低", "symbol": "⊕⊕◯◯", "unicode": "⭭"},
+    "very_low": {"label": "极低", "symbol": "⊕◯◯◯", "unicode": "⭯"}
+  },
+  "recommendation_strength": {
+    "strong": {"label": "强推荐", "code": "1", "description": "利明显大于弊"},
+    "weak": {"label": "弱推荐", "code": "2", "description": "利弊相当或证据不足"}
+  },
+  "bias_tools": {
+    "rct": "Cochrane RoB 2.0",
+    "cohort": "NOS量表",
+    "case_control": "NOS量表",
+    "systematic_review": "AMSTAR 2",
+    "diagnostic": "QUADAS-2"
+  },
+  "prisma_checklist": [
+    {"id": 1, "item": "标题", "requirement": "明确标注为系统评价或系统综述"},
+    {"id": 5, "item": "方法-纳入标准", "requirement": "详细说明PICO、研究设计、语言、时间范围"},
+    {"id": 7, "item": "方法-检索策略", "requirement": "完整的检索式含数据库、日期、过滤器"},
+    {"id": 9, "item": "方法-偏倚风险", "requirement": "评估工具及使用方法"},
+    {"id": 16, "item": "结果-研究筛选", "requirement": "PRISMA流程图各阶段数量"},
+    {"id": 20, "item": "讨论-局限性", "requirement": "纳入研究和综述过程的局限性"},
+    {"id": 23, "item": "其他-注册", "requirement": "注册号和注册平台名称"},
+    {"id": 25, "item": "其他-利益冲突", "requirement": "作者及资助来源的利益冲突声明"}
+  ],
+  "validation_rules": {
+    "require_abstract": true,
+    "require_pico": true,
+    "require_prisma": true,
+    "require_grade": true,
+    "require_bias_assessment": true,
+    "require_effect_size": false,
+    "require_limitations": true,
+    "require_conflict_statement": true,
+    "require_search_date": true,
+    "require_databases": true
+  },
+  "limits": {
+    "max_included_studies": 50,
+    "min_included_studies": 2,
+    "max_references": 200
+  }
+}

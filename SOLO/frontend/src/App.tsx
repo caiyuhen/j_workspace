@@ -5,7 +5,6 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
 import Chat from './pages/Chat'
-import Agents from './pages/Agents'
 import Skills from './pages/Skills'
 import History from './pages/History'
 import Settings from './pages/Settings'
@@ -42,7 +41,6 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="chat" element={<Chat />} />
           <Route path="chat/:conversationId" element={<Chat />} />
-          <Route path="agents" element={<Agents />} />
           <Route path="skills" element={<Skills />} />
           <Route path="history" element={<History />} />
           <Route path="settings" element={<Settings />} />

@@ -16,6 +16,7 @@ import requests
 from app.config import settings
 from app.models import Task, TaskStatus, SubTask, AgentType
 from app.services.artifact_service import artifact_service
+from app.services.artifact_content_cleaner import clean_artifact_content, is_low_quality_tool_output
 
 logger = logging.getLogger(__name__)
 
@@ -179,6 +180,29 @@ def _select_artifact_content(final_content: str, outline_content: str, prompt: s
     if (outline_content or "").strip():
         return outline_content.strip()
     raise RuntimeError("正文生成失败，未生成有效交付物。系统已阻止使用原始提示词生成空壳文件。")
+
+
+def _extract_skill_output_text(skill_response: Dict[str, Any]) -> str:
+    """从 Skill 执行结果中提取可整合进最终交付物的正文。"""
+    skill_id = str(skill_response.get("skill_id") or "")
+    if skill_id in {"skill_md2docx", "skill_md2pptx", "skill_file_converter"}:
+        return ""
+
+    result = skill_response.get("result")
+    if isinstance(result, str):
+        return result.strip()
+    if isinstance(result, dict):
+        for key in ("output", "content", "markdown", "text"):
+            value = result.get(key)
+            if isinstance(value, str) and value.strip():
+                return value.strip()
+        nested = result.get("result")
+        if isinstance(nested, dict):
+            for key in ("output", "content", "markdown", "text"):
+                value = nested.get(key)
+                if isinstance(value, str) and value.strip():
+                    return value.strip()
+    return ""
 
 
 DEFAULT_TASK_PLAN = [
@@ -522,7 +546,9 @@ def _execute_skill_step(step: dict, user_id: str, conversation_id: str,
             f"技能 {skill_id} 缺少必填字段 {missing}，已尝试自动补全仍不完整，按 A 策略降级处理。"
         )
 
-    # 选项 3：调用前探测 endpoint 是否支持 POST；不支持时不发起业务请求，直接抛错以便上层 LLM 兑底
+    # 调用前探测 HTTP endpoint 是否支持 POST。
+    # 注意：protocol=skillhub 现在通过本地 SkillHub CLI 安装包 + SKILL.md + LLM 执行，
+    # endpoint 只是网页详情页/来源地址，不能再按远程 POST API 探测。
     endpoint_url = ""
     config_dict = skill.get("config") or {}
     if isinstance(config_dict, dict):
@@ -544,7 +570,7 @@ def _execute_skill_step(step: dict, user_id: str, conversation_id: str,
         except Exception:  # noqa: BLE001
             pass
 
-    if endpoint_url and protocol in {"skillhub", "openapi", "http", "openai"}:
+    if endpoint_url and protocol in {"openapi", "http", "openai"}:
         probe = _probe_endpoint_supports_post(endpoint_url)
         if not probe.get("post_supported"):
             allow = probe.get("allow") or "(未知)"
@@ -675,23 +701,24 @@ def _run_task_in_thread(
                         previous_outputs.append(outline_content)
 
                     elif step["type"] == "llm" and step["name"] == "生成完整正文":
-                        body_prompt = f"""请基于任务和大纲生成完整正文，输出可直接转换为 {deliverable_format} 文件的 Markdown 内容。
+                        body_prompt = f"""请基于任务和大纲生成最终交付物正文，输出可直接转换为 {deliverable_format} 文件的 Markdown 内容。
 
 任务：{prompt}
 
 大纲：
 {outline_content}
 
-要求：
-1. 内容完整，不要只给建议。
-2. 包含标题、目标、主体内容、结论/下一步。
-3. 如适合表格，请使用 Markdown 表格。"""
+硬性要求：
+1. 只输出最终交付物正文，不要输出执行计划、任务拆解、用户要求复述、模型思考过程或内部推理。
+2. 内容必须完整，不要只给建议；不要写“下一步计划/Next Steps/后续将继续生成”。
+3. 结尾应为正式结论、临床解读或汇报总结，而不是待办事项。
+4. 如适合表格，请使用 Markdown 表格。"""
                         response = _call_llm_sync(
                             [{"role": "user", "content": body_prompt}],
                             model=model,
                             conversation_id=conversation_id,
                         )
-                        final_content = _require_generated_content(response, "生成完整正文")
+                        final_content = clean_artifact_content(_require_generated_content(response, "生成完整正文"))
                         subtask.output_data = {"content": final_content}
                         previous_outputs.append(final_content)
 
@@ -702,14 +729,14 @@ def _run_task_in_thread(
                             f"当前步骤：{step.get('name')}\n"
                             f"步骤说明：{step.get('description') or step.get('name')}\n"
                             f"已有大纲：\n{outline_content or '(尚未生成大纲)'}\n\n"
-                            "请用 Markdown 输出本步骤的内容，不要只给建议；如适合可包含表格。"
+                            "请用 Markdown 输出本步骤可直接并入最终交付物的正文内容；不要复述任务要求、不要输出执行过程、不要输出模型思考；如适合可包含表格。"
                         )
                         response = _call_llm_sync(
                             [{"role": "user", "content": section_prompt}],
                             model=model,
                             conversation_id=conversation_id,
                         )
-                        section_text = (response or "").strip()
+                        section_text = clean_artifact_content((response or "").strip())
                         subtask.output_data = {"content": section_text}
                         if section_text:
                             previous_outputs.append(section_text)
@@ -734,9 +761,17 @@ def _run_task_in_thread(
                                 "duration_seconds": skill_response.get("duration_seconds"),
                                 "input": step.get("input") or {},
                             }
-                            result_text = skill_response.get("result")
-                            if isinstance(result_text, str) and result_text.strip():
+                            result_text = clean_artifact_content(_extract_skill_output_text(skill_response))
+                            if result_text and is_low_quality_tool_output(result_text):
+                                logger.warning("⚠️ 工具输出疑似占位/失败提示，已跳过整合: %s", step.get("name"))
+                                result_text = ""
+                                subtask.output_data["skipped_from_artifact"] = "low_quality_or_placeholder_output"
+                            if result_text:
                                 previous_outputs.append(result_text)
+                                if final_content:
+                                    final_content = final_content.rstrip() + f"\n\n## {step.get('name')}\n\n{result_text}\n"
+                                else:
+                                    final_content = result_text
                         except Exception as tool_exc:
                             # 方案 B：tool 步骤失败时自动用 LLM 重做该步骤，子任务最终 COMPLETED 但保留原始错误
                             logger.warning(
@@ -777,7 +812,7 @@ def _run_task_in_thread(
                                 db.commit()
                                 continue
 
-                            fallback_text = (fallback_response or "").strip()
+                            fallback_text = clean_artifact_content(_require_generated_content(fallback_response, f"{step.get('name')}兜底生成"))
                             if not fallback_text:
                                 # LLM 给空 → 视作失败，按 A 策略继续
                                 logger.warning("B 策略中 LLM 兜底返回空文本，退回 A 策略：name=%s", step.get("name"))

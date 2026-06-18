@@ -5,7 +5,6 @@ import type { MenuProps } from 'antd'
 import {
   DashboardOutlined,
   MessageOutlined,
-  RobotOutlined,
   ToolOutlined,
   HistoryOutlined,
   SettingOutlined,
@@ -20,7 +19,6 @@ const { Header, Sider, Content } = Layout
 
 const menuItems: MenuProps['items'] = [
   { key: '/chat', icon: <MessageOutlined />, label: '智能对话' },
-  { key: '/agents', icon: <RobotOutlined />, label: '代理管理' },
   { key: '/skills', icon: <ToolOutlined />, label: '技能中心' },
   { key: '/history', icon: <HistoryOutlined />, label: '历史记录' },
   { key: '/dashboard', icon: <DashboardOutlined />, label: '仪表盘' },
@@ -80,7 +78,7 @@ export default function MainLayout() {
           justifyContent: 'center',
           borderBottom: '1px solid #f0f0f0'
         }}>
-          <RobotOutlined style={{ fontSize: 24, color: '#1890ff' }} />
+          <ToolOutlined style={{ fontSize: 24, color: '#1890ff' }} />
           {!collapsed && (
             <span style={{ 
               marginLeft: 8, 
