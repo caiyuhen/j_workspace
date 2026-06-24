@@ -7,6 +7,7 @@ import traceback
 import uuid
 import json
 from datetime import datetime
+from minio import Minio
 
 from app.services.dicom_parser import DicomParser
 from app.services.raw_persistence import RawPersistenceService
@@ -16,8 +17,22 @@ from app.models.staging import StagingObservation
 
 router = APIRouter()
 
-# Mock Object Storage path
-MINIO_MOCK_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "minio_mock", "dicom")
+# MinIO Client Setup
+MINIO_URL = os.getenv("MINIO_URL", "127.0.0.1:9000")
+MINIO_ACCESS_KEY = os.getenv("MINIO_ACCESS_KEY", "minioadmin")
+MINIO_SECRET_KEY = os.getenv("MINIO_SECRET_KEY", "minioadmin")
+MINIO_BUCKET = "dicom-images"
+
+def get_minio_client():
+    client = Minio(
+        MINIO_URL,
+        access_key=MINIO_ACCESS_KEY,
+        secret_key=MINIO_SECRET_KEY,
+        secure=False
+    )
+    if not client.bucket_exists(MINIO_BUCKET):
+        client.make_bucket(MINIO_BUCKET)
+    return client
 
 def process_dicom_task(tmp_path: str, filename: str, batch_id: str):
     """Background task to process DICOM dual-stream ingestion."""
@@ -25,19 +40,37 @@ def process_dicom_task(tmp_path: str, filename: str, batch_id: str):
     persistence_svc = RawPersistenceService(db)
     try:
         parser = DicomParser(tmp_path)
-        
+
         # 1. Metadata Stream
         metadata = parser.extract_metadata()
-        
+
         # Determine paths
         patient_id = metadata.get("patient_id", "UNKNOWN")
         study_uid = metadata.get("study_instance_uid", "UNKNOWN_STUDY")
         new_filename = f"{uuid.uuid4().hex[:8]}.dcm"
-        target_path = os.path.join(MINIO_MOCK_DIR, patient_id, study_uid, new_filename)
-        
+        object_name = f"{patient_id}/{study_uid}/{new_filename}"
+
         # 2. File Stream (De-identification & Storage)
-        saved_path = parser.deidentify_dicom(target_path, new_patient_id=f"hash_{patient_id}")
+        # First save to a temp de-identified file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".dcm") as scrubbed_tmp:
+            scrubbed_path = scrubbed_tmp.name
+            
+        parser.deidentify_dicom(scrubbed_path, new_patient_id=f"hash_{patient_id}")
         
+        # Upload to MinIO
+        minio_client = get_minio_client()
+        minio_client.fput_object(
+            MINIO_BUCKET, 
+            object_name, 
+            scrubbed_path,
+            content_type="application/dicom"
+        )
+        saved_path = f"s3://{MINIO_BUCKET}/{object_name}"
+        
+        # Cleanup scrubbed file
+        if os.path.exists(scrubbed_path):
+            os.remove(scrubbed_path)
+
         # 3. Store Raw Metadata in DB
         raw_record = RawRecord(
             batch_id=batch_id,

@@ -73,7 +73,47 @@ class StagingObservation(Base):
     value_as_string = Column(String)           # Used to store JSON metadata string or file paths
     observation_concept_id = Column(Integer, default=0) # e.g. Concept ID for Imaging
     
-    # For DICOM dual-stream tracking
-    file_storage_path = Column(String)         # The MinIO/Object storage path of the de-identified DICOM
+class StagingMeasurement(Base):
+    __tablename__ = "stg_measurement"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_batch_id = Column(String, index=True)
+    raw_record_id = Column(String, ForeignKey("raw_record.id"), index=True)
+    person_source_value = Column(String, index=True)
     
+    measurement_source_value = Column(String)  # 检查项
+    value_source_value = Column(String)        # 原始值
+    unit_source_value = Column(String)         # 单位
+    
+    measurement_date = Column(Date)
+    measurement_datetime = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class StagingConditionOccurrence(Base):
+    __tablename__ = "stg_condition_occurrence"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_batch_id = Column(String, index=True)
+    raw_record_id = Column(String, ForeignKey("raw_record.id"), index=True)
+    person_source_value = Column(String, index=True)
+    
+    condition_source_value = Column(String)    # 诊断名称/原始数据
+    condition_source_concept_id = Column(String) # ICD-10
+    
+    condition_start_date = Column(Date)
+    condition_start_datetime = Column(DateTime)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class StagingDrugExposure(Base):
+    __tablename__ = "stg_drug_exposure"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    source_batch_id = Column(String, index=True)
+    raw_record_id = Column(String, ForeignKey("raw_record.id"), index=True)
+    person_source_value = Column(String, index=True)
+    
+    drug_source_value = Column(String)         # 药名/原始数据
+    dose_source_value = Column(String)         # 剂量
+    form_source_value = Column(String)         # 剂型
+    frequency_source_value = Column(String)    # 服药频率
+    
+    drug_exposure_start_date = Column(Date)
+    drug_exposure_start_datetime = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)

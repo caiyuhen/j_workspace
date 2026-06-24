@@ -1,32 +1,31 @@
 import re
+import json
+import os
 from typing import Dict, Any, List
 from dateutil import parser as date_parser
 
 class CleaningRulesEngine:
     """
     Engine to apply basic data cleaning and normalization rules.
+    Reads configurations from a JSON file.
     """
     
-    # Common null-equivalent representations in Chinese medical data
-    NULL_VALUES = {"", "null", "none", "na", "-", "未知", "不详", "无"}
-
-    # Mock dictionary for Lookup mappings (e.g., Department Codes, ID Types)
-    LOOKUP_DICTS = {
-        "department": {
-            "内科": "Internal Medicine",
-            "外科": "Surgery",
-            "儿科": "Pediatrics",
-            "妇产科": "Obstetrics and Gynecology",
-            "1001": "Internal Medicine",
-            "1002": "Surgery"
-        },
-        "id_type": {
-            "01": "National ID",
-            "02": "Passport",
-            "身份证": "National ID",
-            "护照": "Passport"
-        }
-    }
+    def __init__(self):
+        self._load_config()
+        
+    def _load_config(self):
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config', 'cleaning_rules.json')
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                self.NULL_VALUES = set(config.get("NULL_VALUES", []))
+                self.LOOKUP_DICTS = config.get("LOOKUP_DICTS", {})
+                self.GENDER_MAPPING = config.get("GENDER_MAPPING", {})
+        except Exception as e:
+            print(f"Warning: Failed to load cleaning_rules.json: {e}. Using defaults.")
+            self.NULL_VALUES = {"", "null", "none", "na", "-", "未知", "不详", "无"}
+            self.LOOKUP_DICTS = {}
+            self.GENDER_MAPPING = {"M": ["男", "m", "male", "1"], "F": ["女", "f", "female", "2"]}
 
     def clean_empty_values(self, row: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -66,16 +65,18 @@ class CleaningRulesEngine:
 
     def normalize_gender(self, val: Any) -> str | None:
         """
-        Normalize gender to OMOP expected single char concepts 'M' or 'F'.
+        Normalize gender to OMOP expected single char concepts 'M' or 'F'
+        based on the JSON configuration.
         """
         if not val:
             return None
             
         v_str = str(val).strip().lower()
-        if v_str in {"男", "m", "male", "1"}:
-            return "M"
-        elif v_str in {"女", "f", "female", "2"}:
-            return "F"
+        
+        for std_gender, mapped_values in self.GENDER_MAPPING.items():
+            if v_str in [v.lower() for v in mapped_values]:
+                return std_gender
+                
         return None
 
     def map_dictionary_value(self, dict_name: str, val: Any) -> Any:

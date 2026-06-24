@@ -22,16 +22,23 @@ class RawPersistenceService:
         if error_rows:
             err_records = [
                 ErrorRecord(
-                    batch_id=batch_id, 
+                    batch_id=batch_id,
                     line_number=err.get("line_number"),
                     raw_data=err.get("raw_data"),
                     error_message=err.get("error")
-                ) 
+                )
                 for err in error_rows
             ]
             self.db.bulk_save_objects(err_records)
         
         self.db.commit()
+
+    def update_batch_progress(self, batch_id: str, current_valid: int, current_error: int):
+        batch = self.db.query(SourceBatch).filter(SourceBatch.id == batch_id).first()
+        if batch:
+            batch.total_rows = current_valid
+            batch.error_rows = current_error
+            self.db.commit()
 
     def complete_batch(self, batch_id: str, total_rows: int, error_rows: int, status: str = "completed"):
         batch = self.db.query(SourceBatch).filter(SourceBatch.id == batch_id).first()

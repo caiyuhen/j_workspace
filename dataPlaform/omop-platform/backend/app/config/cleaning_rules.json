@@ -1,0 +1,23 @@
+{
+    "NULL_VALUES": ["", "null", "none", "na", "-", "未知", "不详", "无"],
+    "LOOKUP_DICTS": {
+        "department": {
+            "内科": "Internal Medicine",
+            "外科": "Surgery",
+            "儿科": "Pediatrics",
+            "妇产科": "Obstetrics and Gynecology",
+            "1001": "Internal Medicine",
+            "1002": "Surgery"
+        },
+        "id_type": {
+            "01": "National ID",
+            "02": "Passport",
+            "身份证": "National ID",
+            "护照": "Passport"
+        }
+    },
+    "GENDER_MAPPING": {
+        "M": ["男", "m", "male", "1"],
+        "F": ["女", "f", "female", "2"]
+    }
+}
