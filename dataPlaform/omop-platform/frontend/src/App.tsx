@@ -4,15 +4,19 @@ import type { DataSource } from './components/DataSourceList'
 import UploadForm from './components/UploadForm'
 import BatchHistory from './components/BatchHistory'
 import type { Batch } from './components/BatchHistory'
+import { PipelineMonitor } from './components/PipelineMonitor'
+import { QualityReport } from './components/QualityReport'
 import { Toaster } from "@/components/ui/sonner"
-import { LayoutDashboard, Database, Activity, Settings, Menu } from "lucide-react"
+import { LayoutDashboard, Database, Activity, Settings, Menu, ServerCog } from "lucide-react"
 
 function App() {
+  const [activeTab, setActiveTab] = useState('ingestion')
   const [sources, setSources] = useState<DataSource[]>([])
   const [loadingSources, setLoadingSources] = useState(true)
 
   const [batches, setBatches] = useState<Batch[]>([])
-  const [loadingBatches, setLoadingBatches] = useState(true)
+  // Change initial loading state to false to avoid initial flashing if there's no data
+  const [loadingBatches, setLoadingBatches] = useState(false)
   const [batchError, setBatchError] = useState<string | null>(null)
 
   const fetchSources = useCallback(() => {
@@ -32,8 +36,8 @@ function App() {
     fetchSources()
   }, [fetchSources])
 
-  const fetchBatches = useCallback(() => {
-    setLoadingBatches(true)
+  const fetchBatches = useCallback((showLoading = false) => {
+    if (showLoading) setLoadingBatches(true);
     setBatchError(null)
     fetch('http://127.0.0.1:8080/api/v1/ingestion/batches')
       .then(res => {
@@ -41,7 +45,7 @@ function App() {
         return res.json()
       })
       .then(data => {
-        setBatches(data)
+        setBatches(Array.isArray(data) ? data : [])
         setLoadingBatches(false)
       })
       .catch(err => {
@@ -51,7 +55,7 @@ function App() {
   }, [])
 
   useEffect(() => {
-    fetchBatches()
+    fetchBatches(true)
   }, [fetchBatches])
 
   return (
@@ -65,18 +69,34 @@ function App() {
           </h2>
         </div>
         <nav className="flex-1 p-4 space-y-2">
-          <a href="#" className="flex items-center gap-3 px-4 py-3 bg-blue-600/20 text-blue-400 rounded-lg transition-colors">
+          <button 
+            onClick={() => setActiveTab('ingestion')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'ingestion' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-slate-800 text-slate-300'}`}
+          >
             <LayoutDashboard className="w-5 h-5" />
             数据接入工作台
-          </a>
-          <a href="#" className="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg transition-colors text-slate-300">
+          </button>
+          <button 
+            onClick={() => setActiveTab('pipeline')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'pipeline' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-slate-800 text-slate-300'}`}
+          >
+            <ServerCog className="w-5 h-5" />
+            数据清洗与归一化
+          </button>
+          <button 
+            onClick={() => setActiveTab('quality')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'quality' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-slate-800 text-slate-300'}`}
+          >
             <Activity className="w-5 h-5" />
             质量评估报告
-          </a>
-          <a href="#" className="flex items-center gap-3 px-4 py-3 hover:bg-slate-800 rounded-lg transition-colors text-slate-300">
+          </button>
+          <button 
+            onClick={() => setActiveTab('settings')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-slate-800 text-slate-300'}`}
+          >
             <Settings className="w-5 h-5" />
             系统配置管理
-          </a>
+          </button>
         </nav>
       </aside>
 
@@ -88,7 +108,12 @@ function App() {
             <button className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg">
               <Menu className="w-5 h-5" />
             </button>
-            <h1 className="text-xl font-semibold text-slate-800">数据接入工作台</h1>
+            <h1 className="text-xl font-semibold text-slate-800">
+              {activeTab === 'ingestion' && '数据接入工作台'}
+              {activeTab === 'pipeline' && '数据清洗与归一化管线'}
+              {activeTab === 'quality' && '质量评估报告'}
+              {activeTab === 'settings' && '系统配置管理'}
+            </h1>
           </div>
           <div className="flex items-center gap-3 text-sm text-slate-500">
             <span>MVP 1.0</span>
@@ -101,18 +126,34 @@ function App() {
         {/* Content Scroll Area */}
         <div className="flex-1 overflow-auto p-6">
           <div className="max-w-6xl mx-auto space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Left Column: Data Sources */}
-              <div className="lg:col-span-1">
-                <DataSourceList initialData={sources} isLoading={loadingSources} onSourceAdded={fetchSources} />
+            {activeTab === 'ingestion' && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Left Column: Data Sources */}
+                <div className="lg:col-span-1">
+                  <DataSourceList initialData={sources} isLoading={loadingSources} onSourceAdded={fetchSources} />
+                </div>
+                
+                {/* Right Column: Upload & History */}
+                <div className="lg:col-span-2 space-y-6">
+                  <UploadForm onUploadSuccess={fetchBatches} />
+                  <BatchHistory batches={batches} loading={loadingBatches} error={batchError} onRefresh={fetchBatches} />
+                </div>
               </div>
-              
-              {/* Right Column: Upload & History */}
-              <div className="lg:col-span-2 space-y-6">
-                <UploadForm onUploadSuccess={fetchBatches} />
-                <BatchHistory batches={batches} loading={loadingBatches} error={batchError} />
+            )}
+            
+            {activeTab === 'pipeline' && (
+              <PipelineMonitor />
+            )}
+
+            {activeTab === 'quality' && (
+              <QualityReport />
+            )}
+
+            {activeTab === 'settings' && (
+              <div className="bg-white p-8 rounded-xl border text-center text-slate-500">
+                系统配置管理模块开发中...
               </div>
-            </div>
+            )}
           </div>
         </div>
       </main>

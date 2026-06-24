@@ -7,6 +7,17 @@ class CSVParser:
         self.file_path = file_path
         self.encoding = self._detect_encoding()
         self.delimiter = self._detect_delimiter()
+        self.headers = self._extract_headers()
+
+    def _extract_headers(self) -> list:
+        """Extract and normalize headers upon initialization."""
+        try:
+            with open(self.file_path, 'r', encoding=self.encoding) as f:
+                reader = csv.reader(f, delimiter=self.delimiter)
+                raw_headers = next(reader)
+                return self._normalize_headers(raw_headers)
+        except Exception:
+            return []
 
     def _detect_encoding(self) -> str:
         """Detect the encoding of the CSV file, with BOM awareness."""
