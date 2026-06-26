@@ -7,64 +7,74 @@ import { UploadCloud, FileType, CheckCircle2 } from "lucide-react"
 import { toast } from "sonner"
 
 interface UploadFormProps {
-  onUploadSuccess: () => void;
+  onUploadSuccess: (batchId?: string) => void;
 }
 
 const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess }) => {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
+      setFiles(Array.from(e.target.files));
+    } else {
+      setFiles([]);
     }
   };
 
   const handleUpload = async () => {
-    if (!file) {
-      toast.error('请先选择一个文件。');
+    if (files.length === 0) {
+      toast.error('请先选择至少一个文件。');
       return;
     }
 
     setLoading(true);
+    let successCount = 0;
+    let lastBatchId: string | undefined = undefined;
 
-    const formData = new FormData();
-    formData.append('file', file);
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('file', file);
 
-    // Determine endpoint based on file extension
-    const isDicom = file.name.toLowerCase().endsWith('.dcm');
-    const endpoint = isDicom 
-      ? 'http://127.0.0.1:8080/api/v1/dicom/upload' 
-      : 'http://127.0.0.1:8080/api/v1/ingestion/upload';
+      // Determine endpoint based on file extension
+      const isDicom = file.name.toLowerCase().endsWith('.dcm');
+      const endpoint = isDicom 
+        ? 'http://127.0.0.1:8080/api/v1/dicom/upload' 
+        : 'http://127.0.0.1:8080/api/v1/ingestion/upload';
 
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        body: formData,
-      });
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          body: formData,
+        });
 
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.detail || '上传失败');
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.detail || `文件 ${file.name} 上传失败`);
+        }
+
+        const data = await response.json();
+        successCount++;
+        lastBatchId = data.batch_id;
+      } catch (err: any) {
+        toast.error(`文件 ${file.name} 上传失败`, {
+          description: err.message || '上传过程中发生未知错误。',
+        });
       }
+    }
 
-      const data = await response.json();
-      toast.success(`文件已加入处理队列`, {
-        description: data.message || `文件 ${data.filename} 正在后台解析，请稍后刷新历史批次列表查看结果。`,
+    if (successCount > 0) {
+      toast.success(`成功加入 ${successCount} 个文件到处理队列`, {
+        description: `文件正在后台解析，完成后将自动展示数据探查报告。`,
       });
-      
-      setFile(null);
+      setFiles([]);
       const fileInput = document.getElementById('file-upload') as HTMLInputElement;
       if (fileInput) fileInput.value = '';
 
-      onUploadSuccess();
-    } catch (err: any) {
-      toast.error('上传失败', {
-        description: err.message || '上传过程中发生未知错误。',
-      });
-    } finally {
-      setLoading(false);
+      onUploadSuccess(lastBatchId);
     }
+
+    setLoading(false);
   };
 
   return (
@@ -85,12 +95,13 @@ const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess }) => {
                 id="file-upload" 
                 type="file" 
                 accept=".csv,.dcm" 
+                multiple
                 onChange={handleFileChange} 
                 className="cursor-pointer"
               />
             </div>
           </div>
-          <Button onClick={handleUpload} disabled={loading || !file} className="w-full sm:w-auto">
+          <Button onClick={handleUpload} disabled={loading || files.length === 0} className="w-full sm:w-auto">
             {loading ? (
               <span className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

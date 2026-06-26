@@ -30,8 +30,13 @@ def get_minio_client():
         secret_key=MINIO_SECRET_KEY,
         secure=False
     )
-    if not client.bucket_exists(MINIO_BUCKET):
-        client.make_bucket(MINIO_BUCKET)
+    try:
+        if not client.bucket_exists(MINIO_BUCKET):
+            client.make_bucket(MINIO_BUCKET)
+    except Exception as e:
+        if "积极拒绝" in str(e) or "ConnectionRefusedError" in str(e) or "MaxRetryError" in str(e) or "WinError 10061" in str(e):
+            raise Exception(f"Failed to connect to MinIO object storage at {MINIO_URL}. Please ensure the MinIO service is running. Details: {e}")
+        raise
     return client
 
 def process_dicom_task(tmp_path: str, filename: str, batch_id: str):
@@ -67,11 +72,20 @@ def process_dicom_task(tmp_path: str, filename: str, batch_id: str):
         )
         saved_path = f"s3://{MINIO_BUCKET}/{object_name}"
         
+        # Get presigned URL for frontend viewing
+        presigned_url = minio_client.get_presigned_url(
+            "GET",
+            MINIO_BUCKET,
+            object_name
+        )
+        
         # Cleanup scrubbed file
         if os.path.exists(scrubbed_path):
             os.remove(scrubbed_path)
 
         # 3. Store Raw Metadata in DB
+        # Add the DICOM URL into metadata to allow frontend to generate a download link
+        metadata["_dicom_url"] = presigned_url
         raw_record = RawRecord(
             batch_id=batch_id,
             row_data=metadata
@@ -93,6 +107,8 @@ def process_dicom_task(tmp_path: str, filename: str, batch_id: str):
             except Exception:
                 pass
                 
+        # To make the _dicom_url accessible to the frontend when it queries batch profiling data,
+        # we persist it in value_as_string.
         staging_obs = StagingObservation(
             source_batch_id=batch_id,
             raw_record_id=raw_record.id,
@@ -107,13 +123,23 @@ def process_dicom_task(tmp_path: str, filename: str, batch_id: str):
         db.add(staging_obs)
         db.commit()
         
+        # Update batch with a synthetic profiling data list containing the metadata so frontend can render the URL
+        batch = db.query(SourceBatch).filter(SourceBatch.id == batch_id).first()
+        if batch:
+            batch.profiling_data = [json.dumps(metadata)]
+            db.commit()
+
         # Complete batch
         persistence_svc.complete_batch(batch_id, total_rows=1, error_rows=0, status="completed")
         
     except Exception as e:
         traceback.print_exc()
         # Mark batch as failed
+        error_msg = str(e)
+        # Assuming you have a way to log this error in the database.
+        # Since persistence_svc doesn't have an error log method in this snippet, we will update the batch status.
         persistence_svc.complete_batch(batch_id, total_rows=0, error_rows=1, status="failed")
+        print(f"DICOM processing failed: {error_msg}")
     finally:
         db.close()
         if os.path.exists(tmp_path):

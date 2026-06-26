@@ -15,6 +15,7 @@ class SourceBatch(Base):
     total_rows = Column(Integer, default=0)
     error_rows = Column(Integer, default=0)
     status = Column(String, default="processing")  # processing, completed, failed
+    profiling_data = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     raw_records = relationship("RawRecord", back_populates="batch", cascade="all, delete-orphan")

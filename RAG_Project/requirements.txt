@@ -14,3 +14,4 @@ pymilvus
 sentence-transformers
 torch
 numpy
+pymongo

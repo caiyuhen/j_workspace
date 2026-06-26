@@ -3,27 +3,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { History, FileText, CheckCircle2, AlertCircle, Loader2, Trash2 } from "lucide-react"
+import { History, FileText, CheckCircle2, AlertCircle, Loader2, Trash2, BarChart2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from 'sonner'
-
-export interface Batch {
-  id: string;
-  filename: string;
-  total_rows: number;
-  error_rows: number;
-  status: string;
-  created_at: string;
-}
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import type { Batch } from '@/types'
 
 interface BatchHistoryProps {
   batches: Batch[];
   loading: boolean;
   error: string | null;
   onRefresh?: () => void;
+  autoOpenBatchId?: string | null;
+  onAutoOpenDone?: () => void;
+  onOpenProfiling?: (batch: Batch) => void;
 }
 
-const BatchHistory: React.FC<BatchHistoryProps> = ({ batches = [], loading, error, onRefresh }) => {
+const BatchHistory: React.FC<BatchHistoryProps> = ({ batches = [], loading, error, onRefresh, autoOpenBatchId, onAutoOpenDone, onOpenProfiling }) => {
   const [clearing, setClearing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -43,6 +44,22 @@ const BatchHistory: React.FC<BatchHistoryProps> = ({ batches = [], loading, erro
     };
   }, [batches, onRefresh]);
 
+  // Handle auto open profiling data
+  useEffect(() => {
+    if (autoOpenBatchId && batches) {
+      const targetBatch = batches.find(b => b.id === autoOpenBatchId);
+      if (targetBatch) {
+        if (targetBatch.status === 'completed' && targetBatch.profiling_data) {
+          if (onOpenProfiling) onOpenProfiling(targetBatch);
+          if (onAutoOpenDone) onAutoOpenDone();
+        } else if (targetBatch.status === 'failed') {
+          toast.error(`文件 ${targetBatch.filename} 处理失败`);
+          if (onAutoOpenDone) onAutoOpenDone();
+        }
+      }
+    }
+  }, [autoOpenBatchId, batches, onAutoOpenDone, onOpenProfiling]);
+
   const handleClearData = async () => {
     setClearing(true);
     try {
@@ -51,7 +68,7 @@ const BatchHistory: React.FC<BatchHistoryProps> = ({ batches = [], loading, erro
       });
       if (!res.ok) throw new Error('清除数据失败');
       setShowConfirm(false);
-      toast.success('历史数据已全部清空');
+      toast.success('历史数据与影像文件已全部清空');
       if (onRefresh) onRefresh();
     } catch (err) {
       console.error(err);
@@ -97,6 +114,38 @@ const BatchHistory: React.FC<BatchHistoryProps> = ({ batches = [], loading, erro
           <CardDescription>最近的数据接入批次记录以及其处理状态。</CardDescription>
         </div>
         <div className="flex gap-2">
+          {batches && batches.length > 0 && batches[0].profiling_data && batches[0].profiling_data.length > 0 && (() => {
+            const latest = batches[0];
+            const errorRate = latest.total_rows > 0 ? (latest.error_rows / latest.total_rows * 100).toFixed(1) : '0.0';
+            const hasError = latest.error_rows > 0;
+            // 假设存在 null_rate，进行高空值统计
+            const highNullCols = latest.profiling_data.filter((c: any) => c.null_rate > 0.5).length;
+            const hasNullAnomalies = highNullCols > 0;
+            const isAnomalous = hasError || hasNullAnomalies;
+            
+            return (
+              <Button 
+                variant="outline" 
+                onClick={() => onOpenProfiling && onOpenProfiling(latest)}
+                className={`flex items-center gap-3 h-10 px-3 border shadow-sm transition-all ${isAnomalous ? 'border-orange-200 bg-orange-50/50 hover:bg-orange-100' : 'border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100'}`}
+              >
+                {/* Mini Inline Chart */}
+                <div className="flex items-end gap-[2px] h-5 w-5 pb-0.5" title="异常概览">
+                  <div className={`w-1.5 rounded-t-[1px] ${isAnomalous ? 'bg-orange-300' : 'bg-emerald-300'} h-[50%]`}></div>
+                  <div className={`w-1.5 rounded-t-[1px] ${isAnomalous ? 'bg-orange-400' : 'bg-emerald-400'} h-[80%]`}></div>
+                  <div className={`w-1.5 rounded-t-[1px] ${hasError ? 'bg-red-500 animate-pulse' : hasNullAnomalies ? 'bg-orange-500' : 'bg-emerald-500'} h-[100%]`}></div>
+                </div>
+                <div className="flex flex-col items-start text-left justify-center">
+                  <span className={`text-xs font-bold leading-none mb-1 ${isAnomalous ? 'text-orange-700' : 'text-emerald-700'}`}>
+                    异常分析图表
+                  </span>
+                  <span className={`text-[10px] leading-none font-medium ${isAnomalous ? 'text-orange-600' : 'text-emerald-600'}`}>
+                    {hasError ? `行异常率 ${errorRate}%` : hasNullAnomalies ? `${highNullCols}个字段高空值` : '数据质量优良'}
+                  </span>
+                </div>
+              </Button>
+            );
+          })()}
           {showConfirm ? (
             <>
               <Button variant="outline" size="sm" onClick={() => setShowConfirm(false)}>
@@ -143,6 +192,7 @@ const BatchHistory: React.FC<BatchHistoryProps> = ({ batches = [], loading, erro
                   <TableHead className="text-right">异常行数</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead className="text-right">创建时间</TableHead>
+                  <TableHead className="text-center">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -182,6 +232,18 @@ const BatchHistory: React.FC<BatchHistoryProps> = ({ batches = [], loading, erro
                       {new Date(batch.created_at).toLocaleString('zh-CN', {
                         month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
                       })}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        disabled={batch.status !== 'completed'}
+                        onClick={() => onOpenProfiling && onOpenProfiling(batch)}
+                        className="h-8 flex items-center gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                      >
+                        <BarChart2 className="w-4 h-4" />
+                        数据分布探查
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}

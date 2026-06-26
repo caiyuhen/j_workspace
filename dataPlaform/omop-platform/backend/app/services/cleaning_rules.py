@@ -44,15 +44,29 @@ class CleaningRulesEngine:
         Attempt to parse dates into standard YYYY-MM-DD format.
         If parsing fails, returns None for that field.
         """
+        import datetime
         cleaned_row = dict(row)
         for field in date_fields:
             val = cleaned_row.get(field)
             if not val:
                 continue
             
-            # Pre-process Chinese date formats
             if isinstance(val, str):
-                val_str = val.replace("年", "-").replace("月", "-").replace("日", "")
+                val_str = val.strip()
+                
+                # Check if it's just an age number (1-150)
+                if val_str.isdigit():
+                    age = int(val_str)
+                    if 0 < age <= 150:
+                        # Calculate birth year from age
+                        current_year = datetime.datetime.now().year
+                        birth_year = current_year - age
+                        # Default to January 1st
+                        cleaned_row[field] = f"{birth_year}-01-01"
+                        continue
+
+                # Pre-process Chinese date formats
+                val_str = val_str.replace("年", "-").replace("月", "-").replace("日", "")
                 
                 try:
                     # fuzzy=True helps ignore surrounding text if any

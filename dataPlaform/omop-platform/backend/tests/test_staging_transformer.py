@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch, MagicMock
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.db.database import Base
@@ -25,7 +26,17 @@ def db_session():
         db.close()
         Base.metadata.drop_all(bind=engine)
 
-def test_transform_raw_to_person_staging(db_session):
+@patch('app.services.transformers_ner.TransformersNERMapper.extract_entities')
+def test_transform_raw_to_person_staging(mock_extract_entities, db_session):
+    # Mock the NER extraction to return dummy data to avoid downloading real model in test
+    mock_extract_entities.return_value = {
+        "conditions": [],
+        "medications": [],
+        "procedures": [],
+        "measurements": [],
+        "observations": ["mocked observation"]
+    }
+    
     # 1. Prepare Mock Raw Data
     batch = SourceBatch(id="batch_1", filename="test.csv")
     db_session.add(batch)

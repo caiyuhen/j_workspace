@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Database, CheckCircle, AlertTriangle, FileText, Pill, Stethoscope, RefreshCw } from 'lucide-react';
+import { DataComparison } from './DataComparison';
+import { NLPAnalysis } from './NLPAnalysis';
 
 interface QualityMetrics {
   total_conditions: number;
@@ -184,6 +186,10 @@ export const QualityReport: React.FC = () => {
           );
         })}
       </div>
+
+      <DataComparison />
+
+      <NLPAnalysis />
     </div>
   );
 };

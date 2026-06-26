@@ -65,7 +65,7 @@ class CDMPipelineService:
             mongo_client = None
             mongo_collection = None
             try:
-                self.log("INFO", f"正在连接目标 MongoDB [192.168.0.214:27017]...")
+                self.log("INFO", f"正在连接目标 MongoDB [{MONGO_URI}]...")
                 mongo_client = pymongo.MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
                 mongo_client.server_info()
                 mongo_db = mongo_client[MONGO_DB_NAME]
@@ -74,7 +74,7 @@ class CDMPipelineService:
                 self.log("INFO", "✅ MongoDB 连接成功，数据集已挂载。")
             except Exception as e:
                 self.connections["mongodb"] = False
-                self.log("ERROR", f"❌ MongoDB 连接失败 (沙盒预期内): {e}")
+                self.log("ERROR", f"❌ MongoDB 连接失败: {e}")
 
             # 2. PostgreSQL Connection
             pg_conn = None
@@ -86,7 +86,7 @@ class CDMPipelineService:
                 self.log("INFO", "✅ PostgreSQL 术语数据库连接成功。")
             except Exception as e:
                 self.connections["postgres"] = False
-                self.log("ERROR", f"❌ PostgreSQL 连接失败 (沙盒预期内): {e}")
+                self.log("ERROR", f"❌ PostgreSQL 连接失败: {e}")
 
             # 3. SQLite Connection
             sqlite_conn = None
@@ -305,8 +305,28 @@ class CDMPipelineService:
             self.log("INFO", f"已从 Staging 区提取并组装 {len(patient_records)} 名患者的综合结构化数据。")
         except Exception as e:
             self.log("WARNING", f"提取 Staging 数据失败: {e}")
-            return False
-
+            
+        # Check if there are unassociated observations (like DICOM metadata)
+        # If so, create dummy patient records for them so they get pushed to MongoDB
+        res_unassoc_obs = sqlite_conn.execute(text("SELECT * FROM stg_observation"))
+        unassoc_count = 0
+        for row in res_unassoc_obs:
+            d = dict(row._mapping)
+            pid = d.get('person_source_value')
+            if pid and pid not in patient_records:
+                patient_records[pid] = {
+                    'person_source_value': pid,
+                    'visit_occurrences': [],
+                    'measurements': [],
+                    'conditions': [],
+                    'drug_exposures': [],
+                    'observations': [d]
+                }
+                unassoc_count += 1
+        
+        if unassoc_count > 0:
+            self.log("INFO", f"额外发现了 {unassoc_count} 名仅有独立影像/检查记录的患者，已加入管线。")
+                
         if not patient_records:
             self.log("WARNING", "Staging 数据集为空，无需处理。")
             return False
@@ -314,6 +334,11 @@ class CDMPipelineService:
         valid_records = []
         error_file_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data", "pipeline_errors.csv")
         os.makedirs(os.path.dirname(error_file_path), exist_ok=True)
+        
+        # Make sure metrics reflect the actual records found before we start loop
+        self.metrics["total"] = 0
+        self.metrics["passed"] = 0
+        self.metrics["failed"] = 0
         
         with open(error_file_path, 'w', encoding='utf-8-sig', newline='') as err_f:
             err_writer = csv.writer(err_f)
@@ -350,7 +375,7 @@ class CDMPipelineService:
             else:
                 self.log("WARNING", "没有通过质量校验的合格数据，取消写入动作。")
         else:
-            self.log("WARNING", "由于 MongoDB (192.168.0.214) 物理网络不可达，跳过最终写入阶段。清洗对齐管线逻辑已全部执行。")
+            self.log("WARNING", f"由于 MongoDB ({MONGO_URI}) 网络不可达，跳过最终写入阶段。")
             
         return True
 
