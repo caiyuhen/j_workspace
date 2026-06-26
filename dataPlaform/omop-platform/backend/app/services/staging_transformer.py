@@ -3,6 +3,7 @@ from typing import Dict, Any
 from app.models.raw import RawRecord
 from app.models.staging import StagingPerson, StagingVisitOccurrence, StagingObservation, StagingMeasurement, StagingConditionOccurrence, StagingDrugExposure
 from app.services.cleaning_rules import CleaningRulesEngine
+from app.services.transformers_ner import TransformersNERMapper
 from datetime import datetime
 
 class StagingTransformer:
@@ -12,6 +13,7 @@ class StagingTransformer:
     def __init__(self, db: Session):
         self.db = db
         self.cleaner = CleaningRulesEngine()
+        self.ner_mapper = TransformersNERMapper()
 
     def transform_batch_to_person(self, batch_id: str, mapping_config: Dict[str, str]):
         """
@@ -28,9 +30,14 @@ class StagingTransformer:
                 break
                 
             staging_objects = []
+            import json
+            # 6.4 Collect NLP tasks for batch processing later
+            nlp_tasks = []
+            
             for raw in raw_records:
                 # 1. Base clean (empty strings to None)
-                cleaned_row = self.cleaner.clean_empty_values(raw.row_data)
+                raw_dict = raw.row_data if isinstance(raw.row_data, dict) else json.loads(raw.row_data)
+                cleaned_row = self.cleaner.clean_empty_values(raw_dict)
                 
                 # 2. Field Mapping
                 mapped_data = {}
@@ -223,22 +230,130 @@ class StagingTransformer:
                         )
                         staging_objects.append(meas)
 
-                # 6.4 NLP/Notes -> StagingObservation
+                # 6.4 NLP/Notes -> Collect for Batch Processing
                 nlp_keys = ["chief_complaint", "history_of_present_illness", "imaging_reports", "admission_record", "daily_course_record", "discharge_summary", "treatment_plan"]
                 for k in nlp_keys:
                     val = cleaned_row.get(k)
                     if val:
-                        obs = StagingObservation(
-                            source_batch_id=batch_id,
-                            raw_record_id=raw.id,
+                        nlp_tasks.append({
+                            "person": person,
+                            "visit": visit,
+                            "batch_id": batch_id,
+                            "raw_id": raw.id,
+                            "key": k,
+                            "text": val
+                        })
+            
+            # 6.5 Execute Batch NLP Processing
+            if nlp_tasks:
+                import time
+                t0 = time.time()
+                texts_to_process = [task["text"] for task in nlp_tasks]
+                
+                # Batch size 16 is usually a sweet spot for RTX/GTX GPUs
+                batch_results = self.ner_mapper.extract_entities_batch(texts_to_process, batch_size=16)
+                
+                for task, extracted_entities in zip(nlp_tasks, batch_results):
+                    person = task["person"]
+                    visit = task["visit"]
+                    b_id = task["batch_id"]
+                    r_id = task["raw_id"]
+                    k = task["key"]
+                    
+                    # Process Conditions
+                    for cond_val in extracted_entities.get("conditions", []):
+                        cond = StagingConditionOccurrence(
+                            source_batch_id=b_id,
+                            raw_record_id=r_id,
                             person_source_value=person.person_source_value,
-                            observation_source_value=f"[{k}] {val}", # 保留原始列名提示
-                            value_as_string=val
+                            condition_source_value=cond_val
+                        )
+                        if visit and hasattr(visit, 'visit_start_datetime') and visit.visit_start_datetime:
+                            cond.condition_start_datetime = visit.visit_start_datetime
+                            cond.condition_start_date = visit.visit_start_date
+                        staging_objects.append(cond)
+                        
+                    # Process Medications
+                    for med_val in extracted_entities.get("medications", []):
+                        drug = StagingDrugExposure(
+                            source_batch_id=b_id,
+                            raw_record_id=r_id,
+                            person_source_value=person.person_source_value,
+                            drug_source_value=med_val
+                        )
+                        if visit and hasattr(visit, 'visit_start_datetime') and visit.visit_start_datetime:
+                            drug.drug_exposure_start_datetime = visit.visit_start_datetime
+                            drug.drug_exposure_start_date = visit.visit_start_date
+                        staging_objects.append(drug)
+                        
+                    # Process Measurements
+                    for meas_val in extracted_entities.get("measurements", []):
+                        import re
+                        match = re.search(r'检查：(.*?)\s+值：([\d\.]+)', meas_val)
+                        if match:
+                            m_name = match.group(1).strip()
+                            m_val = match.group(2).strip()
+                            meas = StagingMeasurement(
+                                source_batch_id=b_id,
+                                raw_record_id=r_id,
+                                person_source_value=person.person_source_value,
+                                measurement_source_value=m_name,
+                                value_source_value=m_val
+                            )
+                            if visit and hasattr(visit, 'visit_start_datetime') and visit.visit_start_datetime:
+                                meas.measurement_datetime = visit.visit_start_datetime
+                                meas.measurement_date = visit.visit_start_date
+                            staging_objects.append(meas)
+                            
+                    # Process Symptoms with values
+                    for sym_val in extracted_entities.get("symptoms_with_values", []):
+                        import re
+                        match = re.search(r'症状：(.*?)\s+值：([\d\.]+)', sym_val)
+                        if match:
+                            s_name = match.group(1).strip()
+                            s_val = match.group(2).strip()
+                            # 带有数值的症状（如体温）在 OMOP 中本质上属于 Measurement
+                            meas = StagingMeasurement(
+                                source_batch_id=b_id,
+                                raw_record_id=r_id,
+                                person_source_value=person.person_source_value,
+                                measurement_source_value=f"症状-{s_name}",
+                                value_source_value=s_val
+                            )
+                            if visit and hasattr(visit, 'visit_start_datetime') and visit.visit_start_datetime:
+                                meas.measurement_datetime = visit.visit_start_datetime
+                                meas.measurement_date = visit.visit_start_date
+                            staging_objects.append(meas)
+                            
+                    # Process Times
+                    for time_val in extracted_entities.get("times", []):
+                        obs = StagingObservation(
+                            source_batch_id=b_id,
+                            raw_record_id=r_id,
+                            person_source_value=person.person_source_value,
+                            observation_source_value=f"[{k}] 时间：{time_val}",
+                            value_as_string=time_val
                         )
                         if visit and hasattr(visit, 'visit_start_datetime') and visit.visit_start_datetime:
                             obs.observation_datetime = visit.visit_start_datetime
                             obs.observation_date = visit.visit_start_date
                         staging_objects.append(obs)
+
+                    # Process generic observations and fallback
+                    for obs_val in extracted_entities.get("observations", []):
+                        obs = StagingObservation(
+                            source_batch_id=b_id,
+                            raw_record_id=r_id,
+                            person_source_value=person.person_source_value,
+                            observation_source_value=f"[{k}] {obs_val}",
+                            value_as_string=obs_val
+                        )
+                        if visit and hasattr(visit, 'visit_start_datetime') and visit.visit_start_datetime:
+                            obs.observation_datetime = visit.visit_start_datetime
+                            obs.observation_date = visit.visit_start_date
+                        staging_objects.append(obs)
+                
+                print(f"[{batch_id}] 批量 NLP 推理完成 ({len(nlp_tasks)} 条文本片段), 耗时 {time.time() - t0:.2f}s")
             
             # 7. Bulk insert to staging
             if staging_objects:

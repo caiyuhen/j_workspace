@@ -22,7 +22,9 @@ describe('UploadForm', () => {
     render(<UploadForm onUploadSuccess={vi.fn()} />);
     const button = screen.getByRole('button', { name: /upload/i });
     fireEvent.click(button);
-    expect(await screen.findByText(/Please select a file first/i)).toBeInTheDocument();
+    // Button should be disabled now when files length is 0, so click shouldn't trigger toast.
+    // We can just assert the button is disabled.
+    expect(button).toBeDisabled();
   });
 
   it('handles successful upload', async () => {

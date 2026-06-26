@@ -22,6 +22,12 @@ app.add_middleware(
 )
 
 app.include_router(sources.router, prefix="/api/v1/sources", tags=["sources"])
+# Add custom exception handler for unhandled errors
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    print(f"Global Error: {exc}")
+    return {"error": str(exc)}
+
 app.include_router(ingestion.router, prefix="/api/v1/ingestion", tags=["ingestion"])
 app.include_router(dicom.router, prefix="/api/v1/dicom", tags=["dicom"])
 app.include_router(monitor.router, prefix="/api/v1/monitor", tags=["monitor"])

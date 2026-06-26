@@ -72,6 +72,7 @@ class StagingObservation(Base):
     # Metadata Specifics
     value_as_string = Column(String)           # Used to store JSON metadata string or file paths
     observation_concept_id = Column(Integer, default=0) # e.g. Concept ID for Imaging
+    file_storage_path = Column(String)         # Physical MinIO/S3 storage path for DICOM
     
 class StagingMeasurement(Base):
     __tablename__ = "stg_measurement"

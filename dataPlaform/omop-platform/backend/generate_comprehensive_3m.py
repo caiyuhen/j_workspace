@@ -2,13 +2,14 @@ import os
 import time
 import csv
 import io
+import random
 
 output_dir = r"d:\workspace\dataPlaform\omop-platform\inputdata"
 os.makedirs(output_dir, exist_ok=True)
 output_file = os.path.join(output_dir, "comprehensive_emr_3m.csv")
 
-TOTAL_RECORDS = 3_000_000
-BATCH_SIZE = 100_000
+TOTAL_RECORDS = 10_000
+BATCH_SIZE = 10_000
 
 # ----------------- 数据池 (预计算取模数组，极致提升性能) -----------------
 # 1. 患者基本信息
@@ -61,32 +62,32 @@ with open(output_file, "w", encoding="utf-8-sig", newline="") as f:
     
     for i in range(1, TOTAL_RECORDS + 1):
         # Generate demographic fields
-        n_p = names_prefix[i % 10]
-        n_s = names_suffix[i % 10]
-        name = f"{n_p}{n_s}{i%100}"
-        age = (i % 80) + 10
-        id_card = f"11010519{99-(i%60):02d}{(i%12)+1:02d}{(i%28)+1:02d}{(i%9999):04d}"
-        contact = f"138{i%100000000:08d}"
+        n_p = random.choice(names_prefix)
+        n_s = random.choice(names_suffix)
+        name = f"{n_p}{n_s}{random.randint(1, 99)}"
+        age = random.randint(10, 89)
+        id_card = f"11010519{random.randint(40, 99):02d}{random.randint(1, 12):02d}{random.randint(1, 28):02d}{random.randint(0, 9999):04d}"
+        contact = f"138{random.randint(0, 99999999):08d}"
         
         # 20% error rate logic
-        is_error = (i % 5 == 0) # 1 in 5 = 20%
+        is_error = (random.random() < 0.2) # 20% chance
         
         # If error, break the CSV structure (e.g. miss some columns)
         if is_error:
             # We omit a few columns at the end to trigger the column mismatch error
             row = [
-                f"P{i:08d}", name, genders[i%2], str(age), id_card, contact,
-                allergies[i%6], past_history[i%6], family_history[i%5], lifestyle[i%6], immunization[i%5],
-                chief_complaint[i%6], hpi[i%6], physical_exam[i%6], diagnoses[i%6], prescriptions[i%6], treatment_plans[i%6],
-                admission_records[i%6]
+                f"P{i:08d}", name, random.choice(genders), str(age), id_card, contact,
+                random.choice(allergies), random.choice(past_history), random.choice(family_history), random.choice(lifestyle), random.choice(immunization),
+                random.choice(chief_complaint), random.choice(hpi), random.choice(physical_exam), random.choice(diagnoses), random.choice(prescriptions), random.choice(treatment_plans),
+                random.choice(admission_records)
             ]
         else:
             row = [
-                f"P{i:08d}", name, genders[i%2], str(age), id_card, contact,
-                allergies[i%6], past_history[i%6], family_history[i%5], lifestyle[i%6], immunization[i%5],
-                chief_complaint[i%6], hpi[i%6], physical_exam[i%6], diagnoses[i%6], prescriptions[i%6], treatment_plans[i%6],
-                admission_records[i%6], daily_course[i%6], discharge_summaries[i%6],
-                lab_results[i%6], imaging_reports[i%6], critical_values[i%10]
+                f"P{i:08d}", name, random.choice(genders), str(age), id_card, contact,
+                random.choice(allergies), random.choice(past_history), random.choice(family_history), random.choice(lifestyle), random.choice(immunization),
+                random.choice(chief_complaint), random.choice(hpi), random.choice(physical_exam), random.choice(diagnoses), random.choice(prescriptions), random.choice(treatment_plans),
+                random.choice(admission_records), random.choice(daily_course), random.choice(discharge_summaries),
+                random.choice(lab_results), random.choice(imaging_reports), random.choice(critical_values)
             ]
         
         # Fast append to buffer

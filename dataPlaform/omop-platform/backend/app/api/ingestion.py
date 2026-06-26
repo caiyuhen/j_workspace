@@ -5,12 +5,15 @@ import os
 import shutil
 import tempfile
 import traceback
+import uuid
+import json
 from app.services.csv_parser import CSVParser
 from app.services.nlp_mapper import NLPMapper
 from app.services.raw_persistence import RawPersistenceService
 from app.services.staging_transformer import StagingTransformer
+from app.services.profiler import DataProfiler
 from app.db.database import get_db, SessionLocal
-from app.models.raw import SourceBatch
+from app.models.raw import SourceBatch, ErrorRecord
 from app.schemas.ingestion import BatchResponse
 from typing import List
 
@@ -56,16 +59,35 @@ def process_csv_task(tmp_path: str, filename: str, batch_id: str):
             if total_chunks % 10 == 0:
                 persistence_svc.update_batch_progress(batch_id, total_valid, total_errors)
             
-        persistence_svc.complete_batch(batch_id, total_rows=total_valid, error_rows=total_errors)
+        # Generate Profiling Data
+        print(f"[{batch_id}] Generating Data Profiling...")
+        profiling_data = DataProfiler.generate_profiling(tmp_path)
         
+        # We need to save profiling_data to the batch
+        batch = db.query(SourceBatch).filter(SourceBatch.id == batch_id).first()
+        if batch:
+            batch.profiling_data = profiling_data
+            db.commit()
+            
         # Auto NLP Semantic Mapping Configuration
         auto_mapping = NLPMapper.generate_mapping(parser.headers)
         print(f"[{batch_id}] NLP Auto-Generated Mapping: {auto_mapping}")
         
         if total_valid > 0:
+            import time
+            start_time = time.time()
+            print(f"[{batch_id}] 开始执行深度 NLP 实体提取与 Staging 转换...")
+            
             transformer = StagingTransformer(db)
             transformer.transform_batch_to_person(batch_id, auto_mapping)
             
+            end_time = time.time()
+            duration = end_time - start_time
+            print(f"[{batch_id}] ✅ NLP 提取与转换完成! 耗时: {duration:.2f} 秒 (平均 {duration/total_valid:.2f} 秒/条)")
+            
+        # Complete the batch only AFTER all NLP and staging extraction is done
+        persistence_svc.complete_batch(batch_id, total_rows=total_valid, error_rows=total_errors)
+        
     except Exception as e:
         print("====== BACKGROUND TASK CRASHED ======")
         traceback.print_exc()
@@ -95,6 +117,7 @@ def clear_data(db: Session = Depends(get_db)):
         with engine.connect() as conn:
             conn.execute(text("PRAGMA foreign_keys = OFF;"))
             for table in reversed(meta.sorted_tables):
+                # Don't drop tables, just delete rows
                 conn.execute(table.delete())
             conn.execute(text("PRAGMA foreign_keys = ON;"))
             conn.commit()
@@ -111,18 +134,88 @@ def clear_data(db: Session = Depends(get_db)):
             except:
                 pass
                 
-        return {"message": "All local data cleared successfully"}
+        # Clear MinIO dicom-images bucket
+        try:
+            from app.api.dicom import get_minio_client, MINIO_BUCKET
+            from minio.deleteobjects import DeleteObject
+            minio_client = get_minio_client()
+            if minio_client.bucket_exists(MINIO_BUCKET):
+                objects_to_delete = minio_client.list_objects(MINIO_BUCKET, recursive=True)
+                delete_object_list = [DeleteObject(obj.object_name) for obj in objects_to_delete]
+                if delete_object_list:
+                    errors = minio_client.remove_objects(MINIO_BUCKET, delete_object_list)
+                    for error in errors:
+                        print("Error deleting object from MinIO:", error)
+        except Exception as e:
+            print(f"Failed to clear MinIO data: {e}")
+                
+        return {"message": "All local data and MinIO files cleared successfully"}
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Failed to clear data: {str(e)}")
 
-@router.get("/batches", response_model=List[BatchResponse])
+@router.get("/batches")
 def list_batches(db: Session = Depends(get_db)):
     from app.models.raw import Base as RawBase
     RawBase.metadata.create_all(bind=db.get_bind())
     
     batches = db.query(SourceBatch).order_by(SourceBatch.created_at.desc()).all()
-    return batches
+    # Pydantic is having trouble with the JSON column if it contains raw string instead of dict
+    # So we manually serialize it
+    result = []
+    
+    import sqlite3
+    db_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'omop_platform.db')
+    
+    for b in batches:
+        prof_data = None
+        try:
+            conn = sqlite3.connect(db_path)
+            cursor = conn.cursor()
+            # SQLite string UUID vs direct ID
+            cursor.execute('SELECT profiling_data FROM source_batch WHERE id = ?', (b.id,))
+            row = cursor.fetchone()
+            if row and row[0]:
+                if isinstance(row[0], str):
+                    prof_data = json.loads(row[0])
+                else:
+                    prof_data = row[0]
+            conn.close()
+        except Exception as e:
+            print(f"Failed to load raw JSON: {e}")
+            
+        item = {
+            "id": str(b.id),
+            "filename": str(b.filename),
+            "total_rows": int(b.total_rows or 0),
+            "error_rows": int(b.error_rows or 0),
+            "status": str(b.status),
+            "profiling_data": prof_data,
+            "created_at": b.created_at.isoformat() if b.created_at else None
+        }
+        result.append(item)
+    
+    from fastapi.responses import JSONResponse
+    return JSONResponse(content=result)
+
+@router.get("/batches/{batch_id}/errors")
+def list_batch_errors(batch_id: str, skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """Fetch the specific error rows (with their raw data and reasons) for a batch"""
+    from app.models.raw import Base as RawBase
+    RawBase.metadata.create_all(bind=db.get_bind())
+    
+    errors = db.query(ErrorRecord).filter(ErrorRecord.batch_id == batch_id).order_by(ErrorRecord.line_number.asc()).offset(skip).limit(limit).all()
+    total_count = db.query(ErrorRecord).filter(ErrorRecord.batch_id == batch_id).count()
+    
+    result = []
+    for err in errors:
+        result.append({
+            "line_number": err.line_number,
+            "error_message": err.error_message,
+            "raw_data": err.raw_data
+        })
+        
+    return {"total": total_count, "items": result}
 
 @router.post("/upload")
 async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File(...)):

@@ -3,11 +3,12 @@ import DataSourceList from './components/DataSourceList'
 import type { DataSource } from './components/DataSourceList'
 import UploadForm from './components/UploadForm'
 import BatchHistory from './components/BatchHistory'
-import type { Batch } from './components/BatchHistory'
 import { PipelineMonitor } from './components/PipelineMonitor'
 import { QualityReport } from './components/QualityReport'
+import { ProfilingReport } from './components/ProfilingReport'
 import { Toaster } from "@/components/ui/sonner"
-import { LayoutDashboard, Database, Activity, Settings, Menu, ServerCog } from "lucide-react"
+import { LayoutDashboard, Database, Activity, Settings, Menu, ServerCog, BarChart2 } from "lucide-react"
+import type { Batch } from '@/types'
 
 function App() {
   const [activeTab, setActiveTab] = useState('ingestion')
@@ -18,23 +19,8 @@ function App() {
   // Change initial loading state to false to avoid initial flashing if there's no data
   const [loadingBatches, setLoadingBatches] = useState(false)
   const [batchError, setBatchError] = useState<string | null>(null)
-
-  const fetchSources = useCallback(() => {
-    fetch('http://127.0.0.1:8080/api/v1/sources')
-      .then(res => res.json())
-      .then(data => {
-        setSources(data)
-        setLoadingSources(false)
-      })
-      .catch(err => {
-        console.error('获取数据源失败:', err)
-        setLoadingSources(false)
-      })
-  }, [])
-
-  useEffect(() => {
-    fetchSources()
-  }, [fetchSources])
+  const [autoOpenBatchId, setAutoOpenBatchId] = useState<string | null>(null)
+  const [selectedProfilingBatch, setSelectedProfilingBatch] = useState<Batch | null>(null)
 
   const fetchBatches = useCallback((showLoading = false) => {
     if (showLoading) setLoadingBatches(true);
@@ -54,6 +40,35 @@ function App() {
       })
   }, [])
 
+  const fetchSources = useCallback(() => {
+    fetch('http://127.0.0.1:8080/api/v1/sources')
+      .then(res => res.json())
+      .then(data => {
+        setSources(data)
+        setLoadingSources(false)
+      })
+      .catch(err => {
+        console.error('获取数据源失败:', err)
+        setLoadingSources(false)
+      })
+  }, [])
+
+  useEffect(() => {
+    fetchSources()
+  }, [fetchSources])
+
+  const handleUploadSuccess = useCallback((batchId?: string) => {
+    if (batchId) {
+      setAutoOpenBatchId(batchId);
+    }
+    fetchBatches();
+  }, [fetchBatches]);
+
+  const handleOpenProfiling = useCallback((batch: Batch) => {
+    setSelectedProfilingBatch(batch);
+    setActiveTab('profiling');
+  }, []);
+
   useEffect(() => {
     fetchBatches(true)
   }, [fetchBatches])
@@ -65,7 +80,7 @@ function App() {
         <div className="p-6 border-b border-slate-800">
           <h2 className="text-xl font-bold flex items-center gap-2">
             <Database className="w-6 h-6 text-blue-400" />
-            OMOP 数据平台
+            医疗数据清洗与治理平台
           </h2>
         </div>
         <nav className="flex-1 p-4 space-y-2">
@@ -84,19 +99,28 @@ function App() {
             数据清洗与归一化
           </button>
           <button 
+            onClick={() => setActiveTab('profiling')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'profiling' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-slate-800 text-slate-300'}`}
+          >
+            <BarChart2 className="w-5 h-5" />
+            数据分布探查
+          </button>
+          <button 
             onClick={() => setActiveTab('quality')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'quality' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-slate-800 text-slate-300'}`}
           >
             <Activity className="w-5 h-5" />
             质量评估报告
           </button>
-          <button 
-            onClick={() => setActiveTab('settings')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-slate-800 text-slate-300'}`}
-          >
-            <Settings className="w-5 h-5" />
-            系统配置管理
-          </button>
+          <div className="mt-auto hidden">
+            <button 
+              onClick={() => setActiveTab('settings')}
+              className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-slate-800 text-slate-300'}`}
+            >
+              <Settings className="w-5 h-5" />
+              系统配置管理
+            </button>
+          </div>
         </nav>
       </aside>
 
@@ -111,6 +135,7 @@ function App() {
             <h1 className="text-xl font-semibold text-slate-800">
               {activeTab === 'ingestion' && '数据接入工作台'}
               {activeTab === 'pipeline' && '数据清洗与归一化管线'}
+              {activeTab === 'profiling' && '数据质量与分布探查'}
               {activeTab === 'quality' && '质量评估报告'}
               {activeTab === 'settings' && '系统配置管理'}
             </h1>
@@ -135,14 +160,29 @@ function App() {
                 
                 {/* Right Column: Upload & History */}
                 <div className="lg:col-span-2 space-y-6">
-                  <UploadForm onUploadSuccess={fetchBatches} />
-                  <BatchHistory batches={batches} loading={loadingBatches} error={batchError} onRefresh={fetchBatches} />
+                  <UploadForm onUploadSuccess={handleUploadSuccess} />
+                  <BatchHistory 
+                    batches={batches} 
+                    loading={loadingBatches} 
+                    error={batchError} 
+                    onRefresh={fetchBatches} 
+                    autoOpenBatchId={autoOpenBatchId}
+                    onAutoOpenDone={() => setAutoOpenBatchId(null)}
+                    onOpenProfiling={handleOpenProfiling}
+                  />
                 </div>
               </div>
             )}
             
             {activeTab === 'pipeline' && (
               <PipelineMonitor />
+            )}
+
+            {activeTab === 'profiling' && (
+              <ProfilingReport 
+                batch={selectedProfilingBatch || batches[0]} 
+                onBack={() => setActiveTab('ingestion')} 
+              />
             )}
 
             {activeTab === 'quality' && (
