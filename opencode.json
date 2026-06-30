@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "username": "medical-user",
+  "model": "anthropic/claude-sonnet-4-6",
+  "default_agent": "medical-assistant",
+  "logLevel": "INFO",
+  "skills": {
+    "paths": [".opencode/skills"]
+  },
+  "agent": {
+    "medical-assistant": {
+      "model": "anthropic/claude-sonnet-4-6",
+      "mode": "primary",
+      "description": "A medical AI assistant with clinical decision support, drug interaction checking, and electronic health record capabilities"
+    }
+  },
+  "permission": {
+    "edit": "allow",
+    "bash": "allow"
+  }
+}
