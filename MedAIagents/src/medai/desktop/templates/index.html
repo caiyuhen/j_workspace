@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedAIagents - 医学 AI 助手</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            background: #f0f2f5;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, #1e3a5f 0%, #2d5a87 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #00c6fb 0%, #005bea 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+ justify-content: center;
+            font-size: 20px;
+        }
+
+        .logo-text h1 {
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .logo-text p {
+            font-size: 11px;
+            opacity: 0.7;
+        }
+
+        .nav-menu {
+            flex: 1;
+            padding: 20px 12px;
+            overflow-y: auto;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            margin-bottom: 4px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+
+        .nav-item.active {
+            background: rgba(0,198,251,0.2);
+            border-left: 3px solid #00c6fb;
+        }
+
+        .nav-icon {
+            font-size: 18px;
+            width: 24px;
+            text-align: center;
+        }
+
+        .sidebar-footer {
+            padding: 16px 20px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            font-size: 12px;
+            opacity: 0.6;
+        }
+
+        /* 主内容区 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* 顶部栏 */
+        .top-bar {
+            background: white;
+            padding: 16px 24px;
+            border-bottom: 1px solid #e8e8e8;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a3a5f;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: #52c41a;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* 内容区域 */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        /* 卡片样式 */
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a3a5f;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 聊天界面 */
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding-bottom: 20px;
+        }
+
+        .message {
+            display: flex;
+            margin-bottom: 16px;
+            animation: fadeIn 0.3s;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+
+        .message.assistant .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin-right: 12px;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #00c6fb 0%, #005bea 100%);
+            margin-left: 12px;
+            order: 2;
+        }
+
+        .message-bubble {
+            max-width: 70%;
+            background: white;
+            border-radius: 12px;
+            padding: 14px 18px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            line-height: 1.6;
+        }
+
+        .message.user .message-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .chat-input-area {
+            background: white;
+            padding: 16px 24px;
+            border-top: 1px solid #e8e8e8;
+        }
+
+        .input-wrapper {
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+        }
+
+        .chat-input {
+            flex: 1;
+            border: 2px solid #e8e8e8;
+            border-radius: 12px;
+            padding: 12px 16px;
+            font-size: 14px;
+            resize: none;
+            min-height: 48px;
+            max-height: 120px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .send-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .send-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 表单样式 */
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e8e8e8;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 2px solid #e8e8e8;
+            border-radius: 8px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 80px;
+            font-family: inherit;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        /* 按钮样式 */
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(82, 196, 26, 0.4);
+        }
+
+        /* 结果展示 */
+        .result-box {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-title {
+            font-weight: 600;
+            color: #1a3a5f;
+            margin-bottom: 8px;
+        }
+
+        .result-content {
+            color: #555;
+            line-height: 1.8;
+            white-space: pre-wrap;
+        }
+
+        /* 安全警告 */
+        .safety-warning {
+            background: #fff2e8;
+            border: 1px solid #ffbb96;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 16px;
+        }
+
+        .safety-warning.danger {
+            background: #fff1f0;
+            border-color: #ffa39e;
+        }
+
+        .safety-warning.success {
+            background: #f6ffed;
+            border-color: #b7eb8f;
+        }
+
+        .warning-title {
+            font-weight: 600;
+            color: #d46b08;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .safety-warning.danger .warning-title {
+            color: #cf1322;
+        }
+
+        .safety-warning.success .warning-title {
+            color: #389e0d;
+        }
+
+        /* 标签样式 */
+        .tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+        }
+
+        .tag-blue {
+            background: #e6f7ff;
+            color: #1890ff;
+        }
+
+        .tag-green {
+            background: #f6ffed;
+            color: #52c41a;
+        }
+
+        .tag-orange {
+            background: #fff7e6;
+            color: #fa8c16;
+        }
+
+        .tag-red {
+            background: #fff1f0;
+            color: #f5222d;
+        }
+
+        /* 搜索结果 */
+        .search-result {
+            padding: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .search-result:last-child {
+            border-bottom: none;
+        }
+
+        .search-result-title {
+            font-weight: 600;
+            color: #1a3a5f;
+            margin-bottom: 4px;
+        }
+
+        .search-result-source {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 8px;
+        }
+
+        .search-result-content {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        /* 隐藏页面 */
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        /* 加载动画 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+            gap: 12px;
+            color: #667eea;
+        }
+
+        /* 快速操作按钮 */
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .quick-action-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .quick-action-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .quick-action-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .quick-action-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a3a5f;
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 侧边栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">🏥</div>
+                    <div class="logo-text">
+                        <h1>MedAI</h1>
+                        <p>医学智能助手 v1.0</p>
+                    </div>
+                </div>
+            </div>
+            
+            <nav class="nav-menu">
+                <div class="nav-item active" data-page="chat" onclick="switchPage('chat')">
+                    <span class="nav-icon">💬</span>
+                    <span>智能问答</span>
+                </div>
+                <div class="nav-item" data-page="diagnosis" onclick="switchPage('diagnosis')">
+                    <span class="nav-icon">🔬</span>
+                    <span>诊断辅助</span>
+                </div>
+                <div class="nav-item" data-page="medication" onclick="switchPage('medication')">
+                    <span class="nav-icon">💊</span>
+                    <span>用药安全</span>
+                </div>
+                <div class="nav-item" data-page="notes" onclick="switchPage('notes')">
+                    <span class="nav-icon">📝</span>
+                    <span>病历文书</span>
+                </div>
+                <div class="nav-item" data-page="icd10" onclick="switchPage('icd10')">
+                    <span class="nav-icon">🏷️</span>
+                    <span>ICD-10 编码</span>
+                </div>
+                <div class="nav-item" data-page="knowledge" onclick="switchPage('knowledge')">
+                    <span class="nav-icon">📚</span>
+                    <span>知识库</span>
+                </div>
+                <div class="nav-item" data-page="audit" onclick="switchPage('audit')">
+                    <span class="nav-icon">📋</span>
+                    <span>审计日志</span>
+                </div>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <p>© 2024 MedAIagents</p>
+                <p style="margin-top: 4px;">仅供参考，非医疗诊断</p>
+            </div>
+        </div>
+        
+        <!-- 主内容区 -->
+        <div class="main-content">
+            <div class="top-bar">
+                <div class="page-title" id="pageTitle">智能问答</div>
+                <div class="status-indicator">
+                    <div class="status-dot"></div>
+                    <span>系统就绪</span>
+                </div>
+            </div>
+            
+            <div class="content-area">
+                <!-- 聊天页面 -->
+                <div id="page-chat" class="page active">
+                    <div class="chat-container">
+                        <div class="chat-messages" id="chatMessages">
+                            <div class="message assistant">
+                                <div class="message-avatar">🏥</div>
+                                <div class="message-bubble">
+                                    您好！我是 MedAI 医学智能助手。我可以帮助您：
+                                    <br><br>
+                                    • 解答医学相关问题
+                                    <br>
+                                    • 辅助诊断建议
+                                    <br>
+                                    • 用药安全检查
+                                    <br>
+                                    • 生成病历文书
+                                    <br><br>
+                                    <span style="color: #667eea; font-size: 13px;">⚠️ 提示：所有建议仅供参考，不能替代专业医生诊断</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="chat-input-area">
+                            <div class="input-wrapper">
+                                <textarea class="chat-input" id="chatInput" placeholder="请输入您的问题..." rows="1"></textarea>
+                                <button class="send-btn" onclick="sendMessage()">发送</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 诊断辅助页面 -->
+                <div id="page-diagnosis" class="page">
+                    <div class="quick-actions">
+                        <div class="quick-action-card" onclick="quickDiagnosis('发热')">
+                            <div class="quick-action-icon">🤒</div>
+                            <div class="quick-action-title">发热咨询</div>
+                        </div>
+                        <div class="quick-action-card" onclick="quickDiagnosis('头痛')">
+                            <div class="quick-action-icon">😣</div>
+                            <div class="quick-action-title">头痛咨询</div>
+                        </div>
+                        <div class="quick-action-card" onclick="quickDiagnosis('腹痛')">
+                            <div class="quick-action-icon">🤕</div>
+                            <div class="quick-action-title">腹痛咨询</div>
+                        </div>
+                        <div class="quick-action-card" onclick="quickDiagnosis('咳嗽')">
+                            <div class="quick-action-icon">😷</div>
+                            <div class="quick-action-title">咳嗽咨询</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-title">
+                            <span>🔍</span>
+                            <span>症状输入</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">症状列表（用逗号分隔）</label>
+                            <input type="text" class="form-input" id="symptomsInput" placeholder="例如：头痛, 发热, 咳嗽">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">检查结果（可选）</label>
+                            <textarea class="form-textarea" id="labResultsInput" placeholder="例如：体温: 38.5°C, 血压: 140/90 mmHg"></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="runDiagnosis()">开始诊断分析</button>
+                        
+                        <div id="diagnosisResult"></div>
+                    </div>
+                </div>
+                
+                <!-- 用药安全页面 -->
+                <div id="page-medication" class="page">
+                    <div class="card">
+                        <div class="card-title">
+                            <span>💊</span>
+                            <span>用药安全检查</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">药物列表（用逗号分隔）</label>
+                            <input type="text" class="form-input" id="medicationsInput" placeholder="例如：阿司匹林, 华法林">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">过敏药物（可选，用逗号分隔）</label>
+                            <input type="text" class="form-input" id="allergiesInput" placeholder="例如：青霉素">
+                        </div>
+                        <button class="btn btn-primary" onclick="checkMedication()">开始安全检查</button>
+                        
+                        <div id="medicationResult"></div>
+                    </div>
+                </div>
+                
+                <!-- 病历文书页面 -->
+                <div id="page-notes" class="page">
+                    <div class="card">
+                        <div class="card-title">
+                            <span>📝</span>
+                            <span>生成医学文书</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">文书类型</label>
+                            <select class="form-input" id="noteType">
+                                <option value="admission">入院记录</option>
+                                <option value="progress">病程记录</option>
+                                <option value="discharge">出院记录</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">患者姓名</label>
+                                <input type="text" class="form-input" id="patientName" placeholder="患者姓名">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">年龄</label>
+                                <input type="number" class="form-input" id="patientAge" placeholder="年龄">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">性别</label>
+                                <select class="form-input" id="patientGender">
+                                    <option value="男">男</option>
+                                    <option value="女">女</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">诊断</label>
+                                <input type="text" class="form-input" id="diagnosisInput" placeholder="例如：2型糖尿病">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">主诉/主要内容</label>
+                            <textarea class="form-textarea" id="chiefComplaint" placeholder="请输入主诉或主要内容..."></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="generateNote()">生成文书</button>
+                        
+                        <div id="noteResult"></div>
+                    </div>
+                </div>
+                
+                <!-- ICD-10 编码页面 -->
+                <div id="page-icd10" class="page">
+                    <div class="card">
+                        <div class="card-title">
+                            <span>🏷️</span>
+                            <span>ICD-10 编码查询</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">诊断名称</label>
+                            <input type="text" class="form-input" id="icdDiagnosisInput" placeholder="例如：2型糖尿病">
+                        </div>
+                        <button class="btn btn-primary" onclick="searchICD10()">查询编码</button>
+                        
+                        <div id="icdResult"></div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-title">
+                            <span>📋</span>
+                            <span>常用编码参考</span>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div class="tag tag-blue">E11.9 - 2型糖尿病</div>
+                            <div class="tag tag-blue">I10 - 原发性高血压</div>
+                            <div class="tag tag-blue">J18.9 - 社区获得性肺炎</div>
+                            <div class="tag tag-blue">I25.9 - 冠心病</div>
+                            <div class="tag tag-blue">I63.9 - 脑梗死</div>
+                            <div class="tag tag-blue">K25.9 - 胃溃疡</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 知识库页面 -->
+                <div id="page-knowledge" class="page">
+                    <div class="card">
+                        <div class="card-title">
+                            <span>📚</span>
+                            <span>医学知识库搜索</span>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">搜索关键词</label>
+                            <input type="text" class="form-input" id="knowledgeQuery" placeholder="例如：高血压治疗">
+                        </div>
+                        <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" id="usePubMed">
+                            <label for="usePubMed" style="font-size: 13px; color: #666;">同时搜索 PubMed 文献</label>
+                        </div>
+                        <button class="btn btn-primary" onclick="searchKnowledge()">搜索</button>
+                        
+                        <div id="knowledgeResult"></div>
+                    </div>
+                </div>
+                
+                <!-- 审计日志页面 -->
+                <div id="page-audit" class="page">
+                    <div class="card">
+                        <div class="card-title">
+                            <span>📋</span>
+                            <span>操作审计日志</span>
+                        </div>
+                        <button class="btn btn-success" onclick="loadAuditLogs()">刷新日志</button>
+                        <div id="auditLogsResult" style="margin-top: 16px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 当前页面
+        let currentPage = 'chat';
+        
+        // 页面切换
+        function switchPage(page) {
+            currentPage = page;
+            
+            // 更新导航
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+                if (item.dataset.page === page) {
+                    item.classList.add('active');
+                }
+            });
+            
+            // 更新页面标题
+            const titles = {
+                'chat': '智能问答',
+                'diagnosis': '诊断辅助',
+                'medication': '用药安全',
+                'notes': '病历文书',
+                'icd10': 'ICD-10 编码',
+                'knowledge': '知识库',
+                'audit': '审计日志'
+            };
+            document.getElementById('pageTitle').textContent = titles[page] || page;
+            
+            // 显示对应页面
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(`page-${page}`).classList.add('active');
+        }
+        
+        // 发送消息
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            // 添加用户消息
+            addMessage('user', message);
+            input.value = '';
+            
+            // 显示加载状态
+            const loadingId = addMessage('assistant', 'thinking...', true);
+            
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        message: message,
+                        use_knowledge: true
+                    })
+                });
+                
+                const data = await response.json();
+                
+                // 移除加载消息
+                document.getElementById(loadingId).remove();
+                
+                // 添加回复
+                addMessage('assistant', data.message);
+                
+            } catch (error) {
+                document.getElementById(loadingId).remove();
+                addMessage('assistant', '抱歉，发生了错误：' + error.message);
+            }
+        }
+        
+        function addMessage(role, content, isLoading = false) {
+            const container = document.getElementById('chatMessages');
+            const messageId = 'msg-' + Date.now();
+            
+            const messageDiv = document.createElement('div');
+            messageDiv.id = messageId;
+            messageDiv.className = `message ${role}`;
+            
+            if (isLoading) {
+                messageDiv.innerHTML = `
+                    <div class="message-avatar">🏥</div>
+                    <div class="message-bubble">
+                        <div class="loading-container">
+                            <div class="loading"></div>
+                            <span>思考中...</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const avatar = role === 'assistant' ? '🏥' : '👤';
+                messageDiv.innerHTML = `
+                    <div class="message-avatar">${avatar}</div>
+                    <div class="message-bubble">${content}</div>
+                `;
+            }
+            
+            container.appendChild(messageDiv);
+            container.scrollTop = container.scrollHeight;
+            
+            return messageId;
+        }
+        
+        // 快捷诊断
+        function quickDiagnosis(symptom) {
+            document.getElementById('symptomsInput').value = symptom;
+            runDiagnosis();
+        }
+        
+        // 运行诊断
+        async function runDiagnosis() {
+            const symptomsInput = document.getElementById('symptomsInput').value;
+            const labResultsInput = document.getElementById('labResultsInput').value;
+            
+            if (!symptomsInput.trim()) {
+                alert('请输入至少一个症状');
+                return;
+            }
+            
+            const symptoms = symptomsInput.split(/[,，]/).map(s => s.trim()).filter(s => s);
+            
+            const labResults = {};
+            if (labResultsInput.trim()) {
+                labResultsInput.split(/[,，]/).forEach(item => {
+                    const [key, value] = item.split(/[:：]/);
+                    if (key && value) {
+                        labResults[key.trim()] = value.trim();
+                    }
+                });
+            }
+            
+            const resultDiv = document.getElementById('diagnosisResult');
+            resultDiv.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading"></div>
+                    <span>正在分析病情...</span>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/diagnosis', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ symptoms, lab_results: labResults })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const result = data.data;
+                    let html = '<div class="result-box">';
+                    html += '<div class="result-title">🔍 诊断分析结果</div>';
+                    
+                    if (result.primary_diagnosis) {
+                        html += `<div class="result-content"><strong>主要诊断：</strong>${result.primary_diagnosis.disease || '暂无'}<br>`;
+                        html += `<strong>ICD-10：</strong>${result.primary_diagnosis.icd10 || '暂无'}</div>`;
+                    }
+                    
+                    if (result.differential_diagnoses && result.differential_diagnoses.length > 0) {
+                        html += '<div class="result-content"><br><strong>鉴别诊断：</strong><br>';
+                        result.differential_diagnoses.slice(0, 3).forEach((diag, i) => {
+                            html += `${i + 1}. ${diag.disease || diag}`;
+                            if (diag.icd10) html += ` (${diag.icd10})`;
+                            html += '<br>';
+                        });
+                        html += '</div>';
+                    }
+                    
+                    if (result.recommended_tests) {
+                        html += '<div class="result-content"><br><strong>建议检查：</strong><br>';
+                        result.recommended_tests.forEach(test => {
+                            html += `• ${test}<br>`;
+                        });
+                        html += '</div>';
+                    }
+                    
+                    html += `<br><div style="color: #667eea; font-size: 13px;">⚠️ 以上建议仅供参考，请以临床实际诊断为准</div>`;
+                    html += '</div>';
+                    resultDiv.innerHTML = html;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>发生错误：${error.message}</div>`;
+            }
+        }
+        
+        // 用药安全检查
+        async function checkMedication() {
+            const medicationsInput = document.getElementById('medicationsInput').value;
+            const allergiesInput = document.getElementById('allergiesInput').value;
+            
+            if (!medicationsInput.trim()) {
+                alert('请输入至少一种药物');
+                return;
+            }
+            
+            const medications = medicationsInput.split(/[,，]/).map(s => s.trim()).filter(s => s);
+            const allergies = allergiesInput ? allergiesInput.split(/[,，]/).map(s => s.trim()).filter(s => s) : [];
+            
+            const resultDiv = document.getElementById('medicationResult');
+            resultDiv.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading"></div>
+                    <span>正在检查用药安全...</span>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/medication-safety', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ medications, allergies })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const result = data.data;
+                    let html = '';
+                    
+                    if (result.is_safe) {
+                        html += `<div class="safety-warning success"><div class="warning-title">✅ 安全</div>未发现明显的药物相互作用</div>`;
+                    } else {
+                        html += `<div class="safety-warning danger"><div class="warning-title">⚠️ 存在风险</div>检测到潜在的药物相互作用风险</div>`;
+                    }
+                    
+                    if (result.warnings && result.warnings.length > 0) {
+                        html += '<div class="result-box">';
+                        html += '<div class="result-title">⚠️ 警告信息</div>';
+                        result.warnings.forEach(warning => {
+                            html += `<div class="result-content" style="color: #d46b08;">• ${warning.description || warning}</div>`;
+                        });
+                        html += '</div>';
+                    }
+                    
+                    if (result.recommendations && result.recommendations.length > 0) {
+                        html += '<div class="result-box">';
+                        html += '<div class="result-title">💡 建议</div>';
+                        result.recommendations.forEach(rec => {
+                            html += `<div class="result-content">• ${rec}</div>`;
+                        });
+                        html += '</div>';
+                    }
+                    
+                    resultDiv.innerHTML = html;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>发生错误：${error.message}</div>`;
+            }
+        }
+        
+        // 生成病历
+        async function generateNote() {
+            const noteType = document.getElementById('noteType').value;
+            const patientName = document.getElementById('patientName').value || '患者';
+            const patientAge = document.getElementById('patientAge').value || 0;
+            const patientGender = document.getElementById('patientGender').value;
+            const diagnosis = document.getElementById('diagnosisInput').value || '';
+            const chiefComplaint = document.getElementById('chiefComplaint').value || '';
+            
+            const resultDiv = document.getElementById('noteResult');
+            resultDiv.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading"></div>
+                    <span>正在生成文书...</span>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/generate-note', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        note_type: noteType,
+                        patient_info: { name: patientName, age: parseInt(patientAge), gender: patientGender },
+                        clinical_data: { 
+                            diagnosis: diagnosis, 
+                            chief_complaint: chiefComplaint,
+                            subjective: chiefComplaint
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="result-box">
+                            <div class="result-title">📄 生成结果</div>
+                            <div class="result-content" style="background: white; padding: 16px; border-radius: 8px; margin-top: 8px;">
+                                ${data.content.replace(/\n/g, '<br>')}
+                            </div>
+                            <button class="btn btn-success" style="margin-top: 16px;" onclick="copyToClipboard(\`${data.content}\`)">复制内容</button>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>发生错误：${error.message}</div>`;
+            }
+        }
+        
+        // ICD-10 查询
+        async function searchICD10() {
+            const diagnosis = document.getElementById('icdDiagnosisInput').value.trim();
+            
+            if (!diagnosis) {
+                alert('请输入诊断名称');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('icdResult');
+            resultDiv.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading"></div>
+                    <span>正在查询编码...</span>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/icd10', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ diagnosis })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.found) {
+                        resultDiv.innerHTML = `
+                            <div class="result-box">
+                                <div class="result-title">🏷️ ICD-10 编码</div>
+                                <div class="result-content">
+                                    <strong>诊断：</strong>${data.diagnosis}<br>
+                                    <strong>编码：</strong><span class="tag tag-blue">${data.icd10_code}</span>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        resultDiv.innerHTML = `
+                            <div class="safety-warning">
+                                <div class="warning-title">🔍 未找到编码</div>
+                                未找到 "${data.diagnosis}" 的 ICD-10 编码，请尝试其他关键词
+                            </div>
+                        `;
+                    }
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>发生错误：${error.message}</div>`;
+            }
+        }
+        
+        // 知识库搜索
+        async function searchKnowledge() {
+            const query = document.getElementById('knowledgeQuery').value.trim();
+            const usePubMed = document.getElementById('usePubMed').checked;
+            
+            if (!query) {
+                alert('请输入搜索关键词');
+                return;
+            }
+            
+            const resultDiv = document.getElementById('knowledgeResult');
+            resultDiv.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading"></div>
+                    <span>正在搜索知识库...</span>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, limit: 5, use_pubmed: usePubMed })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.results && data.results.length > 0) {
+                    let html = '<div class="result-box">';
+                    html += `<div class="result-title">📚 找到 ${data.count} 条结果</div>`;
+                    html += '<div style="margin-top: 12px;">';
+                    
+                    data.results.forEach((item, i) => {
+                        html += '<div class="search-result">';
+                        html += `<div class="search-result-title">${i + 1}. ${item.title || '无标题'}</div>`;
+                        html += `<div class="search-result-source">来源：${item.source || '未知'}</div>`;
+                        if (item.content) {
+                            html += `<div class="search-result-content">${item.content.substring(0, 200)}...</div>`;
+                        }
+                        html += '</div>';
+                    });
+                    
+                    html += '</div></div>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="safety-warning">
+                            <div class="warning-title">🔍 未找到结果</div>
+                            未找到与 "${query}" 相关的知识条目
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>发生错误：${error.message}</div>`;
+            }
+        }
+        
+        // 加载审计日志
+        async function loadAuditLogs() {
+            const resultDiv = document.getElementById('auditLogsResult');
+            resultDiv.innerHTML = `
+                <div class="loading-container">
+                    <div class="loading"></div>
+                    <span>正在加载日志...</span>
+                </div>
+            `;
+            
+            try {
+                const response = await fetch('/api/audit-logs?limit=50');
+                const data = await response.json();
+                
+                if (data.success && data.logs && data.logs.length > 0) {
+                    let html = '<div class="result-box">';
+                    html += `<div class="result-title">📋 操作日志 (${data.logs.length} 条)</div>`;
+                    html += '<div style="margin-top: 12px; max-height: 500px; overflow-y: auto;">';
+                    
+                    data.logs.forEach(log => {
+                        const time = log.timestamp ? log.timestamp.substring(0, 19).replace('T', ' ') : '';
+                        html += `<div style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;">`;
+                        html += `<span style="color: #999;">[${time}]</span> `;
+                        html += `<span style="color: #667eea;">${log.action || '未知操作'}</span>`;
+                        html += '</div>';
+                    });
+                    
+                    html += '</div></div>';
+                    resultDiv.innerHTML = html;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="safety-warning">
+                            <div class="warning-title">📋 暂无日志</div>
+                            暂无操作记录
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>发生错误：${error.message}</div>`;
+            }
+        }
+        
+        // 复制到剪贴板
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('已复制到剪贴板');
+            });
+        }
+        
+        // 回车发送消息
+        document.getElementById('chatInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // 页面加载完成后自动调整
+        window.addEventListener('load', function() {
+            console.log('MedAIagents 桌面应用已加载');
+        });
+    </script>
+</body>
+</html>

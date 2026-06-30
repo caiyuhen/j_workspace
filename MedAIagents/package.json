@@ -1,0 +1,49 @@
+{
+  "name": "med-ai-agents",
+  "version": "1.0.0",
+  "description": "医学专用版Hermes AI代理框架 - 面向医疗临床、科研、电子病历的智能助手",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/cli/index.js",
+    "dev": "nodemon src/cli/index.js",
+    "desktop": "electron src/desktop/main.js",
+    "web": "node src/web/server.js",
+    "test": "jest",
+    "lint": "eslint src/**/*.js"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "medical",
+    "clinical",
+    "emr",
+    "cdss",
+    "research"
+  ],
+  "author": "MedAI Team",
+  "license": "MIT",
+  "dependencies": {
+    "openai": "^4.0.0",
+    "@anthropic-ai/sdk": "^0.10.0",
+    "axios": "^1.6.0",
+    "commander": "^11.0.0",
+    "chalk": "^5.3.0",
+    "inquirer": "^9.2.0",
+    "sqlite3": "^5.1.0",
+    "better-sqlite3": "^9.0.0",
+    "yaml": "^2.3.0",
+    "dotenv": "^16.3.0",
+    "node-cron": "^3.0.0",
+    "crypto-js": "^4.2.0",
+    "uuid": "^9.0.0",
+    "winston": "^3.11.0",
+    "express": "^4.18.0",
+    "socket.io": "^4.7.0",
+    "electron": "^28.0.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.0",
+    "eslint": "^8.50.0"
+  }
+}

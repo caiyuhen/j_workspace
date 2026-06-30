@@ -1,0 +1,316 @@
+# MedAIagents Configuration
+# 医学AI代理框架配置文件
+
+# =============================================================================
+# 核心AI模型配置
+# =============================================================================
+llm:
+  default_provider: "openai"  # openai, anthropic, deepseek, etc.
+  
+  providers:
+    openai:
+      api_key: "${OPENAI_API_KEY}"
+      base_url: "https://api.openai.com/v1"
+      default_model: "gpt-4-turbo-preview"
+      models:
+        - "gpt-4-turbo-preview"
+        - "gpt-4"
+        - "gpt-3.5-turbo"
+      temperature: 0.3
+      max_tokens: 4096
+    
+    anthropic:
+      api_key: "${ANTHROPIC_API_KEY}"
+      base_url: "https://api.anthropic.com"
+      default_model: "claude-3-opus-20240229"
+      models:
+        - "claude-3-opus-20240229"
+        - "claude-3-sonnet-20240229"
+        - "claude-3-haiku-20240307"
+      temperature: 0.3
+      max_tokens: 4096
+    
+    deepseek:
+      api_key: "${DEEPSEEK_API_KEY}"
+      base_url: "https://api.deepseek.com"
+      default_model: "deepseek-chat"
+      models:
+        - "deepseek-chat"
+        - "deepseek-coder"
+      temperature: 0.3
+      max_tokens: 4096
+
+# =============================================================================
+# 医学知识库配置
+# =============================================================================
+medical_knowledge:
+  # 向量数据库配置
+  vector_db:
+    provider: "milvus"  # milvus, chroma, pinecone
+    host: "localhost"
+    port: 19530
+    collection_name: "medical_knowledge"
+    embedding_dim: 1536
+  
+  # 外部数据源
+  data_sources:
+    pubmed:
+      enabled: true
+      email: "${PUBMED_EMAIL}"
+      max_results: 50
+    
+    uptodate:
+      enabled: false
+      api_key: "${UPTODATE_API_KEY}"
+    
+    clinicalkey:
+      enabled: false
+      api_key: "${CLINICALKEY_API_KEY}"
+  
+  # 本地知识库路径
+  local_knowledge_path: "./data/knowledge"
+  
+  # 更新频率（cron表达式）
+  update_schedule: "0 2 * * 1"  # 每周一凌晨2点更新
+
+# =============================================================================
+# 临床决策支持（CDSS）配置
+# =============================================================================
+cdss:
+  enabled: true
+  
+  # 诊断推理
+  diagnosis:
+    enabled: true
+    confidence_threshold: 0.7
+    max_differential_diagnoses: 5
+  
+  # 用药安全检查
+  medication_safety:
+    enabled: true
+    drug_interaction_db: "./data/drug_interactions.json"
+    allergy_check: true
+    dosage_validation: true
+  
+  # 指南依从性
+  guideline_compliance:
+    enabled: true
+    guidelines_path: "./data/guidelines"
+
+# =============================================================================
+# 电子病历（EMR）配置
+# =============================================================================
+emr:
+  enabled: true
+  
+  # FHIR服务器配置
+  fhir:
+    enabled: false
+    base_url: "${FHIR_SERVER_URL}"
+    auth_type: "basic"  # basic, oauth2
+    username: "${FHIR_USERNAME}"
+    password: "${FHIR_PASSWORD}"
+  
+  # 模板配置
+  templates:
+    enabled: true
+    templates_path: "./data/emr_templates"
+    default_template: "general_admission_note"
+  
+  # ICD编码
+  icd:
+    version: "icd-10-cm"
+    coding_db: "./data/icd_codes.json"
+
+# =============================================================================
+# 临床科研配置
+# =============================================================================
+clinical_research:
+  enabled: true
+  
+  # RCT方案生成
+  rct:
+    enabled: true
+    consort_compliant: true
+    sample_size_calculation: true
+  
+  # RWE分析
+  rwe:
+    enabled: true
+    strobe_compliant: true
+    causal_inference: true
+  
+  # 统计分析
+  statistics:
+    enabled: true
+    default_significance_level: 0.05
+
+# =============================================================================
+# 医学写作配置
+# =============================================================================
+medical_writing:
+  enabled: true
+  
+  # 论文模板
+  templates:
+    lancet:
+      enabled: true
+      path: "./data/writing_templates/lancet"
+    nejm:
+      enabled: true
+      path: "./data/writing_templates/nejm"
+    bmj:
+      enabled: true
+      path: "./data/writing_templates/bmj"
+  
+  # 文献管理
+  citation:
+    enabled: true
+    default_style: "vancouver"
+    auto_reference: true
+
+# =============================================================================
+# 安全与合规配置
+# =============================================================================
+security:
+  # 数据加密
+  encryption:
+    enabled: true
+    algorithm: "AES-256-GCM"
+    key_file: "./.encryption_key"
+  
+  # 访问控制
+  rbac:
+    enabled: true
+    roles:
+      - "admin"
+      - "doctor"
+      - "researcher"
+      - "viewer"
+  
+  # 审计日志
+  audit_log:
+    enabled: true
+    retention_days: 365
+    log_path: "./logs/audit"
+  
+  # 数据脱敏
+  deidentification:
+    enabled: true
+    remove_fields:
+      - "name"
+      - "id_card"
+      - "phone"
+      - "email"
+      - "address"
+
+# =============================================================================
+# 记忆系统配置
+# =============================================================================
+memory:
+  provider: "sqlite"  # sqlite, honcho, mem0
+  storage_path: "./data/memory"
+  
+  # 用户偏好记忆
+  user_preferences:
+    enabled: true
+    max_preferences: 100
+  
+  # 会话历史
+  session_history:
+    enabled: true
+    max_sessions: 50
+    max_messages_per_session: 100
+
+# =============================================================================
+# 技能系统配置
+# =============================================================================
+skills:
+  enabled: true
+  skills_path: "./skills"
+  auto_install: true
+  
+  # Curator工具
+  curator:
+    enabled: true
+    stale_days: 90
+    auto_archive: true
+
+# =============================================================================
+# 多代理协作配置
+# =============================================================================
+multi_agent:
+  enabled: true
+  max_concurrent_agents: 3
+  task_queue:
+    provider: "sqlite"
+    db_path: "./data/tasks.db"
+  
+  # Kanban工作队列
+  kanban:
+    enabled: true
+    columns:
+      - "todo"
+      - "in_progress"
+      - "review"
+      - "done"
+
+# =============================================================================
+# Cron调度器配置
+# =============================================================================
+scheduler:
+  enabled: true
+  jobs:
+    - name: "daily_briefing"
+      schedule: "0 8 * * *"
+      enabled: false
+    - name: "knowledge_update"
+      schedule: "0 2 * * 1"
+      enabled: true
+
+# =============================================================================
+# 多表面交互配置
+# =============================================================================
+surfaces:
+  cli:
+    enabled: true
+    prompt: "medai> "
+  
+  desktop:
+    enabled: true
+    theme: "dark"
+  
+  web:
+    enabled: true
+    port: 3000
+    host: "localhost"
+  
+  # 消息平台网关
+  gateways:
+    telegram:
+      enabled: false
+      bot_token: "${TELEGRAM_BOT_TOKEN}"
+    discord:
+      enabled: false
+      bot_token: "${DISCORD_BOT_TOKEN}"
+    slack:
+      enabled: false
+      bot_token: "${SLACK_BOT_TOKEN}"
+
+# =============================================================================
+# 日志配置
+# =============================================================================
+logging:
+  level: "INFO"
+  format: "[%(asctime)s] [%(levelname)s] %(name)s: %(message)s"
+  file_path: "./logs/medai.log"
+  max_file_size: "10MB"
+  backup_count: 5
+
+# =============================================================================
+# 插件系统配置
+# =============================================================================
+plugins:
+  enabled: true
+  plugins_path: "./plugins"
+  auto_load: true

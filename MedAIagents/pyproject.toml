@@ -1,0 +1,79 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "medaiagents"
+version = "1.0.0"
+authors = [
+  { name="MedAI Team", email="team@medaiagents.com" }
+]
+description = "医学专用版 AI 代理框架 - 面向医疗临床、科研、电子病历的专业 AI 助手"
+readme = "README.md"
+requires-python = ">=3.9"
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Topic :: Scientific/Engineering :: Medical Science Apps.",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "openai>=1.0.0",
+  "anthropic>=0.10.0",
+  "requests>=2.31.0",
+  "click>=8.1.0",
+  "pyyaml>=6.0",
+  "python-dotenv>=1.0.0",
+  "loguru>=0.7.0",
+  "cryptography>=41.0.0",
+  "fastapi>=0.104.0",
+  "uvicorn[standard]>=0.24.0",
+]
+
+[project.optional-dependencies]
+desktop = [
+  "pywebview>=4.4.0",
+]
+knowledge = [
+  "chromadb>=0.4.0",
+]
+full = [
+  "pywebview>=4.4.0",
+  "chromadb>=0.4.0",
+  "pandas>=2.0.0",
+  "numpy>=1.24.0",
+]
+dev = [
+  "pytest>=7.4.0",
+  "pytest-asyncio>=0.21.0",
+  "black>=23.0.0",
+  "isort>=5.12.0",
+  "mypy>=1.5",
+]
+
+[project.scripts]
+medai = "medai.cli:cli"
+medai-desktop = "medai.desktop.app:run_desktop_app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"medai.desktop.templates" = ["*.html"]
+
+[tool.black]
+line-length = 100
+target-version = ['py39']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true

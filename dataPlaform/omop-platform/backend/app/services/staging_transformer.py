@@ -289,7 +289,7 @@ class StagingTransformer:
                     # Process Measurements
                     for meas_val in extracted_entities.get("measurements", []):
                         import re
-                        match = re.search(r'检查：(.*?)\s+值：([\d\.]+)', meas_val)
+                        match = re.search(r'检查项：(.*?)\s+值:([\d\.]+)', meas_val)
                         if match:
                             m_name = match.group(1).strip()
                             m_val = match.group(2).strip()
@@ -308,7 +308,7 @@ class StagingTransformer:
                     # Process Symptoms with values
                     for sym_val in extracted_entities.get("symptoms_with_values", []):
                         import re
-                        match = re.search(r'症状：(.*?)\s+值：([\d\.]+)', sym_val)
+                        match = re.search(r'症状：(.*?)\s+值:([\d\.]+)', sym_val)
                         if match:
                             s_name = match.group(1).strip()
                             s_val = match.group(2).strip()
@@ -347,6 +347,20 @@ class StagingTransformer:
                             person_source_value=person.person_source_value,
                             observation_source_value=f"[{k}] {obs_val}",
                             value_as_string=obs_val
+                        )
+                        if visit and hasattr(visit, 'visit_start_datetime') and visit.visit_start_datetime:
+                            obs.observation_datetime = visit.visit_start_datetime
+                            obs.observation_date = visit.visit_start_date
+                        staging_objects.append(obs)
+
+                    # Process negations
+                    for val in extracted_entities.get("negations", []):
+                        obs = StagingObservation(
+                            source_batch_id=b_id,
+                            raw_record_id=r_id,
+                            person_source_value=person.person_source_value,
+                            observation_source_value=f"[{k}] {val}",
+                            value_as_string=val
                         )
                         if visit and hasattr(visit, 'visit_start_datetime') and visit.visit_start_datetime:
                             obs.observation_datetime = visit.visit_start_datetime
