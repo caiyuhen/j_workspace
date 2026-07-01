@@ -9,10 +9,11 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 # FastAPI 相关
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
+import io
 
 # 添加项目路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -55,6 +56,66 @@ class SearchRequest(BaseModel):
     query: str
     limit: int = 5
     use_pubmed: bool = False
+
+
+class SkillExecuteRequest(BaseModel):
+    skill_name: str
+    arguments: Dict[str, Any] = {}
+
+
+class RCTRequest(BaseModel):
+    intervention: str
+    condition: str
+    primary_endpoint: str
+    sample_size: int = 100
+
+
+class MetaAnalysisRequest(BaseModel):
+    topic: str
+    effect_measure: str = "OR"
+    num_studies: int = 10
+    language: str = "chinese"
+
+
+class GrantRequest(BaseModel):
+    title: str
+    grant_type: str = "NSFC"
+    research_area: str = ""
+    budget: float = 50
+
+
+class SurvivalRequest(BaseModel):
+    data_description: str
+    time_variable: str
+    event_variable: str
+    group_variable: str = ""
+    covariates: str = ""
+
+
+class LiteratureReviewRequest(BaseModel):
+    topic: str
+    num_papers: int = 30
+    focus_areas: str = ""
+
+
+class PlanRequest(BaseModel):
+    task: str
+    context: str = ""
+
+
+class SandboxRequest(BaseModel):
+    code: str
+    language: str = "python"
+
+
+class ExportRequest(BaseModel):
+    export_type: str
+    data: Dict[str, Any]
+    format: str = "docx"
+
+
+class ModelSwitchRequest(BaseModel):
+    provider: str
 
 
 # 初始化应用
@@ -300,6 +361,289 @@ async def get_stats():
             "stats": stats,
             "timestamp": datetime.now().isoformat()
         }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== Skills API ====================
+
+@app.get("/api/skills")
+async def list_skills(tag: str = None, builtin_only: bool = False):
+    """列出所有 Skills"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        skills = agent.list_skills(tag=tag, builtin_only=builtin_only)
+        return {"success": True, "skills": skills, "count": len(skills)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/skills/execute")
+async def execute_skill(request: SkillExecuteRequest):
+    """执行 Skill"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        result = agent.execute_skill(request.skill_name, request.arguments)
+        return {"success": True, "result": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/skills/search")
+async def search_skills(query: str):
+    """搜索 Skills"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        results = agent.search_skills(query)
+        return {"success": True, "results": results, "count": len(results)}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== 科研工具 API ====================
+
+@app.post("/api/research/rct")
+async def rct_design(request: RCTRequest):
+    """RCT 方案设计"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        result = agent.execute_skill('rct_protocol_design_workflow', {
+            'intervention': request.intervention,
+            'condition': request.condition,
+            'primary_endpoint': request.primary_endpoint,
+            'sample_size': request.sample_size
+        })
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/research/meta-analysis")
+async def meta_analysis(request: MetaAnalysisRequest):
+    """Meta 分析写作"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        result = agent.execute_skill('meta_analysis_writing_workflow', {
+            'topic': request.topic,
+            'effect_measure': request.effect_measure,
+            'num_studies': request.num_studies,
+            'language': request.language
+        })
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/research/grant")
+async def grant_proposal(request: GrantRequest):
+    """基金申请书"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        result = agent.execute_skill('grant_proposal_writing_workflow', {
+            'title': request.title,
+            'grant_type': request.grant_type,
+            'research_area': request.research_area,
+            'budget': request.budget
+        })
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/research/survival")
+async def survival_analysis(request: SurvivalRequest):
+    """生存分析"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        result = agent.execute_skill('survival_analysis_workflow', {
+            'data_description': request.data_description,
+            'time_variable': request.time_variable,
+            'event_variable': request.event_variable,
+            'group_variable': request.group_variable,
+            'covariates': request.covariates
+        })
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/research/literature-review")
+async def literature_review(request: LiteratureReviewRequest):
+    """文献综述"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        result = agent.execute_skill('literature_review_workflow', {
+            'topic': request.topic,
+            'num_papers': request.num_papers,
+            'focus_areas': request.focus_areas
+        })
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== 模型管理 API ====================
+
+@app.get("/api/models")
+async def list_models():
+    """列出可用模型和当前配置"""
+    try:
+        config = Config()
+        providers = config.get('llm.providers', {})
+        default_provider = config.get('llm.default_provider', 'unknown')
+        return {
+            "success": True,
+            "default_provider": default_provider,
+            "providers": list(providers.keys()),
+            "config": {k: {kk: vv for kk, vv in v.items() if kk != 'api_key'} for k, v in providers.items()}
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/models/switch")
+async def switch_model(request: ModelSwitchRequest):
+    """切换大模型"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        agent.switch_model(request.provider)
+        return {"success": True, "provider": request.provider, "message": f"已切换到 {request.provider}"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== 任务规划 API ====================
+
+@app.post("/api/plan")
+async def plan_task(request: PlanRequest):
+    """任务规划"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        result = agent.plan_and_execute(request.task, request.context)
+        return {"success": True, "result": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== 代码沙箱 API ====================
+
+@app.post("/api/sandbox/execute")
+async def sandbox_execute(request: SandboxRequest):
+    """代码沙箱执行"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        result = agent.execute_code(request.code, language=request.language)
+        return {"success": True, "result": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== 导出 API ====================
+
+@app.post("/api/export")
+async def export_document(request: ExportRequest):
+    """导出文档"""
+    try:
+        from medai.export import PaperExporter, GrantProposalExporter, ProtocolExporter, MetaAnalysisExporter
+        
+        exporters = {
+            'paper': PaperExporter,
+            'grant': GrantProposalExporter,
+            'protocol': ProtocolExporter,
+            'meta': MetaAnalysisExporter,
+        }
+        
+        exporter_class = exporters.get(request.export_type)
+        if not exporter_class:
+            return {"success": False, "error": f"不支持的导出类型: {request.export_type}"}
+        
+        # 创建临时文件
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix=f'.{request.format}', delete=False) as f:
+            temp_path = f.name
+        
+        exporter = exporter_class()
+        if request.export_type == 'paper':
+            exporter.export(request.data, temp_path)
+        elif request.export_type == 'grant':
+            exporter.export(request.data, temp_path)
+        
+        # 读取文件内容返回
+        with open(temp_path, 'rb') as f:
+            content = f.read()
+        os.unlink(temp_path)
+        
+        filename = f"export.{request.format}"
+        return StreamingResponse(
+            io.BytesIO(content),
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== 文件上传 API ====================
+
+@app.post("/api/upload")
+async def upload_file(file: UploadFile = File(...)):
+    """文件上传"""
+    try:
+        import tempfile
+        upload_dir = os.path.join(tempfile.gettempdir(), "medai_uploads")
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_path = os.path.join(upload_dir, file.filename)
+        with open(file_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+        
+        return {
+            "success": True,
+            "filename": file.filename,
+            "size": len(content),
+            "path": file_path,
+            "message": "文件上传成功"
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== Agent 编排 API ====================
+
+@app.get("/api/agents")
+async def list_agents():
+    """列出注册 Agent"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        agents = agent.get_registered_agents()
+        return {"success": True, "agents": agents}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/agents/orchestrate")
+async def orchestrate_agents(request: Dict[str, Any]):
+    """多 Agent 编排"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        task = request.get('task', '')
+        mode = request.get('mode', 'auto')
+        result = agent.auto_orchestrate(task) if mode == 'auto' else agent.delegate_to_agents(task)
+        return {"success": True, "result": result}
     except Exception as e:
         return {"success": False, "error": str(e)}
 

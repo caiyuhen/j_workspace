@@ -25,7 +25,7 @@ export const NLPAnalysis: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://127.0.0.1:8080/api/v1/pipeline/nlp-stats');
+      const response = await fetch('http://127.0.0.1:8433/api/v1/pipeline/nlp-stats');
       if (!response.ok) {
         throw new Error('获取NLP分析数据失败');
       }

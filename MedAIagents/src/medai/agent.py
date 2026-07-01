@@ -4,8 +4,25 @@ Medical AI Agent Core Class
 """
 
 import asyncio
+import json
 from typing import Dict, List, Any, Optional, Generator
 from loguru import logger
+
+
+def _run_async(coro):
+    """辅助函数：在已有或新事件循环中运行协程"""
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop is not None:
+        # 已有事件循环（如 Jupyter、FastAPI 等），创建新线程运行
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(asyncio.run, coro)
+            return future.result()
+    else:
+        return asyncio.run(coro)
 
 from .config import Config
 from .llm.routing import LLMRouter
@@ -14,10 +31,31 @@ from .knowledge.base import MedicalKnowledgeBase
 from .cdss.diagnosis import ClinicalDecisionSupport
 from .emr.automation import EMRNoteGenerator, ICD10Coder
 from .security.compliance import SecurityManager
+from .mcp import MCPServerManager
+from .tools.registry import ToolRegistry
+from .tools.executor import ToolExecutor
+from .tools.medical_tools import register_medical_tools
+from .planner.engine import TaskPlanner
+from .agents.orchestrator import AgentOrchestrator
+from .agents.specialized import (
+    ClinicalAgent, ImagingAgent, ResearchAgent,
+    WritingAgent, BioinformaticsAgent
+)
+from .sandbox.executor import CodeSandbox
+from .evolution.learner import FeedbackCollector
+from .evolution.optimizer import PromptOptimizer
+from .evolution.tracker import PerformanceTracker
+from .skills.registry import SkillRegistry
+from .skills.executor import SkillExecutor
+from .skills.learner import SkillLearner
+from .skills.builtin import register_builtin_skills
 
 
 class MedicalAgent:
-    """医学AI代理核心类"""
+    """医学AI代理核心类 - v0.6.0 增强版
+    
+    支持: MCP协议、工具调用、任务规划、多Agent编排、代码沙箱、自进化、Skills
+    """
     
     def __init__(self, config_path: str = None, **kwargs):
         """初始化医学AI代理
@@ -38,6 +76,43 @@ class MedicalAgent:
         self.icd_coder = ICD10Coder(self.config)
         self.security = SecurityManager(self.config)
         
+        # === v0.6.0 新增 Agent 基础设施 ===
+        
+        # MCP 多服务器管理
+        self.mcp_manager = MCPServerManager()
+        
+        # 工具注册表与执行器
+        self.tool_registry = ToolRegistry()
+        self.tool_executor = ToolExecutor(self.tool_registry)
+        register_medical_tools(self.tool_registry)
+        
+        # 任务规划器
+        self.task_planner = TaskPlanner(self.llm_router)
+        
+        # 多 Agent 编排器
+        self.agent_orchestrator = AgentOrchestrator()
+        self._register_specialized_agents()
+        
+        # 代码沙箱
+        self.code_sandbox = CodeSandbox()
+        
+        # 自进化系统
+        self.feedback_collector = FeedbackCollector()
+        self.prompt_optimizer = PromptOptimizer(self.llm_router)
+        self.performance_tracker = PerformanceTracker()
+        
+        # === Skill 系统 ===
+        self.skill_registry = SkillRegistry()
+        self.skill_executor = SkillExecutor(
+            skill_registry=self.skill_registry,
+            llm_router=self.llm_router,
+            tool_executor=self.tool_executor,
+            agent_orchestrator=self.agent_orchestrator
+        )
+        self.skill_learner = SkillLearner(llm_router=self.llm_router)
+        # 注册内置医学 Skills
+        register_builtin_skills(self.skill_registry)
+        
         # 会话信息
         self.current_user_id = kwargs.get('user_id', 'default')
         self.current_session_id = self.memory.create_session()
@@ -45,7 +120,20 @@ class MedicalAgent:
         # 系统提示词
         self.system_prompt = self._build_system_prompt()
         
-        logger.info(f"MedicalAgent initialized - Session: {self.current_session_id}")
+        logger.info(f"MedicalAgent v0.6.0 initialized - Session: {self.current_session_id}")
+    
+    def _register_specialized_agents(self):
+        """注册专科 Agent 到编排器"""
+        agents = [
+            ClinicalAgent(self.llm_router),
+            ImagingAgent(self.llm_router),
+            ResearchAgent(self.llm_router),
+            WritingAgent(self.llm_router),
+            BioinformaticsAgent(self.llm_router),
+        ]
+        for agent in agents:
+            self.agent_orchestrator.register_agent(agent)
+        logger.info(f"Registered {len(agents)} specialized agents")
     
     def _build_system_prompt(self) -> str:
         """构建系统提示词"""
@@ -85,7 +173,7 @@ class MedicalAgent:
         
         # 调用LLM
         try:
-            response = asyncio.run(self.llm_router.chat(messages))
+            response = _run_async(self.llm_router.chat(messages))
             self.memory.add_message('assistant', response)
             
             # 记录审计日志
@@ -329,9 +417,392 @@ class MedicalAgent:
     def get_statistics(self) -> Dict[str, Any]:
         """获取代理统计信息"""
         return {
-            'version': '1.0.0',
+            'version': '0.6.0',
             'current_session': self.current_session_id,
             'messages_in_session': len(self.memory.session_messages),
             'knowledge_base_size': self.knowledge_base.get_statistics(),
-            'total_sessions': len(self.list_sessions())
+            'total_sessions': len(self.list_sessions()),
+            'registered_tools': len(self.tool_registry.list_tools()),
+            'registered_agents': len(self.agent_orchestrator._agents),
         }
+    
+    # === v0.6.0 新增方法 ===
+    
+    def chat_with_tools(self, user_input: str) -> str:
+        """支持工具调用的对话模式
+        
+        LLM 可以自主选择并调用注册的工具来辅助回答。
+        """
+        self.memory.add_message('user', user_input)
+        
+        messages = self._build_chat_prompt(user_input, use_knowledge=True)
+        tools = self.tool_registry.list_tools()
+        
+        try:
+            content, tool_calls = _run_async(
+                self.llm_router.chat_with_tools(messages, tools)
+            )
+            
+            # 执行工具调用
+            if tool_calls:
+                for tc in tool_calls:
+                    tool_name = tc.get('function', {}).get('name', '')
+                    arguments = json.loads(tc.get('function', {}).get('arguments', '{}'))
+                    try:
+                        result = _run_async(self.tool_executor.execute(tool_name, arguments))
+                        messages.append({
+                            'role': 'tool',
+                            'tool_call_id': tc.get('id', ''),
+                            'name': tool_name,
+                            'content': str(result)
+                        })
+                    except Exception as e:
+                        logger.warning(f"Tool execution failed: {tool_name} - {e}")
+                
+                # 将工具结果返回给 LLM 获取最终回复
+                content = _run_async(self.llm_router.chat(messages))
+            
+            self.memory.add_message('assistant', content)
+            return content
+        except Exception as e:
+            logger.error(f"Chat with tools error: {e}")
+            return f"抱歉，处理您的请求时出现错误：{str(e)}"
+    
+    def execute_code(self, code: str, language: str = 'python') -> Dict[str, Any]:
+        """在沙箱中安全执行代码
+        
+        Args:
+            code: 代码字符串
+            language: 编程语言 (目前仅支持 python)
+        
+        Returns:
+            执行结果 {success, stdout, stderr, result}
+        """
+        logger.info(f"Code execution request - Language: {language}")
+        if language == 'python':
+            result = self.code_sandbox.execute_python(code)
+        else:
+            result = {'success': False, 'stdout': '', 'stderr': f'不支持的语言: {language}'}
+        
+        self.performance_tracker.record_execution(
+            task_type='code_execution',
+            duration_ms=0,
+            success=result.get('success', False)
+        )
+        return result
+    
+    def plan_and_execute(self, user_request: str) -> Dict[str, Any]:
+        """自动规划并执行任务
+        
+        将用户请求分解为子任务，按依赖关系并行执行。
+        
+        Args:
+            user_request: 用户请求
+        
+        Returns:
+            执行结果 {goal, subtasks, results, summary}
+        """
+        logger.info(f"Plan and execute - Request: {user_request}")
+        
+        try:
+            tools = self.tool_registry.list_tools()
+            plan = _run_async(self.task_planner.plan(user_request, tools))
+            executed_plan = _run_async(
+                self.task_planner.execute(plan, self.tool_executor)
+            )
+            
+            # 汇总结果
+            results = {}
+            for st in executed_plan.subtasks:
+                results[st.id] = {
+                    'description': st.description,
+                    'status': st.status.value,
+                    'result': st.result,
+                    'error': st.error,
+                }
+            
+            return {
+                'goal': executed_plan.goal,
+                'subtasks': results,
+                'summary': self._summarize_results(results)
+            }
+        except Exception as e:
+            logger.error(f"Plan and execute error: {e}")
+            return {'goal': user_request, 'error': str(e)}
+    
+    def auto_orchestrate(self, task: str) -> str:
+        """自动编排多 Agent 协作完成任务
+        
+        根据任务内容自动选择合适的专科 Agent 协作。
+        
+        Args:
+            task: 任务描述
+        
+        Returns:
+            协作结果
+        """
+        logger.info(f"Auto orchestrate - Task: {task}")
+        try:
+            result = _run_async(
+                self.agent_orchestrator.auto_orchestrate(task, self.task_planner)
+            )
+            return result
+        except Exception as e:
+            logger.error(f"Auto orchestrate error: {e}")
+            return f"编排执行出错：{str(e)}"
+    
+    def delegate_to_agents(self, task: str, roles: List[str]) -> Dict[str, str]:
+        """将任务分派给多个专科 Agent 并行执行
+        
+        Args:
+            task: 任务描述
+            roles: Agent 角色列表 ['clinical', 'imaging', 'research', ...]
+        
+        Returns:
+            各 Agent 执行结果
+        """
+        return _run_async(self.agent_orchestrator.delegate(task, roles))
+    
+    def add_mcp_server(self, name: str, config: Dict[str, Any]) -> bool:
+        """添加 MCP Server 连接
+        
+        Args:
+            name: Server 名称
+            config: 配置 {transport, command, args, url}
+        
+        Returns:
+            是否成功
+        """
+        try:
+            _run_async(self.mcp_manager.add_server(name, config))
+            # 刷新工具列表
+            tools = _run_async(self.mcp_manager.get_all_tools())
+            logger.info(f"MCP Server '{name}' added, {len(tools)} tools available")
+            return True
+        except Exception as e:
+            logger.error(f"Add MCP server failed: {e}")
+            return False
+    
+    def record_feedback(self, task_id: str, feedback: str, rating: int):
+        """记录用户反馈用于自进化"""
+        self.feedback_collector.record_feedback(
+            task_id=task_id,
+            task_type='general',
+            input_text='',
+            output_text='',
+            feedback=feedback,
+            rating=rating
+        )
+    
+    def _summarize_results(self, results: Dict[str, Any]) -> str:
+        """汇总任务执行结果"""
+        completed = sum(1 for r in results.values() if r.get('status') == 'completed')
+        failed = sum(1 for r in results.values() if r.get('status') == 'failed')
+        total = len(results)
+        return f"任务执行完成: {completed}/{total} 成功, {failed}/{total} 失败"
+    
+    def get_available_tools(self) -> List[Dict[str, Any]]:
+        """获取所有可用工具列表"""
+        return self.tool_registry.list_tools()
+    
+    def get_registered_agents(self) -> List[Dict[str, str]]:
+        """获取已注册的 Agent 列表"""
+        return [
+            {'name': name, 'role': agent.role}
+            for name, agent in self.agent_orchestrator._agents.items()
+        ]
+    
+    # === Skill 系统方法 ===
+    
+    def execute_skill(self, skill_name: str, arguments: Dict[str, Any] = None) -> Dict[str, Any]:
+        """执行已注册的 Skill
+        
+        Args:
+            skill_name: Skill 名称
+            arguments: Skill 参数字典
+        
+        Returns:
+            Skill 执行结果字典
+        """
+        if arguments is None:
+            arguments = {}
+        
+        logger.info(f"Executing skill: {skill_name}")
+        try:
+            result = _run_async(self.skill_executor.execute(skill_name, arguments))
+            return {
+                'success': result.success,
+                'output': result.output,
+                'duration_ms': result.duration_ms,
+                'error': result.error,
+                'skill_name': result.skill_name
+            }
+        except Exception as e:
+            logger.error(f"Skill execution error: {e}")
+            return {'success': False, 'error': str(e), 'skill_name': skill_name}
+    
+    def list_skills(self, tag: str = None, builtin_only: bool = False) -> List[Dict[str, Any]]:
+        """列出所有可用 Skills
+        
+        Args:
+            tag: 按标签过滤
+            builtin_only: 仅显示内置 Skills
+        
+        Returns:
+            Skill 列表
+        """
+        skills = self.skill_registry.list_skills(tag=tag, builtin_only=builtin_only)
+        return [
+            {
+                'name': s.name,
+                'description': s.description,
+                'version': s.version,
+                'tags': s.tags,
+                'is_builtin': s.is_builtin,
+                'usage_count': s.usage_count,
+                'success_rate': round(s.success_rate, 2),
+                'parameters': [
+                    {'name': p.name, 'type': p.type, 'required': p.required, 'description': p.description}
+                    for p in s.parameters
+                ]
+            }
+            for s in skills
+        ]
+    
+    def search_skills(self, query: str) -> List[Dict[str, Any]]:
+        """搜索 Skills
+        
+        Args:
+            query: 搜索关键词
+        
+        Returns:
+            匹配的 Skill 列表
+        """
+        skills = self.skill_registry.search(query)
+        return [{'name': s.name, 'description': s.description, 'tags': s.tags} for s in skills]
+    
+    def learn_skill_from_conversation(
+        self,
+        conversation: List[Dict[str, str]] = None,
+        skill_name: str = None,
+        auto_register: bool = True
+    ) -> Dict[str, Any]:
+        """从对话中学习并创建 Skill
+        
+        Args:
+            conversation: 对话历史，如未提供则使用当前会话历史
+            skill_name: Skill 名称
+            auto_register: 是否自动注册到注册表
+        
+        Returns:
+            学习结果
+        """
+        if conversation is None:
+            conversation = self.memory.get_conversation_history()
+        
+        if not conversation:
+            return {'success': False, 'error': '没有可用的对话历史'}
+        
+        try:
+            skill = _run_async(
+                self.skill_learner.learn_with_llm(conversation, skill_name)
+            )
+            
+            if skill is None:
+                # 回退到规则提取
+                skill = self.skill_learner.learn_from_conversation(conversation, skill_name)
+            
+            if skill is None:
+                return {'success': False, 'error': '未能从对话中提取到可复用的工作流'}
+            
+            if auto_register:
+                self.skill_registry.register(skill)
+            
+            return {
+                'success': True,
+                'skill_name': skill.name,
+                'description': skill.description,
+                'steps_count': len(skill.steps),
+                'parameters_count': len(skill.parameters),
+                'tags': skill.tags,
+                'registered': auto_register
+            }
+        except Exception as e:
+            logger.error(f"Learn skill error: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def suggest_learnable_skills(self) -> List[Dict[str, Any]]:
+        """建议当前会话中可以提取 Skill 的对话片段
+        
+        Returns:
+            建议列表，每项包含 confidence 和 preview
+        """
+        conversation = self.memory.get_conversation_history()
+        if not conversation:
+            return []
+        
+        suggestions = self.skill_learner.suggest_skills(conversation)
+        return suggestions
+    
+    def register_custom_skill(self, skill_data: Dict[str, Any]) -> Dict[str, Any]:
+        """注册自定义 Skill
+        
+        Args:
+            skill_data: Skill 数据字典，需包含 name, description, parameters, steps
+        
+        Returns:
+            注册结果
+        """
+        try:
+            from .skills.models import Skill, SkillStep, SkillParameter, StepType
+            
+            parameters = [
+                SkillParameter(**p) for p in skill_data.get('parameters', [])
+            ]
+            steps = [
+                SkillStep(
+                    **{**s, 'step_type': StepType(s.get('step_type', 'llm_call'))}
+                ) for s in skill_data.get('steps', [])
+            ]
+            
+            skill = Skill(
+                name=skill_data['name'],
+                description=skill_data.get('description', ''),
+                parameters=parameters,
+                steps=steps,
+                tags=skill_data.get('tags', ['custom']),
+                is_builtin=False
+            )
+            
+            self.skill_registry.register(skill)
+            return {'success': True, 'skill_name': skill.name}
+        except Exception as e:
+            logger.error(f"Register custom skill error: {e}")
+            return {'success': False, 'error': str(e)}
+    
+    def export_skill(self, skill_name: str, file_path: str) -> bool:
+        """导出 Skill 到文件
+        
+        Args:
+            skill_name: Skill 名称
+            file_path: 导出文件路径
+        
+        Returns:
+            是否成功
+        """
+        return self.skill_registry.export_skill(skill_name, file_path)
+    
+    def import_skill(self, file_path: str) -> Dict[str, Any]:
+        """从文件导入 Skill
+        
+        Args:
+            file_path: 文件路径
+        
+        Returns:
+            导入结果
+        """
+        try:
+            skill = self.skill_registry.import_skill(file_path)
+            return {'success': True, 'skill_name': skill.name}
+        except Exception as e:
+            return {'success': False, 'error': str(e)}

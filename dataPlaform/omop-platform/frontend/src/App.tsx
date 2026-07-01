@@ -25,7 +25,7 @@ function App() {
   const fetchBatches = useCallback((showLoading = false) => {
     if (showLoading) setLoadingBatches(true);
     setBatchError(null)
-    fetch('http://127.0.0.1:8080/api/v1/ingestion/batches')
+    fetch('http://127.0.0.1:8433/api/v1/ingestion/batches')
       .then(res => {
         if (!res.ok) throw new Error('获取批次历史记录失败')
         return res.json()
@@ -41,7 +41,7 @@ function App() {
   }, [])
 
   const fetchSources = useCallback(() => {
-    fetch('http://127.0.0.1:8080/api/v1/sources')
+    fetch('http://127.0.0.1:8433/api/v1/sources')
       .then(res => res.json())
       .then(data => {
         setSources(data)

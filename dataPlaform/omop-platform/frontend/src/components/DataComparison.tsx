@@ -8,7 +8,7 @@ export const DataComparison: React.FC = () => {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://127.0.0.1:8080/api/v1/pipeline/data-comparison');
+      const res = await fetch('http://127.0.0.1:8433/api/v1/pipeline/data-comparison');
       const json = await res.json();
       setData(json);
     } catch (e) {

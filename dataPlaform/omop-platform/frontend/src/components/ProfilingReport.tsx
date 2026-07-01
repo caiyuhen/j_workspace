@@ -22,7 +22,7 @@ export const ProfilingReport: React.FC<ProfilingReportProps> = ({ batch, onBack 
     setLoadingErrors(true);
     setShowErrorModal(true);
     try {
-      const res = await fetch(`http://127.0.0.1:8080/api/v1/ingestion/batches/${batch.id}/errors`);
+      const res = await fetch(`http://127.0.0.1:8433/api/v1/ingestion/batches/${batch.id}/errors`);
       const data = await res.json();
       setErrorDetails(data.items || []);
     } catch (err) {

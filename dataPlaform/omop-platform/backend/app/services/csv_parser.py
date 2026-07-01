@@ -81,9 +81,31 @@ class CSVParser:
                         "error": f"列数不匹配：期望 {expected_cols} 列，实际读取到 {len(row)} 列"
                     })
                 else:
-                    # Additional Type Inference/Validation could happen here before saving
-                    # For now, just save as string mappings
-                    current_chunk_valid.append(dict(zip(headers, row)))
+                    # 增强的异常行检测逻辑 (Enhanced Error Row Detection)
+                    # 1. 关键主键缺失 (Missing Primary Key)
+                    if not row[0] or str(row[0]).strip() == '':
+                        current_chunk_errors.append({
+                            "line_number": row_idx,
+                            "raw_data": row,
+                            "error": "关键字段缺失：patient_id 不能为空"
+                        })
+                    # 2. 极端异常数据探测 (HTML/XML 乱码注入)
+                    elif any('<error>' in str(cell) for cell in row):
+                        current_chunk_errors.append({
+                            "line_number": row_idx,
+                            "raw_data": row,
+                            "error": "数据污染：检测到系统级异常占位符 (<error>...)"
+                        })
+                    # 3. 严重字段错位 (如手机号出现在大段文本列，或者大段文本出现在手机号列)
+                    elif len(str(row[4])) > 20 and not str(row[4]).isdigit():
+                        # 假设 row[4] 是 phone
+                        current_chunk_errors.append({
+                            "line_number": row_idx,
+                            "raw_data": row,
+                            "error": "数据错位：手机号列包含大量非数字文本"
+                        })
+                    else:
+                        current_chunk_valid.append(dict(zip(headers, row)))
                 
                 # Yield when we hit the chunk size
                 if (len(current_chunk_valid) + len(current_chunk_errors)) >= chunk_size:

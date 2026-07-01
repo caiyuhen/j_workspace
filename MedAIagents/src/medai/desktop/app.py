@@ -26,13 +26,18 @@ def start_server():
     try:
         import uvicorn
         from medai.desktop.server import app
+        from urllib.parse import urlparse
         
         print("🚀 正在启动 MedAIagents 服务...")
+        
+        # 从 server_url 解析端口
+        parsed = urlparse(server_url)
+        port = parsed.port or 8228
         
         config = uvicorn.Config(
             app,
             host="127.0.0.1",
-            port=8228,
+            port=port,
             log_level="info"
         )
         server = uvicorn.Server(config)

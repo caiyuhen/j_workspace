@@ -103,6 +103,25 @@
 
 ---
 
+## v0.6.0 Agent 基础设施全量补齐 (规划中)
+
+- [x] MCP (Model Context Protocol) Client 集成
+- [x] 工具调用框架 (Function Calling)
+- [x] 任务规划器 (Task Planner)
+- [x] 多 Agent 编排 (Multi-Agent Orchestration)
+- [x] 代码执行沙箱 (Code Sandbox)
+- [x] 自进化机制 (Self-Evolution)
+
+---
+
+## v0.7.0 临床数据分析与预测模块 (规划中)
+
+- [ ] 统计分析引擎
+- [ ] 预测模型（疾病风险、生存分析）
+- [ ] 数据可视化增强
+
+---
+
 ## 架构演进计划
 
 | 版本 | 架构重点 | 关键技术 |

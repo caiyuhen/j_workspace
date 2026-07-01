@@ -7,8 +7,9 @@ import re
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
 from transformers import pipeline
+from app.core.logger import data_logger
 
-logger = logging.getLogger(__name__)
+logger = data_logger
 
 class TransformersNERMapper:
     """

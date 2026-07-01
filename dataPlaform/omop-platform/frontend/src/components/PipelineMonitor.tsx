@@ -32,7 +32,7 @@ export function PipelineMonitor() {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8080/api/v1/pipeline/status');
+      const res = await fetch('http://127.0.0.1:8433/api/v1/pipeline/status');
       if (res.ok) {
         const data = await res.json();
         setPipelineData(data);
@@ -54,7 +54,7 @@ export function PipelineMonitor() {
 
   const handleRunPipeline = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8080/api/v1/pipeline/run', { method: 'POST' });
+      const res = await fetch('http://127.0.0.1:8433/api/v1/pipeline/run', { method: 'POST' });
       if (res.ok) {
         toast.success('已触发清洗与标准化管线');
         setPipelineData(prev => ({ ...prev, status: 'running', logs: ['[System] 发送管线执行指令...'] }));
@@ -69,7 +69,7 @@ export function PipelineMonitor() {
 
   const handleStopPipeline = async () => {
     try {
-      const res = await fetch('http://127.0.0.1:8080/api/v1/pipeline/stop', { method: 'POST' });
+      const res = await fetch('http://127.0.0.1:8433/api/v1/pipeline/stop', { method: 'POST' });
       if (res.ok) {
         toast.warning('已发送停止指令');
         fetchStatus();
@@ -181,7 +181,7 @@ export function PipelineMonitor() {
                     variant="outline" 
                     size="sm" 
                     className="mt-2 text-xs border-red-200 text-red-600 hover:bg-red-100 h-7"
-                    onClick={() => window.open('http://127.0.0.1:8080/api/v1/pipeline/errors/download', '_blank')}
+                    onClick={() => window.open('http://127.0.0.1:8433/api/v1/pipeline/errors/download', '_blank')}
                   >
                     下载异常报告
                   </Button>

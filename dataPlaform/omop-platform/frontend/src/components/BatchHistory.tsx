@@ -63,7 +63,7 @@ const BatchHistory: React.FC<BatchHistoryProps> = ({ batches = [], loading, erro
   const handleClearData = async () => {
     setClearing(true);
     try {
-      const res = await fetch('http://127.0.0.1:8080/api/v1/ingestion/clear', {
+      const res = await fetch('http://127.0.0.1:8433/api/v1/ingestion/clear', {
         method: 'POST',
       });
       if (!res.ok) throw new Error('清除数据失败');
@@ -140,7 +140,7 @@ const BatchHistory: React.FC<BatchHistoryProps> = ({ batches = [], loading, erro
                     异常分析图表
                   </span>
                   <span className={`text-[10px] leading-none font-medium ${isAnomalous ? 'text-orange-600' : 'text-emerald-600'}`}>
-                    {hasError ? `行异常率 ${errorRate}%` : hasNullAnomalies ? `${highNullCols}个字段高空值` : '数据质量优良'}
+                    {hasError ? `发现 ${latest.error_rows} 行异常数据` : hasNullAnomalies ? `${highNullCols}个字段高空值` : '数据质量优良'}
                   </span>
                 </div>
               </Button>

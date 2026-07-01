@@ -9,6 +9,7 @@ import json
 from datetime import datetime
 from minio import Minio
 
+from app.core.logger import data_logger
 from app.services.dicom_parser import DicomParser
 from app.services.raw_persistence import RawPersistenceService
 from app.db.database import get_db, SessionLocal
@@ -133,13 +134,12 @@ def process_dicom_task(tmp_path: str, filename: str, batch_id: str):
         persistence_svc.complete_batch(batch_id, total_rows=1, error_rows=0, status="completed")
         
     except Exception as e:
-        traceback.print_exc()
+        error_msg = f"{str(e)}\n{traceback.format_exc()}"
+        data_logger.error(f"DICOM processing failed: {error_msg}")
         # Mark batch as failed
-        error_msg = str(e)
         # Assuming you have a way to log this error in the database.
         # Since persistence_svc doesn't have an error log method in this snippet, we will update the batch status.
         persistence_svc.complete_batch(batch_id, total_rows=0, error_rows=1, status="failed")
-        print(f"DICOM processing failed: {error_msg}")
     finally:
         db.close()
         if os.path.exists(tmp_path):
@@ -170,7 +170,7 @@ async def upload_dicom(background_tasks: BackgroundTasks, file: UploadFile = Fil
             "message": "DICOM file accepted. Dual-stream processing started."
         }
     except Exception as e:
-        traceback.print_exc()
+        data_logger.error(f"Upload DICOM failed: {traceback.format_exc()}")
         if 'tmp_path' in locals() and os.path.exists(tmp_path):
             os.remove(tmp_path)
         raise HTTPException(status_code=500, detail=str(e))
