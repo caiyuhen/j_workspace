@@ -1,10 +1,14 @@
+import json
+import time
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 from typing import Dict, Any
+from datetime import datetime
+from app.core.logger import data_logger
 from app.models.raw import RawRecord
 from app.models.staging import StagingPerson, StagingVisitOccurrence, StagingObservation, StagingMeasurement, StagingConditionOccurrence, StagingDrugExposure
 from app.services.cleaning_rules import CleaningRulesEngine
 from app.services.transformers_ner import TransformersNERMapper
-from datetime import datetime
 
 class StagingTransformer:
     """
@@ -367,7 +371,7 @@ class StagingTransformer:
                             obs.observation_date = visit.visit_start_date
                         staging_objects.append(obs)
                 
-                print(f"[{batch_id}] 批量 NLP 推理完成 ({len(nlp_tasks)} 条文本片段), 耗时 {time.time() - t0:.2f}s")
+                data_logger.info(f"[{batch_id}] 批量 NLP 推理完成 ({len(nlp_tasks)} 条文本片段), 耗时 {time.time() - t0:.2f}s")
             
             # 7. Bulk insert to staging
             if staging_objects:

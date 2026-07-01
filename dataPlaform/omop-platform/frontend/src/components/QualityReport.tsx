@@ -29,7 +29,7 @@ export const QualityReport: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://127.0.0.1:8080/api/v1/pipeline/quality-report');
+      const response = await fetch('http://127.0.0.1:8433/api/v1/pipeline/quality-report');
       if (!response.ok) {
         throw new Error('获取报告失败');
       }

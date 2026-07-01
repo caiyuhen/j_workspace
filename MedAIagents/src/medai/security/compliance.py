@@ -173,11 +173,8 @@ class RBACManager:
     def __init__(self, db_path: str = './data/rbac.db'):
         self.db_path = db_path
         os.makedirs(os.path.dirname(db_path), exist_ok=True)
-        
-        self.conn = sqlite3.connect(db_path)
-        self._init_tables()
-        
-        # 预定义角色及其权限
+
+        # 预定义角色及其权限（必须在 _init_tables 之前定义）
         self.role_permissions = {
             'admin': {
                 'permissions': ['*'],
@@ -211,7 +208,10 @@ class RBACManager:
                 'description': '查看者'
             }
         }
-    
+
+        self.conn = sqlite3.connect(db_path)
+        self._init_tables()
+
     def _init_tables(self):
         """初始化数据库表"""
         cursor = self.conn.cursor()

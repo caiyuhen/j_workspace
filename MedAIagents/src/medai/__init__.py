@@ -3,20 +3,24 @@ MedAIagents - 专业级医学AI智能体框架
 Professional Medical AI Agent Framework
 """
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 __author__ = "MedAI Team"
 
 # 配置管理
 from .config import Config
 
+# 核心Agent
+try:
+    from .agent import MedicalAgent
+except ImportError:
+    pass
+
 # 临床决策支持
 try:
     from .cdss import (
-        DiagnosisEngine,
-        DifferentialDiagnosis,
+        DiagnosticReasoner,
         MedicationSafetyChecker,
-        GuidelineEngine,
-        ClinicalDecisionSupportSystem
+        ClinicalDecisionSupport
     )
 except ImportError:
     pass
@@ -159,9 +163,70 @@ try:
 except ImportError:
     pass
 
+# Office 文档导入导出
+try:
+    from .export import (
+        PaperExporter,
+        GrantProposalExporter,
+        ResponseLetterExporter,
+        ProtocolExporter,
+        MetaAnalysisExporter,
+        BudgetExporter,
+        JournalDatabaseExporter,
+        SurvivalDataExporter,
+        ResearchPresentationExporter,
+        ImagingTeachingExporter,
+        BioinformaticsReportExporter,
+        WordImporter,
+        ExcelImporter,
+    )
+except ImportError:
+    pass
+
 # 桌面应用
 try:
     from .desktop import MedAIDesktop
+except ImportError:
+    pass
+
+# MCP (Model Context Protocol)
+try:
+    from .mcp import (
+        MCPClient,
+        MCPServerManager,
+        MCPTool,
+        MCPResource,
+        MCPPrompt,
+        MCPCallToolRequest,
+        MCPCallToolResult,
+        MCPInitializeRequest,
+        MCPInitializeResult,
+    )
+except ImportError:
+    pass
+
+# 自进化
+try:
+    from .evolution import (
+        FeedbackCollector,
+        PromptOptimizer,
+        PerformanceTracker,
+    )
+except ImportError:
+    pass
+
+# Skills 技能系统
+try:
+    from .skills import (
+        Skill,
+        SkillStep,
+        SkillParameter,
+        SkillExecutionResult,
+        SkillRegistry,
+        SkillExecutor,
+        SkillLearner,
+        register_builtin_skills,
+    )
 except ImportError:
     pass
 
@@ -188,8 +253,16 @@ def print_version_info():
         "同行评审辅助": True,
         "医学影像AI分析": True,
         "生物信息学接口": True,
+        "Office文档导入导出": True,
         "大语言模型集成": True,
         "桌面应用": True,
+        "MCP 协议支持": True,
+        "工具调用框架": True,
+        "任务规划器": True,
+        "多 Agent 编排": True,
+        "代码执行沙箱": True,
+        "自进化机制": True,
+        "Skills 技能系统": True,
     }
     
     print("\n📦 可用模块：")
@@ -202,12 +275,12 @@ def print_version_info():
 
 __all__ = [
     "Config",
+    # Core Agent
+    "MedicalAgent",
     # CDSS
-    "DiagnosisEngine",
-    "DifferentialDiagnosis",
+    "DiagnosticReasoner",
     "MedicationSafetyChecker",
-    "GuidelineEngine",
-    "ClinicalDecisionSupportSystem",
+    "ClinicalDecisionSupport",
     # EMR
     "EMRInformationExtractor",
     "MedicalNoteGenerator",
@@ -304,8 +377,61 @@ __all__ = [
     "ModelExplainer",
     "MultiOmicsIntegrator",
     "BioinformaticsToolkit",
+    # Office 文档导入导出
+    "PaperExporter",
+    "GrantProposalExporter",
+    "ResponseLetterExporter",
+    "ProtocolExporter",
+    "MetaAnalysisExporter",
+    "BudgetExporter",
+    "JournalDatabaseExporter",
+    "SurvivalDataExporter",
+    "ResearchPresentationExporter",
+    "ImagingTeachingExporter",
+    "BioinformaticsReportExporter",
+    "WordImporter",
+    "ExcelImporter",
     # Desktop
     "MedAIDesktop",
+    # MCP
+    "MCPClient",
+    "MCPServerManager",
+    "MCPTool",
+    "MCPResource",
+    "MCPPrompt",
+    "MCPCallToolRequest",
+    "MCPCallToolResult",
+    "MCPInitializeRequest",
+    "MCPInitializeResult",
+    # 工具框架
+    "ToolRegistry",
+    "ToolExecutor",
+    # 任务规划
+    "TaskPlanner",
+    # 多 Agent
+    "AgentOrchestrator",
+    "ClinicalAgent",
+    "ImagingAgent",
+    "ResearchAgent",
+    "WritingAgent",
+    "BioinformaticsAgent",
+    # 代码沙箱
+    "CodeSandbox",
+    # 自进化
+    "FeedbackCollector",
+    "PromptOptimizer",
+    "PerformanceTracker",
+    # LLM 增强
+    "ToolCallParser",
+    # Skills
+    "Skill",
+    "SkillStep",
+    "SkillParameter",
+    "SkillExecutionResult",
+    "SkillRegistry",
+    "SkillExecutor",
+    "SkillLearner",
+    "register_builtin_skills",
     # Utilities
     "get_version",
     "print_version_info",

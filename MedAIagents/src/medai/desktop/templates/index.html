@@ -5,660 +5,196 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MedAIagents - 医学 AI 助手</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        .app-container {
-            display: flex;
-            height: 100vh;
-            background: #f0f2f5;
-        }
-
-        /* 侧边栏 */
-        .sidebar {
-            width: 260px;
-            background: linear-gradient(180deg, #1e3a5f 0%, #2d5a87 100%);
-            color: white;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-        }
-
-        .sidebar-header {
-            padding: 24px 20px;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo-icon {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #00c6fb 0%, #005bea 100%);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
- justify-content: center;
-            font-size: 20px;
-        }
-
-        .logo-text h1 {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .logo-text p {
-            font-size: 11px;
-            opacity: 0.7;
-        }
-
-        .nav-menu {
-            flex: 1;
-            padding: 20px 12px;
-            overflow-y: auto;
-        }
-
-        .nav-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 16px;
-            margin-bottom: 4px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s;
-            font-size: 14px;
-        }
-
-        .nav-item:hover {
-            background: rgba(255,255,255,0.1);
-        }
-
-        .nav-item.active {
-            background: rgba(0,198,251,0.2);
-            border-left: 3px solid #00c6fb;
-        }
-
-        .nav-icon {
-            font-size: 18px;
-            width: 24px;
-            text-align: center;
-        }
-
-        .sidebar-footer {
-            padding: 16px 20px;
-            border-top: 1px solid rgba(255,255,255,0.1);
-            font-size: 12px;
-            opacity: 0.6;
-        }
-
-        /* 主内容区 */
-        .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        /* 顶部栏 */
-        .top-bar {
-            background: white;
-            padding: 16px 24px;
-            border-bottom: 1px solid #e8e8e8;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .page-title {
-            font-size: 20px;
-            font-weight: 600;
-            color: #1a3a5f;
-        }
-
-        .status-indicator {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: #666;
-        }
-
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            background: #52c41a;
-            border-radius: 50%;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-
-        /* 内容区域 */
-        .content-area {
-            flex: 1;
-            overflow-y: auto;
-            padding: 24px;
-        }
-
-        /* 卡片样式 */
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            margin-bottom: 20px;
-        }
-
-        .card-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #1a3a5f;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* 聊天界面 */
-        .chat-container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
-
-        .chat-messages {
-            flex: 1;
-            overflow-y: auto;
-            padding-bottom: 20px;
-        }
-
-        .message {
-            display: flex;
-            margin-bottom: 16px;
-            animation: fadeIn 0.3s;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .message.user {
-            justify-content: flex-end;
-        }
-
-        .message-avatar {
-            width: 36px;
-            height: 36px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            flex-shrink: 0;
-        }
-
-        .message.assistant .message-avatar {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            margin-right: 12px;
-        }
-
-        .message.user .message-avatar {
-            background: linear-gradient(135deg, #00c6fb 0%, #005bea 100%);
-            margin-left: 12px;
-            order: 2;
-        }
-
-        .message-bubble {
-            max-width: 70%;
-            background: white;
-            border-radius: 12px;
-            padding: 14px 18px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-            line-height: 1.6;
-        }
-
-        .message.user .message-bubble {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .chat-input-area {
-            background: white;
-            padding: 16px 24px;
-            border-top: 1px solid #e8e8e8;
-        }
-
-        .input-wrapper {
-            display: flex;
-            gap: 12px;
-            align-items: flex-end;
-        }
-
-        .chat-input {
-            flex: 1;
-            border: 2px solid #e8e8e8;
-            border-radius: 12px;
-            padding: 12px 16px;
-            font-size: 14px;
-            resize: none;
-            min-height: 48px;
-            max-height: 120px;
-            font-family: inherit;
-            transition: border-color 0.2s;
-        }
-
-        .chat-input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .send-btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            padding: 12px 24px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .send-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .send-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* 表单样式 */
-        .form-group {
-            margin-bottom: 16px;
-        }
-
-        .form-label {
-            display: block;
-            font-size: 14px;
-            font-weight: 500;
-            color: #333;
-            margin-bottom: 8px;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 10px 14px;
-            border: 2px solid #e8e8e8;
-            border-radius: 8px;
-            font-size: 14px;
-            transition: border-color 0.2s;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .form-textarea {
-            width: 100%;
-            padding: 10px 14px;
-            border: 2px solid #e8e8e8;
-            border-radius: 8px;
-            font-size: 14px;
-            resize: vertical;
-            min-height: 80px;
-            font-family: inherit;
-        }
-
-        .form-textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-        }
-
-        /* 按钮样式 */
-        .btn {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%);
-            color: white;
-        }
-
-        .btn-success:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(82, 196, 26, 0.4);
-        }
-
-        /* 结果展示 */
-        .result-box {
-            background: #f8f9fa;
-            border-radius: 8px;
-            padding: 16px;
-            margin-top: 16px;
-            border-left: 4px solid #667eea;
-        }
-
-        .result-title {
-            font-weight: 600;
-            color: #1a3a5f;
-            margin-bottom: 8px;
-        }
-
-        .result-content {
-            color: #555;
-            line-height: 1.8;
-            white-space: pre-wrap;
-        }
-
-        /* 安全警告 */
-        .safety-warning {
-            background: #fff2e8;
-            border: 1px solid #ffbb96;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-top: 16px;
-        }
-
-        .safety-warning.danger {
-            background: #fff1f0;
-            border-color: #ffa39e;
-        }
-
-        .safety-warning.success {
-            background: #f6ffed;
-            border-color: #b7eb8f;
-        }
-
-        .warning-title {
-            font-weight: 600;
-            color: #d46b08;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .safety-warning.danger .warning-title {
-            color: #cf1322;
-        }
-
-        .safety-warning.success .warning-title {
-            color: #389e0d;
-        }
-
-        /* 标签样式 */
-        .tag {
-            display: inline-block;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-size: 12px;
-            margin-right: 8px;
-            margin-bottom: 8px;
-        }
-
-        .tag-blue {
-            background: #e6f7ff;
-            color: #1890ff;
-        }
-
-        .tag-green {
-            background: #f6ffed;
-            color: #52c41a;
-        }
-
-        .tag-orange {
-            background: #fff7e6;
-            color: #fa8c16;
-        }
-
-        .tag-red {
-            background: #fff1f0;
-            color: #f5222d;
-        }
-
-        /* 搜索结果 */
-        .search-result {
-            padding: 12px;
-            border-bottom: 1px solid #f0f0f0;
-        }
-
-        .search-result:last-child {
-            border-bottom: none;
-        }
-
-        .search-result-title {
-            font-weight: 600;
-            color: #1a3a5f;
-            margin-bottom: 4px;
-        }
-
-        .search-result-source {
-            font-size: 12px;
-            color: #999;
-            margin-bottom: 8px;
-        }
-
-        .search-result-content {
-            font-size: 14px;
-            color: #666;
-            line-height: 1.6;
-        }
-
-        /* 隐藏页面 */
-        .page {
-            display: none;
-        }
-
-        .page.active {
-            display: block;
-        }
-
-        /* 加载动画 */
-        .loading {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .loading-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 40px;
-            gap: 12px;
-            color: #667eea;
-        }
-
-        /* 快速操作按钮 */
-        .quick-actions {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 16px;
-            margin-bottom: 24px;
-        }
-
-        .quick-action-card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
-        }
-
-        .quick-action-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-        }
-
-        .quick-action-icon {
-            font-size: 32px;
-            margin-bottom: 12px;
-        }
-
-        .quick-action-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #1a3a5f;
-        }
-
-        /* 滚动条样式 */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #c1c1c1;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #a1a1a1;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #f0f2f5; height: 100vh; overflow: hidden; }
+        .app-container { display: flex; height: 100vh; }
+        .sidebar { width: 260px; background: linear-gradient(180deg, #1e3a5f 0%, #2d5a87 100%); color: white; display: flex; flex-direction: column; box-shadow: 2px 0 10px rgba(0,0,0,0.1); }
+        .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, #00c6fb 0%, #005bea 100%); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .logo-text h1 { font-size: 16px; font-weight: 600; }
+        .logo-text p { font-size: 11px; opacity: 0.7; }
+        .nav-menu { flex: 1; padding: 12px 10px; overflow-y: auto; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; margin-bottom: 2px; border-radius: 6px; cursor: pointer; transition: all 0.2s; font-size: 13px; }
+        .nav-item:hover { background: rgba(255,255,255,0.1); }
+        .nav-item.active { background: rgba(0,198,251,0.2); border-left: 3px solid #00c6fb; }
+        .nav-icon { font-size: 16px; width: 22px; text-align: center; }
+        .nav-section { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; opacity: 0.5; padding: 12px 14px 6px; margin-top: 4px; }
+        .sidebar-footer { padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 11px; opacity: 0.6; }
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .top-bar { background: white; padding: 12px 20px; border-bottom: 1px solid #e8e8e8; display: flex; justify-content: space-between; align-items: center; }
+        .page-title { font-size: 18px; font-weight: 600; color: #1a3a5f; }
+        .top-actions { display: flex; gap: 8px; align-items: center; }
+        .status-indicator { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #666; }
+        .status-dot { width: 8px; height: 8px; background: #52c41a; border-radius: 50%; animation: pulse 2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+        .content-area { flex: 1; overflow-y: auto; padding: 20px; }
+        .card { background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 16px; }
+        .card-title { font-size: 15px; font-weight: 600; color: #1a3a5f; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+        .form-group { margin-bottom: 14px; }
+        .form-label { display: block; font-size: 13px; font-weight: 500; color: #333; margin-bottom: 6px; }
+        .form-input, .form-textarea, .form-select { width: 100%; padding: 10px 12px; border: 2px solid #e8e8e8; border-radius: 8px; font-size: 14px; transition: border-color 0.2s; font-family: inherit; }
+        .form-input:focus, .form-textarea:focus, .form-select:focus { outline: none; border-color: #667eea; }
+        .form-textarea { resize: vertical; min-height: 80px; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .btn-success { background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #faad14 0%, #d48806 100%); color: white; }
+        .btn-danger { background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%); color: white; }
+        .btn-secondary { background: #f0f2f5; color: #333; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .result-box { background: #f8f9fa; border-radius: 8px; padding: 16px; margin-top: 14px; border-left: 4px solid #667eea; }
+        .result-title { font-weight: 600; color: #1a3a5f; margin-bottom: 8px; }
+        .result-content { color: #555; line-height: 1.8; white-space: pre-wrap; font-size: 13px; }
+        .safety-warning { background: #fff2e8; border: 1px solid #ffbb96; border-radius: 8px; padding: 12px 16px; margin-top: 14px; }
+        .safety-warning.danger { background: #fff1f0; border-color: #ffa39e; }
+        .safety-warning.success { background: #f6ffed; border-color: #b7eb8f; }
+        .warning-title { font-weight: 600; color: #d46b08; display: flex; align-items: center; gap: 8px; }
+        .safety-warning.danger .warning-title { color: #cf1322; }
+        .safety-warning.success .warning-title { color: #389e0d; }
+        .tag { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 12px; margin-right: 6px; margin-bottom: 6px; }
+        .tag-blue { background: #e6f7ff; color: #1890ff; }
+        .tag-green { background: #f6ffed; color: #52c41a; }
+        .tag-orange { background: #fff7e6; color: #fa8c16; }
+        .tag-red { background: #fff1f0; color: #f5222d; }
+        .tag-purple { background: #f9f0ff; color: #722ed1; }
+        .page { display: none; }
+        .page.active { display: block; }
+        .loading { display: inline-block; width: 16px; height: 16px; border: 2px solid #f3f3f3; border-top: 2px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+        .loading-container { display: flex; align-items: center; justify-content: center; padding: 30px; gap: 10px; color: #667eea; font-size: 14px; }
+        .quick-actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+        .quick-action-card { background: white; border-radius: 10px; padding: 16px; text-align: center; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .quick-action-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
+        .quick-action-icon { font-size: 28px; margin-bottom: 8px; }
+        .quick-action-title { font-size: 13px; font-weight: 600; color: #1a3a5f; }
+        .skill-card { background: white; border-radius: 10px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 12px; cursor: pointer; transition: all 0.2s; border: 2px solid transparent; }
+        .skill-card:hover { border-color: #667eea; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .skill-card-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px; }
+        .skill-card-title { font-size: 14px; font-weight: 600; color: #1a3a5f; }
+        .skill-card-desc { font-size: 12px; color: #666; margin-bottom: 10px; line-height: 1.5; }
+        .skill-card-meta { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .skill-card-stats { font-size: 11px; color: #999; margin-left: auto; }
+        .research-tool-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 20px; }
+        .research-tool-card { background: white; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .research-tool-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
+        .research-tool-icon { font-size: 36px; margin-bottom: 10px; }
+        .research-tool-title { font-size: 14px; font-weight: 600; color: #1a3a5f; margin-bottom: 6px; }
+        .research-tool-desc { font-size: 12px; color: #888; }
+        .model-status-card { background: white; border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+        .model-status-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .model-status-name { font-size: 16px; font-weight: 600; color: #1a3a5f; }
+        .model-status-badge { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+        .model-status-badge.active { background: #f6ffed; color: #52c41a; }
+        .model-status-badge.inactive { background: #f0f2f5; color: #999; }
+        .model-config-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+        .model-config-label { color: #666; }
+        .model-config-value { color: #333; font-weight: 500; }
+        .upload-area { border: 2px dashed #d9d9d9; border-radius: 10px; padding: 40px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .upload-area:hover { border-color: #667eea; background: #f0f5ff; }
+        .upload-area.dragover { border-color: #667eea; background: #f0f5ff; }
+        .upload-icon { font-size: 40px; margin-bottom: 12px; }
+        .export-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .export-card { background: white; border-radius: 10px; padding: 20px; text-align: center; cursor: pointer; transition: all 0.2s; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+        .export-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.1); }
+        .export-icon { font-size: 32px; margin-bottom: 10px; }
+        .export-title { font-size: 13px; font-weight: 600; color: #1a3a5f; margin-bottom: 4px; }
+        .export-desc { font-size: 11px; color: #888; }
+        .code-editor { font-family: 'Consolas', 'Monaco', monospace; background: #1e1e1e; color: #d4d4d4; border-radius: 8px; padding: 16px; width: 100%; min-height: 300px; border: none; resize: vertical; font-size: 13px; line-height: 1.6; }
+        .tabs { display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid #e8e8e8; padding-bottom: 8px; }
+        .tab { padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+        .tab:hover { background: #f0f2f5; }
+        .tab.active { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .plan-step { background: white; border-radius: 8px; padding: 14px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); border-left: 3px solid #667eea; }
+        .plan-step-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .plan-step-title { font-weight: 600; color: #1a3a5f; font-size: 13px; }
+        .plan-step-status { font-size: 11px; padding: 2px 8px; border-radius: 4px; }
+        .plan-step-status.pending { background: #fff7e6; color: #fa8c16; }
+        .plan-step-status.running { background: #e6f7ff; color: #1890ff; }
+        .plan-step-status.completed { background: #f6ffed; color: #52c41a; }
+        .plan-step-status.failed { background: #fff1f0; color: #f5222d; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        .chat-container { display: flex; flex-direction: column; height: 100%; }
+        .chat-messages { flex: 1; overflow-y: auto; padding-bottom: 16px; }
+        .message { display: flex; margin-bottom: 14px; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .message.user { justify-content: flex-end; }
+        .message-avatar { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+        .message.assistant .message-avatar { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); margin-right: 10px; }
+        .message.user .message-avatar { background: linear-gradient(135deg, #00c6fb 0%, #005bea 100%); margin-left: 10px; order: 2; }
+        .message-bubble { max-width: 70%; background: white; border-radius: 12px; padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); line-height: 1.6; font-size: 14px; }
+        .message.user .message-bubble { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .chat-input-area { background: white; padding: 14px 20px; border-top: 1px solid #e8e8e8; }
+        .input-wrapper { display: flex; gap: 10px; align-items: flex-end; }
+        .chat-input { flex: 1; border: 2px solid #e8e8e8; border-radius: 12px; padding: 10px 14px; font-size: 14px; resize: none; min-height: 44px; max-height: 100px; font-family: inherit; }
+        .chat-input:focus { outline: none; border-color: #667eea; }
+        .send-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 500; cursor: pointer; }
+        .send-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
+        .search-result { padding: 10px; border-bottom: 1px solid #f0f0f0; }
+        .search-result:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
     <div class="app-container">
-        <!-- 侧边栏 -->
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <div class="logo-icon">🏥</div>
-                    <div class="logo-text">
-                        <h1>MedAI</h1>
-                        <p>医学智能助手 v1.0</p>
-                    </div>
+                    <div class="logo-icon">M</div>
+                    <div class="logo-text"><h1>MedAI</h1><p>医学智能助手 v0.6</p></div>
                 </div>
             </div>
-            
             <nav class="nav-menu">
-                <div class="nav-item active" data-page="chat" onclick="switchPage('chat')">
-                    <span class="nav-icon">💬</span>
-                    <span>智能问答</span>
-                </div>
-                <div class="nav-item" data-page="diagnosis" onclick="switchPage('diagnosis')">
-                    <span class="nav-icon">🔬</span>
-                    <span>诊断辅助</span>
-                </div>
-                <div class="nav-item" data-page="medication" onclick="switchPage('medication')">
-                    <span class="nav-icon">💊</span>
-                    <span>用药安全</span>
-                </div>
-                <div class="nav-item" data-page="notes" onclick="switchPage('notes')">
-                    <span class="nav-icon">📝</span>
-                    <span>病历文书</span>
-                </div>
-                <div class="nav-item" data-page="icd10" onclick="switchPage('icd10')">
-                    <span class="nav-icon">🏷️</span>
-                    <span>ICD-10 编码</span>
-                </div>
-                <div class="nav-item" data-page="knowledge" onclick="switchPage('knowledge')">
-                    <span class="nav-icon">📚</span>
-                    <span>知识库</span>
-                </div>
-                <div class="nav-item" data-page="audit" onclick="switchPage('audit')">
-                    <span class="nav-icon">📋</span>
-                    <span>审计日志</span>
-                </div>
+                <div class="nav-section">临床</div>
+                <div class="nav-item active" data-page="chat" onclick="switchPage('chat')"><span class="nav-icon">💬</span><span>智能问答</span></div>
+                <div class="nav-item" data-page="diagnosis" onclick="switchPage('diagnosis')"><span class="nav-icon">🔬</span><span>诊断辅助</span></div>
+                <div class="nav-item" data-page="medication" onclick="switchPage('medication')"><span class="nav-icon">💊</span><span>用药安全</span></div>
+                <div class="nav-item" data-page="notes" onclick="switchPage('notes')"><span class="nav-icon">📝</span><span>病历文书</span></div>
+                <div class="nav-item" data-page="icd10" onclick="switchPage('icd10')"><span class="nav-icon">🏷️</span><span>ICD-10 编码</span></div>
+                <div class="nav-section">科研</div>
+                <div class="nav-item" data-page="research" onclick="switchPage('research')"><span class="nav-icon">🔬</span><span>科研工具</span></div>
+                <div class="nav-item" data-page="skills" onclick="switchPage('skills')"><span class="nav-icon">🧩</span><span>Skills 技能</span></div>
+                <div class="nav-item" data-page="planner" onclick="switchPage('planner')"><span class="nav-icon">📋</span><span>任务规划</span></div>
+                <div class="nav-item" data-page="sandbox" onclick="switchPage('sandbox')"><span class="nav-icon">💻</span><span>代码沙箱</span></div>
+                <div class="nav-section">系统</div>
+                <div class="nav-item" data-page="models" onclick="switchPage('models')"><span class="nav-icon">⚙️</span><span>模型设置</span></div>
+                <div class="nav-item" data-page="export" onclick="switchPage('export')"><span class="nav-icon">📤</span><span>导出下载</span></div>
+                <div class="nav-item" data-page="upload" onclick="switchPage('upload')"><span class="nav-icon">📁</span><span>文件上传</span></div>
+                <div class="nav-item" data-page="knowledge" onclick="switchPage('knowledge')"><span class="nav-icon">📚</span><span>知识库</span></div>
+                <div class="nav-item" data-page="audit" onclick="switchPage('audit')"><span class="nav-icon">📋</span><span>审计日志</span></div>
             </nav>
-            
             <div class="sidebar-footer">
-                <p>© 2024 MedAIagents</p>
-                <p style="margin-top: 4px;">仅供参考，非医疗诊断</p>
+                <p>MedAIagents v0.6.0</p>
+                <p style="margin-top:4px">仅供参考，非医疗诊断</p>
             </div>
         </div>
-        
-        <!-- 主内容区 -->
+
         <div class="main-content">
             <div class="top-bar">
                 <div class="page-title" id="pageTitle">智能问答</div>
-                <div class="status-indicator">
-                    <div class="status-dot"></div>
-                    <span>系统就绪</span>
+                <div class="top-actions">
+                    <span id="modelBadge" class="tag tag-blue" style="cursor:pointer" onclick="switchPage('models')">加载中...</span>
+                    <div class="status-indicator"><div class="status-dot"></div><span>系统就绪</span></div>
                 </div>
             </div>
-            
+
             <div class="content-area">
-                <!-- 聊天页面 -->
+                <!-- 聊天 -->
                 <div id="page-chat" class="page active">
                     <div class="chat-container">
                         <div class="chat-messages" id="chatMessages">
                             <div class="message assistant">
                                 <div class="message-avatar">🏥</div>
                                 <div class="message-bubble">
-                                    您好！我是 MedAI 医学智能助手。我可以帮助您：
-                                    <br><br>
-                                    • 解答医学相关问题
-                                    <br>
-                                    • 辅助诊断建议
-                                    <br>
-                                    • 用药安全检查
-                                    <br>
-                                    • 生成病历文书
-                                    <br><br>
-                                    <span style="color: #667eea; font-size: 13px;">⚠️ 提示：所有建议仅供参考，不能替代专业医生诊断</span>
+                                    您好！我是 MedAI 医学智能助手。我可以帮助您解答医学问题、辅助诊断、检查用药安全、生成病历文书等。<br><br>
+                                    <span style="color:#667eea;font-size:12px">⚠️ 提示：所有建议仅供参考，不能替代专业医生诊断</span>
                                 </div>
                             </div>
                         </div>
-                        
                         <div class="chat-input-area">
                             <div class="input-wrapper">
                                 <textarea class="chat-input" id="chatInput" placeholder="请输入您的问题..." rows="1"></textarea>
@@ -667,33 +203,17 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- 诊断辅助页面 -->
+
+                <!-- 诊断 -->
                 <div id="page-diagnosis" class="page">
                     <div class="quick-actions">
-                        <div class="quick-action-card" onclick="quickDiagnosis('发热')">
-                            <div class="quick-action-icon">🤒</div>
-                            <div class="quick-action-title">发热咨询</div>
-                        </div>
-                        <div class="quick-action-card" onclick="quickDiagnosis('头痛')">
-                            <div class="quick-action-icon">😣</div>
-                            <div class="quick-action-title">头痛咨询</div>
-                        </div>
-                        <div class="quick-action-card" onclick="quickDiagnosis('腹痛')">
-                            <div class="quick-action-icon">🤕</div>
-                            <div class="quick-action-title">腹痛咨询</div>
-                        </div>
-                        <div class="quick-action-card" onclick="quickDiagnosis('咳嗽')">
-                            <div class="quick-action-icon">😷</div>
-                            <div class="quick-action-title">咳嗽咨询</div>
-                        </div>
+                        <div class="quick-action-card" onclick="quickDiagnosis('发热')"><div class="quick-action-icon">🤒</div><div class="quick-action-title">发热咨询</div></div>
+                        <div class="quick-action-card" onclick="quickDiagnosis('头痛')"><div class="quick-action-icon">😣</div><div class="quick-action-title">头痛咨询</div></div>
+                        <div class="quick-action-card" onclick="quickDiagnosis('腹痛')"><div class="quick-action-icon">🤕</div><div class="quick-action-title">腹痛咨询</div></div>
+                        <div class="quick-action-card" onclick="quickDiagnosis('咳嗽')"><div class="quick-action-icon">😷</div><div class="quick-action-title">咳嗽咨询</div></div>
                     </div>
-                    
                     <div class="card">
-                        <div class="card-title">
-                            <span>🔍</span>
-                            <span>症状输入</span>
-                        </div>
+                        <div class="card-title"><span>🔍</span><span>症状输入</span></div>
                         <div class="form-group">
                             <label class="form-label">症状列表（用逗号分隔）</label>
                             <input type="text" class="form-input" id="symptomsInput" placeholder="例如：头痛, 发热, 咳嗽">
@@ -703,102 +223,74 @@
                             <textarea class="form-textarea" id="labResultsInput" placeholder="例如：体温: 38.5°C, 血压: 140/90 mmHg"></textarea>
                         </div>
                         <button class="btn btn-primary" onclick="runDiagnosis()">开始诊断分析</button>
-                        
                         <div id="diagnosisResult"></div>
                     </div>
                 </div>
-                
-                <!-- 用药安全页面 -->
+
+                <!-- 用药 -->
                 <div id="page-medication" class="page">
                     <div class="card">
-                        <div class="card-title">
-                            <span>💊</span>
-                            <span>用药安全检查</span>
-                        </div>
+                        <div class="card-title"><span>💊</span><span>用药安全检查</span></div>
                         <div class="form-group">
                             <label class="form-label">药物列表（用逗号分隔）</label>
                             <input type="text" class="form-input" id="medicationsInput" placeholder="例如：阿司匹林, 华法林">
                         </div>
                         <div class="form-group">
-                            <label class="form-label">过敏药物（可选，用逗号分隔）</label>
+                            <label class="form-label">过敏药物（可选）</label>
                             <input type="text" class="form-input" id="allergiesInput" placeholder="例如：青霉素">
                         </div>
                         <button class="btn btn-primary" onclick="checkMedication()">开始安全检查</button>
-                        
                         <div id="medicationResult"></div>
                     </div>
                 </div>
-                
-                <!-- 病历文书页面 -->
+
+                <!-- 文书 -->
                 <div id="page-notes" class="page">
                     <div class="card">
-                        <div class="card-title">
-                            <span>📝</span>
-                            <span>生成医学文书</span>
+                        <div class="card-title"><span>📝</span><span>生成医学文书</span></div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                            <span style="font-size:13px;color:#666">填写患者信息生成标准医学文书</span>
+                            <button class="btn btn-success" onclick="exportNote()">📥 导出文书</button>
                         </div>
                         <div class="form-group">
                             <label class="form-label">文书类型</label>
-                            <select class="form-input" id="noteType">
+                            <select class="form-select" id="noteType">
                                 <option value="admission">入院记录</option>
                                 <option value="progress">病程记录</option>
                                 <option value="discharge">出院记录</option>
                             </select>
                         </div>
                         <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">患者姓名</label>
-                                <input type="text" class="form-input" id="patientName" placeholder="患者姓名">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">年龄</label>
-                                <input type="number" class="form-input" id="patientAge" placeholder="年龄">
-                            </div>
+                            <div class="form-group"><label class="form-label">患者姓名</label><input type="text" class="form-input" id="patientName" placeholder="患者姓名"></div>
+                            <div class="form-group"><label class="form-label">年龄</label><input type="number" class="form-input" id="patientAge" placeholder="年龄"></div>
                         </div>
                         <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">性别</label>
-                                <select class="form-input" id="patientGender">
-                                    <option value="男">男</option>
-                                    <option value="女">女</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">诊断</label>
-                                <input type="text" class="form-input" id="diagnosisInput" placeholder="例如：2型糖尿病">
-                            </div>
+                            <div class="form-group"><label class="form-label">性别</label><select class="form-select" id="patientGender"><option value="男">男</option><option value="女">女</option></select></div>
+                            <div class="form-group"><label class="form-label">诊断</label><input type="text" class="form-input" id="diagnosisInput" placeholder="例如：2型糖尿病"></div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">主诉/主要内容</label>
                             <textarea class="form-textarea" id="chiefComplaint" placeholder="请输入主诉或主要内容..."></textarea>
                         </div>
                         <button class="btn btn-primary" onclick="generateNote()">生成文书</button>
-                        
                         <div id="noteResult"></div>
                     </div>
                 </div>
-                
-                <!-- ICD-10 编码页面 -->
+
+                <!-- ICD-10 -->
                 <div id="page-icd10" class="page">
                     <div class="card">
-                        <div class="card-title">
-                            <span>🏷️</span>
-                            <span>ICD-10 编码查询</span>
-                        </div>
+                        <div class="card-title"><span>🏷️</span><span>ICD-10 编码查询</span></div>
                         <div class="form-group">
                             <label class="form-label">诊断名称</label>
                             <input type="text" class="form-input" id="icdDiagnosisInput" placeholder="例如：2型糖尿病">
                         </div>
                         <button class="btn btn-primary" onclick="searchICD10()">查询编码</button>
-                        
                         <div id="icdResult"></div>
                     </div>
-                    
                     <div class="card">
-                        <div class="card-title">
-                            <span>📋</span>
-                            <span>常用编码参考</span>
-                        </div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="card-title"><span>📋</span><span>常用编码参考</span></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
                             <div class="tag tag-blue">E11.9 - 2型糖尿病</div>
                             <div class="tag tag-blue">I10 - 原发性高血压</div>
                             <div class="tag tag-blue">J18.9 - 社区获得性肺炎</div>
@@ -808,512 +300,771 @@
                         </div>
                     </div>
                 </div>
-                
-                <!-- 知识库页面 -->
+
+                <!-- 知识库 -->
                 <div id="page-knowledge" class="page">
                     <div class="card">
-                        <div class="card-title">
-                            <span>📚</span>
-                            <span>医学知识库搜索</span>
-                        </div>
+                        <div class="card-title"><span>📚</span><span>医学知识库搜索</span></div>
                         <div class="form-group">
                             <label class="form-label">搜索关键词</label>
-                            <input type="text" class="form-input" id="knowledgeQuery" placeholder="例如：高血压治疗">
+                            <input type="text" class="form-input" id="knowledgeQuery" placeholder="例如：高血压治疗指南">
                         </div>
-                        <div class="form-group" style="display: flex; align-items: center; gap: 8px;">
-                            <input type="checkbox" id="usePubMed">
-                            <label for="usePubMed" style="font-size: 13px; color: #666;">同时搜索 PubMed 文献</label>
+                        <div class="form-group" style="display:flex;align-items:center;gap:8px">
+                            <input type="checkbox" id="usePubMed"><label for="usePubMed" style="font-size:13px;color:#666">同时搜索 PubMed 文献</label>
                         </div>
                         <button class="btn btn-primary" onclick="searchKnowledge()">搜索</button>
-                        
                         <div id="knowledgeResult"></div>
                     </div>
                 </div>
-                
-                <!-- 审计日志页面 -->
+
+                <!-- ==================== 科研工具 ==================== -->
+                <div id="page-research" class="page">
+                    <div class="research-tool-grid">
+                        <div class="research-tool-card" onclick="showResearchForm('rct')">
+                            <div class="research-tool-icon">🧪</div>
+                            <div class="research-tool-title">RCT 方案设计</div>
+                            <div class="research-tool-desc">随机对照试验方案、样本量计算</div>
+                        </div>
+                        <div class="research-tool-card" onclick="showResearchForm('meta')">
+                            <div class="research-tool-icon">📊</div>
+                            <div class="research-tool-title">Meta 分析写作</div>
+                            <div class="research-tool-desc">系统评价与 Meta 分析论文框架</div>
+                        </div>
+                        <div class="research-tool-card" onclick="showResearchForm('grant')">
+                            <div class="research-tool-icon">💰</div>
+                            <div class="research-tool-title">基金申请书</div>
+                            <div class="research-tool-desc">国自然/省市基金申请书撰写</div>
+                        </div>
+                        <div class="research-tool-card" onclick="showResearchForm('survival')">
+                            <div class="research-tool-icon">📈</div>
+                            <div class="research-tool-title">生存分析</div>
+                            <div class="research-tool-desc">KM 曲线、Cox 回归、竞争风险</div>
+                        </div>
+                        <div class="research-tool-card" onclick="showResearchForm('literature')">
+                            <div class="research-tool-icon">📖</div>
+                            <div class="research-tool-title">文献综述</div>
+                            <div class="research-tool-desc">系统性文献检索与综述框架</div>
+                        </div>
+                        <div class="research-tool-card" onclick="showResearchForm('imaging')">
+                            <div class="research-tool-icon">🩻</div>
+                            <div class="research-tool-title">影像报告结构化</div>
+                            <div class="research-tool-desc">自由文本转结构化影像报告</div>
+                        </div>
+                    </div>
+
+                    <!-- RCT 表单 -->
+                    <div id="research-form-rct" class="card" style="display:none">
+                        <div class="card-title"><span>🧪</span><span>RCT 方案设计</span></div>
+                        <div class="form-group"><label class="form-label">干预措施</label><input type="text" class="form-input" id="rctIntervention" placeholder="例如：新型降压药"></div>
+                        <div class="form-group"><label class="form-label">研究疾病/条件</label><input type="text" class="form-input" id="rctCondition" placeholder="例如：原发性高血压"></div>
+                        <div class="form-group"><label class="form-label">主要终点指标</label><input type="text" class="form-input" id="rctEndpoint" placeholder="例如：收缩压降低幅度"></div>
+                        <div class="form-group"><label class="form-label">计划样本量</label><input type="number" class="form-input" id="rctSampleSize" value="100"></div>
+                        <button class="btn btn-primary" onclick="runResearch('rct')">生成 RCT 方案</button>
+                        <div id="rctResult"></div>
+                    </div>
+
+                    <!-- Meta 分析表单 -->
+                    <div id="research-form-meta" class="card" style="display:none">
+                        <div class="card-title"><span>📊</span><span>Meta 分析写作</span></div>
+                        <div class="form-group"><label class="form-label">研究主题</label><input type="text" class="form-input" id="metaTopic" placeholder="例如：阿司匹林预防心血管事件的疗效"></div>
+                        <div class="form-row">
+                            <div class="form-group"><label class="form-label">效应指标</label><select class="form-select" id="metaEffect"><option value="OR">OR</option><option value="RR">RR</option><option value="MD">MD</option><option value="SMD">SMD</option></select></div>
+                            <div class="form-group"><label class="form-label">纳入研究数</label><input type="number" class="form-input" id="metaStudies" value="10"></div>
+                        </div>
+                        <div class="form-group"><label class="form-label">写作语言</label><select class="form-select" id="metaLang"><option value="chinese">中文</option><option value="english">English</option></select></div>
+                        <button class="btn btn-primary" onclick="runResearch('meta')">生成 Meta 分析框架</button>
+                        <div id="metaResult"></div>
+                    </div>
+
+                    <!-- 基金表单 -->
+                    <div id="research-form-grant" class="card" style="display:none">
+                        <div class="card-title"><span>💰</span><span>基金申请书</span></div>
+                        <div class="form-group"><label class="form-label">研究题目</label><input type="text" class="form-input" id="grantTitle" placeholder="例如：基于AI的肺癌早期筛查模型研究"></div>
+                        <div class="form-row">
+                            <div class="form-group"><label class="form-label">基金类型</label><select class="form-select" id="grantType"><option value="NSFC">国自然</option><option value="provincial">省级</option><option value="hospital">院级</option></select></div>
+                            <div class="form-group"><label class="form-label">预算（万元）</label><input type="number" class="form-input" id="grantBudget" value="50"></div>
+                        </div>
+                        <div class="form-group"><label class="form-label">研究领域</label><input type="text" class="form-input" id="grantArea" placeholder="例如：肿瘤学/影像组学"></div>
+                        <button class="btn btn-primary" onclick="runResearch('grant')">生成申请书框架</button>
+                        <div id="grantResult"></div>
+                    </div>
+
+                    <!-- 生存分析表单 -->
+                    <div id="research-form-survival" class="card" style="display:none">
+                        <div class="card-title"><span>📈</span><span>生存分析</span></div>
+                        <div class="form-group"><label class="form-label">数据描述</label><textarea class="form-textarea" id="survDesc" placeholder="描述您的数据集..."></textarea></div>
+                        <div class="form-row-3">
+                            <div class="form-group"><label class="form-label">时间变量</label><input type="text" class="form-input" id="survTime" placeholder="OS"></div>
+                            <div class="form-group"><label class="form-label">事件变量</label><input type="text" class="form-input" id="survEvent" placeholder="Death"></div>
+                            <div class="form-group"><label class="form-label">分组变量</label><input type="text" class="form-input" id="survGroup" placeholder="Treatment"></div>
+                        </div>
+                        <div class="form-group"><label class="form-label">协变量（逗号分隔）</label><input type="text" class="form-input" id="survCov" placeholder="Age, Sex, Stage"></div>
+                        <button class="btn btn-primary" onclick="runResearch('survival')">生成分析方案</button>
+                        <div id="survivalResult"></div>
+                    </div>
+
+                    <!-- 文献综述表单 -->
+                    <div id="research-form-literature" class="card" style="display:none">
+                        <div class="card-title"><span>📖</span><span>文献综述</span></div>
+                        <div class="form-group"><label class="form-label">综述主题</label><input type="text" class="form-input" id="litTopic" placeholder="例如：免疫检查点抑制剂在肺癌中的应用"></div>
+                        <div class="form-group"><label class="form-label">重点关注领域</label><input type="text" class="form-input" id="litFocus" placeholder="例如：疗效、安全性、生物标志物"></div>
+                        <div class="form-group"><label class="form-label">计划综述文献数</label><input type="number" class="form-input" id="litPapers" value="30"></div>
+                        <button class="btn btn-primary" onclick="runResearch('literature')">生成综述框架</button>
+                        <div id="literatureResult"></div>
+                    </div>
+
+                    <!-- 影像报告表单 -->
+                    <div id="research-form-imaging" class="card" style="display:none">
+                        <div class="card-title"><span>🩻</span><span>影像报告结构化</span></div>
+                        <div class="form-group"><label class="form-label">影像模态</label><select class="form-select" id="imgModality"><option>CT</option><option>MRI</option><option>X-ray</option><option>Ultrasound</option><option>PET-CT</option></select></div>
+                        <div class="form-group"><label class="form-label">检查部位</label><input type="text" class="form-input" id="imgBodyPart" placeholder="例如：胸部"></div>
+                        <div class="form-group"><label class="form-label">原始报告文本</label><textarea class="form-textarea" id="imgReport" placeholder="粘贴原始影像报告..."></textarea></div>
+                        <button class="btn btn-primary" onclick="runResearch('imaging')">结构化处理</button>
+                        <div id="imagingResult"></div>
+                    </div>
+                </div>
+
+                <!-- ==================== Skills ==================== -->
+                <div id="page-skills" class="page">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                        <div>
+                            <h2 style="font-size:16px;color:#1a3a5f">Skills 技能市场</h2>
+                            <p style="font-size:12px;color:#888;margin-top:4px">预置医学工作流，一键执行复杂任务</p>
+                        </div>
+                        <div style="display:flex;gap:8px">
+                            <input type="text" id="skillSearchInput" class="form-input" placeholder="搜索 Skills..." style="width:200px" onkeyup="searchSkillsUI()">
+                            <button class="btn btn-secondary" onclick="loadSkills()">🔄 刷新</button>
+                        </div>
+                    </div>
+                    <div id="skillsList"></div>
+                    <div id="skillExecutionResult"></div>
+                </div>
+
+                <!-- ==================== 任务规划 ==================== -->
+                <div id="page-planner" class="page">
+                    <div class="card">
+                        <div class="card-title"><span>📋</span><span>任务规划器</span></div>
+                        <p style="font-size:13px;color:#666;margin-bottom:14px">输入复杂任务，AI 自动分解为可执行的子任务并规划执行路径</p>
+                        <div class="form-group">
+                            <label class="form-label">任务描述</label>
+                            <textarea class="form-textarea" id="planTask" placeholder="例如：为一位65岁男性高血压患者设计完整的诊疗方案，包括诊断、检查、用药和随访计划..."></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">上下文信息（可选）</label>
+                            <textarea class="form-textarea" id="planContext" placeholder="补充背景信息..."></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="runPlan()">开始规划</button>
+                        <div id="planResult"></div>
+                    </div>
+                </div>
+
+                <!-- ==================== 代码沙箱 ==================== -->
+                <div id="page-sandbox" class="page">
+                    <div class="card">
+                        <div class="card-title"><span>💻</span><span>代码沙箱</span></div>
+                        <p style="font-size:13px;color:#666;margin-bottom:14px">安全执行 Python 代码，用于统计分析、数据处理和算法验证</p>
+                        <div class="form-group">
+                            <label class="form-label">代码</label>
+                            <textarea class="code-editor" id="sandboxCode" placeholder="# 输入 Python 代码
+# 例如：计算 BMI
+def calc_bmi(weight, height):
+    return weight / (height ** 2)
+
+print(calc_bmi(70, 1.75))"></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="runSandbox()">▶ 执行代码</button>
+                        <div id="sandboxResult"></div>
+                    </div>
+                </div>
+
+                <!-- ==================== 模型设置 ==================== -->
+                <div id="page-models" class="page">
+                    <div id="modelsList"></div>
+                    <div class="card">
+                        <div class="card-title"><span>➕</span><span>切换模型</span></div>
+                        <p style="font-size:13px;color:#666;margin-bottom:14px">选择要使用的 AI 模型提供商</p>
+                        <div class="form-group">
+                            <label class="form-label">目标 Provider</label>
+                            <select class="form-select" id="switchModelSelect">
+                                <option value="cherryin">CherryIn (DeepSeek)</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic (Claude)</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="switchModel()">切换模型</button>
+                        <div id="switchModelResult"></div>
+                    </div>
+                </div>
+
+                <!-- ==================== 导出下载 ==================== -->
+                <div id="page-export" class="page">
+                    <div class="export-grid">
+                        <div class="export-card" onclick="exportDocument('paper')">
+                            <div class="export-icon">📄</div>
+                            <div class="export-title">论文导出</div>
+                            <div class="export-desc">IMRaD 格式论文</div>
+                        </div>
+                        <div class="export-card" onclick="exportDocument('grant')">
+                            <div class="export-icon">💰</div>
+                            <div class="export-title">基金申请书</div>
+                            <div class="export-desc">Word 格式申请书</div>
+                        </div>
+                        <div class="export-card" onclick="exportDocument('protocol')">
+                            <div class="export-icon">📋</div>
+                            <div class="export-title">研究方案</div>
+                            <div class="export-desc">RCT 方案文档</div>
+                        </div>
+                        <div class="export-card" onclick="exportDocument('meta')">
+                            <div class="export-icon">📊</div>
+                            <div class="export-title">Meta 分析</div>
+                            <div class="export-desc">系统评价文档</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><span>📤</span><span>快速导出</span></div>
+                        <div class="form-group">
+                            <label class="form-label">导出类型</label>
+                            <select class="form-select" id="exportType">
+                                <option value="paper">论文</option>
+                                <option value="grant">基金申请</option>
+                                <option value="protocol">研究方案</option>
+                                <option value="meta">Meta 分析</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">格式</label>
+                            <select class="form-select" id="exportFormat">
+                                <option value="docx">Word (.docx)</option>
+                                <option value="pdf">PDF (.pdf)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">内容数据（JSON）</label>
+                            <textarea class="form-textarea" id="exportData" placeholder='{"title": "示例标题", "content": "..."}'></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="doExport()">📥 导出文件</button>
+                        <div id="exportResult"></div>
+                    </div>
+                </div>
+
+                <!-- ==================== 文件上传 ==================== -->
+                <div id="page-upload" class="page">
+                    <div class="card">
+                        <div class="card-title"><span>📁</span><span>文件上传</span></div>
+                        <p style="font-size:13px;color:#666;margin-bottom:14px">上传医学文档、数据文件或影像资料进行处理</p>
+                        <div class="upload-area" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                            <div class="upload-icon">📂</div>
+                            <div style="font-size:16px;font-weight:600;color:#1a3a5f;margin-bottom:6px">点击或拖拽文件到此处</div>
+                            <div style="font-size:12px;color:#888">支持 PDF、Word、Excel、图片、DICOM 等格式</div>
+                        </div>
+                        <input type="file" id="fileInput" style="display:none" onchange="handleFileSelect(event)">
+                        <div id="uploadResult"></div>
+                    </div>
+                </div>
+
+                <!-- 审计日志 -->
                 <div id="page-audit" class="page">
                     <div class="card">
-                        <div class="card-title">
-                            <span>📋</span>
-                            <span>操作审计日志</span>
-                        </div>
+                        <div class="card-title"><span>📋</span><span>操作审计日志</span></div>
                         <button class="btn btn-success" onclick="loadAuditLogs()">刷新日志</button>
-                        <div id="auditLogsResult" style="margin-top: 16px;"></div>
+                        <div id="auditLogsResult" style="margin-top:14px"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <script>
-        // 当前页面
-        let currentPage = 'chat';
-        
-        // 页面切换
-        function switchPage(page) {
-            currentPage = page;
-            
-            // 更新导航
-            document.querySelectorAll('.nav-item').forEach(item => {
-                item.classList.remove('active');
-                if (item.dataset.page === page) {
-                    item.classList.add('active');
-                }
-            });
-            
-            // 更新页面标题
-            const titles = {
-                'chat': '智能问答',
-                'diagnosis': '诊断辅助',
-                'medication': '用药安全',
-                'notes': '病历文书',
-                'icd10': 'ICD-10 编码',
-                'knowledge': '知识库',
-                'audit': '审计日志'
-            };
-            document.getElementById('pageTitle').textContent = titles[page] || page;
-            
-            // 显示对应页面
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById(`page-${page}`).classList.add('active');
-        }
-        
-        // 发送消息
-        async function sendMessage() {
-            const input = document.getElementById('chatInput');
-            const message = input.value.trim();
-            
-            if (!message) return;
-            
-            // 添加用户消息
-            addMessage('user', message);
-            input.value = '';
-            
-            // 显示加载状态
-            const loadingId = addMessage('assistant', 'thinking...', true);
-            
-            try {
-                const response = await fetch('/api/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        message: message,
-                        use_knowledge: true
-                    })
-                });
-                
-                const data = await response.json();
-                
-                // 移除加载消息
-                document.getElementById(loadingId).remove();
-                
-                // 添加回复
-                addMessage('assistant', data.message);
-                
-            } catch (error) {
-                document.getElementById(loadingId).remove();
-                addMessage('assistant', '抱歉，发生了错误：' + error.message);
-            }
-        }
-        
-        function addMessage(role, content, isLoading = false) {
-            const container = document.getElementById('chatMessages');
-            const messageId = 'msg-' + Date.now();
-            
-            const messageDiv = document.createElement('div');
-            messageDiv.id = messageId;
-            messageDiv.className = `message ${role}`;
-            
-            if (isLoading) {
-                messageDiv.innerHTML = `
-                    <div class="message-avatar">🏥</div>
-                    <div class="message-bubble">
-                        <div class="loading-container">
-                            <div class="loading"></div>
-                            <span>思考中...</span>
-                        </div>
+    <!-- Skill 执行弹窗 -->
+    <div id="skillModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center">
+        <div style="background:white;border-radius:12px;padding:24px;max-width:500px;width:90%;max-height:80vh;overflow-y:auto">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+                <h3 id="skillModalTitle" style="font-size:16px;color:#1a3a5f">执行 Skill</h3>
+                <span style="cursor:pointer;font-size:20px" onclick="closeSkillModal()">&times;</span>
+            </div>
+            <div id="skillModalContent"></div>
+            <div id="skillModalResult"></div>
+        </div>
+    </div>
+
+<script>
+let currentPage = 'chat';
+let currentSkillName = '';
+
+// 页面切换
+function switchPage(page) {
+    currentPage = page;
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.page === page) item.classList.add('active');
+    });
+    const titles = {
+        'chat': '智能问答', 'diagnosis': '诊断辅助', 'medication': '用药安全', 'notes': '病历文书',
+        'icd10': 'ICD-10 编码', 'knowledge': '知识库', 'audit': '审计日志',
+        'research': '科研工具', 'skills': 'Skills 技能', 'planner': '任务规划',
+        'sandbox': '代码沙箱', 'models': '模型设置', 'export': '导出下载', 'upload': '文件上传'
+    };
+    document.getElementById('pageTitle').textContent = titles[page] || page;
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById(`page-${page}`).classList.add('active');
+
+    if (page === 'skills') loadSkills();
+    if (page === 'models') loadModels();
+    if (page === 'audit') loadAuditLogs();
+}
+
+// 加载模型状态
+async function loadModels() {
+    try {
+        const res = await fetch('/api/models');
+        const data = await res.json();
+        if (data.success) {
+            document.getElementById('modelBadge').textContent = data.default_provider;
+            let html = '';
+            for (const [name, config] of Object.entries(data.config)) {
+                const isActive = name === data.default_provider;
+                html += `<div class="model-status-card">
+                    <div class="model-status-header">
+                        <div class="model-status-name">${name}</div>
+                        <div class="model-status-badge ${isActive ? 'active' : 'inactive'}">${isActive ? '当前使用' : '可用'}</div>
                     </div>
-                `;
-            } else {
-                const avatar = role === 'assistant' ? '🏥' : '👤';
-                messageDiv.innerHTML = `
-                    <div class="message-avatar">${avatar}</div>
-                    <div class="message-bubble">${content}</div>
-                `;
+                    <div class="model-config-row"><span class="model-config-label">Base URL</span><span class="model-config-value">${config.base_url || '默认'}</span></div>
+                    <div class="model-config-row"><span class="model-config-label">默认模型</span><span class="model-config-value">${config.default_model || '未知'}</span></div>
+                    <div class="model-config-row"><span class="model-config-label">Temperature</span><span class="model-config-value">${config.temperature || 0.3}</span></div>
+                </div>`;
             }
-            
-            container.appendChild(messageDiv);
-            container.scrollTop = container.scrollHeight;
-            
-            return messageId;
+            document.getElementById('modelsList').innerHTML = html;
         }
-        
-        // 快捷诊断
-        function quickDiagnosis(symptom) {
-            document.getElementById('symptomsInput').value = symptom;
-            runDiagnosis();
-        }
-        
-        // 运行诊断
-        async function runDiagnosis() {
-            const symptomsInput = document.getElementById('symptomsInput').value;
-            const labResultsInput = document.getElementById('labResultsInput').value;
-            
-            if (!symptomsInput.trim()) {
-                alert('请输入至少一个症状');
-                return;
-            }
-            
-            const symptoms = symptomsInput.split(/[,，]/).map(s => s.trim()).filter(s => s);
-            
-            const labResults = {};
-            if (labResultsInput.trim()) {
-                labResultsInput.split(/[,，]/).forEach(item => {
-                    const [key, value] = item.split(/[:：]/);
-                    if (key && value) {
-                        labResults[key.trim()] = value.trim();
-                    }
-                });
-            }
-            
-            const resultDiv = document.getElementById('diagnosisResult');
-            resultDiv.innerHTML = `
-                <div class="loading-container">
-                    <div class="loading"></div>
-                    <span>正在分析病情...</span>
-                </div>
-            `;
-            
-            try {
-                const response = await fetch('/api/diagnosis', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ symptoms, lab_results: labResults })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success && data.data) {
-                    const result = data.data;
-                    let html = '<div class="result-box">';
-                    html += '<div class="result-title">🔍 诊断分析结果</div>';
-                    
-                    if (result.primary_diagnosis) {
-                        html += `<div class="result-content"><strong>主要诊断：</strong>${result.primary_diagnosis.disease || '暂无'}<br>`;
-                        html += `<strong>ICD-10：</strong>${result.primary_diagnosis.icd10 || '暂无'}</div>`;
-                    }
-                    
-                    if (result.differential_diagnoses && result.differential_diagnoses.length > 0) {
-                        html += '<div class="result-content"><br><strong>鉴别诊断：</strong><br>';
-                        result.differential_diagnoses.slice(0, 3).forEach((diag, i) => {
-                            html += `${i + 1}. ${diag.disease || diag}`;
-                            if (diag.icd10) html += ` (${diag.icd10})`;
-                            html += '<br>';
-                        });
-                        html += '</div>';
-                    }
-                    
-                    if (result.recommended_tests) {
-                        html += '<div class="result-content"><br><strong>建议检查：</strong><br>';
-                        result.recommended_tests.forEach(test => {
-                            html += `• ${test}<br>`;
-                        });
-                        html += '</div>';
-                    }
-                    
-                    html += `<br><div style="color: #667eea; font-size: 13px;">⚠️ 以上建议仅供参考，请以临床实际诊断为准</div>`;
-                    html += '</div>';
-                    resultDiv.innerHTML = html;
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>发生错误：${error.message}</div>`;
-            }
-        }
-        
-        // 用药安全检查
-        async function checkMedication() {
-            const medicationsInput = document.getElementById('medicationsInput').value;
-            const allergiesInput = document.getElementById('allergiesInput').value;
-            
-            if (!medicationsInput.trim()) {
-                alert('请输入至少一种药物');
-                return;
-            }
-            
-            const medications = medicationsInput.split(/[,，]/).map(s => s.trim()).filter(s => s);
-            const allergies = allergiesInput ? allergiesInput.split(/[,，]/).map(s => s.trim()).filter(s => s) : [];
-            
-            const resultDiv = document.getElementById('medicationResult');
-            resultDiv.innerHTML = `
-                <div class="loading-container">
-                    <div class="loading"></div>
-                    <span>正在检查用药安全...</span>
-                </div>
-            `;
-            
-            try {
-                const response = await fetch('/api/medication-safety', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ medications, allergies })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success && data.data) {
-                    const result = data.data;
-                    let html = '';
-                    
-                    if (result.is_safe) {
-                        html += `<div class="safety-warning success"><div class="warning-title">✅ 安全</div>未发现明显的药物相互作用</div>`;
-                    } else {
-                        html += `<div class="safety-warning danger"><div class="warning-title">⚠️ 存在风险</div>检测到潜在的药物相互作用风险</div>`;
-                    }
-                    
-                    if (result.warnings && result.warnings.length > 0) {
-                        html += '<div class="result-box">';
-                        html += '<div class="result-title">⚠️ 警告信息</div>';
-                        result.warnings.forEach(warning => {
-                            html += `<div class="result-content" style="color: #d46b08;">• ${warning.description || warning}</div>`;
-                        });
-                        html += '</div>';
-                    }
-                    
-                    if (result.recommendations && result.recommendations.length > 0) {
-                        html += '<div class="result-box">';
-                        html += '<div class="result-title">💡 建议</div>';
-                        result.recommendations.forEach(rec => {
-                            html += `<div class="result-content">• ${rec}</div>`;
-                        });
-                        html += '</div>';
-                    }
-                    
-                    resultDiv.innerHTML = html;
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>发生错误：${error.message}</div>`;
-            }
-        }
-        
-        // 生成病历
-        async function generateNote() {
-            const noteType = document.getElementById('noteType').value;
-            const patientName = document.getElementById('patientName').value || '患者';
-            const patientAge = document.getElementById('patientAge').value || 0;
-            const patientGender = document.getElementById('patientGender').value;
-            const diagnosis = document.getElementById('diagnosisInput').value || '';
-            const chiefComplaint = document.getElementById('chiefComplaint').value || '';
-            
-            const resultDiv = document.getElementById('noteResult');
-            resultDiv.innerHTML = `
-                <div class="loading-container">
-                    <div class="loading"></div>
-                    <span>正在生成文书...</span>
-                </div>
-            `;
-            
-            try {
-                const response = await fetch('/api/generate-note', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        note_type: noteType,
-                        patient_info: { name: patientName, age: parseInt(patientAge), gender: patientGender },
-                        clinical_data: { 
-                            diagnosis: diagnosis, 
-                            chief_complaint: chiefComplaint,
-                            subjective: chiefComplaint
-                        }
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    resultDiv.innerHTML = `
-                        <div class="result-box">
-                            <div class="result-title">📄 生成结果</div>
-                            <div class="result-content" style="background: white; padding: 16px; border-radius: 8px; margin-top: 8px;">
-                                ${data.content.replace(/\n/g, '<br>')}
-                            </div>
-                            <button class="btn btn-success" style="margin-top: 16px;" onclick="copyToClipboard(\`${data.content}\`)">复制内容</button>
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>发生错误：${error.message}</div>`;
-            }
-        }
-        
-        // ICD-10 查询
-        async function searchICD10() {
-            const diagnosis = document.getElementById('icdDiagnosisInput').value.trim();
-            
-            if (!diagnosis) {
-                alert('请输入诊断名称');
-                return;
-            }
-            
-            const resultDiv = document.getElementById('icdResult');
-            resultDiv.innerHTML = `
-                <div class="loading-container">
-                    <div class="loading"></div>
-                    <span>正在查询编码...</span>
-                </div>
-            `;
-            
-            try {
-                const response = await fetch('/api/icd10', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ diagnosis })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    if (data.found) {
-                        resultDiv.innerHTML = `
-                            <div class="result-box">
-                                <div class="result-title">🏷️ ICD-10 编码</div>
-                                <div class="result-content">
-                                    <strong>诊断：</strong>${data.diagnosis}<br>
-                                    <strong>编码：</strong><span class="tag tag-blue">${data.icd10_code}</span>
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        resultDiv.innerHTML = `
-                            <div class="safety-warning">
-                                <div class="warning-title">🔍 未找到编码</div>
-                                未找到 "${data.diagnosis}" 的 ICD-10 编码，请尝试其他关键词
-                            </div>
-                        `;
-                    }
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>发生错误：${error.message}</div>`;
-            }
-        }
-        
-        // 知识库搜索
-        async function searchKnowledge() {
-            const query = document.getElementById('knowledgeQuery').value.trim();
-            const usePubMed = document.getElementById('usePubMed').checked;
-            
-            if (!query) {
-                alert('请输入搜索关键词');
-                return;
-            }
-            
-            const resultDiv = document.getElementById('knowledgeResult');
-            resultDiv.innerHTML = `
-                <div class="loading-container">
-                    <div class="loading"></div>
-                    <span>正在搜索知识库...</span>
-                </div>
-            `;
-            
-            try {
-                const response = await fetch('/api/search', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ query, limit: 5, use_pubmed: usePubMed })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success && data.results && data.results.length > 0) {
-                    let html = '<div class="result-box">';
-                    html += `<div class="result-title">📚 找到 ${data.count} 条结果</div>`;
-                    html += '<div style="margin-top: 12px;">';
-                    
-                    data.results.forEach((item, i) => {
-                        html += '<div class="search-result">';
-                        html += `<div class="search-result-title">${i + 1}. ${item.title || '无标题'}</div>`;
-                        html += `<div class="search-result-source">来源：${item.source || '未知'}</div>`;
-                        if (item.content) {
-                            html += `<div class="search-result-content">${item.content.substring(0, 200)}...</div>`;
-                        }
-                        html += '</div>';
-                    });
-                    
-                    html += '</div></div>';
-                    resultDiv.innerHTML = html;
-                } else {
-                    resultDiv.innerHTML = `
-                        <div class="safety-warning">
-                            <div class="warning-title">🔍 未找到结果</div>
-                            未找到与 "${query}" 相关的知识条目
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>发生错误：${error.message}</div>`;
-            }
-        }
-        
-        // 加载审计日志
-        async function loadAuditLogs() {
-            const resultDiv = document.getElementById('auditLogsResult');
-            resultDiv.innerHTML = `
-                <div class="loading-container">
-                    <div class="loading"></div>
-                    <span>正在加载日志...</span>
-                </div>
-            `;
-            
-            try {
-                const response = await fetch('/api/audit-logs?limit=50');
-                const data = await response.json();
-                
-                if (data.success && data.logs && data.logs.length > 0) {
-                    let html = '<div class="result-box">';
-                    html += `<div class="result-title">📋 操作日志 (${data.logs.length} 条)</div>`;
-                    html += '<div style="margin-top: 12px; max-height: 500px; overflow-y: auto;">';
-                    
-                    data.logs.forEach(log => {
-                        const time = log.timestamp ? log.timestamp.substring(0, 19).replace('T', ' ') : '';
-                        html += `<div style="padding: 8px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;">`;
-                        html += `<span style="color: #999;">[${time}]</span> `;
-                        html += `<span style="color: #667eea;">${log.action || '未知操作'}</span>`;
-                        html += '</div>';
-                    });
-                    
-                    html += '</div></div>';
-                    resultDiv.innerHTML = html;
-                } else {
-                    resultDiv.innerHTML = `
-                        <div class="safety-warning">
-                            <div class="warning-title">📋 暂无日志</div>
-                            暂无操作记录
-                        </div>
-                    `;
-                }
-            } catch (error) {
-                resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>发生错误：${error.message}</div>`;
-            }
-        }
-        
-        // 复制到剪贴板
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                alert('已复制到剪贴板');
+    } catch (e) { console.error(e); }
+}
+
+// 切换模型
+async function switchModel() {
+    const provider = document.getElementById('switchModelSelect').value;
+    const resultDiv = document.getElementById('switchModelResult');
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>切换中...</div>';
+    try {
+        const res = await fetch('/api/models/switch', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({provider}) });
+        const data = await res.json();
+        resultDiv.innerHTML = data.success
+            ? `<div class="safety-warning success"><div class="warning-title">✅ 成功</div>${data.message}</div>`
+            : `<div class="safety-warning danger"><div class="warning-title">❌ 失败</div>${data.error}</div>`;
+        if (data.success) loadModels();
+    } catch (e) {
+        resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>${e.message}</div>`;
+    }
+}
+
+// ========== Skills ==========
+async function loadSkills() {
+    const listDiv = document.getElementById('skillsList');
+    listDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>加载 Skills...</div>';
+    try {
+        const res = await fetch('/api/skills');
+        const data = await res.json();
+        if (data.success && data.skills) {
+            let html = '';
+            data.skills.forEach(skill => {
+                const tags = skill.tags.map(t => `<span class="tag tag-${t === 'clinical' ? 'green' : t === 'research' ? 'blue' : 'orange'}">${t}</span>`).join('');
+                html += `<div class="skill-card" onclick="openSkillModal('${skill.name}', '${skill.description.replace(/'/g, "\\'")}')">
+                    <div class="skill-card-header">
+                        <div class="skill-card-title">${skill.name}</div>
+                        <div class="skill-card-stats">使用 ${skill.usage_count} 次 · 成功率 ${(skill.success_rate * 100).toFixed(0)}%</div>
+                    </div>
+                    <div class="skill-card-desc">${skill.description}</div>
+                    <div class="skill-card-meta">${tags}</div>
+                </div>`;
             });
+            listDiv.innerHTML = html;
         }
-        
-        // 回车发送消息
-        document.getElementById('chatInput').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendMessage();
+    } catch (e) { listDiv.innerHTML = '<div class="safety-warning danger">加载失败</div>'; }
+}
+
+function searchSkillsUI() {
+    const query = document.getElementById('skillSearchInput').value.toLowerCase();
+    document.querySelectorAll('.skill-card').forEach(card => {
+        card.style.display = card.textContent.toLowerCase().includes(query) ? 'block' : 'none';
+    });
+}
+
+function openSkillModal(name, desc) {
+    currentSkillName = name;
+    document.getElementById('skillModalTitle').textContent = name;
+    document.getElementById('skillModalContent').innerHTML = `<p style="color:#666;margin-bottom:16px">${desc}</p><p style="font-size:13px;color:#888">参数将以默认空值执行，如需自定义参数请使用 API。</p><button class="btn btn-primary" onclick="executeSkillModal()">▶ 执行 Skill</button>`;
+    document.getElementById('skillModalResult').innerHTML = '';
+    document.getElementById('skillModal').style.display = 'flex';
+}
+
+function closeSkillModal() {
+    document.getElementById('skillModal').style.display = 'none';
+}
+
+async function executeSkillModal() {
+    const resultDiv = document.getElementById('skillModalResult');
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>执行中...</div>';
+    try {
+        const res = await fetch('/api/skills/execute', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ skill_name: currentSkillName, arguments: {} })
+        });
+        const data = await res.json();
+        if (data.success && data.result) {
+            const output = typeof data.result.output === 'string' ? data.result.output : JSON.stringify(data.result.output, null, 2);
+            resultDiv.innerHTML = `<div class="result-box"><div class="result-title">执行结果</div><div class="result-content">${output.replace(/\n/g, '<br>')}</div></div>`;
+        } else {
+            resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">执行失败</div>${data.error || '未知错误'}</div>`;
+        }
+    } catch (e) {
+        resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">错误</div>${e.message}</div>`;
+    }
+}
+
+// ========== 科研工具 ==========
+function showResearchForm(type) {
+    document.querySelectorAll('[id^="research-form-"]').forEach(el => el.style.display = 'none');
+    const form = document.getElementById(`research-form-${type}`);
+    if (form) form.style.display = 'block';
+    form.scrollIntoView({ behavior: 'smooth' });
+}
+
+async function runResearch(type) {
+    const resultDiv = document.getElementById(`${type}Result`);
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>AI 生成中，请稍候...</div>';
+
+    let endpoint = '', body = {};
+    if (type === 'rct') {
+        endpoint = '/api/research/rct';
+        body = { intervention: document.getElementById('rctIntervention').value, condition: document.getElementById('rctCondition').value, primary_endpoint: document.getElementById('rctEndpoint').value, sample_size: parseInt(document.getElementById('rctSampleSize').value) || 100 };
+    } else if (type === 'meta') {
+        endpoint = '/api/research/meta-analysis';
+        body = { topic: document.getElementById('metaTopic').value, effect_measure: document.getElementById('metaEffect').value, num_studies: parseInt(document.getElementById('metaStudies').value) || 10, language: document.getElementById('metaLang').value };
+    } else if (type === 'grant') {
+        endpoint = '/api/research/grant';
+        body = { title: document.getElementById('grantTitle').value, grant_type: document.getElementById('grantType').value, research_area: document.getElementById('grantArea').value, budget: parseFloat(document.getElementById('grantBudget').value) || 50 };
+    } else if (type === 'survival') {
+        endpoint = '/api/research/survival';
+        body = { data_description: document.getElementById('survDesc').value, time_variable: document.getElementById('survTime').value, event_variable: document.getElementById('survEvent').value, group_variable: document.getElementById('survGroup').value, covariates: document.getElementById('survCov').value };
+    } else if (type === 'literature') {
+        endpoint = '/api/research/literature-review';
+        body = { topic: document.getElementById('litTopic').value, num_papers: parseInt(document.getElementById('litPapers').value) || 30, focus_areas: document.getElementById('litFocus').value };
+    } else if (type === 'imaging') {
+        endpoint = '/api/skills/execute';
+        body = { skill_name: 'imaging_report_structuring_workflow', arguments: { modality: document.getElementById('imgModality').value, body_part: document.getElementById('imgBodyPart').value, report_text: document.getElementById('imgReport').value } };
+    }
+
+    try {
+        const res = await fetch(endpoint, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (data.success) {
+            const output = data.result ? (typeof data.result.output === 'string' ? data.result.output : JSON.stringify(data.result.output, null, 2)) : JSON.stringify(data, null, 2);
+            resultDiv.innerHTML = `<div class="result-box"><div class="result-title">生成结果 <button class="btn btn-success" style="padding:4px 12px;font-size:11px;float:right" onclick="copyText(this.parentElement.parentElement.querySelector('.result-content').innerText)">复制</button></div><div class="result-content">${output.replace(/\n/g, '<br>')}</div></div>`;
+        } else {
+            resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">生成失败</div>${data.error || '未知错误'}</div>`;
+        }
+    } catch (e) {
+        resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">错误</div>${e.message}</div>`;
+    }
+}
+
+// ========== 任务规划 ==========
+async function runPlan() {
+    const resultDiv = document.getElementById('planResult');
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>AI 规划中...</div>';
+    try {
+        const res = await fetch('/api/plan', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ task: document.getElementById('planTask').value, context: document.getElementById('planContext').value })
+        });
+        const data = await res.json();
+        if (data.success && data.result) {
+            let html = '<div class="result-box"><div class="result-title">规划结果</div>';
+            html += `<div class="result-content">${JSON.stringify(data.result, null, 2).replace(/\n/g, '<br>')}</div></div>`;
+            resultDiv.innerHTML = html;
+        } else {
+            resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">规划失败</div>${data.error}</div>`;
+        }
+    } catch (e) {
+        resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">错误</div>${e.message}</div>`;
+    }
+}
+
+// ========== 代码沙箱 ==========
+async function runSandbox() {
+    const resultDiv = document.getElementById('sandboxResult');
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>执行中...</div>';
+    try {
+        const res = await fetch('/api/sandbox/execute', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ code: document.getElementById('sandboxCode').value, language: 'python' })
+        });
+        const data = await res.json();
+        if (data.success && data.result) {
+            const output = data.result.output || data.result.result || JSON.stringify(data.result, null, 2);
+            resultDiv.innerHTML = `<div class="result-box"><div class="result-title">执行结果</div><pre class="result-content" style="background:#1e1e1e;color:#d4d4d4;padding:12px;border-radius:6px;overflow-x:auto">${output}</pre></div>`;
+        } else {
+            resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">执行失败</div>${data.error || '未知错误'}</div>`;
+        }
+    } catch (e) {
+        resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">错误</div>${e.message}</div>`;
+    }
+}
+
+// ========== 导出 ==========
+async function exportDocument(type) {
+    document.getElementById('exportType').value = type;
+    switchPage('export');
+}
+
+async function doExport() {
+    const resultDiv = document.getElementById('exportResult');
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>生成文件中...</div>';
+    try {
+        const dataStr = document.getElementById('exportData').value || '{}';
+        const res = await fetch('/api/export', {
+            method: 'POST', headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ export_type: document.getElementById('exportType').value, format: document.getElementById('exportFormat').value, data: JSON.parse(dataStr) })
+        });
+        if (res.ok) {
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `export.${document.getElementById('exportFormat').value}`;
+            a.click();
+            window.URL.revokeObjectURL(url);
+            resultDiv.innerHTML = '<div class="safety-warning success"><div class="warning-title">✅ 导出成功</div>文件已开始下载</div>';
+        } else {
+            const data = await res.json();
+            resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">导出失败</div>${data.error}</div>`;
+        }
+    } catch (e) {
+        resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">错误</div>${e.message}</div>`;
+    }
+}
+
+function exportNote() {
+    const content = document.getElementById('noteResult').innerText;
+    if (!content || content.includes('正在生成')) { alert('请先生成文书'); return; }
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `医学文书_${new Date().toISOString().slice(0,10)}.txt`; a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+// ========== 文件上传 ==========
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    uploadFile(file);
+}
+
+async function uploadFile(file) {
+    const resultDiv = document.getElementById('uploadResult');
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>上传中...</div>';
+    const formData = new FormData();
+    formData.append('file', file);
+    try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+            resultDiv.innerHTML = `<div class="safety-warning success"><div class="warning-title">✅ 上传成功</div>文件名：${data.filename}<br>大小：${(data.size / 1024).toFixed(1)} KB<br>路径：${data.path}</div>`;
+        } else {
+            resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">上传失败</div>${data.error}</div>`;
+        }
+    } catch (e) {
+        resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">错误</div>${e.message}</div>`;
+    }
+}
+
+// 拖拽上传
+const uploadArea = document.getElementById('uploadArea');
+if (uploadArea) {
+    uploadArea.addEventListener('dragover', e => { e.preventDefault(); uploadArea.classList.add('dragover'); });
+    uploadArea.addEventListener('dragleave', () => uploadArea.classList.remove('dragover'));
+    uploadArea.addEventListener('drop', e => {
+        e.preventDefault(); uploadArea.classList.remove('dragover');
+        if (e.dataTransfer.files.length) uploadFile(e.dataTransfer.files[0]);
+    });
+}
+
+// ========== 原有功能 ==========
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    if (!message) return;
+    addMessage('user', message);
+    input.value = '';
+    const loadingId = addMessage('assistant', '', true);
+    try {
+        const response = await fetch('/api/chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ message, use_knowledge: true }) });
+        const data = await response.json();
+        document.getElementById(loadingId).remove();
+        addMessage('assistant', data.message);
+    } catch (error) {
+        document.getElementById(loadingId).remove();
+        addMessage('assistant', '抱歉，发生了错误：' + error.message);
+    }
+}
+
+function addMessage(role, content, isLoading = false) {
+    const container = document.getElementById('chatMessages');
+    const messageId = 'msg-' + Date.now();
+    const div = document.createElement('div');
+    div.id = messageId; div.className = `message ${role}`;
+    if (isLoading) {
+        div.innerHTML = `<div class="message-avatar">🏥</div><div class="message-bubble"><div class="loading-container"><div class="loading"></div><span>思考中...</span></div></div>`;
+    } else {
+        const avatar = role === 'assistant' ? '🏥' : '👤';
+        div.innerHTML = `<div class="message-avatar">${avatar}</div><div class="message-bubble">${content}</div>`;
+    }
+    container.appendChild(div); container.scrollTop = container.scrollHeight;
+    return messageId;
+}
+
+function quickDiagnosis(symptom) { document.getElementById('symptomsInput').value = symptom; runDiagnosis(); }
+
+async function runDiagnosis() {
+    const symptomsInput = document.getElementById('symptomsInput').value;
+    const labResultsInput = document.getElementById('labResultsInput').value;
+    if (!symptomsInput.trim()) { alert('请输入至少一个症状'); return; }
+    const symptoms = symptomsInput.split(/[,，]/).map(s => s.trim()).filter(s => s);
+    const labResults = {};
+    if (labResultsInput.trim()) {
+        labResultsInput.split(/[,，]/).forEach(item => {
+            const [key, value] = item.split(/[:：]/);
+            if (key && value) labResults[key.trim()] = value.trim();
+        });
+    }
+    const resultDiv = document.getElementById('diagnosisResult');
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>正在分析病情...</div>';
+    try {
+        const response = await fetch('/api/diagnosis', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ symptoms, lab_results: labResults }) });
+        const data = await response.json();
+        if (data.success && data.data) {
+            const result = data.data;
+            let html = '<div class="result-box"><div class="result-title">诊断分析结果</div>';
+            if (result.primary_diagnosis) html += `<div class="result-content"><strong>主要诊断：</strong>${result.primary_diagnosis.disease || '暂无'}<br><strong>ICD-10：</strong>${result.primary_diagnosis.icd10 || '暂无'}</div>`;
+            if (result.differential_diagnoses && result.differential_diagnoses.length > 0) {
+                html += '<div class="result-content"><br><strong>鉴别诊断：</strong><br>';
+                result.differential_diagnoses.slice(0, 3).forEach((diag, i) => { html += `${i + 1}. ${diag.disease || diag}${diag.icd10 ? ' (' + diag.icd10 + ')' : ''}<br>`; });
+                html += '</div>';
             }
-        });
-        
-        // 页面加载完成后自动调整
-        window.addEventListener('load', function() {
-            console.log('MedAIagents 桌面应用已加载');
-        });
-    </script>
+            if (result.recommended_tests) { html += '<div class="result-content"><br><strong>建议检查：</strong><br>'; result.recommended_tests.forEach(test => html += `• ${test}<br>`); html += '</div>'; }
+            html += '<br><div style="color:#667eea;font-size:12px">⚠️ 以上建议仅供参考，请以临床实际诊断为准</div></div>';
+            resultDiv.innerHTML = html;
+        }
+    } catch (error) { resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">错误</div>${error.message}</div>`; }
+}
+
+async function checkMedication() {
+    const medicationsInput = document.getElementById('medicationsInput').value;
+    const allergiesInput = document.getElementById('allergiesInput').value;
+    if (!medicationsInput.trim()) { alert('请输入至少一种药物'); return; }
+    const medications = medicationsInput.split(/[,，]/).map(s => s.trim()).filter(s => s);
+    const allergies = allergiesInput ? allergiesInput.split(/[,，]/).map(s => s.trim()).filter(s => s) : [];
+    const resultDiv = document.getElementById('medicationResult');
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>正在检查用药安全...</div>';
+    try {
+        const response = await fetch('/api/medication-safety', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ medications, allergies }) });
+        const data = await response.json();
+        if (data.success && data.data) {
+            const result = data.data; let html = '';
+            if (result.is_safe) html += `<div class="safety-warning success"><div class="warning-title">安全</div>未发现明显的药物相互作用</div>`;
+            else html += `<div class="safety-warning danger"><div class="warning-title">存在风险</div>检测到潜在的药物相互作用风险</div>`;
+            if (result.warnings && result.warnings.length > 0) { html += '<div class="result-box"><div class="result-title">警告信息</div>'; result.warnings.forEach(w => html += `<div class="result-content" style="color:#d46b08">• ${w.description || w}</div>`); html += '</div>'; }
+            if (result.recommendations && result.recommendations.length > 0) { html += '<div class="result-box"><div class="result-title">建议</div>'; result.recommendations.forEach(r => html += `<div class="result-content">• ${r}</div>`); html += '</div>'; }
+            resultDiv.innerHTML = html;
+        }
+    } catch (error) { resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">错误</div>${error.message}</div>`; }
+}
+
+async function generateNote() {
+    const noteType = document.getElementById('noteType').value;
+    const patientName = document.getElementById('patientName').value || '患者';
+    const patientAge = document.getElementById('patientAge').value || 0;
+    const patientGender = document.getElementById('patientGender').value;
+    const diagnosis = document.getElementById('diagnosisInput').value || '';
+    const chiefComplaint = document.getElementById('chiefComplaint').value || '';
+    const resultDiv = document.getElementById('noteResult');
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>正在生成文书...</div>';
+    try {
+        const response = await fetch('/api/generate-note', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ note_type: noteType, patient_info: { name: patientName, age: parseInt(patientAge), gender: patientGender }, clinical_data: { diagnosis, chief_complaint: chiefComplaint, subjective: chiefComplaint } }) });
+        const data = await response.json();
+        if (data.success) {
+            resultDiv.innerHTML = `<div class="result-box"><div class="result-title">生成结果 <button class="btn btn-success" style="padding:4px 12px;font-size:11px;float:right" onclick="copyText(this.parentElement.parentElement.querySelector('.result-content').innerText)">复制</button></div><div class="result-content" style="background:white;padding:16px;border-radius:8px;margin-top:8px">${data.content.replace(/\n/g, '<br>')}</div></div>`;
+        }
+    } catch (error) { resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">错误</div>${error.message}</div>`; }
+}
+
+async function searchICD10() {
+    const diagnosis = document.getElementById('icdDiagnosisInput').value.trim();
+    if (!diagnosis) { alert('请输入诊断名称'); return; }
+    const resultDiv = document.getElementById('icdResult');
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>正在查询编码...</div>';
+    try {
+        const response = await fetch('/api/icd10', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ diagnosis }) });
+        const data = await response.json();
+        if (data.success) {
+            if (data.found) resultDiv.innerHTML = `<div class="result-box"><div class="result-title">ICD-10 编码</div><div class="result-content"><strong>诊断：</strong>${data.diagnosis}<br><strong>编码：</strong><span class="tag tag-blue">${data.icd10_code}</span></div></div>`;
+            else resultDiv.innerHTML = `<div class="safety-warning"><div class="warning-title">未找到编码</div>未找到 "${data.diagnosis}" 的 ICD-10 编码，请尝试其他关键词</div>`;
+        }
+    } catch (error) { resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">错误</div>${error.message}</div>`; }
+}
+
+async function searchKnowledge() {
+    const query = document.getElementById('knowledgeQuery').value.trim();
+    const usePubMed = document.getElementById('usePubMed').checked;
+    if (!query) { alert('请输入搜索关键词'); return; }
+    const resultDiv = document.getElementById('knowledgeResult');
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>正在搜索知识库...</div>';
+    try {
+        const response = await fetch('/api/search', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ query, limit: 5, use_pubmed: usePubMed }) });
+        const data = await response.json();
+        if (data.success && data.results && data.results.length > 0) {
+            let html = '<div class="result-box"><div class="result-title">找到 ' + data.count + ' 条结果</div><div style="margin-top:12px">';
+            data.results.forEach((item, i) => {
+                html += '<div class="search-result">';
+                html += `<div class="search-result-title">${i + 1}. ${item.title || '无标题'}</div>`;
+                html += `<div class="search-result-source">来源：${item.source || '未知'}</div>`;
+                if (item.content) html += `<div class="search-result-content">${item.content.substring(0, 200)}...</div>`;
+                html += '</div>';
+            });
+            html += '</div></div>'; resultDiv.innerHTML = html;
+        } else { resultDiv.innerHTML = `<div class="safety-warning"><div class="warning-title">未找到结果</div>未找到与 "${query}" 相关的知识条目</div>`; }
+    } catch (error) { resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">错误</div>${error.message}</div>`; }
+}
+
+async function loadAuditLogs() {
+    const resultDiv = document.getElementById('auditLogsResult');
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>正在加载日志...</div>';
+    try {
+        const response = await fetch('/api/audit-logs?limit=50');
+        const data = await response.json();
+        if (data.success && data.logs && data.logs.length > 0) {
+            let html = '<div class="result-box"><div class="result-title">操作日志 (' + data.logs.length + ' 条)</div><div style="margin-top:12px;max-height:500px;overflow-y:auto">';
+            data.logs.forEach(log => {
+                const time = log.timestamp ? log.timestamp.substring(0, 19).replace('T', ' ') : '';
+                html += `<div style="padding:6px 0;border-bottom:1px solid #f0f0f0;font-size:12px"><span style="color:#999">[${time}]</span> <span style="color:#667eea">${log.action || '未知操作'}</span></div>`;
+            });
+            html += '</div></div>'; resultDiv.innerHTML = html;
+        } else { resultDiv.innerHTML = '<div class="safety-warning"><div class="warning-title">暂无日志</div>暂无操作记录</div>'; }
+    } catch (error) { resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">错误</div>${error.message}</div>`; }
+}
+
+function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => alert('已复制到剪贴板'));
+}
+
+// 回车发送
+const chatInput = document.getElementById('chatInput');
+if (chatInput) {
+    chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+}
+
+// 初始化加载模型状态
+loadModels();
+</script>
 </body>
 </html>

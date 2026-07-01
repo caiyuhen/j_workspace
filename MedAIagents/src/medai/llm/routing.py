@@ -30,7 +30,7 @@ class BaseLLMProvider(ABC):
         messages: List[Dict[str, str]],
         model: Optional[str] = None,
         **kwargs
-    ) -> str:
+    ) -> Any:
         """聊天补全"""
         pass
     
@@ -59,23 +59,58 @@ class OpenAIProvider(BaseLLMProvider):
         self,
         messages: List[Dict[str, str]],
         model: Optional[str] = None,
+        temperature: float = 0.3,
+        max_tokens: int = 4096,
+        stream: bool = False,
+        tools: Optional[List[Dict]] = None,
+        tool_choice: Optional[Any] = None,
         **kwargs
-    ) -> str:
+    ) -> Any:
         model = model or self.default_model
-        temperature = kwargs.get('temperature', self.temperature)
-        max_tokens = kwargs.get('max_tokens', self.max_tokens)
+        temperature = kwargs.get('temperature', temperature)
+        max_tokens = kwargs.get('max_tokens', max_tokens)
         
         try:
-            response = await self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens
-            )
+            request_params = {
+                'model': model,
+                'messages': messages,
+                'temperature': temperature,
+                'max_tokens': max_tokens,
+            }
+            if tools is not None:
+                request_params['tools'] = tools
+            if tool_choice is not None:
+                request_params['tool_choice'] = tool_choice
+            
+            response = await self.client.chat.completions.create(**request_params)
+            
+            if tools is not None:
+                return response
             return response.choices[0].message.content
         except Exception as e:
             logger.error(f"OpenAI API Error: {e}")
             raise
+    
+    def parse_tool_calls(self, response) -> List[Dict]:
+        """从响应中解析 tool_calls"""
+        if not response or not hasattr(response, 'choices') or not response.choices:
+            return []
+        
+        message = response.choices[0].message
+        if not message or not hasattr(message, 'tool_calls') or message.tool_calls is None:
+            return []
+        
+        result = []
+        for tc in message.tool_calls:
+            result.append({
+                'id': getattr(tc, 'id', None),
+                'type': getattr(tc, 'type', 'function'),
+                'function': {
+                    'name': getattr(tc.function, 'name', None),
+                    'arguments': getattr(tc.function, 'arguments', None),
+                }
+            })
+        return result
     
     async def chat_completion_stream(
         self,
@@ -275,6 +310,8 @@ class LLMRouter:
         provider: str = None,
         model: str = None,
         stream: bool = False,
+        tools: Optional[List[Dict]] = None,
+        tool_choice: Optional[Any] = None,
         **kwargs
     ):
         """聊天接口
@@ -284,6 +321,8 @@ class LLMRouter:
             provider: LLM提供商
             model: 模型名称
             stream: 是否流式输出
+            tools: 工具定义列表
+            tool_choice: 工具选择策略
             **kwargs: 其他参数
         
         Returns:
@@ -294,7 +333,59 @@ class LLMRouter:
         if stream:
             return llm_provider.chat_completion_stream(messages, model, **kwargs)
         else:
-            return await llm_provider.chat_completion(messages, model, **kwargs)
+            return await llm_provider.chat_completion(
+                messages, model=model, tools=tools, tool_choice=tool_choice, **kwargs
+            )
+    
+    async def chat_with_tools(
+        self,
+        messages: List[Dict[str, str]],
+        tools: List[Dict],
+        model: str = None,
+        provider: str = None,
+        temperature: float = 0.3,
+        max_tokens: int = 4096
+    ):
+        """使用工具调用聊天，并解析 tool_calls
+        
+        Args:
+            messages: 消息列表
+            tools: 工具定义列表
+            model: 模型名称
+            provider: LLM提供商
+            temperature: 温度参数
+            max_tokens: 最大token数
+        
+        Returns:
+            (content, tool_calls) 元组
+        """
+        response = await self.chat(
+            messages=messages,
+            provider=provider,
+            model=model,
+            stream=False,
+            tools=tools,
+            tool_choice="auto",
+            temperature=temperature,
+            max_tokens=max_tokens
+        )
+        
+        llm_provider = self.get_provider(provider)
+        content = ""
+        tool_calls = []
+        
+        if hasattr(response, 'choices'):
+            message = response.choices[0].message if response.choices else None
+            content = getattr(message, 'content', None) or ""
+            if hasattr(llm_provider, 'parse_tool_calls'):
+                tool_calls = llm_provider.parse_tool_calls(response)
+            else:
+                from .tool_parser import ToolCallParser
+                tool_calls = ToolCallParser.parse_openai_tool_calls(response)
+        else:
+            content = response or ""
+        
+        return content, tool_calls
     
     def switch_provider(self, provider: str):
         """切换默认提供商"""

@@ -2,10 +2,10 @@ import os
 import sys
 import json
 import csv
-import logging
 from datetime import date, datetime
 from sqlalchemy import create_engine, text
 import pymongo
+from app.core.logger import data_logger
 
 # --- Database Configurations ---
 DB_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
@@ -43,7 +43,12 @@ class CDMPipelineService:
         timestamp = datetime.now().strftime("%H:%M:%S")
         log_entry = f"[{timestamp}] [{level}] {message}"
         self.logs.append(log_entry)
-        print(log_entry)
+        if level.upper() == "ERROR":
+            data_logger.error(message)
+        elif level.upper() == "WARNING":
+            data_logger.warning(message)
+        else:
+            data_logger.info(message)
         
     def cancel_pipeline(self):
         """Request the running pipeline to stop."""

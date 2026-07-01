@@ -67,7 +67,7 @@ const DataSourceList: React.FC<DataSourceListProps> = ({ initialData, isLoading,
   const handleDelete = async (id: string) => {
     if (!confirm('确定要删除这个数据源吗？')) return;
     try {
-      const res = await fetch(`http://127.0.0.1:8080/api/v1/sources/${id}`, {
+      const res = await fetch(`http://127.0.0.1:8433/api/v1/sources/${id}`, {
         method: 'DELETE'
       });
       if (!res.ok) throw new Error('删除失败');
@@ -88,7 +88,7 @@ const DataSourceList: React.FC<DataSourceListProps> = ({ initialData, isLoading,
     setTestPassed(false);
     
     try {
-      const res = await fetch('http://127.0.0.1:8080/api/v1/sources/test', {
+      const res = await fetch('http://127.0.0.1:8433/api/v1/sources/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -127,8 +127,8 @@ const DataSourceList: React.FC<DataSourceListProps> = ({ initialData, isLoading,
     try {
       const method = editingId ? 'PUT' : 'POST';
       const url = editingId 
-        ? `http://127.0.0.1:8080/api/v1/sources/${editingId}`
-        : 'http://127.0.0.1:8080/api/v1/sources';
+        ? `http://127.0.0.1:8433/api/v1/sources/${editingId}`
+        : 'http://127.0.0.1:8433/api/v1/sources';
 
       const res = await fetch(url, {
         method,

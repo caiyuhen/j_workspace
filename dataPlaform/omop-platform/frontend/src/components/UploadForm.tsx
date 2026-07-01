@@ -39,8 +39,8 @@ const UploadForm: React.FC<UploadFormProps> = ({ onUploadSuccess }) => {
       // Determine endpoint based on file extension
       const isDicom = file.name.toLowerCase().endsWith('.dcm');
       const endpoint = isDicom 
-        ? 'http://127.0.0.1:8080/api/v1/dicom/upload' 
-        : 'http://127.0.0.1:8080/api/v1/ingestion/upload';
+        ? 'http://127.0.0.1:8433/api/v1/dicom/upload' 
+        : 'http://127.0.0.1:8433/api/v1/ingestion/upload';
 
       try {
         const response = await fetch(endpoint, {

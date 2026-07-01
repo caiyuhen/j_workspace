@@ -1,5 +1,6 @@
 import pandas as pd
 import json
+from app.core.logger import data_logger
 
 class DataProfiler:
     @staticmethod
@@ -48,5 +49,5 @@ class DataProfiler:
                 
             return profiling
         except Exception as e:
-            print(f"Profiling error: {e}")
+            data_logger.error(f"Profiling error: {e}")
             return []

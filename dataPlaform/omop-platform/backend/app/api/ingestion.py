@@ -7,6 +7,7 @@ import tempfile
 import traceback
 import uuid
 import json
+from app.core.logger import data_logger
 from app.services.csv_parser import CSVParser
 from app.services.nlp_mapper import NLPMapper
 from app.services.raw_persistence import RawPersistenceService
@@ -38,7 +39,7 @@ def process_csv_task(tmp_path: str, filename: str, batch_id: str):
         # Since it was created in a separate session, we just verify it's there
         batch_exists = db.query(SourceBatch).filter(SourceBatch.id == batch_id).first()
         if not batch_exists:
-            print(f"ERROR: Batch {batch_id} not found in background task session!")
+            data_logger.error(f"ERROR: Batch {batch_id} not found in background task session!")
             # Recreate it just in case!
             batch = SourceBatch(id=batch_id, filename=filename, status="processing")
             db.add(batch)
@@ -60,7 +61,7 @@ def process_csv_task(tmp_path: str, filename: str, batch_id: str):
                 persistence_svc.update_batch_progress(batch_id, total_valid, total_errors)
             
         # Generate Profiling Data
-        print(f"[{batch_id}] Generating Data Profiling...")
+        data_logger.info(f"[{batch_id}] Generating Data Profiling...")
         profiling_data = DataProfiler.generate_profiling(tmp_path)
         
         # We need to save profiling_data to the batch
@@ -71,27 +72,25 @@ def process_csv_task(tmp_path: str, filename: str, batch_id: str):
             
         # Auto NLP Semantic Mapping Configuration
         auto_mapping = NLPMapper.generate_mapping(parser.headers)
-        print(f"[{batch_id}] NLP Auto-Generated Mapping: {auto_mapping}")
+        data_logger.info(f"[{batch_id}] NLP Auto-Generated Mapping: {auto_mapping}")
         
         if total_valid > 0:
             import time
             start_time = time.time()
-            print(f"[{batch_id}] 开始执行深度 NLP 实体提取与 Staging 转换...")
+            data_logger.info(f"[{batch_id}] 开始执行深度 NLP 实体提取与 Staging 转换...")
             
             transformer = StagingTransformer(db)
             transformer.transform_batch_to_person(batch_id, auto_mapping)
             
             end_time = time.time()
             duration = end_time - start_time
-            print(f"[{batch_id}] ✅ NLP 提取与转换完成! 耗时: {duration:.2f} 秒 (平均 {duration/total_valid:.2f} 秒/条)")
+            data_logger.info(f"[{batch_id}] ✅ NLP 提取与转换完成! 耗时: {duration:.2f} 秒 (平均 {duration/total_valid:.2f} 秒/条)")
             
         # Complete the batch only AFTER all NLP and staging extraction is done
         persistence_svc.complete_batch(batch_id, total_rows=total_valid, error_rows=total_errors)
         
     except Exception as e:
-        print("====== BACKGROUND TASK CRASHED ======")
-        traceback.print_exc()
-        print("=====================================")
+        data_logger.error(f"====== BACKGROUND TASK CRASHED ======\n{traceback.format_exc()}\n=====================================")
         # Mark batch as failed
         persistence_svc = RawPersistenceService(db)
         persistence_svc.complete_batch(batch_id, total_rows=0, error_rows=0, status="failed")
@@ -145,13 +144,13 @@ def clear_data(db: Session = Depends(get_db)):
                 if delete_object_list:
                     errors = minio_client.remove_objects(MINIO_BUCKET, delete_object_list)
                     for error in errors:
-                        print("Error deleting object from MinIO:", error)
+                        data_logger.error(f"Error deleting object from MinIO: {error}")
         except Exception as e:
-            print(f"Failed to clear MinIO data: {e}")
+            data_logger.error(f"Failed to clear MinIO data: {e}")
                 
         return {"message": "All local data and MinIO files cleared successfully"}
     except Exception as e:
-        traceback.print_exc()
+        data_logger.error(f"Failed to clear data: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail=f"Failed to clear data: {str(e)}")
 
 @router.get("/batches")
@@ -182,7 +181,7 @@ def list_batches(db: Session = Depends(get_db)):
                     prof_data = row[0]
             conn.close()
         except Exception as e:
-            print(f"Failed to load raw JSON: {e}")
+            data_logger.error(f"Failed to load raw JSON: {e}")
             
         item = {
             "id": str(b.id),
@@ -254,7 +253,7 @@ async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File
             "message": "File uploaded successfully. Processing started in the background."
         }
     except Exception as e:
-        traceback.print_exc()
+        data_logger.error(f"Upload file failed: {traceback.format_exc()}")
         if 'tmp_path' in locals() and os.path.exists(tmp_path):
             os.remove(tmp_path)
         raise HTTPException(status_code=500, detail=str(e))
