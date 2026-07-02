@@ -4,12 +4,17 @@ from app.services.cdm_pipeline import pipeline_service_instance
 from app.db.database import SessionLocal
 from sqlalchemy.orm import Session
 from app.models.raw import RawRecord
+from app.models.pipeline import PipelineRun
 from app.models.staging import StagingPerson, StagingConditionOccurrence, StagingMeasurement, StagingDrugExposure, StagingObservation
 import json
 import os
 import pymongo
+from typing import Optional
+from datetime import datetime
+from app.db.database import get_db
 
 router = APIRouter()
+
 
 MONGO_URI = "mongodb://jdjd:JdJdllmix2308@192.168.0.214:27017/"
 MONGO_DB_NAME = "omop_cdm_standardized"
@@ -153,10 +158,33 @@ def get_nlp_stats():
             {"$limit": 10}
         ]
         
-        # Aggregate Top 10 NLP Observations (starts with '[')
+        # Aggregate Top 10 Measurements (Lab Results/Vitals)
+        meas_pipeline = [
+            {"$unwind": "$measurements"},
+            {"$group": {"_id": "$measurements.measurement_source_value", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 10}
+        ]
+        
+        # Aggregate Top 10 Negations (Starts with [ and contains 排除/阴性：)
+        negation_pipeline = [
+            {"$unwind": "$observations"},
+            {"$match": {"observations.observation_source_value": {"$regex": "排除/阴性：|无明显"}}},
+            {"$group": {"_id": "$observations.observation_source_value", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+            {"$limit": 10}
+        ]
+
+        # Aggregate Top 10 NLP Observations (starts with '[' but not negations)
         obs_pipeline = [
             {"$unwind": "$observations"},
-            {"$match": {"observations.observation_source_value": {"$regex": "^\\["}}},
+            {"$match": {
+                "observations.observation_source_value": {"$regex": "^\\["},
+                "$and": [
+                    {"observations.observation_source_value": {"$not": {"$regex": "排除/阴性："}}},
+                    {"observations.observation_source_value": {"$not": {"$regex": "无明显"}}}
+                ]
+            }},
             {"$group": {"_id": "$observations.observation_source_value", "count": {"$sum": 1}}},
             {"$sort": {"count": -1}},
             {"$limit": 10}
@@ -164,18 +192,105 @@ def get_nlp_stats():
         
         conditions = list(col.aggregate(cond_pipeline))
         drugs = list(col.aggregate(drug_pipeline))
+        measurements = list(col.aggregate(meas_pipeline))
+        negations = list(col.aggregate(negation_pipeline))
         observations = list(col.aggregate(obs_pipeline))
+        
+        format_res = lambda lst: [{"name": str(x["_id"]), "count": x["count"]} for x in lst if x["_id"]]
         
         return {
             "status": "success",
             "data": {
-                "conditions": [{"name": c["_id"], "count": c["count"]} for c in conditions if c["_id"]],
-                "drugs": [{"name": d["_id"], "count": d["count"]} for d in drugs if d["_id"]],
-                "observations": [{"name": o["_id"], "count": o["count"]} for o in observations if o["_id"]]
+                "conditions": format_res(conditions),
+                "drugs": format_res(drugs),
+                "measurements": format_res(measurements),
+                "negations": format_res(negations),
+                "observations": format_res(observations)
             }
         }
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        return {"status": "error", "message": f"MongoDB 查询失败: {str(e)}"}
+
+def _format_lineage_data(patient_data: dict) -> dict:
+    patient_id = patient_data.get("person_source_value", "Unknown")
+    raw = patient_data.get("raw_data", {})
+    
+    # Stage 1: Source
+    stage1 = {
+        "source_file": patient_data.get("source_file", "Unknown"),
+        "raw_data": raw
+    }
+    
+    # Stage 2: Staging
+    stage2 = {
+        "stg_person": {
+            "person_source_value": patient_id,
+            "gender_source_value": raw.get("gender", ""),
+            "birth_datetime": raw.get("birth_datetime", "")
+        },
+        "stg_condition_occurrence": [c.get("condition_source_value") for c in patient_data.get("conditions", []) if not str(c.get("condition_source_value", "")).startswith("症状-")],
+        "stg_measurement": [m.get("measurement_source_value") for m in patient_data.get("measurements", []) if not str(m.get("measurement_source_value", "")).startswith("症状-")],
+        "stg_drug_exposure": [d.get("drug_source_value") for d in patient_data.get("drug_exposures", [])]
+    }
+    
+    # Stage 3: MongoDB Final
+    stage3 = dict(patient_data)
+    stage3.pop("_id", None)
+    stage3.pop("raw_data", None)
+    stage3.pop("source_file", None)
+    
+    return {
+        "patient_id": patient_id,
+        "stage1": stage1,
+        "stage2": stage2,
+        "stage3": stage3
+    }
+
+@router.get("/lineage/random")
+def get_random_lineage():
+    """Get a random patient's data lineage."""
+    try:
+        client = pymongo.MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
+        db = client[MONGO_DB_NAME]
+        col = db[MONGO_COLLECTION_NAME]
+        
+        # Aggregate a random sample of 1
+        pipeline = [{"$sample": {"size": 1}}]
+        sample = list(col.aggregate(pipeline))
+        
+        if not sample:
+            raise HTTPException(status_code=404, detail="数据库中没有数据可供抽取")
+            
+        patient_data = sample[0]
+        
+        return {
+            "status": "success",
+            "data": _format_lineage_data(patient_data)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/lineage/{patient_id}")
+def get_lineage_by_patient(patient_id: str):
+    """Get data lineage for a specific patient."""
+    try:
+        client = pymongo.MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
+        db = client[MONGO_DB_NAME]
+        col = db[MONGO_COLLECTION_NAME]
+        
+        patient_data = col.find_one({"person_source_value": patient_id})
+        
+        if not patient_data:
+            raise HTTPException(status_code=404, detail=f"未找到 Patient ID: {patient_id} 的数据")
+            
+        return {
+            "status": "success",
+            "data": _format_lineage_data(patient_data)
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/status")
 def get_pipeline_status():
@@ -202,6 +317,46 @@ def trigger_pipeline(background_tasks: BackgroundTasks):
     # Run in background so we don't block the HTTP request
     background_tasks.add_task(pipeline_service_instance.run_pipeline)
     return {"message": "Pipeline started successfully"}
+
+@router.get("/history")
+def get_pipeline_history(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """Fetch the history of pipeline runs."""
+    from app.models.pipeline import Base
+    Base.metadata.create_all(bind=db.get_bind())
+    
+    runs = db.query(PipelineRun).order_by(PipelineRun.start_time.desc()).offset(skip).limit(limit).all()
+    
+    result = []
+    for run in runs:
+        result.append({
+            "id": run.id,
+            "status": run.status,
+            "start_time": run.start_time.isoformat() if run.start_time else None,
+            "end_time": run.end_time.isoformat() if run.end_time else None,
+            "total_processed": run.total_processed,
+            "passed_count": run.passed_count,
+            "failed_count": run.failed_count
+        })
+        
+    return result
+
+@router.get("/history/{run_id}")
+def get_pipeline_run_details(run_id: str, db: Session = Depends(get_db)):
+    """Fetch details and logs for a specific pipeline run."""
+    run = db.query(PipelineRun).filter(PipelineRun.id == run_id).first()
+    if not run:
+        raise HTTPException(status_code=404, detail="Pipeline run not found")
+        
+    return {
+        "id": run.id,
+        "status": run.status,
+        "start_time": run.start_time.isoformat() if run.start_time else None,
+        "end_time": run.end_time.isoformat() if run.end_time else None,
+        "total_processed": run.total_processed,
+        "passed_count": run.passed_count,
+        "failed_count": run.failed_count,
+        "logs": run.logs or []
+    }
 
 @router.post("/stop")
 def stop_pipeline():

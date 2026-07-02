@@ -4,30 +4,80 @@
 # LLM 模型配置
 llm:
   # 默认使用的提供商
-  default_provider: openai
+  default_provider: cherryin
 
   # 提供商配置
   providers:
-    # CherryIn OpenAI 兼容 API
-    openai:
+    # CherryIn 聚合平台 (OpenAI 兼容)
+    # 支持模型: deepseek, qwen, openai, bytedance, stepfun 等
+    cherryin:
       api_key: ${CHERRYIN_API_KEY}
-      base_url: https://open.cherryin.net/v1
+      base_url: https://open.cherryin.cc/v1
       default_model: deepseek/deepseek-v4-flash
       temperature: 0.3
       max_tokens: 4096
+      # 该平台支持的可用模型列表
+      available_models:
+        - id: deepseek/deepseek-v4-flash
+          name: DeepSeek V4 Flash
+          description: DeepSeek 快速版，适合日常对话
+        - id: deepseek/deepseek-ocr
+          name: DeepSeek OCR
+          description: DeepSeek 视觉 OCR 模型
+        - id: qwen/qwen3-235b-a22b-instruct-2507
+          name: Qwen3 235B A22B
+          description: 阿里通义千问旗舰版
+        - id: qwen/qwen-image-edit-2509
+          name: Qwen Image Edit
+          description: 阿里通义千问图像编辑
+        - id: qwen/qwen3.5-27b
+          name: Qwen 3.5 27B
+          description: 阿里通义千问 3.5
+        - id: qwen/qwen3-vl-30b-a3b-thinking
+          name: Qwen3 VL 30B Thinking
+          description: 阿里通义千问视觉推理版
+        - id: BAAI/bge-reranker-v2-m3
+          name: BGE Reranker v2
+          description: BAAI 重排序模型
+        - id: bytedance/seed-oss-36b-instruct
+          name: ByteDance Seed 36B
+          description: 字节跳动 Seed 模型
+        - id: stepfun-ai/step-3.5-flash
+          name: StepFun Step 3.5 Flash
+          description: 阶跃星辰 Step 模型
+        - id: openai/gpt-4o
+          name: GPT-4o
+          description: OpenAI 多模态模型
 
-    # Anthropic Claude (如配置了 API Key 可启用)
-    # anthropic:
-    #   api_key: ${ANTHROPIC_API_KEY}
-    #   default_model: claude-3-sonnet-20240229
+    # 独立 OpenAI 官方 API (如需使用请取消注释并配置)
+    # openai:
+    #   api_key: ${OPENAI_API_KEY}
+    #   base_url: https://api.openai.com/v1
+    #   default_model: gpt-4o
     #   temperature: 0.3
     #   max_tokens: 4096
 
-    # DeepSeek (如配置了 API Key 可启用)
+    # 独立 Anthropic Claude API (如需使用请取消注释并配置)
+    # anthropic:
+    #   api_key: ${ANTHROPIC_API_KEY}
+    #   base_url: https://api.anthropic.com/v1
+    #   default_model: claude-3-5-sonnet-20241022
+    #   temperature: 0.3
+    #   max_tokens: 4096
+
+    # 独立 DeepSeek API (如需使用请取消注释并配置)
     # deepseek:
     #   api_key: ${DEEPSEEK_API_KEY}
     #   base_url: https://api.deepseek.com/v1
     #   default_model: deepseek-chat
+    #   temperature: 0.3
+    #   max_tokens: 4096
+
+    # 阿里云百炼/Qwen API (如需使用请取消注释并配置)
+    # qwen:
+    #   api_key: ${DASHSCOPE_API_KEY}
+    #   base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+    #   default_model: qwen2.5-72b-instruct
     #   temperature: 0.3
     #   max_tokens: 4096
 

@@ -6,6 +6,8 @@ from datetime import date, datetime
 from sqlalchemy import create_engine, text
 import pymongo
 from app.core.logger import data_logger
+from app.db.database import SessionLocal
+from app.models.pipeline import PipelineRun
 
 # --- Database Configurations ---
 DB_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
@@ -38,6 +40,7 @@ class CDMPipelineService:
             "mongodb": False
         }
         self.last_run = None
+        self.current_run_id = None
 
     def log(self, level, message):
         timestamp = datetime.now().strftime("%H:%M:%S")
@@ -57,14 +60,24 @@ class CDMPipelineService:
             self.log("WARNING", "已收到停止指令，正在安全中断管线...")
 
     def run_pipeline(self):
+        db = SessionLocal()
         try:
+            from app.models.pipeline import Base
+            Base.metadata.create_all(bind=db.get_bind())
+            
+            run_record = PipelineRun(status="running")
+            db.add(run_record)
+            db.commit()
+            db.refresh(run_record)
+            self.current_run_id = run_record.id
+
             self.logs = []
             self.status = "running"
             self._cancel_requested = False
             self.metrics = {"total": 0, "passed": 0, "failed": 0}
             self.last_run = datetime.now().isoformat()
             
-            self.log("INFO", "=== 阶段 1: 建立数据库连接与环境校验 ===")
+            self.log("INFO", f"=== 阶段 1: 建立数据库连接与环境校验 (Batch ID: {self.current_run_id}) ===")
             
             # 1. MongoDB Connection
             mongo_client = None
@@ -118,11 +131,26 @@ class CDMPipelineService:
                 self.log("INFO", "请先在【数据接入工作台】上传文件，解析入库后再执行管线。")
                 
             self.log("INFO", "=== 管线执行完毕 ===")
-            self.status = "success"
+            self.status = "success" if not self._cancel_requested else "cancelled"
+            
+            run_record.status = self.status
+            run_record.end_time = datetime.utcnow()
+            run_record.total_processed = self.metrics["total"]
+            run_record.passed_count = self.metrics["passed"]
+            run_record.failed_count = self.metrics["failed"]
+            run_record.logs = self.logs
+            db.commit()
 
         except Exception as e:
             self.log("ERROR", f"❌ 管线执行发生严重错误: {e}")
             self.status = "failed"
+            
+            run_record.status = "failed"
+            run_record.end_time = datetime.utcnow()
+            run_record.logs = self.logs
+            db.commit()
+        finally:
+            db.close()
             
         return self.get_report()
 
@@ -242,8 +270,17 @@ class CDMPipelineService:
     def process_db_stream(self, sqlite_conn, pg_conn, mongo_collection):
         patient_records = {}
         try:
-            # 1. Fetch Persons
-            res_person = sqlite_conn.execute(text("SELECT * FROM stg_person"))
+            # 1. Fetch Persons with Raw Data Join
+            # To populate Stage 1 (Source) we need the original CSV JSON row from raw_record table
+            # and the filename from source_batch table.
+            query = """
+                SELECT p.*, r.row_data as raw_data_json, b.filename as source_file
+                FROM stg_person p
+                LEFT JOIN raw_record r ON p.raw_record_id = r.id
+                LEFT JOIN source_batch b ON p.source_batch_id = b.id
+            """
+            res_person = sqlite_conn.execute(text(query))
+            import json
             for row in res_person:
                 d = dict(row._mapping)
                 d['visit_occurrences'] = []
@@ -251,6 +288,20 @@ class CDMPipelineService:
                 d['conditions'] = []
                 d['drug_exposures'] = []
                 d['observations'] = []
+                
+                # Load actual raw data
+                raw_data_str = d.pop('raw_data_json', None)
+                if raw_data_str:
+                    try:
+                        d['raw_data'] = json.loads(raw_data_str)
+                    except:
+                        d['raw_data'] = {"raw_text": raw_data_str}
+                else:
+                    d['raw_data'] = {"info": "Extracted from SQLite Staging"}
+                    
+                source_file = d.pop('source_file', None)
+                d['source_file'] = source_file if source_file else "Unknown Source"
+                
                 patient_records[d['person_source_value']] = d
                 
             # 2. Fetch Visits
@@ -291,10 +342,15 @@ class CDMPipelineService:
                 res_drug = sqlite_conn.execute(text("SELECT * FROM stg_drug_exposure"))
                 for row in res_drug:
                     d = dict(row._mapping)
+                    # Filter out unnecessary columns if needed
+                    keys_to_keep = ['drug_source_value', 'form_source_value', 'route_source_value', 'dose_source_value', 'frequency_source_value', 'drug_exposure_start_date']
+                    d_clean = {k: v for k, v in d.items() if k in keys_to_keep and v is not None}
+                    
                     pid = d.get('person_source_value')
                     if pid in patient_records:
-                        self._align_concept_for_dict(d, "drug_source_value", pg_conn)
-                        patient_records[pid]['drug_exposures'].append(d)
+                        if 'medications' not in patient_records[pid]:
+                            patient_records[pid]['medications'] = []
+                        patient_records[pid]['medications'].append(d_clean)
             except Exception as e:
                 self.log("WARNING", f"提取 Staging Drug 失败: {e}")
 

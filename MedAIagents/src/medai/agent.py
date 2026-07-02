@@ -491,22 +491,27 @@ class MedicalAgent:
         )
         return result
     
-    def plan_and_execute(self, user_request: str) -> Dict[str, Any]:
+    def plan_and_execute(self, user_request: str, context: str = "") -> Dict[str, Any]:
         """自动规划并执行任务
         
         将用户请求分解为子任务，按依赖关系并行执行。
         
         Args:
             user_request: 用户请求
+            context: 额外上下文信息（可选）
         
         Returns:
             执行结果 {goal, subtasks, results, summary}
         """
-        logger.info(f"Plan and execute - Request: {user_request}")
+        logger.info(f"Plan and execute - Request: {user_request}, Context: {context}")
         
         try:
             tools = self.tool_registry.list_tools()
-            plan = _run_async(self.task_planner.plan(user_request, tools))
+            # 如果有上下文，拼接进请求中
+            full_request = user_request
+            if context:
+                full_request = f"{user_request}\n\n## 上下文\n{context}"
+            plan = _run_async(self.task_planner.plan(full_request, tools))
             executed_plan = _run_async(
                 self.task_planner.execute(plan, self.tool_executor)
             )
@@ -530,6 +535,204 @@ class MedicalAgent:
             logger.error(f"Plan and execute error: {e}")
             return {'goal': user_request, 'error': str(e)}
     
+    def _should_auto_plan(self, user_input: str) -> bool:
+        """使用 LLM 判断用户请求是否需要自动规划
+        
+        对于复杂、多步骤的任务自动触发规划，简单问题直接回答。
+        
+        Args:
+            user_input: 用户输入
+            
+        Returns:
+            是否需要自动规划
+        """
+        # 快速关键词预判断（避免简单问题也调用 LLM）
+        simple_keywords = [
+            '你好', 'hello', 'hi', '谢谢', '再见', '是什么', '是谁',
+            '多少', '哪里', '为什么', '怎么读', '翻译',
+        ]
+        input_lower = user_input.strip().lower()
+        for kw in simple_keywords:
+            if input_lower == kw or input_lower == kw + '？' or input_lower == kw + '?':
+                return False
+        
+        # 输入太短（<10字符），大概率是简单问题
+        if len(user_input.strip()) < 10:
+            return False
+        
+        # 使用 LLM 判断是否需要规划
+        judge_prompt = f"""请判断以下用户请求是否需要分解为多个子任务来执行。
+
+用户请求：{user_input}
+
+判断标准：
+- 需要规划：涉及多个步骤、多工具调用、复杂流程、方案设计、分析报告等
+- 不需要规划：简单问答、单一概念解释、简单查询、问候等
+
+请只回复 JSON，不要有其他内容：
+{{"needs_plan": true或false, "reason": "简短理由"}}"""
+
+        try:
+            messages = [
+                {"role": "system", "content": "你是一个任务复杂度判断助手，只输出 JSON。"},
+                {"role": "user", "content": judge_prompt},
+            ]
+            response = _run_async(self.llm_router.chat(messages))
+            
+            # 解析 JSON
+            resp_str = response.strip()
+            if "```json" in resp_str:
+                resp_str = resp_str.split("```json")[1].split("```")[0].strip()
+            elif "```" in resp_str:
+                resp_str = resp_str.split("```")[1].split("```")[0].strip()
+            
+            import json
+            result = json.loads(resp_str)
+            needs_plan = result.get('needs_plan', False)
+            reason = result.get('reason', '')
+            logger.info(f"Auto-plan judgment: needs_plan={needs_plan}, reason={reason}")
+            return bool(needs_plan)
+        except Exception as e:
+            logger.warning(f"Auto-plan judgment failed: {e}, defaulting to no plan")
+            return False
+    
+    def chat_with_auto_plan(self, user_input: str, use_knowledge: bool = True) -> Dict[str, Any]:
+        """带自动任务规划的对话
+        
+        Hermes 风格：在对话中自动识别复杂请求，生成计划并执行。
+        简单问题直接回答，复杂问题自动触发任务规划。
+        
+        Args:
+            user_input: 用户输入
+            use_knowledge: 是否使用知识库
+            
+        Returns:
+            {
+                "type": "simple" | "plan",
+                "message": "直接回复内容",
+                "plan": {  // 仅 type=plan 时存在
+                    "goal": "任务目标",
+                    "subtasks": {...},
+                    "summary": "汇总"
+                }
+            }
+        """
+        # 记录用户消息
+        self.memory.add_message('user', user_input)
+        
+        # 1. 判断是否需要自动规划
+        needs_plan = self._should_auto_plan(user_input)
+        
+        if not needs_plan:
+            # 简单问题，直接对话回答
+            messages = self._build_chat_prompt(user_input, use_knowledge)
+            try:
+                response = _run_async(self.llm_router.chat(messages))
+                self.memory.add_message('assistant', response)
+                
+                self.security.log_access(
+                    user_id=self.current_user_id,
+                    username='user',
+                    action='chat',
+                    resource_type='conversation',
+                    details={'input_length': len(user_input), 'output_length': len(response)}
+                )
+                
+                return {"type": "simple", "message": response}
+            except Exception as e:
+                logger.error(f"Chat error: {e}")
+                return {"type": "simple", "message": f"抱歉，处理您的请求时出现错误：{str(e)}"}
+        
+        # 2. 复杂问题，自动生成任务计划并执行
+        logger.info(f"Auto-planning triggered for: {user_input[:100]}")
+        
+        try:
+            plan_result = self.plan_and_execute(user_input)
+            
+            if 'error' in plan_result:
+                # 规划失败，降级为普通对话
+                messages = self._build_chat_prompt(user_input, use_knowledge)
+                response = _run_async(self.llm_router.chat(messages))
+                self.memory.add_message('assistant', response)
+                return {"type": "simple", "message": response}
+            
+            # 生成规划结果的文本摘要
+            summary_text = self._format_plan_result(plan_result)
+            self.memory.add_message('assistant', summary_text)
+            
+            self.security.log_access(
+                user_id=self.current_user_id,
+                username='user',
+                action='auto_plan',
+                resource_type='task_plan',
+                details={'goal': plan_result.get('goal', ''), 'subtask_count': len(plan_result.get('subtasks', {}))}
+            )
+            
+            return {
+                "type": "plan",
+                "message": summary_text,
+                "plan": plan_result
+            }
+        except Exception as e:
+            logger.error(f"Auto-plan error: {e}")
+            # 降级为普通对话
+            try:
+                messages = self._build_chat_prompt(user_input, use_knowledge)
+                response = _run_async(self.llm_router.chat(messages))
+                self.memory.add_message('assistant', response)
+                return {"type": "simple", "message": response}
+            except Exception:
+                return {"type": "simple", "message": f"抱歉，处理请求时出现错误：{str(e)}"}
+    
+    def _format_plan_result(self, plan_result: Dict[str, Any]) -> str:
+        """将规划结果格式化为可读的文本摘要
+        
+        Args:
+            plan_result: plan_and_execute 的返回结果
+            
+        Returns:
+            格式化的文本摘要
+        """
+        goal = plan_result.get('goal', '未知任务')
+        subtasks = plan_result.get('subtasks', {})
+        summary = plan_result.get('summary', '')
+        
+        text = f"## 任务规划：{goal}\n\n"
+        text += "### 执行结果\n\n"
+        
+        completed = 0
+        failed = 0
+        for st_id, st_info in subtasks.items():
+            status = st_info.get('status', 'unknown')
+            desc = st_info.get('description', '')
+            result = st_info.get('result', '')
+            error = st_info.get('error', '')
+            
+            status_icon = "[OK]" if status == "completed" else "[FAIL]" if status == "failed" else "[--]"
+            if status == "completed":
+                completed += 1
+            elif status == "failed":
+                failed += 1
+            
+            text += f"- {status_icon} {desc}\n"
+            if error:
+                text += f"  错误: {error}\n"
+            elif result and isinstance(result, dict):
+                # 提取关键信息
+                for k, v in result.items():
+                    if k != 'description' and v:
+                        text += f"  {k}: {str(v)[:200]}\n"
+        
+        text += f"\n**完成情况**: {completed}/{len(subtasks)} 成功"
+        if failed > 0:
+            text += f"，{failed} 个失败"
+        text += "\n"
+        
+        if summary:
+            text += f"\n### 总结\n{summary}\n"
+        
+        return text
+
     def auto_orchestrate(self, task: str) -> str:
         """自动编排多 Agent 协作完成任务
         

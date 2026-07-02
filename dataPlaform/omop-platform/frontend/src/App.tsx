@@ -7,7 +7,7 @@ import { PipelineMonitor } from './components/PipelineMonitor'
 import { QualityReport } from './components/QualityReport'
 import { ProfilingReport } from './components/ProfilingReport'
 import { Toaster } from "@/components/ui/sonner"
-import { LayoutDashboard, Database, Activity, Settings, Menu, ServerCog, BarChart2 } from "lucide-react"
+import { LayoutDashboard, Database, Activity, Settings, Menu, ServerCog, BarChart2, ChartNoAxesColumn } from "lucide-react"
 import type { Batch } from '@/types'
 
 function App() {
@@ -92,18 +92,18 @@ function App() {
             数据接入工作台
           </button>
           <button 
+            onClick={() => setActiveTab('profiling')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'profiling' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-slate-800 text-slate-300'}`}
+          >
+            <ChartNoAxesColumn className="w-5 h-5" />
+            数据分布探查
+          </button>
+          <button 
             onClick={() => setActiveTab('pipeline')}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'pipeline' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-slate-800 text-slate-300'}`}
           >
             <ServerCog className="w-5 h-5" />
             数据清洗与归一化
-          </button>
-          <button 
-            onClick={() => setActiveTab('profiling')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'profiling' ? 'bg-blue-600/20 text-blue-400' : 'hover:bg-slate-800 text-slate-300'}`}
-          >
-            <BarChart2 className="w-5 h-5" />
-            数据分布探查
           </button>
           <button 
             onClick={() => setActiveTab('quality')}
@@ -137,6 +137,7 @@ function App() {
               {activeTab === 'pipeline' && '数据清洗与归一化管线'}
               {activeTab === 'profiling' && '数据质量与分布探查'}
               {activeTab === 'quality' && '质量评估报告'}
+              {activeTab === 'lineage' && '数据血缘追踪'}
               {activeTab === 'settings' && '系统配置管理'}
             </h1>
           </div>
