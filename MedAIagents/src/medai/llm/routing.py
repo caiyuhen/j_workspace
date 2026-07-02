@@ -277,12 +277,25 @@ class LLMRouter:
             'openai': OpenAIProvider,
             'anthropic': AnthropicProvider,
             'deepseek': DeepSeekProvider,
+            # OpenAI 兼容接口的聚合平台
+            'cherryin': OpenAIProvider,
+            'siliconflow': OpenAIProvider,
+            'fireworks': OpenAIProvider,
+            'together': OpenAIProvider,
+            'groq': OpenAIProvider,
+            'qwen': OpenAIProvider,
         }
         
         for provider_name, provider_config in providers_config.items():
-            if provider_name in provider_classes:
+            provider_class = provider_classes.get(provider_name)
+            # 如果名称不在映射中，但配置了 base_url，默认使用 OpenAI 兼容接口
+            if provider_class is None and provider_config.get('base_url'):
+                provider_class = OpenAIProvider
+                logger.info(f"Provider '{provider_name}' not in known list, using OpenAI-compatible interface")
+            
+            if provider_class:
                 try:
-                    self._providers[provider_name] = provider_classes[provider_name](provider_config)
+                    self._providers[provider_name] = provider_class(provider_config)
                     logger.info(f"Initialized LLM provider: {provider_name}")
                 except Exception as e:
                     logger.warning(f"Failed to initialize LLM provider {provider_name}: {e}")
@@ -389,8 +402,38 @@ class LLMRouter:
     
     def switch_provider(self, provider: str):
         """切换默认提供商"""
-        if provider not in self._providers:
-            raise ValueError(f"LLM provider '{provider}' not available")
+        # 如果 provider 已存在，重新初始化以读取最新配置（如模型 ID 变更）
+        if provider in self._providers:
+            provider_config = self.config.get(f'llm.providers.{provider}', {})
+            try:
+                # 根据 provider 类型选择正确的类
+                provider_classes = {
+                    'openai': OpenAIProvider,
+                    'anthropic': AnthropicProvider,
+                    'deepseek': DeepSeekProvider,
+                    'cherryin': OpenAIProvider,
+                    'siliconflow': OpenAIProvider,
+                    'fireworks': OpenAIProvider,
+                    'together': OpenAIProvider,
+                    'groq': OpenAIProvider,
+                    'qwen': OpenAIProvider,
+                }
+                provider_class = provider_classes.get(provider, OpenAIProvider)
+                self._providers[provider] = provider_class(provider_config)
+                logger.info(f"Reloaded LLM provider: {provider} with model {provider_config.get('default_model')}")
+            except Exception as e:
+                logger.warning(f"Failed to reload provider {provider}: {e}")
+        elif provider not in self._providers:
+            # 尝试初始化新的 provider
+            provider_config = self.config.get(f'llm.providers.{provider}', {})
+            if provider_config.get('base_url'):
+                try:
+                    self._providers[provider] = OpenAIProvider(provider_config)
+                    logger.info(f"Initialized new LLM provider: {provider}")
+                except Exception as e:
+                    raise ValueError(f"LLM provider '{provider}' not available: {e}")
+            else:
+                raise ValueError(f"LLM provider '{provider}' not available")
         
         self.config.set('llm.default_provider', provider)
         logger.info(f"Switched default LLM provider to: {provider}")

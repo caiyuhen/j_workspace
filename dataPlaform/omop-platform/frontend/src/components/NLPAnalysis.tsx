@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrainCircuit, AlertTriangle, RefreshCw, Activity, Pill, FileText } from 'lucide-react';
+import { BrainCircuit, AlertTriangle, RefreshCw, Activity, Pill, FileText, Beaker, ShieldAlert } from 'lucide-react';
 
 interface NLPStatItem {
   name: string;
@@ -12,6 +12,8 @@ interface NLPStatsResponse {
   data?: {
     conditions: NLPStatItem[];
     drugs: NLPStatItem[];
+    measurements: NLPStatItem[];
+    negations: NLPStatItem[];
     observations: NLPStatItem[];
   };
 }
@@ -110,15 +112,12 @@ export const NLPAnalysis: React.FC = () => {
       <div className="flex items-center gap-3 mb-2">
         <BrainCircuit className="w-7 h-7 text-purple-600" />
         <h2 className="text-xl font-bold text-slate-800">NLP 深度语义提取分析</h2>
-        <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-medium rounded-full ml-2">
-          Hugging Face Transformers
-        </span>
       </div>
       <p className="text-slate-500 text-sm mb-6">
         基于深度学习 NER 模型从非结构化文本（如主诉、现病史、影像报告）中自动抽取的实体分布。
       </p>
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {renderDistribution(
           "疾病与症状 (Top 10)", 
           stats.data.conditions, 
@@ -132,6 +131,20 @@ export const NLPAnalysis: React.FC = () => {
           <Pill className="w-6 h-6 text-blue-500" />, 
           "bg-blue-500", 
           "bg-blue-50"
+        )}
+        {renderDistribution(
+          "生化指标与测量 (Top 10)", 
+          stats.data.measurements, 
+          <Beaker className="w-6 h-6 text-teal-500" />, 
+          "bg-teal-500", 
+          "bg-teal-50"
+        )}
+        {renderDistribution(
+          "阴性/排除性发现 (Top 10)", 
+          stats.data.negations, 
+          <ShieldAlert className="w-6 h-6 text-indigo-500" />, 
+          "bg-indigo-500", 
+          "bg-indigo-50"
         )}
         {renderDistribution(
           "独立文本观察 (Top 10)", 

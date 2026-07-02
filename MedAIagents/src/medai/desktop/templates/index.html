@@ -129,6 +129,25 @@
         .message.user .message-avatar { background: linear-gradient(135deg, #00c6fb 0%, #005bea 100%); margin-left: 10px; order: 2; }
         .message-bubble { max-width: 70%; background: white; border-radius: 12px; padding: 12px 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); line-height: 1.6; font-size: 14px; }
         .message.user .message-bubble { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .message-bubble:has(.plan-card) { max-width: 85%; }
+        /* 任务规划卡片 */
+        .plan-card { background: #f8f9ff; border: 1px solid #e0e5ff; border-radius: 10px; padding: 14px; margin: 4px 0; }
+        .plan-header { margin-bottom: 8px; }
+        .plan-badge { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .plan-goal { font-weight: 600; font-size: 14px; color: #333; margin-bottom: 10px; }
+        .plan-progress-bar { height: 6px; background: #e8ecf5; border-radius: 3px; overflow: hidden; margin-bottom: 6px; }
+        .plan-progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); border-radius: 3px; transition: width 0.5s ease; }
+        .plan-stats { display: flex; justify-content: space-between; font-size: 11px; color: #888; margin-bottom: 10px; }
+        .plan-fail-count { color: #e74c3c; }
+        .plan-tasks { display: flex; flex-direction: column; gap: 6px; }
+        .plan-task-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; background: white; border: 1px solid #eee; font-size: 13px; }
+        .plan-task-item.done { border-color: #d4edda; background: #f0fff4; }
+        .plan-task-item.fail { border-color: #f8d7da; background: #fff5f5; }
+        .plan-task-item.running { border-color: #fff3cd; background: #fffef5; }
+        .plan-task-icon { font-size: 14px; flex-shrink: 0; }
+        .plan-task-desc { flex: 1; color: #444; }
+        .plan-task-error { cursor: help; font-size: 13px; }
+        .plan-summary { margin-top: 10px; padding: 8px 10px; background: white; border-radius: 6px; border-left: 3px solid #667eea; font-size: 13px; color: #555; line-height: 1.5; }
         .chat-input-area { background: white; padding: 14px 20px; border-top: 1px solid #e8e8e8; }
         .input-wrapper { display: flex; gap: 10px; align-items: flex-end; }
         .chat-input { flex: 1; border: 2px solid #e8e8e8; border-radius: 12px; padding: 10px 14px; font-size: 14px; resize: none; min-height: 44px; max-height: 100px; font-family: inherit; }
@@ -479,20 +498,31 @@ print(calc_bmi(70, 1.75))"></textarea>
 
                 <!-- ==================== 模型设置 ==================== -->
                 <div id="page-models" class="page">
-                    <div id="modelsList"></div>
                     <div class="card">
-                        <div class="card-title"><span>➕</span><span>切换模型</span></div>
-                        <p style="font-size:13px;color:#666;margin-bottom:14px">选择要使用的 AI 模型提供商</p>
-                        <div class="form-group">
-                            <label class="form-label">目标 Provider</label>
-                            <select class="form-select" id="switchModelSelect">
-                                <option value="cherryin">CherryIn (DeepSeek)</option>
-                                <option value="openai">OpenAI</option>
-                                <option value="anthropic">Anthropic (Claude)</option>
-                            </select>
+                        <div class="card-title"><span>🤖</span><span>当前模型</span></div>
+                        <div id="currentModelInfo" style="padding:12px;background:#f0f5ff;border-radius:8px;margin-bottom:16px">
+                            <div style="font-size:14px;font-weight:600;color:#1a3a5f" id="currentModelName">加载中...</div>
+                            <div style="font-size:12px;color:#666;margin-top:4px" id="currentModelId"></div>
                         </div>
-                        <button class="btn btn-primary" onclick="switchModel()">切换模型</button>
-                        <div id="switchModelResult"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><span>🔄</span><span>切换模型</span></div>
+                        <p style="font-size:13px;color:#666;margin-bottom:14px">点击模型卡片切换使用的 AI 模型。所有模型共用同一套 API Key（CherryIn 聚合平台）。</p>
+                        <div id="modelsGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+                            <div class="loading-container"><div class="loading"></div>加载模型列表...</div>
+                        </div>
+                        <div id="switchModelResult" style="margin-top:16px"></div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><span>➕</span><span>添加独立 Provider</span></div>
+                        <p style="font-size:13px;color:#666;margin-bottom:14px">如需使用独立的 OpenAI / Claude / DeepSeek / 阿里云 API，请修改 <code>config.yaml</code> 文件取消对应 provider 的注释并配置 API Key。</p>
+                        <div style="background:#f8f9fa;padding:12px;border-radius:8px;font-size:12px;font-family:monospace">
+ providers:<br>
+ &nbsp;&nbsp;qwen:<br>
+ &nbsp;&nbsp;&nbsp;&nbsp;api_key: ${DASHSCOPE_API_KEY}<br>
+ &nbsp;&nbsp;&nbsp;&nbsp;base_url: https://dashscope.aliyuncs.com/compatible-mode/v1<br>
+ &nbsp;&nbsp;&nbsp;&nbsp;default_model: qwen2.5-72b-instruct
+                        </div>
                     </div>
                 </div>
 
@@ -618,32 +648,53 @@ async function loadModels() {
         const res = await fetch('/api/models');
         const data = await res.json();
         if (data.success) {
-            document.getElementById('modelBadge').textContent = data.default_provider;
+            // 顶部 badge
+            const currentModel = data.models.find(m => m.is_current);
+            document.getElementById('modelBadge').textContent = currentModel ? currentModel.name : data.default_provider;
+            document.getElementById('currentModelName').textContent = currentModel ? currentModel.name : data.default_provider;
+            document.getElementById('currentModelId').textContent = currentModel ? currentModel.id : data.current_model;
+            
+            // 模型卡片网格
+            const grid = document.getElementById('modelsGrid');
             let html = '';
-            for (const [name, config] of Object.entries(data.config)) {
-                const isActive = name === data.default_provider;
-                html += `<div class="model-status-card">
-                    <div class="model-status-header">
-                        <div class="model-status-name">${name}</div>
-                        <div class="model-status-badge ${isActive ? 'active' : 'inactive'}">${isActive ? '当前使用' : '可用'}</div>
-                    </div>
-                    <div class="model-config-row"><span class="model-config-label">Base URL</span><span class="model-config-value">${config.base_url || '默认'}</span></div>
-                    <div class="model-config-row"><span class="model-config-label">默认模型</span><span class="model-config-value">${config.default_model || '未知'}</span></div>
-                    <div class="model-config-row"><span class="model-config-label">Temperature</span><span class="model-config-value">${config.temperature || 0.3}</span></div>
+            data.models.forEach(m => {
+                const isCurrent = m.is_current;
+                html += `<div class="research-tool-card" style="border:${isCurrent ? '2px solid #52c41a' : '2px solid transparent'};position:relative" onclick="switchModelId('${m.id}')">
+                    ${isCurrent ? '<div style="position:absolute;top:8px;right:8px;background:#52c41a;color:white;font-size:11px;padding:2px 8px;border-radius:4px">当前使用</div>' : ''}
+                    <div style="font-size:24px;margin-bottom:8px">${m.provider === 'cherryin' ? '🔮' : m.provider === 'openai' ? '🅾️' : m.provider === 'anthropic' ? '🅰️' : m.provider === 'qwen' ? '🇨🇳' : '🤖'}</div>
+                    <div style="font-size:14px;font-weight:600;color:#1a3a5f;margin-bottom:4px">${m.name}</div>
+                    <div style="font-size:11px;color:#888">${m.description || ''}</div>
+                    <div style="font-size:10px;color:#999;margin-top:6px;font-family:monospace">${m.id}</div>
                 </div>`;
-            }
-            document.getElementById('modelsList').innerHTML = html;
+            });
+            grid.innerHTML = html;
         }
     } catch (e) { console.error(e); }
 }
 
-// 切换模型
+// 切换 Provider（保留原有功能）
 async function switchModel() {
     const provider = document.getElementById('switchModelSelect').value;
     const resultDiv = document.getElementById('switchModelResult');
     resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>切换中...</div>';
     try {
         const res = await fetch('/api/models/switch', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({provider}) });
+        const data = await res.json();
+        resultDiv.innerHTML = data.success
+            ? `<div class="safety-warning success"><div class="warning-title">✅ 成功</div>${data.message}</div>`
+            : `<div class="safety-warning danger"><div class="warning-title">❌ 失败</div>${data.error}</div>`;
+        if (data.success) loadModels();
+    } catch (e) {
+        resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>${e.message}</div>`;
+    }
+}
+
+// 切换具体模型 ID
+async function switchModelId(modelId) {
+    const resultDiv = document.getElementById('switchModelResult');
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>切换中...</div>';
+    try {
+        const res = await fetch('/api/models/switch-model', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({model_id: modelId}) });
         const data = await res.json();
         resultDiv.innerHTML = data.success
             ? `<div class="safety-warning success"><div class="warning-title">✅ 成功</div>${data.message}</div>`
@@ -899,7 +950,11 @@ async function sendMessage() {
         const response = await fetch('/api/chat', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ message, use_knowledge: true }) });
         const data = await response.json();
         document.getElementById(loadingId).remove();
-        addMessage('assistant', data.message);
+        if (data.type === 'plan' && data.plan) {
+            addPlanMessage(data.message, data.plan);
+        } else {
+            addMessage('assistant', data.message);
+        }
     } catch (error) {
         document.getElementById(loadingId).remove();
         addMessage('assistant', '抱歉，发生了错误：' + error.message);
@@ -919,6 +974,64 @@ function addMessage(role, content, isLoading = false) {
     }
     container.appendChild(div); container.scrollTop = container.scrollHeight;
     return messageId;
+}
+
+function addPlanMessage(summaryText, planData) {
+    const container = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'message assistant';
+    
+    const goal = planData.goal || '任务规划';
+    const subtasks = planData.subtasks || {};
+    const summary = planData.summary || '';
+    
+    let tasksHtml = '';
+    let completed = 0, failed = 0, total = 0;
+    for (const [id, st] of Object.entries(subtasks)) {
+        total++;
+        const status = st.status || 'unknown';
+        const desc = st.description || id;
+        const error = st.error || '';
+        let statusClass = 'pending';
+        let statusIcon = '⏳';
+        if (status === 'completed') { statusClass = 'done'; statusIcon = '✅'; completed++; }
+        else if (status === 'failed') { statusClass = 'fail'; statusIcon = '❌'; failed++; }
+        else if (status === 'running') { statusClass = 'running'; statusIcon = '🔄'; }
+        
+        tasksHtml += `
+            <div class="plan-task-item ${statusClass}">
+                <span class="plan-task-icon">${statusIcon}</span>
+                <span class="plan-task-desc">${desc}</span>
+                ${error ? `<span class="plan-task-error" title="${error}">⚠️</span>` : ''}
+            </div>`;
+    }
+    
+    const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
+    
+    div.innerHTML = `
+        <div class="message-avatar">🏥</div>
+        <div class="message-bubble">
+            <div class="plan-card">
+                <div class="plan-header">
+                    <span class="plan-badge">📋 自动任务规划</span>
+                </div>
+                <div class="plan-goal">${goal}</div>
+                <div class="plan-progress-bar">
+                    <div class="plan-progress-fill" style="width:${progress}%"></div>
+                </div>
+                <div class="plan-stats">
+                    <span>完成 ${completed}/${total}</span>
+                    ${failed > 0 ? `<span class="plan-fail-count">失败 ${failed}</span>` : ''}
+                    <span>${progress}%</span>
+                </div>
+                <div class="plan-tasks">${tasksHtml}</div>
+                ${summary ? `<div class="plan-summary"><strong>总结：</strong>${summary}</div>` : ''}
+            </div>
+        </div>`;
+    
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+    return div.id;
 }
 
 function quickDiagnosis(symptom) { document.getElementById('symptomsInput').value = symptom; runDiagnosis(); }

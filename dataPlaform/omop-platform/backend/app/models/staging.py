@@ -109,12 +109,11 @@ class StagingDrugExposure(Base):
     source_batch_id = Column(String, index=True)
     raw_record_id = Column(String, ForeignKey("raw_record.id"), index=True)
     person_source_value = Column(String, index=True)
-    
-    drug_source_value = Column(String)         # 药名/原始数据
+    drug_source_value = Column(String)
+    form_source_value = Column(String)
+    route_source_value = Column(String)
     dose_source_value = Column(String)         # 剂量
-    form_source_value = Column(String)         # 剂型
     frequency_source_value = Column(String)    # 服药频率
-    
     drug_exposure_start_date = Column(Date)
     drug_exposure_start_datetime = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)

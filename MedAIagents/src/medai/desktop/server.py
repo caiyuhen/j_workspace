@@ -182,18 +182,29 @@ async def health_check():
 
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
-    """聊天接口"""
+    """聊天接口（支持自动任务规划）"""
     try:
         if agent is None:
             raise HTTPException(status_code=500, detail="Agent 未初始化")
         
-        response = agent.chat(request.message, use_knowledge=request.use_knowledge)
+        result = agent.chat_with_auto_plan(request.message, use_knowledge=request.use_knowledge)
         
-        return {
+        response_data = {
             "success": True,
-            "message": response,
             "timestamp": datetime.now().isoformat()
         }
+        
+        if result["type"] == "plan":
+            # 复杂任务：返回规划结果
+            response_data["message"] = result["message"]
+            response_data["type"] = "plan"
+            response_data["plan"] = result["plan"]
+        else:
+            # 简单对话：直接返回
+            response_data["message"] = result["message"]
+            response_data["type"] = "simple"
+        
+        return response_data
     except Exception as e:
         return {
             "success": False,
@@ -499,11 +510,27 @@ async def list_models():
         config = Config()
         providers = config.get('llm.providers', {})
         default_provider = config.get('llm.default_provider', 'unknown')
+        
+        # 构建可用模型列表
+        all_models = []
+        for provider_name, provider_config in providers.items():
+            available = provider_config.get('available_models', [])
+            current_model = provider_config.get('default_model', '')
+            for m in available:
+                all_models.append({
+                    "id": m.get('id', ''),
+                    "name": m.get('name', m.get('id', '')),
+                    "description": m.get('description', ''),
+                    "provider": provider_name,
+                    "is_current": m.get('id', '') == current_model
+                })
+        
         return {
             "success": True,
             "default_provider": default_provider,
             "providers": list(providers.keys()),
-            "config": {k: {kk: vv for kk, vv in v.items() if kk != 'api_key'} for k, v in providers.items()}
+            "models": all_models,
+            "current_model": providers.get(default_provider, {}).get('default_model', '')
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
@@ -511,12 +538,50 @@ async def list_models():
 
 @app.post("/api/models/switch")
 async def switch_model(request: ModelSwitchRequest):
-    """切换大模型"""
+    """切换模型提供商"""
     try:
         if agent is None:
             return {"success": False, "error": "Agent 未初始化"}
         agent.switch_model(request.provider)
         return {"success": True, "provider": request.provider, "message": f"已切换到 {request.provider}"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+class ModelSwitchIdRequest(BaseModel):
+    model_id: str
+    provider: str = None
+
+
+@app.post("/api/models/switch-model")
+async def switch_model_id(request: ModelSwitchIdRequest):
+    """切换具体模型 ID（在同一 provider 内切换不同模型）"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        
+        config = Config()
+        provider = request.provider or config.get('llm.default_provider', 'cherryin')
+        provider_config = config.get(f'llm.providers.{provider}', {})
+        
+        # 检查模型是否在可用列表中
+        available = provider_config.get('available_models', [])
+        model_ids = [m.get('id') for m in available]
+        if request.model_id not in model_ids:
+            return {"success": False, "error": f"模型 {request.model_id} 不在可用列表中"}
+        
+        # 更新配置中的 default_model
+        config.set(f'llm.providers.{provider}.default_model', request.model_id)
+        
+        # 重新初始化 LLM router（让它读取新的配置）
+        agent.llm_router.switch_provider(provider)
+        
+        return {
+            "success": True,
+            "provider": provider,
+            "model_id": request.model_id,
+            "message": f"已切换到模型: {request.model_id}"
+        }
     except Exception as e:
         return {"success": False, "error": str(e)}
 

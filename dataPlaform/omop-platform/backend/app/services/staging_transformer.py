@@ -175,67 +175,11 @@ class StagingTransformer:
                         drug.drug_exposure_start_date = visit.visit_start_date
                     staging_objects.append(drug)
 
-                # 6.3 Lab Results -> StagingMeasurement
-                lab_val = cleaned_row.get("lab_results")
-                if lab_val:
-                    if "：" in lab_val:
-                        try:
-                            category, items_str = lab_val.split("：", 1)
-                            items_str = " ".join(items_str.split())
-                            items = items_str.split(" ")
-                            
-                            parsed_any = False
-                            i = 0
-                            while i < len(items):
-                                item = items[i]
-                                if ":" in item:
-                                    test_name, test_val = item.split(":", 1)
-                                    test_name = test_name.strip()
-                                    test_val = test_val.strip()
-                                    
-                                    if not test_val and i + 1 < len(items) and ":" not in items[i+1]:
-                                        test_val = items[i+1].strip()
-                                        i += 1
-                                        
-                                    if test_val:
-                                        parsed_any = True
-                                        meas = StagingMeasurement(
-                                            source_batch_id=batch_id,
-                                            raw_record_id=raw.id,
-                                            person_source_value=person.person_source_value,
-                                            measurement_source_value=test_name,
-                                            value_source_value=test_val,
-                                            unit_source_value="" # 测试数据中暂时没有单位，预留
-                                        )
-                                        if visit and hasattr(visit, 'visit_start_datetime') and visit.visit_start_datetime:
-                                            meas.measurement_datetime = visit.visit_start_datetime
-                                            meas.measurement_date = visit.visit_start_date
-                                        staging_objects.append(meas)
-                                i += 1
-                                
-                            if not parsed_any:
-                                meas = StagingMeasurement(
-                                    source_batch_id=batch_id,
-                                    raw_record_id=raw.id,
-                                    person_source_value=person.person_source_value,
-                                    measurement_source_value=lab_val,
-                                    value_source_value=""
-                                )
-                                staging_objects.append(meas)
-                        except Exception:
-                            pass
-                    else:
-                        meas = StagingMeasurement(
-                            source_batch_id=batch_id,
-                            raw_record_id=raw.id,
-                            person_source_value=person.person_source_value,
-                            measurement_source_value=lab_val,
-                            value_source_value=""
-                        )
-                        staging_objects.append(meas)
+                # 6.3 Lab Results -> NLP processing (handled together with other notes)
+                # Removed manual split logic to let TransformersNERMapper handle it cleanly.
 
                 # 6.4 NLP/Notes -> Collect for Batch Processing
-                nlp_keys = ["chief_complaint", "history_of_present_illness", "imaging_reports", "admission_record", "daily_course_record", "discharge_summary", "treatment_plan"]
+                nlp_keys = ["lab_results", "chief_complaint", "history_of_present_illness", "imaging_reports", "admission_record", "daily_course_record", "discharge_summary", "treatment_plan"]
                 for k in nlp_keys:
                     val = cleaned_row.get(k)
                     if val:
@@ -279,12 +223,27 @@ class StagingTransformer:
                         
                     # Process Medications
                     for med_val in extracted_entities.get("medications", []):
-                        drug = StagingDrugExposure(
-                            source_batch_id=b_id,
-                            raw_record_id=r_id,
-                            person_source_value=person.person_source_value,
-                            drug_source_value=med_val
-                        )
+                        import re
+                        match = re.search(r'药名：(.*?)\s+剂型：(.*?)\s+给药方式：(.*)', med_val)
+                        if match:
+                            d_name = match.group(1).strip()
+                            d_form = match.group(2).strip()
+                            d_route = match.group(3).strip()
+                            drug = StagingDrugExposure(
+                                source_batch_id=b_id,
+                                raw_record_id=r_id,
+                                person_source_value=person.person_source_value,
+                                drug_source_value=d_name,
+                                form_source_value=d_form,
+                                route_source_value=d_route
+                            )
+                        else:
+                            drug = StagingDrugExposure(
+                                source_batch_id=b_id,
+                                raw_record_id=r_id,
+                                person_source_value=person.person_source_value,
+                                drug_source_value=med_val
+                            )
                         if visit and hasattr(visit, 'visit_start_datetime') and visit.visit_start_datetime:
                             drug.drug_exposure_start_datetime = visit.visit_start_datetime
                             drug.drug_exposure_start_date = visit.visit_start_date
@@ -293,16 +252,18 @@ class StagingTransformer:
                     # Process Measurements
                     for meas_val in extracted_entities.get("measurements", []):
                         import re
-                        match = re.search(r'检查项：(.*?)\s+值:([\d\.]+)', meas_val)
+                        match = re.search(r'检查项：(.*?)\s+值:([^\s]+)(?:\s+单位:(.*))?', meas_val)
                         if match:
                             m_name = match.group(1).strip()
                             m_val = match.group(2).strip()
+                            m_unit = match.group(3).strip() if match.group(3) else ""
                             meas = StagingMeasurement(
                                 source_batch_id=b_id,
                                 raw_record_id=r_id,
                                 person_source_value=person.person_source_value,
                                 measurement_source_value=m_name,
-                                value_source_value=m_val
+                                value_source_value=m_val,
+                                unit_source_value=m_unit
                             )
                             if visit and hasattr(visit, 'visit_start_datetime') and visit.visit_start_datetime:
                                 meas.measurement_datetime = visit.visit_start_datetime
@@ -312,17 +273,19 @@ class StagingTransformer:
                     # Process Symptoms with values
                     for sym_val in extracted_entities.get("symptoms_with_values", []):
                         import re
-                        match = re.search(r'症状：(.*?)\s+值:([\d\.]+)', sym_val)
+                        match = re.search(r'症状：(.*?)\s+值:([^\s]+)(?:\s+单位:(.*))?', sym_val)
                         if match:
                             s_name = match.group(1).strip()
                             s_val = match.group(2).strip()
+                            s_unit = match.group(3).strip() if match.group(3) else ""
                             # 带有数值的症状（如体温）在 OMOP 中本质上属于 Measurement
                             meas = StagingMeasurement(
                                 source_batch_id=b_id,
                                 raw_record_id=r_id,
                                 person_source_value=person.person_source_value,
                                 measurement_source_value=f"症状-{s_name}",
-                                value_source_value=s_val
+                                value_source_value=s_val,
+                                unit_source_value=s_unit
                             )
                             if visit and hasattr(visit, 'visit_start_datetime') and visit.visit_start_datetime:
                                 meas.measurement_datetime = visit.visit_start_datetime

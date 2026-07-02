@@ -2,8 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Play, Server, Database, CheckCircle2, XCircle, Activity, Loader2, Square } from 'lucide-react';
+import { Play, Server, Database, CheckCircle2, XCircle, Activity, Loader2, Square, History } from 'lucide-react';
 import { toast } from 'sonner';
+
+interface PipelineRunHistory {
+  id: string;
+  status: string;
+  start_time: string;
+  end_time: string | null;
+  total_processed: number;
+  passed_count: number;
+  failed_count: number;
+}
 
 interface PipelineStatus {
   status: 'idle' | 'running' | 'success' | 'failed' | 'cancelled';
@@ -29,6 +39,7 @@ export function PipelineMonitor() {
     connections: { sqlite: false, postgres: false, mongodb: false },
     logs: []
   });
+  const [historyList, setHistoryList] = useState<PipelineRunHistory[]>([]);
 
   const fetchStatus = async () => {
     try {
@@ -42,12 +53,26 @@ export function PipelineMonitor() {
     }
   };
 
+  const fetchHistory = async () => {
+    try {
+      const res = await fetch('http://127.0.0.1:8433/api/v1/pipeline/history?limit=5');
+      if (res.ok) {
+        const data = await res.json();
+        setHistoryList(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch pipeline history", error);
+    }
+  };
+
   useEffect(() => {
     // Initial fetch
     fetchStatus();
+    fetchHistory();
     // Poll every 2 seconds unconditionally to avoid stale closure issues
     const interval = setInterval(() => {
       fetchStatus();
+      fetchHistory();
     }, 2000);
     return () => clearInterval(interval);
   }, []);
@@ -224,6 +249,58 @@ export function PipelineMonitor() {
               })
             )}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Pipeline History List */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <History className="w-4 h-4 text-indigo-500" />
+            管线执行历史记录
+          </CardTitle>
+          <CardDescription>最近执行的清洗归一化批次记录</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {historyList.length === 0 ? (
+            <div className="text-center text-slate-500 py-6 text-sm">暂无管线执行记录</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-slate-500 bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <th className="px-4 py-3 font-medium rounded-tl-lg">批次 ID</th>
+                    <th className="px-4 py-3 font-medium">状态</th>
+                    <th className="px-4 py-3 font-medium">总数据量</th>
+                    <th className="px-4 py-3 font-medium">通过量</th>
+                    <th className="px-4 py-3 font-medium">拦截量</th>
+                    <th className="px-4 py-3 font-medium rounded-tr-lg">执行时间</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {historyList.map((run) => (
+                    <tr key={run.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-4 py-3 font-mono text-xs text-slate-600 truncate max-w-[120px]" title={run.id}>
+                        {run.id}
+                      </td>
+                      <td className="px-4 py-3">
+                        {run.status === 'success' && <span className="text-emerald-600 font-medium flex items-center gap-1"><CheckCircle2 className="w-3 h-3"/> 已完成</span>}
+                        {run.status === 'failed' && <span className="text-red-600 font-medium flex items-center gap-1"><XCircle className="w-3 h-3"/> 失败</span>}
+                        {run.status === 'running' && <span className="text-blue-600 font-medium flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin"/> 执行中</span>}
+                        {run.status === 'cancelled' && <span className="text-orange-600 font-medium flex items-center gap-1"><Square className="w-3 h-3"/> 已终止</span>}
+                      </td>
+                      <td className="px-4 py-3 font-medium">{run.total_processed}</td>
+                      <td className="px-4 py-3 text-emerald-600 font-medium">{run.passed_count}</td>
+                      <td className="px-4 py-3 text-red-600 font-medium">{run.failed_count}</td>
+                      <td className="px-4 py-3 text-slate-500">
+                        {run.start_time ? new Date(run.start_time).toLocaleString() : '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
