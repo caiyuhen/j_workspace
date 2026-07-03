@@ -148,6 +148,16 @@
         .plan-task-desc { flex: 1; color: #444; }
         .plan-task-error { cursor: help; font-size: 13px; }
         .plan-summary { margin-top: 10px; padding: 8px 10px; background: white; border-radius: 6px; border-left: 3px solid #667eea; font-size: 13px; color: #555; line-height: 1.5; }
+        /* 交付物下载按钮 */
+        .plan-downloads { margin-top: 12px; border-top: 1px solid #e0e5ff; padding-top: 10px; }
+        .plan-downloads-title { font-size: 12px; font-weight: 600; color: #667eea; margin-bottom: 8px; }
+        .plan-download-btn { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: white; border: 1px solid #e0e5ff; border-radius: 8px; text-decoration: none; transition: all 0.2s; margin-bottom: 6px; }
+        .plan-download-btn:hover { border-color: #667eea; background: #f0f2ff; transform: translateY(-1px); box-shadow: 0 2px 8px rgba(102,126,234,0.15); }
+        .plan-download-icon { font-size: 20px; flex-shrink: 0; }
+        .plan-download-info { flex: 1; display: flex; flex-direction: column; }
+        .plan-download-label { font-size: 13px; font-weight: 600; color: #333; }
+        .plan-download-meta { font-size: 11px; color: #999; }
+        .plan-download-action { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; flex-shrink: 0; }
         .chat-input-area { background: white; padding: 14px 20px; border-top: 1px solid #e8e8e8; }
         .input-wrapper { display: flex; gap: 10px; align-items: flex-end; }
         .chat-input { flex: 1; border: 2px solid #e8e8e8; border-radius: 12px; padding: 10px 14px; font-size: 14px; resize: none; min-height: 44px; max-height: 100px; font-family: inherit; }
@@ -528,6 +538,12 @@ print(calc_bmi(70, 1.75))"></textarea>
 
                 <!-- ==================== 导出下载 ==================== -->
                 <div id="page-export" class="page">
+                    <div class="card" style="margin-bottom: 16px;">
+                        <div class="card-title"><span>📥</span><span>自动生成的交付物</span></div>
+                        <div id="autoExportList" style="min-height: 60px;">
+                            <p style="color: #999; font-size: 13px;">加载中...</p>
+                        </div>
+                    </div>
                     <div class="export-grid">
                         <div class="export-card" onclick="exportDocument('paper')">
                             <div class="export-icon">📄</div>
@@ -544,7 +560,7 @@ print(calc_bmi(70, 1.75))"></textarea>
                             <div class="export-title">研究方案</div>
                             <div class="export-desc">RCT 方案文档</div>
                         </div>
-                        <div class="export-card" onclick="exportDocument('meta')">
+                        <div class="export-card" onclick="exportDocument('meta_analysis')">
                             <div class="export-icon">📊</div>
                             <div class="export-title">Meta 分析</div>
                             <div class="export-desc">系统评价文档</div>
@@ -558,7 +574,11 @@ print(calc_bmi(70, 1.75))"></textarea>
                                 <option value="paper">论文</option>
                                 <option value="grant">基金申请</option>
                                 <option value="protocol">研究方案</option>
-                                <option value="meta">Meta 分析</option>
+                                <option value="meta_analysis">Meta 分析</option>
+                                <option value="budget">经费预算</option>
+                                <option value="survival">生存分析</option>
+                                <option value="response_letter">审稿回复信</option>
+                                <option value="research_report">科研汇报PPT</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -640,6 +660,7 @@ function switchPage(page) {
     if (page === 'skills') loadSkills();
     if (page === 'models') loadModels();
     if (page === 'audit') loadAuditLogs();
+    if (page === 'export') loadAutoExports();
 }
 
 // 加载模型状态
@@ -892,6 +913,43 @@ async function doExport() {
     }
 }
 
+async function loadAutoExports() {
+    const container = document.getElementById('autoExportList');
+    try {
+        const res = await fetch('/api/exports');
+        const data = await res.json();
+        if (!data.success) {
+            container.innerHTML = '<p style="color: #999; font-size: 13px;">加载失败</p>';
+            return;
+        }
+        const files = data.files || [];
+        if (files.length === 0) {
+            container.innerHTML = '<p style="color: #bbb; font-size: 13px;">暂无自动生成的交付物。在聊天中输入复杂任务（如"帮我写一篇Meta分析"），系统会自动生成可下载的文件。</p>';
+            return;
+        }
+        let html = '';
+        for (const f of files) {
+            const ext = f.filename.split('.').pop() || '';
+            const iconMap = { 'docx': '📄', 'pptx': '📊', 'xlsx': '📋' };
+            const icon = iconMap[ext] || '📁';
+            const sizeStr = f.size > 1024 ? `${(f.size/1024).toFixed(1)}KB` : `${f.size}B`;
+            const timeStr = new Date(f.modified).toLocaleString();
+            html += `
+                <a href="/api/download/${encodeURIComponent(f.filename)}" class="plan-download-btn" download>
+                    <span class="plan-download-icon">${icon}</span>
+                    <span class="plan-download-info">
+                        <span class="plan-download-label">${f.filename}</span>
+                        <span class="plan-download-meta">${sizeStr} · ${timeStr}</span>
+                    </span>
+                    <span class="plan-download-action">下载</span>
+                </a>`;
+        }
+        container.innerHTML = html;
+    } catch (e) {
+        container.innerHTML = `<p style="color: #e74c3c; font-size: 13px;">加载失败: ${e.message}</p>`;
+    }
+}
+
 function exportNote() {
     const content = document.getElementById('noteResult').innerText;
     if (!content || content.includes('正在生成')) { alert('请先生成文书'); return; }
@@ -951,7 +1009,7 @@ async function sendMessage() {
         const data = await response.json();
         document.getElementById(loadingId).remove();
         if (data.type === 'plan' && data.plan) {
-            addPlanMessage(data.message, data.plan);
+            addPlanMessage(data.message, data.plan, data.deliverables || []);
         } else {
             addMessage('assistant', data.message);
         }
@@ -976,10 +1034,11 @@ function addMessage(role, content, isLoading = false) {
     return messageId;
 }
 
-function addPlanMessage(summaryText, planData) {
+function addPlanMessage(summaryText, planData, deliverables) {
     const container = document.getElementById('chatMessages');
     const div = document.createElement('div');
     div.className = 'message assistant';
+    deliverables = deliverables || [];
     
     const goal = planData.goal || '任务规划';
     const subtasks = planData.subtasks || {};
@@ -1008,6 +1067,30 @@ function addPlanMessage(summaryText, planData) {
     
     const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
     
+    let deliverablesHtml = '';
+    if (deliverables.length > 0) {
+        deliverablesHtml = '<div class="plan-downloads">';
+        deliverablesHtml += '<div class="plan-downloads-title">📥 可下载交付物</div>';
+        for (const d of deliverables) {
+            const label = d.label || d.type || '文件';
+            const filename = d.filename || '';
+            const size = d.size || 0;
+            const sizeStr = size > 0 ? ` (${(size/1024).toFixed(1)}KB)` : '';
+            const iconMap = { 'docx': '📄', 'pptx': '📊', 'xlsx': '📋' };
+            const icon = iconMap[d.format] || '📁';
+            deliverablesHtml += `
+                <a href="/api/download/${encodeURIComponent(filename)}" class="plan-download-btn" download>
+                    <span class="plan-download-icon">${icon}</span>
+                    <span class="plan-download-info">
+                        <span class="plan-download-label">${label}</span>
+                        <span class="plan-download-meta">${filename}${sizeStr}</span>
+                    </span>
+                    <span class="plan-download-action">下载</span>
+                </a>`;
+        }
+        deliverablesHtml += '</div>';
+    }
+    
     div.innerHTML = `
         <div class="message-avatar">🏥</div>
         <div class="message-bubble">
@@ -1026,6 +1109,7 @@ function addPlanMessage(summaryText, planData) {
                 </div>
                 <div class="plan-tasks">${tasksHtml}</div>
                 ${summary ? `<div class="plan-summary"><strong>总结：</strong>${summary}</div>` : ''}
+                ${deliverablesHtml}
             </div>
         </div>`;
     
