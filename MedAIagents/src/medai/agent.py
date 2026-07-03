@@ -35,6 +35,7 @@ from .mcp import MCPServerManager
 from .tools.registry import ToolRegistry
 from .tools.executor import ToolExecutor
 from .tools.medical_tools import register_medical_tools
+from .tools.system_tools import register_system_tools
 from .planner.engine import TaskPlanner
 from .agents.orchestrator import AgentOrchestrator
 from .agents.specialized import (
@@ -85,6 +86,7 @@ class MedicalAgent:
         self.tool_registry = ToolRegistry()
         self.tool_executor = ToolExecutor(self.tool_registry)
         register_medical_tools(self.tool_registry)
+        register_system_tools(self.tool_registry)
         
         # 任务规划器
         self.task_planner = TaskPlanner(self.llm_router)
@@ -526,11 +528,34 @@ class MedicalAgent:
                     'error': st.error,
                 }
             
-            return {
+            response = {
                 'goal': executed_plan.goal,
                 'subtasks': results,
-                'summary': self._summarize_results(results)
+                'summary': self._summarize_results(results),
+                'deliverables': [],
             }
+            
+            # 自动检测并生成交付物
+            deliverable_types = self._detect_deliverable_type(executed_plan.goal)
+            if deliverable_types:
+                logger.info(f"Auto-detected {len(deliverable_types)} deliverable types: {[d['type'] for d in deliverable_types]}")
+                
+                import os
+                output_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'exports')
+                os.makedirs(output_dir, exist_ok=True)
+                
+                for dt in deliverable_types:
+                    # 限制最多生成 2 个交付物，避免耗时过长
+                    if len(response['deliverables']) >= 2:
+                        break
+                    
+                    deliverable = self._generate_deliverable(
+                        dt['type'], executed_plan.goal, results, output_dir
+                    )
+                    if deliverable:
+                        response['deliverables'].append(deliverable)
+            
+            return response
         except Exception as e:
             logger.error(f"Plan and execute error: {e}")
             return {'goal': user_request, 'error': str(e)}
@@ -668,10 +693,14 @@ class MedicalAgent:
                 details={'goal': plan_result.get('goal', ''), 'subtask_count': len(plan_result.get('subtasks', {}))}
             )
             
+            # 提取交付物信息
+            deliverables = plan_result.get('deliverables', [])
+            
             return {
                 "type": "plan",
                 "message": summary_text,
-                "plan": plan_result
+                "plan": plan_result,
+                "deliverables": deliverables
             }
         except Exception as e:
             logger.error(f"Auto-plan error: {e}")
@@ -730,6 +759,18 @@ class MedicalAgent:
         
         if summary:
             text += f"\n### 总结\n{summary}\n"
+        
+        # 添加可下载交付物信息
+        deliverables = plan_result.get('deliverables', [])
+        if deliverables:
+            text += "\n### 可下载交付物\n\n"
+            for d in deliverables:
+                filename = d.get('filename', '')
+                label = d.get('label', '文件')
+                size = d.get('size', 0)
+                size_str = f"{size / 1024:.1f}KB" if size > 0 else ""
+                text += f"- 📄 **{label}** ({filename}) {size_str}\n"
+            text += "\n> 点击上方回复中的下载链接或前往「导出下载」页面获取文件\n"
         
         return text
 
@@ -803,6 +844,277 @@ class MedicalAgent:
         failed = sum(1 for r in results.values() if r.get('status') == 'failed')
         total = len(results)
         return f"任务执行完成: {completed}/{total} 成功, {failed}/{total} 失败"
+    
+    def _detect_deliverable_type(self, goal: str) -> List[Dict[str, Any]]:
+        """根据任务目标自动检测应生成的交付物类型
+        
+        Args:
+            goal: 任务目标描述
+            
+        Returns:
+            交付物类型列表 [{type, label, format, description}]
+        """
+        goal_lower = goal.lower()
+        candidates = []
+        
+        # 关键词匹配检测
+        rule_map = [
+            # (关键词列表, 交付物类型, 文件后缀, 显示标签)
+            (['meta分析', 'meta-analysis', 'meta analysis', '荟萃分析', '系统综述'],
+             'meta_analysis', 'xlsx', 'Meta分析结果表'),
+            (['基金申请', '申请书', 'grant', 'nsfc', '国自然', '课题申请'],
+             'grant', 'docx', '基金申请书'),
+            (['rct', '临床试验', '试验方案', 'protocol', '随机对照'],
+             'protocol', 'docx', '临床试验方案'),
+            (['论文', 'paper', '文章', '论著', 'manuscript', '撰写论文'],
+             'paper', 'docx', '医学论文'),
+            (['幻灯片', 'ppt', 'presentation', '汇报', 'slides', '报告ppt'],
+             'research_report', 'pptx', '科研汇报PPT'),
+            (['经费预算', '预算表', 'budget', '经费'],
+             'budget', 'xlsx', '经费预算表'),
+            (['生存分析', 'survival', 'kaplan', 'km曲线', 'cox'],
+             'survival', 'xlsx', '生存分析数据'),
+            (['response letter', '审稿回复', '回复信', 'rebuttal'],
+             'response_letter', 'docx', '审稿回复信'),
+            (['影像', 'imaging', '放射', 'ct', 'mri', '超声'],
+             'teaching', 'pptx', '影像教学PPT'),
+            (['生信', '生物信息', 'bioinformatics', '基因组', '转录组'],
+             'bioinformatics', 'pptx', '生信分析报告PPT'),
+            (['期刊', 'journal', '投稿期刊'],
+             'journal_db', 'xlsx', '期刊数据库'),
+        ]
+        
+        for keywords, dtype, fmt, label in rule_map:
+            if any(kw in goal_lower for kw in keywords):
+                candidates.append({
+                    'type': dtype,
+                    'format': fmt,
+                    'label': label,
+                    'description': f'根据"{goal[:50]}..."自动生成的{label}'
+                })
+        
+        return candidates
+    
+    def _generate_deliverable(self, dtype: str, goal: str, subtasks: Dict[str, Any], output_dir: str) -> Optional[Dict[str, Any]]:
+        """使用 LLM 生成交付物数据并导出为文件
+        
+        Args:
+            dtype: 交付物类型
+            goal: 任务目标
+            subtasks: 子任务结果
+            output_dir: 输出目录
+            
+        Returns:
+            交付物元数据 {type, label, format, filename, filepath} 或 None
+        """
+        try:
+            import os
+            from datetime import datetime
+            
+            # 构建 LLM 提示词，让 LLM 生成导出所需的结构化数据
+            subtasks_summary = json.dumps(subtasks, ensure_ascii=False, indent=2)[:3000]
+            
+            # 根据不同类型构建不同的生成提示
+            type_prompts = {
+                'paper': {
+                    'exporter_fn': 'export_paper',
+                    'exporter_class': 'PaperExporter',
+                    'format': 'docx',
+                    'label': '医学论文',
+                    'system': '你是一个医学论文写作专家。请根据任务目标和执行结果，生成IMRaD结构的论文数据。',
+                    'data_schema': '{"title": "论文标题", "authors": "作者（字符串）", "abstract": "摘要", "keywords": ["关键词"], "introduction": "引言", "methods": "方法", "results": "结果", "discussion": "讨论", "conclusion": "结论", "references": ["参考文献列表"]}'
+                },
+                'grant': {
+                    'exporter_fn': 'export_proposal',
+                    'exporter_class': 'GrantProposalExporter',
+                    'format': 'docx',
+                    'label': '基金申请书',
+                    'system': '你是一个基金申请书撰写专家。请根据任务目标和执行结果，生成基金申请书的结构化数据。',
+                    'data_schema': '{"title": "项目名称", "grant_type": "申请类型", "research_area": "研究领域", "applicant": "申请人", "institution": "依托单位", "rationale": "立项依据", "research_content": "研究内容", "objectives": "研究目标", "key_problems": "关键科学问题", "methodology": "研究方案", "feasibility": "可行性分析", "innovation": "创新点", "timeline": "年度计划", "expected_outcomes": "预期成果", "budget": {"total": 50, "items": [{"name": "设备费", "amount": 10, "notes": ""}]}}'
+                },
+                'protocol': {
+                    'exporter_fn': 'export_protocol',
+                    'exporter_class': 'ProtocolExporter',
+                    'format': 'docx',
+                    'label': '临床试验方案',
+                    'system': '你是一个临床试验方案设计专家。请根据任务目标和执行结果，生成RCT试验方案的数据。',
+                    'data_schema': '{"study_info": {"title": "方案标题", "study_type": "RCT", "phase": "III期", "indication": "适应症", "duration_months": 24}, "study_objectives": {"primary": "主要目的"}, "endpoints": {"primary": "主要终点"}, "inclusion_criteria": ["入选标准"], "exclusion_criteria": ["排除标准"], "sample_size": "样本量计算", "statistical_analysis": "统计方法", "ethical_considerations": {"informed_consent": "知情同意"}}'
+                },
+                'meta_analysis': {
+                    'exporter_fn': 'export_meta_analysis',
+                    'exporter_class': 'MetaAnalysisExporter',
+                    'format': 'xlsx',
+                    'label': 'Meta分析结果表',
+                    'system': '你是一个Meta分析专家。请根据任务目标和执行结果，生成Meta分析的结构化数据（含各研究数据、汇总统计等）。',
+                    'data_schema': '{"studies": [{"name": "研究1", "a_events": 50, "a_total": 100, "b_events": 30, "b_total": 100, "effect_size": 1.5}], "pooled_effect": 1.35, "ci_lower": 1.1, "ci_upper": 1.6, "i_squared": "45%", "q_statistic": 12.3, "p_value": "<0.01", "model": "Random"}'
+                },
+                'budget': {
+                    'exporter_fn': 'export_budget',
+                    'exporter_class': 'BudgetExporter',
+                    'format': 'xlsx',
+                    'label': '经费预算表',
+                    'system': '你是一个科研经费预算专家。请根据任务目标和执行结果，生成经费预算表数据。',
+                    'data_schema': '{"title": "经费预算标题", "total": 50, "items": [{"name": "科目名称", "amount": 10, "notes": "说明"}]}'
+                },
+                'survival': {
+                    'exporter_fn': 'export_survival_data',
+                    'exporter_class': 'SurvivalDataExporter',
+                    'format': 'xlsx',
+                    'label': '生存分析数据',
+                    'system': '你是一个生存分析专家。请根据任务目标和执行结果，生成生存分析数据（每条记录含time, event, group等字段）。',
+                    'data_schema': '[{"patient_id": "P001", "time": 12, "event": 1, "group": "治疗组", "age": 55, "stage": "III"}, {"patient_id": "P002", "time": 8, "event": 0, "group": "对照组", "age": 62, "stage": "IV"}]'
+                },
+                'response_letter': {
+                    'exporter_fn': 'export_response_letter',
+                    'exporter_class': 'ResponseLetterExporter',
+                    'format': 'docx',
+                    'label': '审稿回复信',
+                    'system': '你是一个学术回复信撰写专家。请根据任务目标和执行结果，生成Response Letter的结构化数据。',
+                    'data_schema': '{"manuscript_id": "MS-2024-001", "title": "文章标题", "authors": "作者列表", "responses": [{"comment": "审稿人意见", "response": "作者回复", "changes": "修改说明"}]}'
+                },
+                'research_report': {
+                    'exporter_fn': 'export_research_report',
+                    'exporter_class': 'ResearchPresentationExporter',
+                    'format': 'pptx',
+                    'label': '科研汇报PPT',
+                    'system': '你是一个科研汇报PPT制作专家。请根据任务目标和执行结果，生成科研汇报演示文稿的数据。',
+                    'data_schema': '{"title": "报告标题", "subtitle": "副标题", "background": ["背景1"], "methods": ["方法1"], "results": ["结果1"], "discussion": ["讨论1"], "conclusions": ["结论1"], "acknowledgments": ["致谢"]}'
+                },
+                'teaching': {
+                    'exporter_fn': 'export_teaching',
+                    'exporter_class': 'ImagingTeachingExporter',
+                    'format': 'pptx',
+                    'label': '影像教学PPT',
+                    'system': '你是一个医学影像教学专家。请根据任务目标和执行结果，生成影像征象教学PPT的数据。',
+                    'data_schema': '[{"name": "征象名称", "description": "描述", "modalities": ["CT"], "anatomy": ["解剖位置"], "diseases": ["相关疾病"], "severity": "严重程度"}]'
+                },
+                'bioinformatics': {
+                    'exporter_fn': 'export_bioinformatics_report',
+                    'exporter_class': 'BioinformaticsReportExporter',
+                    'format': 'pptx',
+                    'label': '生信分析报告PPT',
+                    'system': '你是一个生物信息学分析专家。请根据任务目标和执行结果，生成生信分析报告PPT的数据。',
+                    'data_schema': '{"title": "报告标题", "subtitle": "副标题", "sample_info": ["样本信息"], "mutation_summary": ["突变图谱"], "pathways": ["通路富集"], "survival": ["生存分析"], "conclusions": ["结论"]}'
+                },
+                'journal_db': {
+                    'exporter_fn': 'export_journals',
+                    'exporter_class': 'JournalDatabaseExporter',
+                    'format': 'xlsx',
+                    'label': '期刊数据库',
+                    'system': '你是一个医学期刊数据库管理员。请根据任务目标生成相关期刊列表数据。',
+                    'data_schema': '[{"name": "期刊名称", "impact_factor": 5.0, "jcr_quartile": "Q1", "cas_quartile": "Q1", "field": "领域", "oa_policy": "混合OA", "review_period": "3个月"}]'
+                }
+            }
+            
+            if dtype not in type_prompts:
+                logger.warning(f"Unknown deliverable type: {dtype}")
+                return None
+            
+            tp = type_prompts[dtype]
+            
+            # 调用 LLM 生成结构化数据
+            prompt = f"""根据以下任务目标和子任务执行结果，生成{dtype}类型的结构化导出数据。
+
+## 任务目标
+{goal}
+
+## 子任务执行结果
+{subtasks_summary}
+
+## 输出要求
+请严格按照以下 JSON Schema 格式输出数据，不要包含其他内容：
+
+```json
+{tp['data_schema']}
+```"""
+            
+            messages = [
+                {"role": "system", "content": tp['system']},
+                {"role": "user", "content": prompt},
+            ]
+            response = _run_async(self.llm_router.chat(messages))
+            
+            # 解析 JSON
+            resp_str = response.strip()
+            if "```json" in resp_str:
+                resp_str = resp_str.split("```json")[1].split("```")[0].strip()
+            elif "```" in resp_str:
+                resp_str = resp_str.split("```")[1].split("```")[0].strip()
+            
+            data = json.loads(resp_str)
+            
+            # 使用对应的导出器生成文件
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_goal = "".join(c if c.isalnum() or c in " _-" else "_" for c in goal[:30]).strip()
+            filename = f"{dtype}_{safe_goal}_{timestamp}.{tp['format']}"
+            filepath = os.path.join(output_dir, filename)
+            
+            # 动态导入导出器
+            from medai.export import (
+                PaperExporter, GrantProposalExporter, ProtocolExporter,
+                ResponseLetterExporter, MetaAnalysisExporter, BudgetExporter,
+                JournalDatabaseExporter, SurvivalDataExporter,
+                ResearchPresentationExporter, ImagingTeachingExporter,
+                BioinformaticsReportExporter
+            )
+            
+            exporter_map = {
+                'paper': PaperExporter,
+                'grant': GrantProposalExporter,
+                'protocol': ProtocolExporter,
+                'meta_analysis': MetaAnalysisExporter,
+                'budget': BudgetExporter,
+                'survival': SurvivalDataExporter,
+                'response_letter': ResponseLetterExporter,
+                'research_report': ResearchPresentationExporter,
+                'teaching': ImagingTeachingExporter,
+                'bioinformatics': BioinformaticsReportExporter,
+                'journal_db': JournalDatabaseExporter,
+            }
+            
+            exporter_class = exporter_map.get(dtype)
+            if exporter_class is None:
+                logger.warning(f"No exporter for type: {dtype}")
+                return None
+            
+            exporter = exporter_class()
+            export_fn = getattr(exporter, tp['exporter_fn'])
+            
+            if dtype in ('meta_analysis', 'budget', 'survival') or dtype == 'journal_db' or dtype == 'teaching':
+                if dtype == 'meta_analysis':
+                    export_fn(data, filepath)
+                elif dtype == 'budget':
+                    export_fn(data, filepath)
+                elif dtype == 'survival':
+                    export_fn(data, filepath)
+                elif dtype == 'journal_db':
+                    export_fn(data, filepath)
+                elif dtype == 'teaching':
+                    export_fn(data, filepath)
+                else:
+                    export_fn(data, filepath)
+            else:
+                export_fn(data, filepath)
+            
+            logger.info(f"Deliverable generated: {filepath}")
+            
+            return {
+                'type': dtype,
+                'label': tp.get('label', dtype),
+                'format': tp['format'],
+                'filename': filename,
+                'filepath': filepath,
+                'size': os.path.getsize(filepath) if os.path.exists(filepath) else 0
+            }
+        except json.JSONDecodeError as e:
+            logger.error(f"Deliverable JSON parse error for {dtype}: {e}")
+            return None
+        except ImportError as e:
+            logger.warning(f"Deliverable exporter import error for {dtype}: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Deliverable generation error for {dtype}: {e}")
+            return None
     
     def get_available_tools(self) -> List[Dict[str, Any]]:
         """获取所有可用工具列表"""

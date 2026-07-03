@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 import io
+from urllib.parse import quote
 
 # 添加项目路径
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
@@ -199,6 +200,7 @@ async def chat(request: ChatRequest):
             response_data["message"] = result["message"]
             response_data["type"] = "plan"
             response_data["plan"] = result["plan"]
+            response_data["deliverables"] = result.get("deliverables", [])
         else:
             # 简单对话：直接返回
             response_data["message"] = result["message"]
@@ -620,18 +622,33 @@ async def sandbox_execute(request: SandboxRequest):
 async def export_document(request: ExportRequest):
     """导出文档"""
     try:
-        from medai.export import PaperExporter, GrantProposalExporter, ProtocolExporter, MetaAnalysisExporter
+        from medai.export import (
+            PaperExporter, GrantProposalExporter, ProtocolExporter,
+            ResponseLetterExporter, MetaAnalysisExporter, BudgetExporter,
+            JournalDatabaseExporter, SurvivalDataExporter,
+            ResearchPresentationExporter, ImagingTeachingExporter,
+            BioinformaticsReportExporter
+        )
         
-        exporters = {
-            'paper': PaperExporter,
-            'grant': GrantProposalExporter,
-            'protocol': ProtocolExporter,
-            'meta': MetaAnalysisExporter,
+        exporter_map = {
+            'paper': (PaperExporter, 'export_paper'),
+            'grant': (GrantProposalExporter, 'export_proposal'),
+            'protocol': (ProtocolExporter, 'export_protocol'),
+            'response_letter': (ResponseLetterExporter, 'export_response_letter'),
+            'meta_analysis': (MetaAnalysisExporter, 'export_meta_analysis'),
+            'budget': (BudgetExporter, 'export_budget'),
+            'journal_db': (JournalDatabaseExporter, 'export_journals'),
+            'survival': (SurvivalDataExporter, 'export_survival_data'),
+            'research_report': (ResearchPresentationExporter, 'export_research_report'),
+            'teaching': (ImagingTeachingExporter, 'export_teaching'),
+            'bioinformatics': (BioinformaticsReportExporter, 'export_bioinformatics_report'),
         }
         
-        exporter_class = exporters.get(request.export_type)
-        if not exporter_class:
+        entry = exporter_map.get(request.export_type)
+        if not entry:
             return {"success": False, "error": f"不支持的导出类型: {request.export_type}"}
+        
+        exporter_class, export_fn_name = entry
         
         # 创建临时文件
         import tempfile
@@ -639,22 +656,87 @@ async def export_document(request: ExportRequest):
             temp_path = f.name
         
         exporter = exporter_class()
-        if request.export_type == 'paper':
-            exporter.export(request.data, temp_path)
-        elif request.export_type == 'grant':
-            exporter.export(request.data, temp_path)
+        export_fn = getattr(exporter, export_fn_name)
+        export_fn(request.data, temp_path)
         
         # 读取文件内容返回
         with open(temp_path, 'rb') as f:
             content = f.read()
         os.unlink(temp_path)
-        
         filename = f"export.{request.format}"
+        encoded_filename = quote(filename, safe='')
+        media_type_map = {
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        }
         return StreamingResponse(
             io.BytesIO(content),
-            media_type="application/octet-stream",
-            headers={"Content-Disposition": f"attachment; filename={filename}"}
+            media_type=media_type_map.get(request.format, "application/octet-stream"),
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
         )
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# ==================== 文件下载 API ====================
+
+@app.get("/api/download/{filename:path}")
+async def download_file(filename: str):
+    """下载存储在 data/exports 目录的自动生成文件"""
+    try:
+        import os
+        filepath = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'exports', filename)
+        # 安全检查：防止路径穿越
+        real_path = os.path.realpath(filepath)
+        exports_dir = os.path.realpath(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'exports'))
+        if not real_path.startswith(exports_dir):
+            return {"success": False, "error": "非法文件路径"}
+        
+        if not os.path.exists(real_path):
+            return {"success": False, "error": f"文件不存在: {filename}"}
+        
+        with open(real_path, 'rb') as f:
+            content = f.read()
+        
+        ext = filename.rsplit('.', 1)[-1] if '.' in filename else 'bin'
+        media_type_map = {
+            'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'pdf': 'application/pdf',
+        }
+        encoded_filename = quote(filename, safe='')
+        return StreamingResponse(
+            io.BytesIO(content),
+            media_type=media_type_map.get(ext, "application/octet-stream"),
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
+        )
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/exports")
+async def list_exports():
+    """列出所有已生成的交付物文件"""
+    try:
+        import os
+        exports_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'data', 'exports')
+        os.makedirs(exports_dir, exist_ok=True)
+        
+        files = []
+        for fname in os.listdir(exports_dir):
+            fpath = os.path.join(exports_dir, fname)
+            if os.path.isfile(fpath) and not fname.startswith('.'):
+                files.append({
+                    'filename': fname,
+                    'size': os.path.getsize(fpath),
+                    'modified': datetime.fromtimestamp(os.path.getmtime(fpath)).isoformat(),
+                })
+        
+        # 按修改时间倒序排列
+        files.sort(key=lambda x: x['modified'], reverse=True)
+        return {"success": True, "files": files}
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -686,6 +768,47 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 # ==================== Agent 编排 API ====================
+
+# ==================== 包管理 API ====================
+
+class PackageInstallRequest(BaseModel):
+    package_name: str
+    version: str = ""
+    dry_run: bool = False
+
+
+@app.post("/api/packages/install")
+async def api_install_package(request: PackageInstallRequest):
+    """安装 Python 包"""
+    try:
+        from medai.tools.system_tools import install_package
+        result = install_package(request.package_name, version=request.version, dry_run=request.dry_run)
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/packages/check")
+async def api_check_package(request: PackageInstallRequest):
+    """检查包安全性"""
+    try:
+        from medai.tools.system_tools import check_package
+        result = check_package(request.package_name)
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/packages")
+async def api_list_packages(filter: str = ""):
+    """列出已安装的包"""
+    try:
+        from medai.tools.system_tools import list_packages
+        result = list_packages(filter)
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
 
 @app.get("/api/agents")
 async def list_agents():

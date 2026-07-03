@@ -31,6 +31,8 @@ def register_builtin_skills(registry: SkillRegistry = None) -> List[Skill]:
         _build_response_letter_skill(),
         _build_medical_note_skill(),
         _build_drug_safety_check_skill(),
+        _build_package_installer_skill(),
+        _build_ecrf_designer_skill(),
     ]
     
     if registry:
@@ -832,5 +834,250 @@ ${contraindication_check}
             ),
         ],
         tags=["clinical", "medication", "safety", "builtin"],
+        is_builtin=True
+    )
+
+
+def _build_package_installer_skill() -> Skill:
+    """包安装管理 Skill"""
+    return Skill(
+        name="package_installer_workflow",
+        description="安全安装Python包的工作流：验证包安全性、预检查依赖、执行安装、确认结果",
+        version="1.0.0",
+        parameters=[
+            SkillParameter(name="package_name", description="要安装的包名", type="string", required=True),
+            SkillParameter(name="version", description="指定版本（可选）", type="string", required=False, default=""),
+            SkillParameter(name="purpose", description="安装目的说明", type="string", required=True),
+        ],
+        steps=[
+            SkillStep(
+                name="安全检查",
+                step_type=StepType.TOOL_CALL,
+                config={
+                    "tool_name": "check_package",
+                    "arguments": {"package_name": "${package_name}"}
+                },
+                output_var="safety_check"
+            ),
+            SkillStep(
+                name="确认安装",
+                step_type=StepType.LLM_CALL,
+                description="基于安全检查结果，确认是否继续安装",
+                config={
+                    "prompt_template": """请审核以下包安装请求：
+
+包名: ${package_name}
+版本: ${version}
+安装目的: ${purpose}
+
+安全检查结果: ${safety_check}
+
+请给出以下信息：
+1. 安全性评估（安全/警告/危险）
+2. 是否建议安装（是/否）
+3. 安装后需要做的配置或验证
+4. 潜在风险说明"""
+                },
+                output_var="install_decision"
+            ),
+            SkillStep(
+                name="执行安装",
+                step_type=StepType.TOOL_CALL,
+                config={
+                    "tool_name": "install_package",
+                    "arguments": {
+                        "package_name": "${package_name}",
+                        "version": "${version}"
+                    }
+                },
+                output_var="install_result"
+            ),
+            SkillStep(
+                name="输出安装报告",
+                step_type=StepType.OUTPUT,
+                config={
+                    "output_template": """# 包安装报告
+
+## 安装请求
+- 包名: ${package_name}
+- 版本: ${version}
+- 目的: ${purpose}
+
+## 安全检查
+${safety_check}
+
+## 安装决策
+${install_decision}
+
+## 安装结果
+${install_result}
+
+---
+*安装完成后，可能需要重启服务以使新包生效。*"""
+                },
+                output_var="output"
+            ),
+        ],
+        tags=["system", "package", "install", "builtin"],
+        is_builtin=True
+    )
+
+
+def _build_ecrf_designer_skill() -> Skill:
+    """eCRF Designer Skill（移植自 ClawHub @aipoch-ai/ecrf-designer）
+
+    设计临床试验病例报告表(CRF)，支持CDISC SDTM合规、字段验证规则和逻辑跳转。
+    """
+    return Skill(
+        name="ecrf_designer_workflow",
+        description="临床试验eCRF设计工作流：设计病例报告表、字段验证规则、逻辑跳转模式，支持CDISC SDTM合规",
+        version="1.0.0",
+        parameters=[
+            SkillParameter(name="study_title", description="研究标题", type="string", required=True),
+            SkillParameter(name="visit_schedule", description="访视时间点列表（如：筛选期、基线、第4周、第8周、随访期）", type="string", required=True),
+            SkillParameter(name="data_elements", description="需要收集的数据元素列表（如：人口统计学、生命体征、实验室检查、不良事件）", type="string", required=True),
+            SkillParameter(name="cdisc_domain", description="CDISC SDTM领域代码（如：DM=人口统计学, VS=生命体征, LB=实验室检查, AE=不良事件）", type="string", required=False, default=""),
+            SkillParameter(name="target_population", description="目标人群描述（如：晚期非小细胞肺癌患者）", type="string", required=False, default=""),
+        ],
+        steps=[
+            SkillStep(
+                name="设计CRF整体结构",
+                step_type=StepType.LLM_CALL,
+                description="基于研究信息和访视计划，设计CRF的整体模块结构",
+                config={
+                    "prompt_template": """你是一名临床试验数据管理专家。请为以下研究设计eCRF（电子病例报告表）结构：
+
+## 研究信息
+- 研究标题：${study_title}
+- 目标人群：${target_population}
+- 访视时间点：${visit_schedule}
+- 数据收集领域：${data_elements}
+- CDISC SDTM领域：${cdisc_domain}
+
+## 设计要求
+1. 每个访视点需要收集哪些CRF页面
+2. 每个页面的字段清单（字段名、标签、数据类型、是否必填）
+3. 字段间的逻辑关系（如：如果"是否怀孕"=是，则显示"末次月经日期"）
+4. CDISC SDTM映射（每个字段对应的标准变量名）
+
+请输出结构化的CRF设计方案，使用表格形式。"""
+                },
+                output_var="crf_structure"
+            ),
+            SkillStep(
+                name="设计字段验证规则",
+                step_type=StepType.LLM_CALL,
+                description="为每个字段设计数据验证规则",
+                config={
+                    "prompt_template": """基于以下CRF结构，为每个字段设计详细的验证规则：
+
+${crf_structure}
+
+## 验证规则要求
+1. 范围检查（如：年龄 18-100岁，收缩压 90-200 mmHg）
+2. 格式检查（如：日期格式、受试者编号格式）
+3. 逻辑一致性（如：入组日期 <= 首次给药日期 <= 末次给药日期）
+4. 缺失值处理规则
+5. 严重异常值标记规则
+
+请按CRF页面分组输出验证规则。"""
+                },
+                output_var="validation_rules"
+            ),
+            SkillStep(
+                name="设计逻辑跳转模式",
+                step_type=StepType.LLM_CALL,
+                description="设计CRF页面间的逻辑跳转和条件显示",
+                config={
+                    "prompt_template": """基于以下CRF结构和验证规则，设计逻辑跳转模式：
+
+## CRF结构
+${crf_structure}
+
+## 验证规则
+${validation_rules}
+
+## 逻辑跳转要求
+1. 条件显示：哪些字段在特定条件下才显示
+2. 页面跳转：根据回答跳转到不同页面
+3. 必填/可选动态切换
+4. 重复测量模块的处理（如：多次访视的同一检查）
+5. 早期终止/退出流程
+
+请以伪代码或流程图描述的形式输出。"""
+                },
+                output_var="skip_patterns"
+            ),
+            SkillStep(
+                name="生成数据字典",
+                step_type=StepType.LLM_CALL,
+                description="生成CDISC SDTM兼容的数据字典",
+                config={
+                    "prompt_template": """基于以下CRF设计，生成CDISC SDTM兼容的数据字典：
+
+## CRF结构
+${crf_structure}
+
+## 验证规则
+${validation_rules}
+
+## 逻辑跳转
+${skip_patterns}
+
+## 数据字典要求
+1. 变量名（SDTM标准变量名或自定义变量名）
+2. 变量标签
+3. 数据类型（Char/Num/Date）
+4. 长度
+5. 受控术语/代码列表（如：性别：M=男, F=女）
+6. 来源/派生规则
+7. 注释
+
+请以表格形式输出，按SDTM领域分组。"""
+                },
+                output_var="data_dictionary"
+            ),
+            SkillStep(
+                name="汇总输出CRF规范",
+                step_type=StepType.OUTPUT,
+                config={
+                    "output_template": """# eCRF 设计规范报告
+
+## 研究信息
+- **研究标题**：${study_title}
+- **目标人群**：${target_population}
+- **访视计划**：${visit_schedule}
+- **数据领域**：${data_elements}
+- **CDISC领域**：${cdisc_domain}
+
+---
+
+## 一、CRF整体结构
+${crf_structure}
+
+---
+
+## 二、字段验证规则
+${validation_rules}
+
+---
+
+## 三、逻辑跳转模式
+${skip_patterns}
+
+---
+
+## 四、数据字典（CDISC SDTM兼容）
+${data_dictionary}
+
+---
+
+*本报告由 eCRF Designer Skill 自动生成（来源：ClawHub @aipoch-ai/ecrf-designer）*
+"""
+                },
+                output_var="output"
+            ),
+        ],
+        tags=["clinical", "crf", "cdisc", "edc", "data-management", "builtin", "clawhub"],
         is_builtin=True
     )

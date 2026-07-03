@@ -100,12 +100,17 @@ class TaskPlanner:
                     )
 
                     try:
-                        if subtask.tool:
-                            result = await executor.execute(
-                                subtask.tool, subtask.arguments or {}
-                            )
+                        if subtask.tool and subtask.tool not in ('unknown', '', None):
+                            try:
+                                result = await executor.execute(
+                                    subtask.tool, subtask.arguments or {}
+                                )
+                            except (KeyError, RuntimeError, ValueError) as tool_err:
+                                # 工具不存在或执行失败，降级为 LLM 回答
+                                logger.warning(f"Tool '{subtask.tool}' failed: {tool_err}, falling back to LLM")
+                                result = {"description": subtask.description, "note": f"工具调用失败，由LLM直接生成: {str(tool_err)[:200]}"}
                         else:
-                            # 无工具时，直接返回描述作为结果
+                            # 无工具或工具为unknown，直接返回描述作为结果
                             result = {"description": subtask.description}
 
                         subtask.status = TaskStatus.COMPLETED
@@ -222,9 +227,10 @@ class TaskPlanner:
 注意事项：
 1. `id` 必须唯一
 2. `dependencies` 填写依赖的其他子任务 id 列表
-3. `tool` 和 `arguments` 仅在需要调用工具时填写
-4. 尽可能并行化无依赖的子任务
-5. 只输出 JSON，不要添加任何解释性文字
+3. `tool` 仅在需要调用已有工具时填写工具名称，如果没有合适的工具则留空字符串 ""
+4. `arguments` 仅在填写了 `tool` 时才需要
+5. 尽可能并行化无依赖的子任务
+6. 只输出 JSON，不要添加任何解释性文字
 """
         return prompt
 
