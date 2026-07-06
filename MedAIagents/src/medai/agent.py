@@ -896,159 +896,185 @@ class MedicalAgent:
         return candidates
     
     def _generate_deliverable(self, dtype: str, goal: str, subtasks: Dict[str, Any], output_dir: str) -> Optional[Dict[str, Any]]:
-        """使用 LLM 生成交付物数据并导出为文件
-        
+        """使用 LLM 生成交付物数据并导出为文件（增强版：内容详实、数据丰富）
+
         Args:
             dtype: 交付物类型
             goal: 任务目标
             subtasks: 子任务结果
             output_dir: 输出目录
-            
+
         Returns:
             交付物元数据 {type, label, format, filename, filepath} 或 None
         """
         try:
             import os
             from datetime import datetime
-            
+
             # 构建 LLM 提示词，让 LLM 生成导出所需的结构化数据
-            subtasks_summary = json.dumps(subtasks, ensure_ascii=False, indent=2)[:3000]
-            
-            # 根据不同类型构建不同的生成提示
+            # 扩充上下文长度，从3000字符增加到12000，充分利用子任务结果
+            subtasks_json = json.dumps(subtasks, ensure_ascii=False, indent=2)
+            subtasks_summary = subtasks_json[:12000] if len(subtasks_json) > 12000 else subtasks_json
+            if len(subtasks_json) > 12000:
+                subtasks_summary += "\n...（后续结果已截断）"
+
+            # 根据不同类型构建不同的生成提示（增强版：详细字段要求、字数要求、数据要求）
             type_prompts = {
                 'paper': {
                     'exporter_fn': 'export_paper',
                     'exporter_class': 'PaperExporter',
                     'format': 'docx',
                     'label': '医学论文',
-                    'system': '你是一个医学论文写作专家。请根据任务目标和执行结果，生成IMRaD结构的论文数据。',
-                    'data_schema': '{"title": "论文标题", "authors": "作者（字符串）", "abstract": "摘要", "keywords": ["关键词"], "introduction": "引言", "methods": "方法", "results": "结果", "discussion": "讨论", "conclusion": "结论", "references": ["参考文献列表"]}'
+                    'system': '你是一位资深医学论文写作专家，擅长撰写高质量的IMRaD结构医学论文。你的输出必须专业、详实、数据充分，符合SCI期刊投稿标准。',
+                    'data_schema': '{"title": "论文标题（准确反映研究内容）", "authors": "作者姓名（如：张三, 李四, 王五）", "abstract": "结构化摘要：目的、方法、结果、结论，300-500字", "keywords": ["关键词1", "关键词2", "关键词3", "关键词4", "关键词5"], "introduction": "引言：研究背景、国内外现状、研究意义、研究目的。不少于800字，需引用相关文献支撑论述", "methods": "方法：研究设计、纳入排除标准、干预措施、终点指标、统计方法。不少于800字，需详细到可重复", "results": "结果：基线特征、主要终点、次要终点、亚组分析、安全性。不少于600字，需包含具体数据", "discussion": "讨论：主要发现解读、与现有研究比较、研究优势、局限性、临床意义、未来方向。不少于800字", "conclusion": "结论：简明总结核心发现，200-300字", "references": ["1. 作者. 标题. 期刊名. 年份;卷(期):页码.", "2. ...（至少15条参考文献）"]}',
+                    'quality_requirements': '1. 摘要300-500字，包含目的/方法/结果/结论四部分；2. 引言≥800字，需论述研究背景和意义；3. 方法≥800字，详细到可重复；4. 结果≥600字，包含具体数值；5. 讨论≥800字，深入分析；6. 参考文献≥15条'
                 },
                 'grant': {
                     'exporter_fn': 'export_proposal',
                     'exporter_class': 'GrantProposalExporter',
                     'format': 'docx',
                     'label': '基金申请书',
-                    'system': '你是一个基金申请书撰写专家。请根据任务目标和执行结果，生成基金申请书的结构化数据。',
-                    'data_schema': '{"title": "项目名称", "grant_type": "申请类型", "research_area": "研究领域", "applicant": "申请人", "institution": "依托单位", "rationale": "立项依据", "research_content": "研究内容", "objectives": "研究目标", "key_problems": "关键科学问题", "methodology": "研究方案", "feasibility": "可行性分析", "innovation": "创新点", "timeline": "年度计划", "expected_outcomes": "预期成果", "budget": {"total": 50, "items": [{"name": "设备费", "amount": 10, "notes": ""}]}}'
+                    'system': '你是一位资深的国家自然科学基金申请书撰写专家，擅长撰写高质量的科研基金申请书。你的输出必须逻辑严密、论证充分、创新点突出。',
+                    'data_schema': '{"title": "项目名称（准确、简洁、有吸引力）", "grant_type": "NSFC/省基金/院基金", "research_area": "具体研究领域", "applicant": "申请人姓名", "institution": "依托单位", "rationale": "立项依据：研究背景、国内外进展、存在问题、科学假说。不少于1200字，需引用关键文献", "research_content": "研究内容：具体研究内容1、2、3，每条详细描述。总计不少于800字", "objectives": "研究目标：总体目标和具体目标，清晰可考核。200-400字", "key_problems": "关键科学问题：1-3个核心科学问题，每个问题分析深入。400-600字", "methodology": "研究方案：技术路线、实验设计、数据分析方法。不少于800字，需具体到实验步骤", "feasibility": "可行性分析：前期工作基础、技术条件、团队能力、资源保障。400-600字", "innovation": "创新点：理论创新、方法创新、应用创新。200-400字", "timeline": "年度计划：第1年...第2年...第3年...，每年具体任务和考核指标", "expected_outcomes": "预期成果：论文、专利、人才培养、临床应用等。200-400字", "budget": {"total": 50, "items": [{"name": "设备费", "amount": 10, "notes": "具体设备名称和用途说明"}, {"name": "材料费", "amount": 8, "notes": "试剂、耗材等"}, {"name": "测试化验加工费", "amount": 6, "notes": "外送检测费用"}, {"name": "差旅/会议费", "amount": 5, "notes": "学术交流"}, {"name": "出版/文献费", "amount": 3, "notes": "论文发表、查新"}, {"name": "劳务费", "amount": 12, "notes": "研究生助研津贴"}, {"name": "专家咨询费", "amount": 4, "notes": "专家论证"}, {"name": "间接费用", "amount": 2, "notes": "管理费"}]}}',
+                    'quality_requirements': '1. 立项依据≥1200字，充分论证科学问题；2. 研究内容≥800字，具体可操作；3. 研究方案≥800字，详细到实验步骤；4. 关键科学问题分析深入；5. 创新点明确突出；6. 经费预算科目完整、理由充分'
                 },
                 'protocol': {
                     'exporter_fn': 'export_protocol',
                     'exporter_class': 'ProtocolExporter',
                     'format': 'docx',
                     'label': '临床试验方案',
-                    'system': '你是一个临床试验方案设计专家。请根据任务目标和执行结果，生成RCT试验方案的数据。',
-                    'data_schema': '{"study_info": {"title": "方案标题", "study_type": "RCT", "phase": "III期", "indication": "适应症", "duration_months": 24}, "study_objectives": {"primary": "主要目的"}, "endpoints": {"primary": "主要终点"}, "inclusion_criteria": ["入选标准"], "exclusion_criteria": ["排除标准"], "sample_size": "样本量计算", "statistical_analysis": "统计方法", "ethical_considerations": {"informed_consent": "知情同意"}}'
+                    'system': '你是一位资深的临床试验方案设计专家，熟悉ICH-GCP、CONSORT等国际标准。你的输出必须严谨、规范、可执行。',
+                    'data_schema': '{"study_info": {"title": "方案全称", "study_type": "多中心/单中心 RCT", "phase": "I/II/III期", "indication": "具体适应症", "duration_months": 24, "sponsor": "申办方", "protocol_version": "1.0", "protocol_date": "2024-01-01"}, "study_objectives": {"primary": "主要目的：详细描述", "secondary": ["次要目的1：详细描述", "次要目的2：详细描述"]}, "endpoints": {"primary": "主要终点：具体指标、测量方法、时间点", "secondary": ["次要终点1：具体指标", "次要终点2：具体指标"]}, "inclusion_criteria": ["1. 年龄18-75岁", "2. 经组织学/细胞学确诊的...", "3. ECOG评分0-1分", "4. 预期生存期≥3个月", "5. 足够的器官功能（中性粒细胞≥1.5×10^9/L，血小板≥100×10^9/L...）", "6. 自愿签署知情同意书", "7. ...（至少8条详细入选标准）"], "exclusion_criteria": ["1. 既往接受过同类药物治疗", "2. 合并其他恶性肿瘤", "3. 严重心肺功能不全", "4. 活动性感染", "5. 妊娠或哺乳期女性", "6. 已知对研究药物过敏", "7. ...（至少8条详细排除标准）"], "study_design": {"randomization": "分层区组随机化，按...分层", "blinding": "双盲/单盲/开放", "treatment_groups": [{"name": "试验组", "intervention": "具体给药方案：剂量、途径、频次、疗程", "control": "对照药物和方案"}, {"name": "对照组", "intervention": "...", "control": "..."}]}, "sample_size": {"calculation": "详细样本量计算过程和公式", "total": 200, "per_group": 100, "dropout_rate": "20%", "power": "80%", "alpha": "双侧0.05"}, "statistical_analysis": "详细统计分析方法：主要终点分析方法、次要终点、亚组分析、期中分析、缺失数据处理、多重性校正。不少于400字", "safety": {"ae_definition": "不良事件定义和分级标准（CTCAE v5.0）", "sae_reporting": "严重不良事件报告流程和时限", "dsmc": "数据安全监察委员会组成和职责"}, "ethical_considerations": {"informed_consent": "知情同意过程和文件要点", "ethics_committee": "伦理审查委员会", "data_protection": "受试者数据保护措施"}}',
+                    'quality_requirements': '1. 入选标准≥8条，具体可执行；2. 排除标准≥8条，覆盖安全性和有效性；3. 干预方案具体到剂量/途径/频次；4. 样本量计算有公式和参数；5. 统计方法≥400字，涵盖主要/次要/亚组分析；6. 安全性监测方案完整'
                 },
                 'meta_analysis': {
                     'exporter_fn': 'export_meta_analysis',
                     'exporter_class': 'MetaAnalysisExporter',
                     'format': 'xlsx',
                     'label': 'Meta分析结果表',
-                    'system': '你是一个Meta分析专家。请根据任务目标和执行结果，生成Meta分析的结构化数据（含各研究数据、汇总统计等）。',
-                    'data_schema': '{"studies": [{"name": "研究1", "a_events": 50, "a_total": 100, "b_events": 30, "b_total": 100, "effect_size": 1.5}], "pooled_effect": 1.35, "ci_lower": 1.1, "ci_upper": 1.6, "i_squared": "45%", "q_statistic": 12.3, "p_value": "<0.01", "model": "Random"}'
+                    'system': '你是一位资深的循证医学和Meta分析专家，熟悉Cochrane系统评价方法和RevMan软件。你的输出必须数据准确、统计规范。',
+                    'data_schema': '{"studies": [{"name": "作者, 年份", "a_events": 50, "a_total": 100, "b_events": 30, "b_total": 100, "effect_size": 1.5, "ci_lower": 1.1, "ci_upper": 2.0, "weight": "25%", "quality": "RCT, Jadad=5分"}, {"name": "作者2, 年份", "a_events": 45, "a_total": 90, "b_events": 25, "b_total": 85, "effect_size": 1.6, "ci_lower": 1.0, "ci_upper": 2.4, "weight": "20%", "quality": "RCT, Jadad=4分"}, {"name": "...（至少8-12个真实研究数据）"}], "pooled_effect": 1.45, "ci_lower": 1.15, "ci_upper": 1.75, "i_squared": "42%", "q_statistic": 15.3, "q_df": 9, "q_pvalue": "0.08", "model": "Random-effects (DerSimonian-Laird)", "publication_bias": {"egger_p": "0.12", "beggs_p": "0.25", "funnel_plot": "对称", "trim_fill": "无需填补"}, "sensitivity": [{"analysis": "剔除低质量研究", "pooled_effect": 1.48, "ci_lower": 1.18, "ci_upper": 1.78}, {"analysis": "固定效应模型", "pooled_effect": 1.42, "ci_lower": 1.14, "ci_upper": 1.70}], "subgroup": [{"factor": "样本量", "level": ">100例", "pooled_effect": 1.5, "ci_lower": 1.2, "ci_upper": 1.8, "studies": 5}, {"factor": "样本量", "level": "≤100例", "pooled_effect": 1.3, "ci_lower": 0.9, "ci_upper": 1.7, "studies": 5}]}',
+                    'quality_requirements': '1. 纳入研究≥8个，数据完整；2. 每个研究包含效应量和95%CI；3. 包含异质性检验（I²、Q统计量）；4. 包含发表偏倚评估（Egger、Begg）；5. 包含敏感性分析；6. 包含亚组分析'
                 },
                 'budget': {
                     'exporter_fn': 'export_budget',
                     'exporter_class': 'BudgetExporter',
                     'format': 'xlsx',
                     'label': '经费预算表',
-                    'system': '你是一个科研经费预算专家。请根据任务目标和执行结果，生成经费预算表数据。',
-                    'data_schema': '{"title": "经费预算标题", "total": 50, "items": [{"name": "科目名称", "amount": 10, "notes": "说明"}]}'
+                    'system': '你是一位资深的科研经费预算编制专家，熟悉国家自然科学基金等各类科研项目的经费管理办法。',
+                    'data_schema': '{"title": "XX项目经费预算表", "total": 50, "currency": "万元", "items": [{"name": "设备费", "amount": 10.0, "percentage": "20%", "notes": "具体设备名称：高性能液相色谱仪（8万）、低温离心机（2万）", "details": [{"item": "液相色谱仪", "spec": "Agilent 1260 Infinity II", "unit_price": 8.0, "quantity": 1, "total": 8.0}]}, {"name": "材料费", "amount": 8.0, "percentage": "16%", "notes": "实验试剂、耗材、细胞培养基等", "details": [{"item": "胎牛血清", "spec": "Gibco", "unit_price": 0.3, "quantity": 10, "total": 3.0}]}, {"name": "测试化验加工费", "amount": 6.0, "percentage": "12%", "notes": "外送基因检测、质谱分析等", "details": [{"item": "全外显子测序", "spec": "30X", "unit_price": 0.4, "quantity": 10, "total": 4.0}]}, {"name": "差旅/会议费", "amount": 5.0, "percentage": "10%", "notes": "参加国内学术会议、调研差旅", "details": [{"item": "学术会议注册费", "spec": "CSCO年会", "unit_price": 0.2, "quantity": 5, "total": 1.0}]}, {"name": "出版/文献/信息传播费", "amount": 3.0, "percentage": "6%", "notes": "论文发表APC、查新、软件授权", "details": [{"item": "论文版面费", "spec": "OA期刊", "unit_price": 1.0, "quantity": 2, "total": 2.0}]}, {"name": "劳务费", "amount": 12.0, "percentage": "24%", "notes": "研究生助研津贴、临时聘用人员", "details": [{"item": "硕士研究生助研津贴", "spec": "2人×3年", "unit_price": 2.0, "quantity": 6, "total": 12.0}]}, {"name": "专家咨询费", "amount": 4.0, "percentage": "8%", "notes": "项目论证、方案评审专家费用", "details": [{"item": "专家咨询", "spec": "高级专家", "unit_price": 0.2, "quantity": 20, "total": 4.0}]}, {"name": "间接费用", "amount": 2.0, "percentage": "4%", "notes": "依托单位管理费", "details": [{"item": "管理费", "spec": "按直接费用4%计提", "unit_price": 2.0, "quantity": 1, "total": 2.0}]}]}',
+                    'quality_requirements': '1. 科目完整，覆盖NSFC全部科目；2. 每个科目有明细项；3. 每项有单价、数量、合计；4. 占比合理，符合NSFC规定；5. 理由说明充分'
                 },
                 'survival': {
                     'exporter_fn': 'export_survival_data',
                     'exporter_class': 'SurvivalDataExporter',
                     'format': 'xlsx',
                     'label': '生存分析数据',
-                    'system': '你是一个生存分析专家。请根据任务目标和执行结果，生成生存分析数据（每条记录含time, event, group等字段）。',
-                    'data_schema': '[{"patient_id": "P001", "time": 12, "event": 1, "group": "治疗组", "age": 55, "stage": "III"}, {"patient_id": "P002", "time": 8, "event": 0, "group": "对照组", "age": 62, "stage": "IV"}]'
+                    'system': '你是一位资深的生物统计学家，擅长生存分析和临床试验数据分析。你的输出必须数据真实、格式规范。',
+                    'data_schema': '[{"patient_id": "P001", "time": 12.5, "event": 1, "group": "实验组", "age": 55, "gender": "男", "stage": "III", "ecog": 1, "biomarker_positive": 1, "prior_therapy": 0, "note": "疾病进展"}, {"patient_id": "P002", "time": 8.0, "event": 0, "group": "对照组", "age": 62, "gender": "女", "stage": "IV", "ecog": 2, "biomarker_positive": 0, "prior_therapy": 1, "note": "删失"}, {"patient_id": "P003", "time": 24.0, "event": 1, "group": "实验组", "age": 48, "gender": "男", "stage": "II", "ecog": 0, "biomarker_positive": 1, "prior_therapy": 0, "note": "死亡"}, {"patient_id": "...（至少30-50条模拟数据，覆盖不同亚组）"}]',
+                    'quality_requirements': '1. 数据记录≥30条；2. 覆盖实验组和对照组；3. 包含time、event、group等核心字段；4. 包含协变量（年龄、分期、ECOG等）；5. 数据分布合理，有事件和删失'
                 },
                 'response_letter': {
                     'exporter_fn': 'export_response_letter',
                     'exporter_class': 'ResponseLetterExporter',
                     'format': 'docx',
                     'label': '审稿回复信',
-                    'system': '你是一个学术回复信撰写专家。请根据任务目标和执行结果，生成Response Letter的结构化数据。',
-                    'data_schema': '{"manuscript_id": "MS-2024-001", "title": "文章标题", "authors": "作者列表", "responses": [{"comment": "审稿人意见", "response": "作者回复", "changes": "修改说明"}]}'
+                    'system': '你是一位资深的学术期刊编辑和审稿回复信撰写专家，擅长撰写礼貌、专业、有针对性的Response Letter。',
+                    'data_schema': '{"manuscript_id": "MS-2024-001", "title": "论文完整标题", "authors": "作者1, 作者2, 作者3", "journal": "投稿期刊名称", "date": "2024-01-15", "opening": "尊敬的编辑和审稿人：感谢您们对本稿件的认真审阅和宝贵意见。我们已根据审稿意见逐条修改，修改内容在修订稿中以红色标注。", "responses": [{"reviewer": "Reviewer #1", "comment": "审稿意见原文：主要关注点的详细描述", "response": "尊敬的审稿人，感谢您的宝贵意见。我们已在修订稿中进行了以下修改：...（回复不少于200字，具体说明修改内容和位置）", "changes": "具体修改：在Results部分第3段增加了...，在Table 2中补充了..."}, {"reviewer": "Reviewer #2", "comment": "对统计方法的质疑：为什么使用Log-rank检验而不是...", "response": "感谢您的专业建议。我们重新分析了数据，现在同时报告了Log-rank检验和...的结果。具体修改如下：...", "changes": "在Methods部分更新了统计分析段落（第2.4节），在Results部分补充了敏感性分析结果（Figure S1）。"}, {"reviewer": "Editor", "comment": "建议补充更多关于研究局限性的讨论", "response": "感谢您的建议。我们在Discussion部分增加了Limitations小节，详细讨论了本研究的样本量限制、单中心设计、随访时间等局限性...", "changes": "Discussion部分新增第4节Limitations，约300字。"}, {"reviewer": "...（至少覆盖3-5个审稿人的全部意见）"}], "closing": "再次感谢编辑和审稿人的宝贵时间和专业意见。我们相信经过修改，稿件质量有了显著提升，期待您的进一步反馈。此致敬礼！"}',
+                    'quality_requirements': '1. 覆盖所有审稿人（至少3个审稿人+编辑）；2. 每条回复≥200字，具体且有针对性；3. 每条意见都有明确的修改说明；4. 语气礼貌专业；5. 修改内容具体到章节/图表/行号'
                 },
                 'research_report': {
                     'exporter_fn': 'export_research_report',
                     'exporter_class': 'ResearchPresentationExporter',
                     'format': 'pptx',
                     'label': '科研汇报PPT',
-                    'system': '你是一个科研汇报PPT制作专家。请根据任务目标和执行结果，生成科研汇报演示文稿的数据。',
-                    'data_schema': '{"title": "报告标题", "subtitle": "副标题", "background": ["背景1"], "methods": ["方法1"], "results": ["结果1"], "discussion": ["讨论1"], "conclusions": ["结论1"], "acknowledgments": ["致谢"]}'
+                    'system': '你是一位资深的学术汇报PPT制作专家，擅长将复杂的研究内容转化为结构清晰、内容详实的学术演示文稿。',
+                    'data_schema': '{"title": "汇报标题（醒目、准确）", "subtitle": "副标题：研究类型+单位+日期", "background": ["研究背景1：疾病负担和未满足需求，详细描述", "研究背景2：现有治疗的局限性，数据支撑", "研究背景3：本研究的科学假说和创新点", "研究背景4：国内外研究现状和本研究的定位"], "methods": ["研究设计：多中心、随机、双盲、对照试验", "纳入排除标准：详细描述目标人群", "干预方案：实验组和对照组具体给药方案", "终点指标：主要终点和次要终点定义", "统计方法：样本量、分析集、统计检验"], "results": ["基线特征：两组均衡性比较，具体数值", "主要终点：HR=0.65, 95%CI 0.48-0.89, p=0.003", "次要终点：PFS、ORR、DOR等具体数据", "亚组分析：森林图关键结果", "安全性：TRAE发生率、≥3级AE、特别关注AE"], "discussion": ["主要发现解读：与现有证据的一致性", "临床意义：对临床实践的影响", "研究优势：设计严谨、样本量大、随访充分", "研究局限性：单中心、开放标签等", "未来方向：后续研究计划"], "conclusions": ["核心结论1：主要终点的临床意义", "核心结论2：安全性特征总结", "核心结论3：对临床实践的建议"], "acknowledgments": ["感谢研究团队和参与中心", "感谢基金资助（项目编号）", "声明利益冲突和伦理审批"]}',
+                    'quality_requirements': '1. 每页PPT的内容点≥4条；2. 每条内容具体、有数据支撑；3. 结果部分包含具体统计值；4. 背景部分论述充分；5. 讨论部分深入分析'
                 },
                 'teaching': {
                     'exporter_fn': 'export_teaching',
                     'exporter_class': 'ImagingTeachingExporter',
                     'format': 'pptx',
                     'label': '影像教学PPT',
-                    'system': '你是一个医学影像教学专家。请根据任务目标和执行结果，生成影像征象教学PPT的数据。',
-                    'data_schema': '[{"name": "征象名称", "description": "描述", "modalities": ["CT"], "anatomy": ["解剖位置"], "diseases": ["相关疾病"], "severity": "严重程度"}]'
+                    'system': '你是一位资深的医学影像科主任医师和教学专家，擅长制作高质量的影像征象教学PPT。',
+                    'data_schema': '[{"name": "磨玻璃结节（GGN）", "description": "肺内局限性密度增高影，血管和支气管纹理仍可见。病理基础为肺泡壁增厚或肺泡腔不完全填充。分为纯磨玻璃结节（pGGN）和混杂性磨玻璃结节（mGGN）。", "modalities": ["CT（HRCT为金标准）", "PET-CT（SUV值通常较低）"], "anatomy": ["右肺上叶", "左肺上叶", "双肺多发"], "diseases": ["早期肺腺癌（AIS/MIA）", "局灶性纤维化", "出血", "炎症"], "severity": "pGGN恶性率约18%，mGGN恶性率约63%", "differential": ["AIS：圆形/类圆形，边界清楚，密度均匀", "MIA：出现实性成分，分叶/毛刺", "炎症：短期内变化，抗感染后缩小"], "management": "≤5mm：年度随访；5-8mm：3-6月复查；>8mm或增长：考虑活检或手术"}, {"name": "...（至少5-8个典型征象，每个征象描述详细）"}]',
+                    'quality_requirements': '1. 征象数量≥5个；2. 每个征象描述≥100字；3. 包含影像学表现、病理基础、鉴别诊断、处理建议；4. 包含相关疾病列表；5. 数据准确（恶性率、随访策略等）'
                 },
                 'bioinformatics': {
                     'exporter_fn': 'export_bioinformatics_report',
                     'exporter_class': 'BioinformaticsReportExporter',
                     'format': 'pptx',
                     'label': '生信分析报告PPT',
-                    'system': '你是一个生物信息学分析专家。请根据任务目标和执行结果，生成生信分析报告PPT的数据。',
-                    'data_schema': '{"title": "报告标题", "subtitle": "副标题", "sample_info": ["样本信息"], "mutation_summary": ["突变图谱"], "pathways": ["通路富集"], "survival": ["生存分析"], "conclusions": ["结论"]}'
+                    'system': '你是一位资深的生物信息学分析专家，擅长多组学数据分析和可视化汇报。',
+                    'data_schema': '{"title": "多组学整合分析报告", "subtitle": "项目名称 | 分析日期 | 分析平台", "sample_info": ["样本来源：XX癌组织及配对癌旁组织", "样本量：实验组50例，对照组50例", "测序策略：WES（肿瘤100X，正常30X）+ RNA-seq", "质控：Q30≥85%，比对率≥95%"], "mutation_summary": ["突变负荷：TMB中位数8.2 mut/Mb（范围2.1-34.5）", "驱动突变：TP53（42%）、KRAS（28%）、EGFR（18%）", "突变特征：Signature 4（吸烟相关）占主导", "CNV：8q扩增（MYC）、17p缺失（TP53）"], "pathways": ["富集通路1：PI3K-AKT信号通路（FDR=2.3e-5）", "富集通路2：细胞周期调控（FDR=8.1e-4）", "富集通路3：DNA损伤修复（FDR=1.2e-3）", "GSEA结果：EMT和血管生成显著激活"], "survival": ["OS分析：高TMB组中位OS 28.5月 vs 低TMB组 16.2月（HR=0.52, p=0.008）", "PFS分析：PI3K突变组中位PFS 9.3月 vs 野生型 14.1月（HR=1.68, p=0.012）", "多因素分析：TMB、分期、ECOG为独立预后因素"], "conclusions": ["核心发现1：TP53/KRAS共突变与免疫治疗抵抗相关", "核心发现2：PI3K通路激活是潜在治疗靶点", "核心发现3：TMB可作为预后生物标志物"], "recommendations": ["建议1：针对PI3K突变患者开展靶向治疗研究", "建议2：验证TMB作为免疫治疗预测标志物", "建议3：扩大样本量进行外部验证"]}',
+                    'quality_requirements': '1. 每部分≥4条具体内容；2. 包含具体统计值（p值、HR、FDR等）；3. 突变数据有频率和具体基因；4. 通路分析有统计学指标；5. 生存分析有具体数值'
                 },
                 'journal_db': {
                     'exporter_fn': 'export_journals',
                     'exporter_class': 'JournalDatabaseExporter',
                     'format': 'xlsx',
                     'label': '期刊数据库',
-                    'system': '你是一个医学期刊数据库管理员。请根据任务目标生成相关期刊列表数据。',
-                    'data_schema': '[{"name": "期刊名称", "impact_factor": 5.0, "jcr_quartile": "Q1", "cas_quartile": "Q1", "field": "领域", "oa_policy": "混合OA", "review_period": "3个月"}]'
+                    'system': '你是一位资深的医学期刊投稿顾问，熟悉各领域的SCI期刊情况和投稿策略。',
+                    'data_schema': '[{"name": "Journal of Clinical Oncology", "abbreviation": "JCO", "impact_factor": 45.3, "jcr_quartile": "Q1", "cas_quartile": "Q1", "field": "肿瘤学/临床肿瘤", "oa_policy": "混合OA（APC $4000）", "review_period": "初审2-3周，外审4-8周", "acceptance_rate": "约15%", "article_types": ["Original Research", "Clinical Trial", "Review"], "special_requirements": "需要临床试验注册号，统计方法需详细", "website": "ascopubs.org/journal/jco"}, {"name": "Lancet Oncology", "abbreviation": "Lancet Oncol", "impact_factor": 41.6, "jcr_quartile": "Q1", "cas_quartile": "Q1", "field": "肿瘤学", "oa_policy": "混合OA（APC $6300）", "review_period": "初审1-2周，外审6-10周", "acceptance_rate": "约10%", "article_types": ["Article", "Review", "Comment"], "special_requirements": "摘要≤300字，图表≤6个", "website": "thelancet.com/journals/lanonc"}, {"name": "...（至少15-20个相关期刊）"}]',
+                    'quality_requirements': '1. 期刊数量≥15个；2. 每个期刊信息完整（IF、分区、审稿周期、接收率）；3. 包含不同IF层次（高/中/低）；4. 包含OA政策和费用；5. 包含特殊投稿要求'
                 }
             }
-            
+
             if dtype not in type_prompts:
                 logger.warning(f"Unknown deliverable type: {dtype}")
                 return None
-            
+
             tp = type_prompts[dtype]
-            
-            # 调用 LLM 生成结构化数据
-            prompt = f"""根据以下任务目标和子任务执行结果，生成{dtype}类型的结构化导出数据。
+
+            # 调用 LLM 生成结构化数据（增强版提示词）
+            prompt = f"""根据以下任务目标和子任务执行结果，生成一份高质量、内容详实的【{tp['label']}】。
 
 ## 任务目标
 {goal}
 
-## 子任务执行结果
+## 子任务执行结果（请充分利用这些详细信息）
 {subtasks_summary}
 
-## 输出要求
-请严格按照以下 JSON Schema 格式输出数据，不要包含其他内容：
+## 内容质量要求（必须严格遵守）
+1. **内容详实**：每个字段/章节必须包含充分的内容，不可敷衍或只写框架
+2. **数据丰富**：尽可能包含具体数据、统计值、病例数、百分比等量化信息
+3. **专业深度**：使用专业术语，体现医学/科研领域的专业水平，不可泛泛而谈
+4. **结构完整**：严格按照要求的JSON Schema输出，确保所有字段都有实质性内容
+5. **中文撰写**：所有内容使用中文撰写（英文术语、期刊名、基因名保留原文）
+
+## 各字段详细度要求
+{tp['quality_requirements']}
+
+## 输出格式
+请严格按照以下 JSON Schema 格式输出数据。只输出 JSON 数据，不要包含任何其他说明文字。
+注意：JSON中的字符串值必须是完整、详细的内容，不能是简短的占位符。
 
 ```json
 {tp['data_schema']}
 ```"""
-            
+
             messages = [
                 {"role": "system", "content": tp['system']},
                 {"role": "user", "content": prompt},
             ]
             response = _run_async(self.llm_router.chat(messages))
-            
+
             # 解析 JSON
             resp_str = response.strip()
             if "```json" in resp_str:
                 resp_str = resp_str.split("```json")[1].split("```")[0].strip()
             elif "```" in resp_str:
                 resp_str = resp_str.split("```")[1].split("```")[0].strip()
-            
+
             data = json.loads(resp_str)
-            
+
             # 使用对应的导出器生成文件
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             safe_goal = "".join(c if c.isalnum() or c in " _-" else "_" for c in goal[:30]).strip()
             filename = f"{dtype}_{safe_goal}_{timestamp}.{tp['format']}"
             filepath = os.path.join(output_dir, filename)
-            
+
             # 动态导入导出器
             from medai.export import (
                 PaperExporter, GrantProposalExporter, ProtocolExporter,
@@ -1057,7 +1083,7 @@ class MedicalAgent:
                 ResearchPresentationExporter, ImagingTeachingExporter,
                 BioinformaticsReportExporter
             )
-            
+
             exporter_map = {
                 'paper': PaperExporter,
                 'grant': GrantProposalExporter,
@@ -1071,33 +1097,18 @@ class MedicalAgent:
                 'bioinformatics': BioinformaticsReportExporter,
                 'journal_db': JournalDatabaseExporter,
             }
-            
+
             exporter_class = exporter_map.get(dtype)
             if exporter_class is None:
                 logger.warning(f"No exporter for type: {dtype}")
                 return None
-            
+
             exporter = exporter_class()
             export_fn = getattr(exporter, tp['exporter_fn'])
-            
-            if dtype in ('meta_analysis', 'budget', 'survival') or dtype == 'journal_db' or dtype == 'teaching':
-                if dtype == 'meta_analysis':
-                    export_fn(data, filepath)
-                elif dtype == 'budget':
-                    export_fn(data, filepath)
-                elif dtype == 'survival':
-                    export_fn(data, filepath)
-                elif dtype == 'journal_db':
-                    export_fn(data, filepath)
-                elif dtype == 'teaching':
-                    export_fn(data, filepath)
-                else:
-                    export_fn(data, filepath)
-            else:
-                export_fn(data, filepath)
-            
+            export_fn(data, filepath)
+
             logger.info(f"Deliverable generated: {filepath}")
-            
+
             return {
                 'type': dtype,
                 'label': tp.get('label', dtype),
