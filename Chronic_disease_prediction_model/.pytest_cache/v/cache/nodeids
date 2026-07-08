@@ -1,0 +1,21 @@
+[
+  "tests/test_calibration.py::test_calibration_helpers",
+  "tests/test_dataset.py::test_build_sequence_dataset",
+  "tests/test_dataset_multi.py::test_build_sequence_dataset_multi_empty",
+  "tests/test_evaluation.py::test_evaluate_binary",
+  "tests/test_feature_engineering.py::test_build_rolling_features",
+  "tests/test_inference_multi.py::test_inference_multi_pipeline",
+  "tests/test_inference_risk_level.py::test_risk_level",
+  "tests/test_inference_transformer_empty.py::test_predict_transformer_empty",
+  "tests/test_labeling.py::test_generate_future_label",
+  "tests/test_labeling_multi.py::test_generate_future_labels",
+  "tests/test_monitoring.py::test_feature_distribution_compare",
+  "tests/test_monitoring.py::test_psi_and_drift",
+  "tests/test_monitoring.py::test_rollback",
+  "tests/test_preprocessing.py::test_apply_range_clipping",
+  "tests/test_preprocessing.py::test_preprocess_pipeline_fit",
+  "tests/test_training_lstm.py::test_train_lstm_pipeline",
+  "tests/test_training_persist.py::test_training_persist",
+  "tests/test_transformer_pipeline.py::test_transformer_pipeline",
+  "tests/test_xgb_model.py::test_xgb_model_build"
+]
