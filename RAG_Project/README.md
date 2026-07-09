@@ -6,7 +6,11 @@
 
 本服务通过统一的 HTTP 接口 (`POST /search`) 对外提供检索能力，集成了以下六大知识源，并具备强大的**查询理解与转换能力**：
 
-1.  **Milvus (Local Knowledge) - Unified Vector Search**
+1.  **多格式素材解析与上下文关联 (Multi-format Material Context)**
+    *   **内容**: 支持用户传入多种格式的素材文件（文档如 PDF, DOCX, Markdown, TXT, Excel，图像如 JPG, BMP, DICOM等），作为额外上下文关联。
+    *   **大模型自动调用**: 支持通过 `summarize` 参数，基于检索和上传素材内容自动调用底层大模型进行信息提炼和内容总结。
+
+2.  **Milvus (Local Knowledge) - Unified Vector Search**
     *   **内容**: 本地索引的医学指南、教科书、私有文档 (PDF/Markdown)。
     *   **技术**: 向量检索 (Dense Retrieval)，支持 **Milvus Standalone** (高性能) 与 **Milvus Lite** (本地文件回退) 双模式切换。
     *   **统一存储库**: 所有的本地知识（包括《乳腺癌疾病管理路径》、通用医学指南、肺癌专库等）已通过数据清洗与重构，统一转化为 512 维向量并合并至单一的 `medical_rag` 主库中，彻底摒弃了此前低效且有损的跨维度多库检索（384维切片映射），大幅提升了查询速度与检索精确度。
