@@ -393,10 +393,19 @@ async def get_trial(
 async def update_trial(
     trial_id: UUID,
     body: TrialUpdate,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_permissions("trial:write")),
 ):
     """更新试验基本信息"""
+    logger.info("“保存修改”时，数据是发到了 saveRwsProjectAll 这个主接口： https://syncsim-test.jdhhealth.cn/rws/rwsProject/saveRwsProjectAll")
+    
+    # 从请求头中提取 Token 并打印
+    auth_header = request.headers.get("Authorization", "")
+    token_value = auth_header.replace("Bearer ", "") if auth_header.startswith("Bearer ") else None
+    logger.info(f"User token present: {bool(token_value)}")
+    logger.info(f"User token value: {token_value}")
+    
     result = await db.execute(select(Trial).options(selectinload(Trial.extension)).where(Trial.id == trial_id))
     trial = result.scalar_one_or_none()
     if not trial:

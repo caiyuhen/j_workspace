@@ -698,7 +698,7 @@ CTMS.renderEditTrialModal = function() {
         </table>
       </div>
     </div>
-  `, `<button class="btn btn-secondary" onclick="CTMS.closeModal()">取消</button><button class="btn btn-primary" onclick="CTMS.updateTrial('${d.trialId}')">保存修改</button>`);
+  `, `<button class="btn btn-secondary" onclick="CTMS.closeModal()">取消</button><button class="btn btn-primary" onclick="CTMS.saveRwsProjectAll('${d.trialId}')">保存修改</button>`);
 };
 
 CTMS.addEditTrialVisit = function() {
@@ -1342,7 +1342,7 @@ CTMS.createTrial = async function() {
     planned_start: d.start_date || null,
     centers: window.CTMS_NEW_TRIAL_DATA.centers || [],
     users: window.CTMS_NEW_TRIAL_DATA.users || [],
-    user_token: sessionStorage.getItem('user_token'),
+    user_token: window.API?.token?.getAccessToken() || localStorage.getItem('access_token'),
     extra_data: {
       centers: window.CTMS_NEW_TRIAL_DATA.centers || [],
       users: window.CTMS_NEW_TRIAL_DATA.users || [],
@@ -1484,7 +1484,151 @@ CTMS.updateTrial = async function(trialId) {
   }
 };
 
-// ===== 试验详情 =====
+  CTMS.saveRwsProjectAll = async function(trialId) {
+    CTMS.syncEditTrialDataFromDOM();
+    const d = window.CTMS_EDIT_TRIAL_DATA;
+    if (!d || !d.basic) {
+      CTMS.showToast('编辑数据状态异常，请关闭后重试', 'error');
+      return;
+    }
+    const targetEnrollment = parseInt(document.getElementById('edit-trial-target').value);
+    
+    const trialData = {
+      short_name: d.basic.full_name.slice(0, 50),
+      full_name: d.basic.full_name,
+      phase: d.basic.phase,
+      indication: d.basic.indication,
+      sponsor: d.basic.sponsor,
+      drug_name: d.basic.drug_name || null,
+      target_enrollment: isNaN(targetEnrollment) ? 100 : targetEnrollment,
+      planned_start: d.basic.planned_start || null,
+      status: d.basic.status,
+      extra_data: {
+        centers: d.centers || [],
+        users: d.users || [],
+        protocol: d.protocol || {}
+      }
+    };
+    
+    // 验证必填字段
+    if (!trialData.full_name || !trialData.indication || !trialData.sponsor || isNaN(targetEnrollment)) {
+      CTMS.showToast('请完整填写带有星号的必填字段', 'error');
+      return;
+    }
+    
+    if (targetEnrollment <= 0) {
+      CTMS.showToast('目标入组例数必须大于0', 'error');
+      return;
+    }
+    
+    try {
+      // 1. 先保存至本地系统
+      await API.trials.update(trialId, trialData);
+      CTMS.saveEditTrialExtraData();
+
+      // 2. 准备 IWRS 同步数据
+      const hospitalList = (d.centers || []).map(c => ({
+          hospitalName: c.name || "",
+          hospitalCode: c.code || "",
+          projectLeader: c.pi || ""
+      }));
+
+      // ==========================================
+      // 从系统全局用户列表 (CTMS_DATA.users) 中查找用户的真实手机号
+      // ==========================================
+      const getRealPhoneByUserName = (userName) => {
+          if (!userName) return "";
+          // 在系统用户列表中查找匹配的名字或用户名
+          const foundUser = (CTMS_DATA.users || []).find(user => 
+              user.name === userName || 
+              user.username === userName || 
+              user.full_name === userName
+          );
+          return foundUser ? (foundUser.phone || foundUser.mobile || "") : "";
+      };
+
+      const userInfoList = (d.users || []).map(u => {
+          const userName = u.name || "";
+          // 优先使用当前表单中的 phone，如果没有，则去系统数据库(CTMS_DATA)中查他的真实手机号
+          let realPhone = u.phone || getRealPhoneByUserName(userName);
+          // 如果系统里也没有记录他的手机号，最后才用 13800000000 兜底，防止 EDC 报错
+          realPhone = realPhone || "13800000000";
+
+          return {
+              keyword: realPhone, 
+              userName: userName,
+              hospitalCode: "",
+              userTag: u.role || ""
+          };
+      });
+
+      const payload = {
+          project: {
+              ctmsProjectId: trialId,
+              projectNumber: d.basic.trial_no || trialId,
+              projectName: trialData.full_name,
+              projectStatus: trialData.status,
+              projectType: trialData.phase,
+              bidCompany: trialData.sponsor,
+              projectSystem: "5"
+          },
+          projectHospitalList: hospitalList,
+          projectUserInfoList: userInfoList
+      };
+
+      const targetUrl = "https://syncsim-test.jdhhealth.cn/rws/rwsProject/saveRwsProjectAll";
+      
+      // 恢复为动态获取当前系统登录用户的 Token
+      let userToken = window.API?.token?.getAccessToken() || localStorage.getItem('access_token') || "";
+      // 按照要求，直接使用原始的 token 字符串，绝对不加 Bearer 前缀
+      if (userToken.toLowerCase().startsWith('bearer ')) {
+          userToken = userToken.substring(7).trim();
+      }
+      const finalToken = userToken;
+
+      console.log("========== 完整调用接口信息概览 ==========");
+      console.log("1. 目标 URL: " + targetUrl);
+      console.log("2. 请求方法: POST");
+      console.log("3. 请求标头 (Headers): ");
+      console.log("   - Content-Type: application/json");
+      console.log("   - Authorization: " + (finalToken || "缺失"));
+      console.log("4. 请求载荷 (Payload): " + JSON.stringify(payload));
+      console.log("=======================================");
+
+      if (finalToken) {
+          try {
+              const response = await fetch(targetUrl, {
+                  method: "POST",
+                  headers: {
+                      "Content-Type": "application/json",
+                      "Authorization": finalToken
+                  },
+                  body: JSON.stringify(payload)
+              });
+              const resData = await response.json();
+              if (resData && String(resData.code) === "1") {
+                  CTMS.showToast('修改已保存，并成功同步至EDC！', 'success');
+              } else {
+                  CTMS.showToast('修改已保存，但同步至EDC失败', 'warning');
+                  console.warn("EDC sync response:", resData);
+              }
+          } catch (syncErr) {
+              console.error('同步至EDC网络异常:', syncErr);
+              CTMS.showToast('修改已保存，但同步EDC时发生网络异常', 'warning');
+          }
+      } else {
+          CTMS.showToast('修改已保存！(未同步至EDC：缺少凭证)', 'success');
+      }
+
+      CTMS.closeModal();
+      CTMS.navigate('trial-detail', { trialId: trialId });
+    } catch (error) {
+      console.error('更新试验失败:', error);
+      CTMS.showToast(error.message || '更新失败，请重试', 'error');
+    }
+  };
+
+  // ===== 试验详情 =====
 PAGES['trial-detail'] = function(params) {
   const targetTrialId = params.trialId || (CTMS_DATA.trials && CTMS_DATA.trials.length > 0 ? CTMS_DATA.trials[0].id : 'CT2025001');
   const t = CTMS_DATA.trials.find(x => x.id === targetTrialId || x.apiId === (params.trialApiId || '') || x.apiId === targetTrialId) || getTrialById(targetTrialId);
