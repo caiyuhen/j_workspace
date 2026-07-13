@@ -895,6 +895,110 @@ class MedicalAgent:
         
         return candidates
     
+    def _check_deliverable_hard_rules(self, dtype: str, data: Dict[str, Any]) -> tuple:
+        """代码级硬规则校验：检查交付物数据是否满足最低质量标准
+        
+        Returns:
+            (passed: bool, issues: list[str])
+        """
+        issues = []
+        
+        def _len(text) -> int:
+            """计算字符串长度（中文字符算1个）"""
+            return len(str(text)) if text else 0
+        
+        def _list_len(obj) -> int:
+            """安全获取列表长度"""
+            return len(obj) if isinstance(obj, list) else 0
+        
+        if dtype == 'paper':
+            refs = _list_len(data.get('references'))
+            if refs < 15:
+                issues.append(f"参考文献数量不足：{refs}条（要求≥15条）")
+            if _len(data.get('introduction')) < 800:
+                issues.append(f"引言字数不足：{_len(data.get('introduction'))}字（要求≥800字）")
+            if _len(data.get('methods')) < 800:
+                issues.append(f"方法字数不足：{_len(data.get('methods'))}字（要求≥800字）")
+            if _len(data.get('results')) < 600:
+                issues.append(f"结果字数不足：{_len(data.get('results'))}字（要求≥600字）")
+            if _len(data.get('discussion')) < 800:
+                issues.append(f"讨论字数不足：{_len(data.get('discussion'))}字（要求≥800字）")
+            if _len(data.get('abstract')) < 100:
+                issues.append(f"摘要字数不足：{_len(data.get('abstract'))}字（要求≥100字）")
+        
+        elif dtype == 'grant':
+            if _len(data.get('rationale')) < 1200:
+                issues.append(f"立项依据字数不足：{_len(data.get('rationale'))}字（要求≥1200字）")
+            if _len(data.get('research_content')) < 800:
+                issues.append(f"研究内容字数不足：{_len(data.get('research_content'))}字（要求≥800字）")
+            if _len(data.get('methodology')) < 800:
+                issues.append(f"研究方案字数不足：{_len(data.get('methodology'))}字（要求≥800字）")
+            budget = data.get('budget', {})
+            items = _list_len(budget.get('items')) if isinstance(budget, dict) else 0
+            if items < 8:
+                issues.append(f"经费预算科目不足：{items}个（要求≥8个）")
+        
+        elif dtype == 'protocol':
+            inclusion = _list_len(data.get('inclusion_criteria'))
+            if inclusion < 8:
+                issues.append(f"入选标准不足：{inclusion}条（要求≥8条）")
+            exclusion = _list_len(data.get('exclusion_criteria'))
+            if exclusion < 8:
+                issues.append(f"排除标准不足：{exclusion}条（要求≥8条）")
+            if _len(data.get('statistical_analysis')) < 400:
+                issues.append(f"统计方法描述不足：{_len(data.get('statistical_analysis'))}字（要求≥400字）")
+        
+        elif dtype == 'meta_analysis':
+            studies = _list_len(data.get('studies'))
+            if studies < 8:
+                issues.append(f"纳入研究数量不足：{studies}个（要求≥8个）")
+        
+        elif dtype == 'budget':
+            items = _list_len(data.get('items'))
+            if items < 8:
+                issues.append(f"预算科目不足：{items}个（要求≥8个）")
+        
+        elif dtype == 'survival':
+            records = _list_len(data)
+            if records < 30:
+                issues.append(f"数据记录不足：{records}条（要求≥30条）")
+        
+        elif dtype == 'response_letter':
+            responses = _list_len(data.get('responses'))
+            if responses < 3:
+                issues.append(f"回复审稿人数量不足：{responses}个（要求≥3个）")
+            for i, r in enumerate(data.get('responses', [])[:responses]):
+                if _len(r.get('response', '')) < 200:
+                    issues.append(f"Reviewer #{i+1} 回复字数不足：{_len(r.get('response', ''))}字（要求≥200字）")
+        
+        elif dtype == 'research_report':
+            for field in ['background', 'methods', 'results', 'discussion', 'conclusions']:
+                items = _list_len(data.get(field))
+                if items < 4:
+                    issues.append(f"{field} 内容点不足：{items}条（要求≥4条）")
+        
+        elif dtype == 'teaching':
+            findings = data if isinstance(data, list) else []
+            if _list_len(findings) < 5:
+                issues.append(f"征象数量不足：{_list_len(findings)}个（要求≥5个）")
+            for i, f in enumerate(findings[:_list_len(findings)]):
+                if _len(f.get('description', '')) < 100:
+                    issues.append(f"征象{i+1}描述不足：{_len(f.get('description', ''))}字（要求≥100字）")
+        
+        elif dtype == 'bioinformatics':
+            for field in ['sample_info', 'mutation_summary', 'pathways', 'survival', 'conclusions']:
+                items = _list_len(data.get(field))
+                if items < 4:
+                    issues.append(f"{field} 内容点不足：{items}条（要求≥4条）")
+        
+        elif dtype == 'journal_db':
+            journals = data if isinstance(data, list) else []
+            if _list_len(journals) < 15:
+                issues.append(f"期刊数量不足：{_list_len(journals)}个（要求≥15个）")
+        
+        passed = len(issues) == 0
+        return passed, issues
+    
     def _generate_deliverable(self, dtype: str, goal: str, subtasks: Dict[str, Any], output_dir: str) -> Optional[Dict[str, Any]]:
         """使用 LLM 生成交付物数据并导出为文件（增强版：内容详实、数据丰富）
 
@@ -1027,8 +1131,18 @@ class MedicalAgent:
 
             tp = type_prompts[dtype]
 
-            # 调用 LLM 生成结构化数据（增强版提示词）
-            prompt = f"""根据以下任务目标和子任务执行结果，生成一份高质量、内容详实的【{tp['label']}】。
+            # ========== Loop 质量检验：生成 → 硬规则检查 → LLM自评分 → 不通过则迭代优化 ==========
+            max_quality_rounds = 5
+            quality_pass_score = 8  # 满分10分，≥8分通过（提高门槛）
+            data = None
+            last_score = 0
+            last_review = ""
+            hard_rules_passed = False
+
+            for quality_round in range(max_quality_rounds):
+                if quality_round == 0:
+                    # 首轮生成
+                    gen_prompt = f"""根据以下任务目标和子任务执行结果，生成一份高质量、内容详实的【{tp['label']}】。
 
 ## 任务目标
 {goal}
@@ -1053,21 +1167,121 @@ class MedicalAgent:
 ```json
 {tp['data_schema']}
 ```"""
+                    messages = [
+                        {"role": "system", "content": tp['system']},
+                        {"role": "user", "content": gen_prompt},
+                    ]
+                else:
+                    # 迭代优化：附带评语让 LLM 改进
+                    gen_prompt = f"""你之前生成的【{tp['label']}】内容质量不够，需要改进。
 
-            messages = [
-                {"role": "system", "content": tp['system']},
-                {"role": "user", "content": prompt},
-            ]
-            response = _run_async(self.llm_router.chat(messages))
+## 质量评审意见（必须逐条改进）
+{last_review}
 
-            # 解析 JSON
-            resp_str = response.strip()
-            if "```json" in resp_str:
-                resp_str = resp_str.split("```json")[1].split("```")[0].strip()
-            elif "```" in resp_str:
-                resp_str = resp_str.split("```")[1].split("```")[0].strip()
+## 上一版数据
+{json.dumps(data, ensure_ascii=False, indent=2)[:6000]}
 
-            data = json.loads(resp_str)
+## 要求
+请根据评审意见逐条改进，重新生成完整的 JSON 数据。改进要点：
+1. 对评语中指出不足的部分，必须大幅扩充内容
+2. 之前达标的部分保持不变
+3. 严格按 JSON Schema 格式输出，只输出 JSON
+
+```json
+{tp['data_schema']}
+```"""
+                    messages = [
+                        {"role": "system", "content": tp['system']},
+                        {"role": "user", "content": gen_prompt},
+                    ]
+
+                response = _run_async(self.llm_router.chat(messages))
+
+                # 解析 JSON
+                resp_str = response.strip()
+                if "```json" in resp_str:
+                    resp_str = resp_str.split("```json")[1].split("```")[0].strip()
+                elif "```" in resp_str:
+                    resp_str = resp_str.split("```")[1].split("```")[0].strip()
+
+                data = json.loads(resp_str)
+
+                # --- 代码级硬规则检查（先于LLM自评分，快速拦截低质量数据） ---
+                hard_passed, hard_issues = self._check_deliverable_hard_rules(dtype, data)
+                if not hard_passed:
+                    logger.warning(f"Deliverable hard rules failed round {quality_round + 1}: {hard_issues}")
+                    last_review = "### 代码质量检查未通过（以下问题必须修复）：\n"
+                    for issue in hard_issues:
+                        last_review += f"- {issue}\n"
+                    # 硬规则不通过，直接进入下一轮迭代，跳过LLM自评分
+                    continue
+                else:
+                    hard_rules_passed = True
+                    logger.info(f"Deliverable hard rules passed round {quality_round + 1}")
+
+                # --- LLM 自评分 ---
+                data_preview = json.dumps(data, ensure_ascii=False, indent=2)[:8000]
+                review_prompt = f"""你是一位严格的质量评审专家。请对以下【{tp['label']}】的内容质量进行评分。
+
+## 质量标准
+{tp['quality_requirements']}
+
+## 待评审内容
+{data_preview}
+
+## 评分规则（满分10分）
+请从以下维度评分：
+1. **内容完整度**（0-3分）：所有字段是否都有实质性内容，有无空缺或占位符
+2. **数据丰富度**（0-3分）：是否包含具体数据、统计值、案例等量化信息
+3. **专业深度**（0-2分）：专业术语使用是否准确，论述是否深入
+4. **格式规范**（0-2分）：JSON结构是否完整，字段类型是否正确
+
+## 输出格式（严格按此格式，只输出JSON）
+```json
+{{"score": 8, "completeness": {{"score": 2, "issues": ["issue1"]}}, "richness": {{"score": 2, "issues": ["issue1"]}}, "depth": {{"score": 1, "issues": ["issue1"]}}, "format": {{"score": 2, "issues": []}}, "summary": "总体评价和改进建议", "improvements": ["具体改进建议1", "具体改进建议2"]}}
+```"""
+
+                review_messages = [
+                    {"role": "system", "content": "你是一位严格的质量评审专家，请客观、严格地评分。只有真正高质量的内容才能获得高分。"},
+                    {"role": "user", "content": review_prompt},
+                ]
+                review_response = _run_async(self.llm_router.chat(review_messages))
+
+                # 解析评分
+                review_str = review_response.strip()
+                if "```json" in review_str:
+                    review_str = review_str.split("```json")[1].split("```")[0].strip()
+                elif "```" in review_str:
+                    review_str = review_str.split("```")[1].split("```")[0].strip()
+
+                try:
+                    review_data = json.loads(review_str)
+                    last_score = review_data.get("score", 0)
+                    improvements = review_data.get("improvements", [])
+                    summary = review_data.get("summary", "")
+
+                    # 构建评审意见文本
+                    last_review = f"### 评分：{last_score}/10\n"
+                    if summary:
+                        last_review += f"### 总体评价\n{summary}\n"
+                    if improvements:
+                        last_review += f"### 必须改进的问题\n"
+                        for imp in improvements:
+                            last_review += f"- {imp}\n"
+
+                    logger.info(f"Deliverable quality round {quality_round + 1}: score={last_score}/10")
+
+                    if last_score >= quality_pass_score:
+                        logger.info(f"Deliverable passed quality check at round {quality_round + 1}")
+                        break
+                except (json.JSONDecodeError, KeyError) as e:
+                    logger.warning(f"Quality review parse error: {e}, accepting current data")
+                    break
+            # ========== Loop 质量检验结束 ==========
+
+            if data is None:
+                logger.error(f"All quality rounds failed for {dtype}, no valid data")
+                return None
 
             # 使用对应的导出器生成文件
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1107,7 +1321,7 @@ class MedicalAgent:
             export_fn = getattr(exporter, tp['exporter_fn'])
             export_fn(data, filepath)
 
-            logger.info(f"Deliverable generated: {filepath}")
+            logger.info(f"Deliverable generated: {filepath} (hard_rules={hard_rules_passed}, quality_score={last_score}/10)")
 
             return {
                 'type': dtype,
@@ -1115,7 +1329,9 @@ class MedicalAgent:
                 'format': tp['format'],
                 'filename': filename,
                 'filepath': filepath,
-                'size': os.path.getsize(filepath) if os.path.exists(filepath) else 0
+                'size': os.path.getsize(filepath) if os.path.exists(filepath) else 0,
+                'quality_score': last_score,
+                'hard_rules_passed': hard_rules_passed,
             }
         except json.JSONDecodeError as e:
             logger.error(f"Deliverable JSON parse error for {dtype}: {e}")

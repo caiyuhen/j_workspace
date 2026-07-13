@@ -6,3 +6,8 @@ pytest==7.4.2
 httpx==0.25.0
 transformers
 torch
+pandas
+pymongo
+pydicom
+minio
+pillow
