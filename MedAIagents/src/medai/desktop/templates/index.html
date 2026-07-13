@@ -1078,11 +1078,24 @@ function addPlanMessage(summaryText, planData, deliverables) {
             const sizeStr = size > 0 ? ` (${(size/1024).toFixed(1)}KB)` : '';
             const iconMap = { 'docx': '📄', 'pptx': '📊', 'xlsx': '📋' };
             const icon = iconMap[d.format] || '📁';
+            const score = d.quality_score || 0;
+            const hardPassed = d.hard_rules_passed;
+            let scoreBadge = '';
+            if (score > 0) {
+                const scoreColor = score >= 8 ? '#16a34a' : score >= 6 ? '#d97706' : '#dc2626';
+                scoreBadge = `<span class="plan-download-score" style="background:${scoreColor};color:white;padding:1px 6px;border-radius:10px;font-size:11px;margin-left:6px;">${score}/10</span>`;
+            }
+            let hardBadge = '';
+            if (hardPassed === true) {
+                hardBadge = `<span style="background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:8px;font-size:10px;margin-left:4px;">✓ 规则通过</span>`;
+            } else if (hardPassed === false) {
+                hardBadge = `<span style="background:#fee2e2;color:#991b1b;padding:1px 5px;border-radius:8px;font-size:10px;margin-left:4px;">✗ 规则未过</span>`;
+            }
             deliverablesHtml += `
                 <a href="/api/download/${encodeURIComponent(filename)}" class="plan-download-btn" download>
                     <span class="plan-download-icon">${icon}</span>
                     <span class="plan-download-info">
-                        <span class="plan-download-label">${label}</span>
+                        <span class="plan-download-label">${label}${scoreBadge}${hardBadge}</span>
                         <span class="plan-download-meta">${filename}${sizeStr}</span>
                     </span>
                     <span class="plan-download-action">下载</span>
