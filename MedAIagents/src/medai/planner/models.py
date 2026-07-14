@@ -44,6 +44,7 @@ class TaskPlan(BaseModel):
     subtasks: List[SubTask]
     created_at: datetime = Field(default_factory=datetime.now)
     completed_at: Optional[datetime] = None
+    replan_count: int = 0  # 重规划次数
 
     def get_subtask(self, subtask_id: str) -> Optional[SubTask]:
         """根据 id 获取子任务"""
