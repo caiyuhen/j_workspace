@@ -1043,6 +1043,7 @@ function addPlanMessage(summaryText, planData, deliverables) {
     const goal = planData.goal || '任务规划';
     const subtasks = planData.subtasks || {};
     const summary = planData.summary || '';
+    const replanCount = planData.replan_count || 0;
     
     let tasksHtml = '';
     let completed = 0, failed = 0, total = 0;
@@ -1118,6 +1119,7 @@ function addPlanMessage(summaryText, planData, deliverables) {
                 <div class="plan-stats">
                     <span>完成 ${completed}/${total}</span>
                     ${failed > 0 ? `<span class="plan-fail-count">失败 ${failed}</span>` : ''}
+                    ${replanCount > 0 ? `<span class="plan-replan-count" style="color:#4b3fe3;font-weight:500;">🔄 重规划 ${replanCount}次</span>` : ''}
                     <span>${progress}%</span>
                 </div>
                 <div class="plan-tasks">${tasksHtml}</div>

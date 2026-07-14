@@ -13,6 +13,11 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread
 TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 
+class DummyNERMapper:
+    def extract_entities_batch(self, texts, batch_size=16):
+        return [{} for _ in texts]
+
+
 @pytest.fixture(scope="function")
 def db_session():
     import app.models.raw
@@ -61,7 +66,7 @@ def test_transform_raw_to_person_staging(db_session):
         "birth_datetime": "birth_date",
     }
 
-    transformer = StagingTransformer(db_session)
+    transformer = StagingTransformer(db_session, ner_mapper=DummyNERMapper())
     transformer.transform_batch_to_person(batch_id="batch_1", mapping_config=mapping_config)
 
     staging_persons = db_session.query(StagingPerson).order_by(StagingPerson.person_source_value).all()

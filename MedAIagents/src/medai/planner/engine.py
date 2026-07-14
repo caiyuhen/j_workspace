@@ -66,19 +66,60 @@ class TaskPlanner:
         plan: TaskPlan,
         executor: Any,
         max_parallel: int = 3,
+        enable_replan: bool = True,
+        max_replan: int = 2,
     ) -> TaskPlan:
-        """执行任务计划
+        """执行任务计划（支持动态重规划 Loop）
 
         按依赖关系拓扑排序，并行执行无依赖的任务。
         失败任务自动重试 1 次。
+        当失败比例过高或关键任务失败时，自动触发重规划。
 
         Args:
             plan: 任务计划
             executor: 执行器，需实现 `execute(tool_name, arguments)` 接口
             max_parallel: 最大并行数
+            enable_replan: 是否启用动态重规划
+            max_replan: 最大重规划次数
 
         Returns:
             执行后的任务计划（含结果）
+        """
+        original_goal = plan.goal
+        replan_count = 0
+
+        while True:
+            # 执行当前 plan
+            await self._execute_once(plan, executor, max_parallel)
+
+            # 检查是否需要重规划
+            if not enable_replan or replan_count >= max_replan:
+                break
+
+            should_replan, reason = self._should_replan(plan)
+            if not should_replan:
+                break
+
+            logger.info(f"触发重规划 (第 {replan_count + 1} 次): {reason}")
+            new_plan = await self._replan(plan, original_goal)
+            plan = self._merge_replan_results(plan, new_plan)
+            replan_count += 1
+            logger.info(f"重规划完成，新任务数: {len(plan.subtasks)}，继续执行...")
+
+        plan.replan_count = replan_count
+        plan.completed_at = datetime.now()
+        return plan
+
+    async def _execute_once(
+        self,
+        plan: TaskPlan,
+        executor: Any,
+        max_parallel: int = 3,
+    ) -> None:
+        """单次执行任务计划（内部方法）
+
+        按依赖关系拓扑排序，并行执行无依赖的任务。
+        失败任务自动重试 1 次。
         """
         sorted_subtasks = self._topological_sort(plan.subtasks)
         if sorted_subtasks is None:
@@ -181,8 +222,176 @@ class TaskPlanner:
                         st.error = "依赖不可达或存在循环依赖"
                     break
 
-        plan.completed_at = datetime.now()
-        return plan
+    def _should_replan(self, plan: TaskPlan) -> tuple:
+        """判断是否需要重规划
+
+        Returns:
+            (should_replan: bool, reason: str)
+        """
+        total = len(plan.subtasks)
+        if total == 0:
+            return False, "无子任务"
+
+        completed = [st for st in plan.subtasks if st.status == TaskStatus.COMPLETED]
+        failed = [st for st in plan.subtasks if st.status == TaskStatus.FAILED]
+        failed_count = len(failed)
+        completed_count = len(completed)
+
+        # 条件1：失败比例 > 30%
+        failure_rate = failed_count / total
+        if failure_rate > 0.3:
+            return True, f"失败比例过高 ({failure_rate:.0%}，{failed_count}/{total}个任务失败)"
+
+        # 条件2：全部失败
+        if failed_count == total:
+            return True, f"所有任务均失败 ({failed_count}/{total})"
+
+        # 条件3：关键任务失败（没有任何任务成功完成）
+        if completed_count == 0 and failed_count > 0:
+            return True, f"关键任务失败，无任何成功结果"
+
+        # 条件4：失败任务包含明显的规划错误信号
+        for st in failed:
+            error_lower = (st.error or "").lower()
+            if any(kw in error_lower for kw in ["工具", "tool", "不存在", "not found", "unknown"]):
+                return True, f"任务'{st.description[:30]}'因工具/资源缺失失败，需要重新规划"
+
+        return False, ""
+
+    async def _replan(self, plan: TaskPlan, original_goal: str) -> TaskPlan:
+        """基于执行结果重新规划任务
+
+        将已完成的子任务结果和失败原因反馈给 LLM，生成修订后的任务计划。
+        """
+        # 收集已完成任务的摘要
+        completed_tasks = []
+        for st in plan.subtasks:
+            if st.status == TaskStatus.COMPLETED:
+                result_summary = ""
+                if st.result:
+                    if isinstance(st.result, dict):
+                        result_summary = json.dumps(st.result, ensure_ascii=False, indent=2)[:500]
+                    else:
+                        result_summary = str(st.result)[:500]
+                completed_tasks.append({
+                    "id": st.id,
+                    "description": st.description,
+                    "result_summary": result_summary,
+                })
+
+        # 收集失败任务的原因
+        failed_tasks = []
+        for st in plan.subtasks:
+            if st.status == TaskStatus.FAILED:
+                failed_tasks.append({
+                    "id": st.id,
+                    "description": st.description,
+                    "error": st.error or "未知错误",
+                })
+
+        prompt = self._build_replanning_prompt(
+            original_goal, completed_tasks, failed_tasks
+        )
+        messages = [
+            {"role": "system", "content": "你是一个任务规划专家。根据前序任务的执行结果，重新规划剩余任务。"},
+            {"role": "user", "content": prompt},
+        ]
+
+        try:
+            response = await self.llm_router.chat(messages)
+            new_plan = self._parse_plan(response)
+            return new_plan
+        except Exception as e:
+            logger.error(f"Re-planning failed: {e}")
+            # 重规划失败，返回空计划（表示无可补充任务）
+            return TaskPlan(goal=original_goal, subtasks=[])
+
+    def _merge_replan_results(self, old_plan: TaskPlan, new_plan: TaskPlan) -> TaskPlan:
+        """合并重规划结果：保留已完成的旧任务，添加新任务
+
+        新任务会获得新的 id，避免与旧任务冲突。
+        """
+        # 保留已完成的旧任务
+        merged_subtasks = [
+            st for st in old_plan.subtasks if st.status == TaskStatus.COMPLETED
+        ]
+
+        # 为新增任务生成新的 id
+        existing_ids = {st.id for st in merged_subtasks}
+        for i, st in enumerate(new_plan.subtasks):
+            new_id = f"replanned_task_{i + 1}"
+            while new_id in existing_ids:
+                new_id = f"replanned_task_{i + 1}_{len(existing_ids)}"
+                existing_ids.add(new_id)
+            st.id = new_id
+            # 重置状态为待执行
+            st.status = TaskStatus.PENDING
+            st.result = None
+            st.error = None
+            # 更新依赖关系（指向已完成的旧任务或新任务）
+            st.dependencies = [
+                dep for dep in st.dependencies if dep in existing_ids
+            ]
+            merged_subtasks.append(st)
+            existing_ids.add(new_id)
+
+        return TaskPlan(
+            goal=old_plan.goal,
+            subtasks=merged_subtasks,
+        )
+
+    def _build_replanning_prompt(
+        self,
+        goal: str,
+        completed_tasks: List[Dict],
+        failed_tasks: List[Dict],
+    ) -> str:
+        """构建重规划提示词"""
+        completed_str = ""
+        for ct in completed_tasks:
+            completed_str += f"\n- [{ct['id']}] {ct['description']}\n  结果摘要: {ct['result_summary'][:200]}\n"
+
+        failed_str = ""
+        for ft in failed_tasks:
+            failed_str += f"\n- [{ft['id']}] {ft['description']}\n  失败原因: {ft['error']}\n"
+
+        prompt = f"""原任务目标：{goal}
+
+部分任务已经执行，但后续任务因失败或规划不当需要重新规划。
+
+## 已完成的任务（结果可直接使用）
+{completed_str or "（无）"}
+
+## 失败的任务（需要替代方案）
+{failed_str or "（无）"}
+
+## 要求
+请重新规划剩余任务，以达成最终目标。注意：
+1. 已完成的任务结果可以作为后续任务的输入
+2. 失败的任务需要设计替代方案（更换工具、调整策略或绕过）
+3. 新任务不要重复已完成的工作
+4. 新任务的 dependencies 只引用已完成的任务 id
+
+## 输出格式
+请严格按照以下 JSON 格式输出，不要包含其他内容：
+
+```json
+{{
+  "goal": "{goal}",
+  "subtasks": [
+    {{
+      "id": "task_1",
+      "description": "新任务描述",
+      "tool": "",
+      "arguments": {{}},
+      "dependencies": []
+    }}
+  ]
+}}
+```
+
+如果已完成的任务已足够达成目标，可以输出空的 subtasks 列表。"""
+        return prompt
 
     def _build_planning_prompt(self, request: str, tools: List[Dict]) -> str:
         """构建任务分解提示词"""

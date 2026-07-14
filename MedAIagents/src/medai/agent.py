@@ -533,6 +533,7 @@ class MedicalAgent:
                 'subtasks': results,
                 'summary': self._summarize_results(results),
                 'deliverables': [],
+                'replan_count': getattr(executed_plan, 'replan_count', 0),
             }
             
             # 自动检测并生成交付物
