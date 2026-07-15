@@ -503,6 +503,17 @@ Implementation should proceed in this order:
 3. SQLite is acceptable for functional delivery, but very large-scale performance expectations may later require a stronger analytical store
 4. replay scope must be tightly validated to avoid accidental duplicate processing
 
+## Implementation Status
+
+- backend incremental metadata: done
+- replay orchestration endpoint: done
+- selective staging for changed rows: done
+- batch analytics summary generation: done
+- batch analytics list, compare, and CSV export APIs: done
+- frontend batch analytics workspace entry: done
+- full replay execution pipeline beyond placeholder orchestration: pending
+- richer batch detail drawer and comparison visualization: pending
+
 ## Self Review
 
 - no placeholder sections remain

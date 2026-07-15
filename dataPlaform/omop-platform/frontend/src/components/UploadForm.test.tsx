@@ -14,16 +14,16 @@ describe('UploadForm', () => {
 
   it('renders upload form', () => {
     render(<UploadForm onUploadSuccess={vi.fn()} />);
-    expect(screen.getByText(/Upload CSV File/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /upload/i })).toBeInTheDocument();
+    expect(screen.getByText('多模态数据上传')).toBeInTheDocument();
+    expect(screen.getByLabelText('选择 CSV / DICOM 文件')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '上传并自动处理' })).toBeInTheDocument();
   });
 
   it('shows error if uploading without file', async () => {
     render(<UploadForm onUploadSuccess={vi.fn()} />);
-    const button = screen.getByRole('button', { name: /upload/i });
+    const button = screen.getByRole('button', { name: '上传并自动处理' });
+    expect(button).toBeDisabled();
     fireEvent.click(button);
-    // Button should be disabled now when files length is 0, so click shouldn't trigger toast.
-    // We can just assert the button is disabled.
     expect(button).toBeDisabled();
   });
 
@@ -41,14 +41,14 @@ describe('UploadForm', () => {
 
     render(<UploadForm onUploadSuccess={mockSuccessFn} />);
     
-    // Create a mock file
     const file = new File(['hello'], 'test.csv', { type: 'text/csv' });
-    const input = screen.getByLabelText(/Select CSV/i);
+    const input = screen.getByLabelText('选择 CSV / DICOM 文件');
     
     fireEvent.change(input, { target: { files: [file] } });
-    fireEvent.click(screen.getByRole('button', { name: /upload/i }));
+    fireEvent.click(screen.getByRole('button', { name: '上传并自动处理' }));
 
-    expect(await screen.findByText(/Upload successful/i)).toBeInTheDocument();
-    expect(mockSuccessFn).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockSuccessFn).toHaveBeenCalledWith('123');
+    });
   });
 });
