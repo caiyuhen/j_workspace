@@ -10,8 +10,24 @@ class RawPersistenceService:
     def __init__(self, db: Session):
         self.db = db
 
-    def create_batch(self, filename: str) -> SourceBatch:
-        batch = SourceBatch(filename=filename, status="processing")
+    def create_batch(
+        self,
+        filename: str,
+        batch_type: str = "full",
+        dataset_name: str = "ingestion",
+        trigger_mode: str = "auto",
+        window_start: Optional[datetime] = None,
+        window_end: Optional[datetime] = None,
+    ) -> SourceBatch:
+        batch = SourceBatch(
+            filename=filename,
+            status="processing",
+            batch_type=batch_type,
+            dataset_name=dataset_name,
+            trigger_mode=trigger_mode,
+            window_start=window_start,
+            window_end=window_end,
+        )
         self.db.add(batch)
         self.db.commit()
         self.db.refresh(batch)
