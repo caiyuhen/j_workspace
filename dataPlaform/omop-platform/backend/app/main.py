@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api import sources, ingestion, dicom, monitor, pipeline
-from app.db.database import engine, Base
+from app.db.database import engine, Base, ensure_sqlite_schema_compatibility
 from app.models import models
 
 # 创建数据库表
 Base.metadata.create_all(bind=engine)
+ensure_sqlite_schema_compatibility(engine, Base.metadata)
 
 app = FastAPI(
     title="OMOP Data Platform API",
