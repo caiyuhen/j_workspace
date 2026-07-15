@@ -1,5 +1,7 @@
 import asyncio
+from datetime import datetime
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, BackgroundTasks
+from fastapi.responses import Response
 from sqlalchemy.orm import Session
 import os
 import shutil
@@ -13,6 +15,7 @@ from app.services.nlp_mapper import NLPMapper
 from app.services.raw_persistence import RawPersistenceService
 from app.services.staging_transformer import StagingTransformer
 from app.services.profiler import DataProfiler
+from app.services.batch_analytics import BatchAnalyticsService
 from app.db.database import get_db, SessionLocal, Base, ensure_sqlite_schema_compatibility
 from app.models.raw import SourceBatch, ErrorRecord
 from app.schemas.ingestion import BatchResponse, ReplayRequest, ReplayResponse
@@ -288,6 +291,44 @@ def replay_incremental_batch(
         window_end=batch.window_end,
         status=batch.status,
     )
+
+
+@router.get("/batch-analytics")
+def list_batch_analytics(
+    batch_type: str | None = None,
+    start_time: datetime | None = None,
+    end_time: datetime | None = None,
+    status: str | None = None,
+    db: Session = Depends(get_db),
+):
+    service = BatchAnalyticsService(db)
+    rows = service.query_summaries(
+        batch_type=batch_type,
+        start_time=start_time,
+        end_time=end_time,
+        status=status,
+    )
+    return {"items": [service.serialize_row(batch, summary) for batch, summary in rows]}
+
+
+@router.get("/batch-analytics/export")
+def export_batch_analytics(batch_ids: str = "", db: Session = Depends(get_db)):
+    batch_id_list = [item for item in batch_ids.split(",") if item]
+    content = BatchAnalyticsService(db).export_csv(batch_id_list)
+    return Response(content=content, media_type="text/csv")
+
+
+@router.get("/batch-analytics/compare")
+def compare_batch_analytics(batch_ids: str = "", db: Session = Depends(get_db)):
+    batch_id_list = [item for item in batch_ids.split(",") if item]
+    service = BatchAnalyticsService(db)
+    rows = service.query_summaries()
+    filtered_rows = [
+        service.serialize_row(batch, summary)
+        for batch, summary in rows
+        if not batch_id_list or batch.id in batch_id_list
+    ]
+    return {"items": filtered_rows}
 
 @router.post("/upload")
 async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
