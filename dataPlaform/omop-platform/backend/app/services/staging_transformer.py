@@ -2,7 +2,7 @@ import json
 import re
 import time
 from sqlalchemy.orm import Session
-from sqlalchemy import text
+from sqlalchemy import or_, text
 from collections import OrderedDict
 from typing import Dict, Any, Optional, Tuple
 from datetime import datetime
@@ -269,6 +269,31 @@ class StagingTransformer:
         extra_parts = [f"{key}={value}" for key, value in (extra or {}).items()]
         return f"{prefix} {' '.join(metric_parts + extra_parts)}".strip()
 
+    def _delete_existing_staging_rows(self, batch_id: str, business_key: str) -> None:
+        if not business_key:
+            return
+
+        staging_models = (
+            StagingPerson,
+            StagingVisitOccurrence,
+            StagingObservation,
+            StagingMeasurement,
+            StagingConditionOccurrence,
+            StagingDrugExposure,
+            StagingProcedureOccurrence,
+            StagingNote,
+            StagingNoteNlp,
+            StagingSpecimen,
+            StagingDeviceExposure,
+            StagingDeath,
+        )
+
+        for model in staging_models:
+            self.db.query(model).filter(
+                model.source_batch_id == batch_id,
+                model.person_source_value == business_key,
+            ).delete(synchronize_session=False)
+
     def transform_batch_to_person(self, batch_id: str, mapping_config: Dict[str, str]):
         """
         Extracts records from RawZone, applies mapping/cleaning, and inserts to StagingPerson.
@@ -281,6 +306,12 @@ class StagingTransformer:
             raw_records = (
                 self.db.query(RawRecord)
                 .filter(RawRecord.batch_id == batch_id)
+                .filter(
+                    or_(
+                        RawRecord.change_type.is_(None),
+                        RawRecord.change_type.in_(["insert", "update", "delete"]),
+                    )
+                )
                 .limit(self.BATCH_SIZE)
                 .offset(offset)
                 .all()
@@ -296,6 +327,10 @@ class StagingTransformer:
             nlp_tasks = []
             
             for raw in raw_records:
+                if raw.change_type == "delete":
+                    self._delete_existing_staging_rows(batch_id=batch_id, business_key=raw.business_key or "")
+                    continue
+
                 # 1. Base clean (empty strings to None)
                 raw_dict = raw.row_data if isinstance(raw.row_data, dict) else json.loads(raw.row_data)
                 cleaned_row = self.cleaner.clean_empty_values(raw_dict)
