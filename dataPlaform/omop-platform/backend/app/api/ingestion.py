@@ -13,9 +13,9 @@ from app.services.nlp_mapper import NLPMapper
 from app.services.raw_persistence import RawPersistenceService
 from app.services.staging_transformer import StagingTransformer
 from app.services.profiler import DataProfiler
-from app.db.database import get_db, SessionLocal
+from app.db.database import get_db, SessionLocal, Base, ensure_sqlite_schema_compatibility
 from app.models.raw import SourceBatch, ErrorRecord
-from app.schemas.ingestion import BatchResponse
+from app.schemas.ingestion import BatchResponse, ReplayRequest, ReplayResponse
 from typing import List
 
 router = APIRouter()
@@ -78,7 +78,11 @@ def process_csv_task(tmp_path: str, filename: str, batch_id: str):
             import time
             start_time = time.time()
             data_logger.info(f"[{batch_id}] 开始执行深度 NLP 实体提取与 Staging 转换...")
-            
+
+            schema_changes = ensure_sqlite_schema_compatibility(db.get_bind(), Base.metadata)
+            if schema_changes["columns_added"] or schema_changes["indexes_added"]:
+                data_logger.info(f"[{batch_id}] SQLite schema auto-repaired: {schema_changes}")
+
             transformer = StagingTransformer(db)
             transformer.transform_batch_to_person(batch_id, auto_mapping)
             
@@ -102,6 +106,31 @@ def process_csv_task(tmp_path: str, filename: str, batch_id: str):
             loop.close()
         except:
             pass
+
+
+def process_replay_task(
+    batch_id: str,
+    dataset_name: str,
+    window_start=None,
+    window_end=None,
+    source_batch_id: str = None,
+    business_keys: List[str] = None,
+):
+    db = SessionLocal()
+    try:
+        data_logger.info(
+            f"[{batch_id}] Starting replay orchestration "
+            f"(dataset={dataset_name}, window_start={window_start}, window_end={window_end}, "
+            f"source_batch_id={source_batch_id}, business_keys={business_keys or []})"
+        )
+        persistence_svc = RawPersistenceService(db)
+        persistence_svc.complete_batch(batch_id, total_rows=0, error_rows=0)
+    except Exception:
+        data_logger.error(f"====== REPLAY TASK CRASHED ======\n{traceback.format_exc()}\n=================================")
+        persistence_svc = RawPersistenceService(db)
+        persistence_svc.complete_batch(batch_id, total_rows=0, error_rows=0, status="failed")
+    finally:
+        db.close()
 
 @router.post("/clear")
 def clear_data(db: Session = Depends(get_db)):
@@ -186,8 +215,17 @@ def list_batches(db: Session = Depends(get_db)):
         item = {
             "id": str(b.id),
             "filename": str(b.filename),
+            "batch_type": str(b.batch_type or "full"),
+            "dataset_name": str(b.dataset_name or "ingestion"),
+            "trigger_mode": str(b.trigger_mode or "auto"),
+            "window_start": b.window_start.isoformat() if b.window_start else None,
+            "window_end": b.window_end.isoformat() if b.window_end else None,
             "total_rows": int(b.total_rows or 0),
             "error_rows": int(b.error_rows or 0),
+            "inserted_rows": int(b.inserted_rows or 0),
+            "updated_rows": int(b.updated_rows or 0),
+            "deleted_rows": int(b.deleted_rows or 0),
+            "unchanged_rows": int(b.unchanged_rows or 0),
             "status": str(b.status),
             "profiling_data": prof_data,
             "created_at": b.created_at.isoformat() if b.created_at else None
@@ -216,6 +254,41 @@ def list_batch_errors(batch_id: str, skip: int = 0, limit: int = 100, db: Sessio
         
     return {"total": total_count, "items": result}
 
+
+@router.post("/replay", response_model=ReplayResponse)
+def replay_incremental_batch(
+    payload: ReplayRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+):
+    persistence = RawPersistenceService(db)
+    batch = persistence.create_batch(
+        filename="manual-replay.csv",
+        batch_type="replay",
+        dataset_name=payload.dataset_name,
+        trigger_mode=payload.trigger_mode,
+        window_start=payload.window_start,
+        window_end=payload.window_end,
+    )
+    background_tasks.add_task(
+        process_replay_task,
+        batch.id,
+        payload.dataset_name,
+        payload.window_start,
+        payload.window_end,
+        payload.batch_id,
+        payload.business_keys,
+    )
+    return ReplayResponse(
+        batch_id=batch.id,
+        batch_type=batch.batch_type,
+        dataset_name=batch.dataset_name,
+        trigger_mode=batch.trigger_mode,
+        window_start=batch.window_start,
+        window_end=batch.window_end,
+        status=batch.status,
+    )
+
 @router.post("/upload")
 async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File(...)):
     if not file.filename.endswith('.csv'):
@@ -236,10 +309,7 @@ async def upload_file(background_tasks: BackgroundTasks, file: UploadFile = File
         # This completely avoids FastAPI's Depends(get_db) auto-rollback issues
         dedicated_db = SessionLocal()
         try:
-            batch = SourceBatch(filename=file.filename, status="processing")
-            dedicated_db.add(batch)
-            dedicated_db.commit()
-            dedicated_db.refresh(batch)
+            batch = RawPersistenceService(dedicated_db).create_batch(filename=file.filename)
             batch_id = batch.id
         finally:
             dedicated_db.close()
