@@ -164,3 +164,42 @@ def test_batch_analytics_compare_returns_selected_batches(client, db_session):
     assert response.status_code == 200
     payload = response.json()
     assert [item["id"] for item in payload["items"]] == ["batch_compare_1", "batch_compare_2"]
+
+
+def test_batch_analytics_list_exposes_summary_metrics(client, db_session):
+    batch = SourceBatch(
+        id="batch_metrics",
+        filename="metrics.csv",
+        batch_type="incremental",
+        dataset_name="ingestion",
+        status="completed",
+        total_rows=7,
+        error_rows=1,
+        inserted_rows=2,
+        updated_rows=3,
+        deleted_rows=1,
+    )
+    db_session.add(batch)
+    db_session.add_all(
+        [
+            RawRecord(batch_id=batch.id, row_data={"patient_id": "P1"}, change_type="insert"),
+            RawRecord(batch_id=batch.id, row_data={"patient_id": "P2"}, change_type="update"),
+            ErrorRecord(batch_id=batch.id, line_number=9, raw_data={"patient_id": "PX"}, error_message="bad row"),
+        ]
+    )
+    db_session.commit()
+
+    BatchAnalyticsService(db_session).build_summary_for_batch(batch.id)
+
+    response = client.get(
+        "/api/v1/ingestion/batch-analytics",
+        params={"batch_type": "incremental"},
+    )
+
+    assert response.status_code == 200
+    payload = response.json()
+    metrics_row = next(item for item in payload["items"] if item["id"] == "batch_metrics")
+    assert metrics_row["core_metrics"] == {"raw_records": 2, "error_records": 1}
+    assert metrics_row["inserted_rows"] == 2
+    assert metrics_row["updated_rows"] == 3
+    assert metrics_row["deleted_rows"] == 1
