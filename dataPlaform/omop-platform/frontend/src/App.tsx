@@ -3,6 +3,7 @@ import DataSourceList from './components/DataSourceList'
 import type { DataSource } from './components/DataSourceList'
 import UploadForm from './components/UploadForm'
 import BatchHistory from './components/BatchHistory'
+import BatchAnalyticsPanel from './components/BatchAnalyticsPanel'
 import { PipelineMonitor } from './components/PipelineMonitor'
 import { QualityReport } from './components/QualityReport'
 import { ProfilingReport } from './components/ProfilingReport'
@@ -21,6 +22,7 @@ function App() {
   const [batchError, setBatchError] = useState<string | null>(null)
   const [autoOpenBatchId, setAutoOpenBatchId] = useState<string | null>(null)
   const [selectedProfilingBatch, setSelectedProfilingBatch] = useState<Batch | null>(null)
+  const [selectedAnalyticsBatch, setSelectedAnalyticsBatch] = useState<Batch | null>(null)
 
   const fetchBatches = useCallback((showLoading = false) => {
     if (showLoading) setLoadingBatches(true);
@@ -162,6 +164,11 @@ function App() {
                 {/* Right Column: Upload & History */}
                 <div className="lg:col-span-2 space-y-6">
                   <UploadForm onUploadSuccess={handleUploadSuccess} />
+                  <BatchAnalyticsPanel
+                    batches={batches}
+                    onSelectBatch={setSelectedAnalyticsBatch}
+                    onExport={() => window.open('http://127.0.0.1:8433/api/v1/ingestion/batch-analytics/export', '_blank')}
+                  />
                   <BatchHistory 
                     batches={batches} 
                     loading={loadingBatches} 
@@ -171,6 +178,14 @@ function App() {
                     onAutoOpenDone={() => setAutoOpenBatchId(null)}
                     onOpenProfiling={handleOpenProfiling}
                   />
+                  {selectedAnalyticsBatch && (
+                    <div className="rounded-xl border bg-white p-4 shadow-sm">
+                      <div className="text-sm font-semibold text-slate-900">当前选中批次</div>
+                      <div className="mt-2 text-sm text-slate-600">
+                        {selectedAnalyticsBatch.filename} / {selectedAnalyticsBatch.id}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
