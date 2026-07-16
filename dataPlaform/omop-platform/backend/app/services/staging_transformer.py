@@ -37,14 +37,21 @@ class StagingTransformer:
         "lab_results",
         "chief_complaint",
         "history_of_present_illness",
+        "physical_examination",
+        "icd_diagnosis",
+        "electronic_prescription",
         "imaging_reports",
+        "critical_values",
         "admission_record",
         "daily_course_record",
         "discharge_summary",
         "treatment_plan",
     )
-    RX_FORMS = ("片", "胶囊", "颗粒", "注射液", "口服液")
-    NLP_MEDICATION_PATTERN = re.compile(r"药名：(.*?)\s+剂型：(.*?)\s+给药方式：(.*)")
+    RX_FORMS = ("肠溶片", "分散片", "糖衣片", "薄膜衣片", "咀嚼片", "口腔崩解片", "软胶囊", "胶囊", "颗粒", "注射液", "口服液", "糖浆", "丸", "片")
+    RX_ROUTES = ("静脉滴注", "静滴", "静脉注射", "静注", "肌肉注射", "肌注", "皮下注射", "皮注", "口服", "吞服", "含服", "舌下含服", "外用", "涂抹", "贴敷", "雾化吸入", "雾化", "滴眼", "滴鼻", "滴耳", "注射")
+    RX_FREQUENCY_PATTERN = re.compile(r"\b(qd|bid|tid|qid|qod|qhs|qn|prn|st)\b|每日[一二三四五六七八九十0-9]+次|每[日天晚晨][一二三四五六七八九十0-9]*次", re.IGNORECASE)
+    RX_DOSE_PATTERN = re.compile(r"\b\d+(?:\.\d+)?\s*(?:mg|g|ug|mcg|μg|ml|mL|IU|iu|片|粒|袋|支|丸)\b", re.IGNORECASE)
+    NLP_MEDICATION_PATTERN = re.compile(r"药名：(.*?)\s+剂型：(.*?)\s+给药方式：(.*?)(?:\s+剂量：(.*?))?(?:\s+频次：(.*))?$")
     NLP_MEASUREMENT_PATTERN = re.compile(r"检查项：(.*?)\s+值:([^\s]+)(?:\s+单位:(.*))?")
     NLP_SYMPTOM_PATTERN = re.compile(r"症状：(.*?)\s+持续时间：([^\s]+)")
 
@@ -61,6 +68,71 @@ class StagingTransformer:
         if not match:
             return None
         return match.group(1).strip(), match.group(2).strip(), match.group(3).strip()
+
+    @classmethod
+    def _parse_medication_components(cls, med_val: str) -> Optional[Dict[str, str]]:
+        if not med_val:
+            return None
+
+        match = cls.NLP_MEDICATION_PATTERN.search(med_val)
+        if match:
+            return {
+                "name": match.group(1).strip(),
+                "form": match.group(2).strip(),
+                "route": match.group(3).strip(),
+                "dose": match.group(4).strip() if match.group(4) else "",
+                "frequency": match.group(5).strip() if match.group(5) else "",
+            }
+
+        normalized = re.sub(r"[，,;；]+", " ", med_val).strip()
+        if not normalized:
+            return None
+
+        dose_match = cls.RX_DOSE_PATTERN.search(normalized)
+        freq_match = cls.RX_FREQUENCY_PATTERN.search(normalized)
+
+        dose = dose_match.group(0).strip() if dose_match else ""
+        frequency = freq_match.group(0).strip() if freq_match else ""
+
+        route = ""
+        for candidate in cls.RX_ROUTES:
+            if candidate in normalized:
+                route = candidate
+                break
+
+        stripped = normalized
+        if dose:
+            stripped = stripped.replace(dose, " ", 1)
+        if frequency:
+            stripped = re.sub(re.escape(frequency), " ", stripped, count=1, flags=re.IGNORECASE)
+        if route:
+            stripped = stripped.replace(route, " ", 1)
+        stripped = re.sub(r"\s+", " ", stripped).strip()
+
+        form = ""
+        name = stripped
+        for candidate in cls.RX_FORMS:
+            if stripped.endswith(candidate):
+                form = candidate
+                name = stripped[: -len(candidate)].strip()
+                break
+
+        if not route:
+            if "注射" in form:
+                route = "注射"
+            elif form:
+                route = "口服"
+
+        if not name:
+            name = stripped
+
+        return {
+            "name": name,
+            "form": form,
+            "route": route,
+            "dose": dose,
+            "frequency": frequency.lower() if re.fullmatch(r"[A-Za-z]+", frequency or "") else frequency,
+        }
 
     @classmethod
     def _parse_nlp_measurement_value(cls, meas_val: str) -> Optional[Tuple[str, str, str]]:
@@ -437,27 +509,22 @@ class StagingTransformer:
                 # 6.2 Medication -> StagingDrugExposure
                 rx_val = cleaned_row.get("electronic_prescription")
                 if rx_val:
-                    # Example: "阿司匹林肠溶片 100mg qd"
-                    parts = rx_val.split(" ")
-                    name = parts[0] if len(parts) > 0 else rx_val
-                    dose = parts[1] if len(parts) > 1 else ""
-                    freq = parts[2] if len(parts) > 2 else ""
-                    
-                    # 简单提取剂型 (如果包含片/胶囊/颗粒等)
-                    form = ""
-                    for f in ["片", "胶囊", "颗粒", "注射液", "口服液"]:
-                        if f in name:
-                            form = f
-                            break
-                            
+                    parsed_rx = self._parse_medication_components(rx_val) or {
+                        "name": rx_val,
+                        "form": "",
+                        "route": "",
+                        "dose": "",
+                        "frequency": "",
+                    }
                     drug = StagingDrugExposure(
                         source_batch_id=batch_id,
                         raw_record_id=raw.id,
                         person_source_value=person.person_source_value,
-                        drug_source_value=name,
-                        dose_source_value=dose,
-                        form_source_value=form,
-                        frequency_source_value=freq
+                        drug_source_value=parsed_rx["name"],
+                        dose_source_value=parsed_rx["dose"],
+                        form_source_value=parsed_rx["form"],
+                        route_source_value=parsed_rx["route"],
+                        frequency_source_value=parsed_rx["frequency"]
                     )
                     self._apply_visit_start(drug, visit, "drug_exposure_start_datetime", "drug_exposure_start_date")
                     staging_objects.append(drug)
@@ -528,16 +595,17 @@ class StagingTransformer:
                         
                     # Process Medications
                     for med_val in extracted_entities.get("medications", []):
-                        parsed_med = self._parse_nlp_medication_value(med_val)
+                        parsed_med = self._parse_medication_components(med_val)
                         if parsed_med:
-                            d_name, d_form, d_route = parsed_med
                             drug = StagingDrugExposure(
                                 source_batch_id=b_id,
                                 raw_record_id=r_id,
                                 person_source_value=person_source_value,
-                                drug_source_value=d_name,
-                                form_source_value=d_form,
-                                route_source_value=d_route,
+                                drug_source_value=parsed_med["name"],
+                                form_source_value=parsed_med["form"],
+                                route_source_value=parsed_med["route"],
+                                dose_source_value=parsed_med["dose"],
+                                frequency_source_value=parsed_med["frequency"],
                                 note_id=note_id,
                             )
                         else:

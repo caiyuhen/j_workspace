@@ -348,9 +348,9 @@ class CDMPipelineService:
                     
                     pid = d.get('person_source_value')
                     if pid in patient_records:
-                        if 'medications' not in patient_records[pid]:
-                            patient_records[pid]['medications'] = []
-                        patient_records[pid]['medications'].append(d_clean)
+                        if 'drug_exposures' not in patient_records[pid]:
+                            patient_records[pid]['drug_exposures'] = []
+                        patient_records[pid]['drug_exposures'].append(d_clean)
             except Exception as e:
                 self.log("WARNING", f"提取 Staging Drug 失败: {e}")
 
