@@ -87,3 +87,53 @@ def test_transformer_flushes_notes_once_per_batch_and_keeps_note_links():
     finally:
         db.close()
         Base.metadata.drop_all(bind=engine)
+
+
+def test_transformer_processes_extended_nlp_text_fields():
+    Base.metadata.create_all(bind=engine)
+    db = TestingSessionLocal()
+    try:
+        batch = SourceBatch(id="batch_extended_nlp_fields", filename="extended_fields.csv")
+        db.add(batch)
+        db.commit()
+
+        raw = RawRecord(
+            id="raw_extended_nlp_fields",
+            batch_id="batch_extended_nlp_fields",
+            row_data={
+                "patient_id": "P701",
+                "gender": "女",
+                "physical_examination": "双肺呼吸音清。",
+                "icd_diagnosis": "冠心病",
+                "electronic_prescription": "阿司匹林肠溶片",
+                "critical_values": "血糖 16.8 mmol/L",
+            },
+        )
+        db.add(raw)
+        db.commit()
+
+        mapping_config = {
+            "person_source_value": "patient_id",
+            "gender_source_value": "gender",
+        }
+
+        transformer = StagingTransformer(db, ner_mapper=MultiNoteNERMapper())
+        transformer.transform_batch_to_person(
+            batch_id="batch_extended_nlp_fields",
+            mapping_config=mapping_config,
+        )
+
+        notes = db.query(StagingNote).order_by(StagingNote.note_source_value).all()
+        conditions = db.query(StagingConditionOccurrence).order_by(StagingConditionOccurrence.id).all()
+
+        assert [note.note_source_value for note in notes] == [
+            "critical_values",
+            "electronic_prescription",
+            "icd_diagnosis",
+            "physical_examination",
+        ]
+        assert len(conditions) >= 4
+        assert {row.note_id for row in conditions if row.note_id is not None} == {note.id for note in notes}
+    finally:
+        db.close()
+        Base.metadata.drop_all(bind=engine)

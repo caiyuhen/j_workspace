@@ -162,3 +162,30 @@ def test_llm_assigns_inline_note_sections_by_offset():
 
     assert observation_item["section"] == "查体"
     assert procedure_item["section"] == "辅助检查"
+
+
+def test_llm_parse_normalizes_alias_keys_and_recovers_truncated_json():
+    mapper = object.__new__(TransformersNERMapper)
+    text = "患者抢救无效死亡，李主任建议转入CCU继续监护。"
+
+    result = mapper._parse_llm_content(
+        'json\n{"conditions":[],"medications":[],"procedures":[],"observations":[],"devices":[],"specimens":[],"deaths":["抢救无效死亡"],"providers":["李主任"],"care_facilities":["CCU"]',
+        original_text=text,
+    )
+
+    assert result["death"] == ["抢救无效死亡"]
+    assert result["providers"] == ["李主任"]
+    assert result["care_sites"] == ["CCU"]
+
+    items = result["note_nlp_items"]
+    assert any(item["domain"] == "death" and item["text"] == "抢救无效死亡" for item in items)
+    assert any(item["domain"] == "provider" and item["text"] == "李主任" for item in items)
+    assert any(item["domain"] == "care_site" and item["text"] == "CCU" for item in items)
+
+
+def test_regex_extracts_medication_with_dose_and_frequency():
+    mapper = object.__new__(TransformersNERMapper)
+
+    result = mapper._extract_drugs_regex("氨氯地平片 5mg qd")
+
+    assert result["drugs"] == ["药名：氨氯地平 剂型：片 给药方式：口服 剂量：5mg 频次：qd"]

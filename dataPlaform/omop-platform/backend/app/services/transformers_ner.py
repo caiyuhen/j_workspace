@@ -374,16 +374,24 @@ class TransformersNERMapper:
         )
 
         patterns = [
-            ("drug_form", rf"([\u4e00-\u9fa5A-Za-z0-9]{{2,20}}?)\s*({forms})(?:\s*({routes}))?"),
-            ("form_drug", rf"({forms})([\u4e00-\u9fa5A-Za-z0-9]{{2,20}}?)(?:\s*({routes}))?"),
+            (
+                "drug_form",
+                rf"([\u4e00-\u9fa5A-Za-z0-9]{{2,20}}?)\s*({forms})(?:\s*({routes}))?(?:\s*(\d+(?:\.\d+)?\s*(?:mg|g|ug|mcg|μg|ml|mL|IU|iu|片|粒|袋|支|丸)))?(?:\s*(qd|bid|tid|qid|qod|qhs|qn|prn|st))?",
+            ),
+            (
+                "form_drug",
+                rf"({forms})([\u4e00-\u9fa5A-Za-z0-9]{{2,20}}?)(?:\s*({routes}))?(?:\s*(\d+(?:\.\d+)?\s*(?:mg|g|ug|mcg|μg|ml|mL|IU|iu|片|粒|袋|支|丸)))?(?:\s*(qd|bid|tid|qid|qod|qhs|qn|prn|st))?",
+            ),
         ]
 
         for pattern_type, pattern in patterns:
-            for match in list(re.finditer(pattern, cleaned_text)):
+            for match in list(re.finditer(pattern, cleaned_text, flags=re.IGNORECASE)):
                 if pattern_type == "drug_form":
                     raw_drug, form, route = match.group(1), match.group(2), match.group(3) or ""
                 else:
                     form, raw_drug, route = match.group(1), match.group(2), match.group(3) or ""
+                dose = match.group(4) or ""
+                freq = (match.group(5) or "").lower()
 
                 drug_name = re.sub(prefix_pattern, "", raw_drug).strip()
                 if len(drug_name) < 2:
@@ -395,7 +403,12 @@ class TransformersNERMapper:
                     elif any(token in form for token in ["片", "胶囊", "丸", "颗粒", "口服液", "糖浆"]):
                         route = "口服"
 
-                drugs.append(f"药名：{drug_name} 剂型：{form} 给药方式：{route}")
+                med_parts = [f"药名：{drug_name}", f"剂型：{form}", f"给药方式：{route}"]
+                if dose:
+                    med_parts.append(f"剂量：{dose}")
+                if freq:
+                    med_parts.append(f"频次：{freq}")
+                drugs.append(" ".join(med_parts))
                 cleaned_text = self._remove_span(cleaned_text, match.start(), match.end())
 
         return {"drugs": self._dedupe_list(drugs), "remaining_text": cleaned_text}
@@ -808,15 +821,60 @@ class TransformersNERMapper:
                 depth -= 1
                 if depth == 0:
                     return text[first : idx + 1]
+        if depth > 0:
+            return text[first:] + ("}" * depth)
         return text
 
+    def _normalize_llm_schema_keys(self, parsed: Dict[str, Any]) -> Dict[str, Any]:
+        if not isinstance(parsed, dict):
+            return parsed
+
+        normalized = dict(parsed)
+        alias_pairs = {
+            "deaths": "death",
+            "care_facility": "care_sites",
+            "care_facilities": "care_sites",
+            "care_setting": "care_sites",
+            "care_settings": "care_sites",
+            "department": "care_sites",
+            "departments": "care_sites",
+            "doctor": "providers",
+            "doctors": "providers",
+            "clinician": "providers",
+            "clinicians": "providers",
+        }
+
+        for alias, canonical in alias_pairs.items():
+            alias_value = normalized.pop(alias, None)
+            if alias_value in (None, "", []):
+                continue
+
+            existing = normalized.get(canonical, [])
+            if isinstance(existing, str):
+                existing = [existing]
+            elif not isinstance(existing, list):
+                existing = [existing]
+
+            if isinstance(alias_value, str):
+                alias_items = [alias_value]
+            elif isinstance(alias_value, list):
+                alias_items = alias_value
+            else:
+                alias_items = [alias_value]
+
+            normalized[canonical] = existing + alias_items
+
+        return normalized
+
     def _coerce_llm_json_shape(self, parsed: Dict[str, Any]) -> Dict[str, Any]:
+        parsed = self._normalize_llm_schema_keys(parsed)
         if all(key in parsed for key in ["conditions", "medications", "procedures", "observations"]):
             return parsed
 
         for wrapper_key in ["response", "result", "data", "output"]:
             wrapped = parsed.get(wrapper_key)
             if isinstance(wrapped, dict):
+                wrapped = self._normalize_llm_schema_keys(wrapped)
                 if any(
                     key in wrapped
                     for key in [
@@ -836,6 +894,7 @@ class TransformersNERMapper:
                 try:
                     nested = json.loads(self._extract_json_fragment(wrapped))
                     if isinstance(nested, dict):
+                        nested = self._normalize_llm_schema_keys(nested)
                         return nested
                 except Exception:
                     pass
