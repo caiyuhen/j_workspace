@@ -1092,11 +1092,24 @@ function addPlanMessage(summaryText, planData, deliverables) {
             } else if (hardPassed === false) {
                 hardBadge = `<span style="background:#fee2e2;color:#991b1b;padding:1px 5px;border-radius:8px;font-size:10px;margin-left:4px;">✗ 规则未过</span>`;
             }
+            // P2: 引文验证徽章
+            let refBadge = '';
+            const refVer = d.ref_verification;
+            if (refVer && refVer.total > 0) {
+                const { verified, replaced, failed, total } = refVer;
+                if (failed === 0 && replaced === 0) {
+                    refBadge = `<span style="background:#d1fae5;color:#065f46;padding:1px 5px;border-radius:8px;font-size:10px;margin-left:4px;">✓ 引文已验证 (${verified}/${total})</span>`;
+                } else if (failed === 0) {
+                    refBadge = `<span style="background:#dbeafe;color:#1e40af;padding:1px 5px;border-radius:8px;font-size:10px;margin-left:4px;">↻ 引文已替换 (${replaced}/${total})</span>`;
+                } else {
+                    refBadge = `<span style="background:#fef3c7;color:#92400e;padding:1px 5px;border-radius:8px;font-size:10px;margin-left:4px;">⚠ 引文 ${failed}/${total} 待确认</span>`;
+                }
+            }
             deliverablesHtml += `
                 <a href="/api/download/${encodeURIComponent(filename)}" class="plan-download-btn" download>
                     <span class="plan-download-icon">${icon}</span>
                     <span class="plan-download-info">
-                        <span class="plan-download-label">${label}${scoreBadge}${hardBadge}</span>
+                        <span class="plan-download-label">${label}${scoreBadge}${hardBadge}${refBadge}</span>
                         <span class="plan-download-meta">${filename}${sizeStr}</span>
                     </span>
                     <span class="plan-download-action">下载</span>
