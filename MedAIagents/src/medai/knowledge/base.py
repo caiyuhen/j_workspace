@@ -131,12 +131,22 @@ class SimpleVectorDB(VectorDBBase):
 
 
 class PubMedSearcher:
-    """PubMed文献搜索器"""
+    """PubMed文献搜索器 - 支持引文验证"""
     
     BASE_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
     
     def __init__(self, email: str = None):
         self.email = email or "anonymous@example.com"
+        self._last_request_time = 0
+        self._min_interval = 0.35  # NCBI要求每秒不超过3次请求
+    
+    def _rate_limit(self):
+        """请求频率限制"""
+        import time
+        elapsed = time.time() - self._last_request_time
+        if elapsed < self._min_interval:
+            time.sleep(self._min_interval - elapsed)
+        self._last_request_time = time.time()
     
     def search(self, query: str, max_results: int = 10) -> List[Dict[str, Any]]:
         """搜索PubMed文献
@@ -149,6 +159,7 @@ class PubMedSearcher:
             文献列表
         """
         try:
+            self._rate_limit()
             # 搜索ID
             search_url = f"{self.BASE_URL}/esearch.fcgi"
             params = {
@@ -168,6 +179,7 @@ class PubMedSearcher:
             if not id_list:
                 return []
             
+            self._rate_limit()
             # 获取摘要
             fetch_url = f"{self.BASE_URL}/efetch.fcgi"
             params = {
@@ -187,6 +199,178 @@ class PubMedSearcher:
         except Exception as e:
             logger.error(f"PubMed search failed: {e}")
             return []
+    
+    def search_by_title(self, title: str, max_results: int = 5) -> List[Dict[str, Any]]:
+        """按标题搜索PubMed文献（用于引文验证）
+        
+        Args:
+            title: 文献标题（可包含部分标题）
+            max_results: 最大结果数量
+        
+        Returns:
+            文献列表
+        """
+        if not title or len(title.strip()) < 5:
+            return []
+        # 清理标题中的特殊字符，保留主要词汇
+        clean_title = title.strip().replace('[', '').replace(']', '')
+        # 使用标题精确搜索
+        query = f'"{clean_title}"[Title]'
+        return self.search(query, max_results=max_results)
+    
+    def verify_reference(self, title: str, authors: str = "", year: str = "") -> Dict[str, Any]:
+        """验证单条参考文献是否在PubMed中存在
+        
+        Args:
+            title: 文献标题
+            authors: 作者信息（可选，用于辅助匹配）
+            year: 发表年份（可选，用于辅助匹配）
+        
+        Returns:
+            验证结果字典 {
+                'verified': bool,
+                'matched': bool,
+                'pubmed_result': dict or None,
+                'original_title': str,
+                'reason': str
+            }
+        """
+        result = {
+            'verified': False,
+            'matched': False,
+            'pubmed_result': None,
+            'original_title': title,
+            'reason': ''
+        }
+        
+        if not title or len(title.strip()) < 5:
+            result['reason'] = '标题过短或为空'
+            return result
+        
+        try:
+            # 策略1：按标题精确搜索
+            pubmed_results = self.search_by_title(title, max_results=3)
+            
+            if pubmed_results:
+                # 找到结果，进行相似度匹配
+                best_match = self._find_best_match(title, authors, year, pubmed_results)
+                if best_match:
+                    result['verified'] = True
+                    result['matched'] = True
+                    result['pubmed_result'] = best_match
+                    result['reason'] = f"在PubMed中找到匹配记录 (PMID: {best_match.get('pmid', 'N/A')})"
+                else:
+                    result['verified'] = True
+                    result['matched'] = False
+                    result['reason'] = '在PubMed中找到相似标题但无法确认完全匹配'
+            else:
+                # 策略2：尝试用关键词搜索（去掉停用词后的前5个词）
+                keywords = self._extract_keywords(title)
+                if keywords:
+                    self._rate_limit()
+                    pubmed_results = self.search(keywords, max_results=3)
+                    if pubmed_results:
+                        best_match = self._find_best_match(title, authors, year, pubmed_results)
+                        if best_match:
+                            result['verified'] = True
+                            result['matched'] = True
+                            result['pubmed_result'] = best_match
+                            result['reason'] = f"关键词搜索匹配成功 (PMID: {best_match.get('pmid', 'N/A')})"
+                        else:
+                            result['reason'] = '关键词搜索未找到匹配'
+                    else:
+                        result['reason'] = 'PubMed中未找到该文献'
+                else:
+                    result['reason'] = 'PubMed中未找到该文献'
+                    
+        except Exception as e:
+            result['reason'] = f'验证过程出错: {str(e)}'
+            logger.warning(f"Reference verification error for '{title[:50]}...': {e}")
+        
+        return result
+    
+    def _extract_keywords(self, title: str) -> str:
+        """从标题中提取关键词（去掉常见停用词）"""
+        stopwords = {'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by',
+                     '一项', '的', '和', '与', '在', '对', '基于', '研究', '分析', '探讨', '观察'}
+        words = title.strip().split()
+        filtered = [w for w in words if w.lower() not in stopwords and len(w) > 2]
+        return ' '.join(filtered[:6])  # 取前6个关键词
+    
+    def _find_best_match(self, title: str, authors: str, year: str, 
+                          candidates: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """从候选结果中找到最佳匹配"""
+        import difflib
+        
+        title_lower = title.lower().strip()
+        best_score = 0.0
+        best_match = None
+        
+        for cand in candidates:
+            cand_title = cand.get('title', '').lower().strip()
+            if not cand_title:
+                continue
+            
+            # 计算标题相似度
+            similarity = difflib.SequenceMatcher(None, title_lower, cand_title).ratio()
+            
+            # 年份匹配加分
+            if year and str(year) in str(cand.get('year', '')):
+                similarity += 0.15
+            
+            # 作者匹配加分（简单检查第一个作者姓氏）
+            if authors and cand.get('authors'):
+                first_author = cand['authors'][0].split()[0].lower() if cand['authors'][0] else ''
+                input_first = authors.split(',')[0].split()[0].lower() if authors else ''
+                if first_author and input_first and (first_author in input_first or input_first in first_author):
+                    similarity += 0.1
+            
+            if similarity > best_score:
+                best_score = similarity
+                best_match = cand
+        
+        # 相似度阈值：0.65 认为匹配（提高阈值减少误匹配）
+        if best_score >= 0.65:
+            return best_match
+        return None
+    
+    def format_citation(self, result: Dict[str, Any], style: str = "vancouver") -> str:
+        """将PubMed结果格式化为标准引用格式
+        
+        Args:
+            result: PubMed搜索结果字典
+            style: 引用格式，支持 vancouver / apa / gb7714
+        
+        Returns:
+            格式化后的引用字符串
+        """
+        authors = result.get('authors', [])
+        title = result.get('title', '')
+        journal = result.get('journal', '')
+        year = result.get('year', '')
+        pmid = result.get('pmid', '')
+        
+        # 格式化作者
+        if len(authors) >= 6:
+            author_str = f"{authors[0]} et al."
+        elif len(authors) > 1:
+            author_str = ", ".join(authors[:-1]) + ", " + authors[-1]
+        elif authors:
+            author_str = authors[0]
+        else:
+            author_str = "Unknown"
+        
+        if style == "vancouver":
+            # Vancouver 格式: 作者. 标题. 期刊. 年份;卷:页.
+            return f"{author_str}. {title}. {journal}. {year}; PMID:{pmid}."
+        elif style == "apa":
+            # APA 格式: 作者.(年份).标题.期刊.
+            return f"{author_str} ({year}). {title}. {journal}."
+        elif style == "gb7714":
+            # GB/T 7714 格式
+            return f"{author_str}. {title}[J]. {journal}, {year}."
+        else:
+            return f"{author_str}. {title}. {journal}. {year}; PMID:{pmid}."
     
     def _parse_pubmed_xml(self, xml_text: str) -> List[Dict[str, Any]]:
         """简单解析PubMed XML响应"""

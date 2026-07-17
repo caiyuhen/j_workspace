@@ -896,6 +896,337 @@ class MedicalAgent:
         
         return candidates
     
+    def _two_stage_generate(self, tp: dict, goal: str, subtasks_summary: str) -> Optional[Dict[str, Any]]:
+        """两阶段生成交付物数据：先大纲后逐段展开
+
+        第一阶段：生成详细大纲（每个字段的要点和结构规划）
+        第二阶段：按大纲逐字段展开，独立生成每个字段的完整内容
+
+        Args:
+            tp: type_prompts 中的类型配置
+            goal: 任务目标
+            subtasks_summary: 子任务执行结果
+
+        Returns:
+            完整的交付物数据字典，或 None（失败时）
+        """
+        try:
+            # ==================== 第一阶段：生成大纲 ====================
+            outline_prompt = f"""请为以下【{tp['label']}】生成一份详细的内容大纲（Outline）。
+
+## 任务目标
+{goal}
+
+## 子任务执行结果
+{subtasks_summary}
+
+## 输出要求
+请按以下格式，为每个字段生成内容规划。**不要输出JSON格式**，使用以下纯文本格式：
+
+---
+### 字段名：标题
+**要点摘要**：该部分应包含的核心内容、数据、论据（100-200字）
+**写作策略**：如何展开这部分内容的具体思路（50-100字）
+---
+
+请覆盖以下所有字段：
+{self._extract_field_names(tp['data_schema'])}
+
+注意事项：
+1. 只输出大纲规划，不写完整正文
+2. 大纲必须详尽、具体、有数据支撑
+3. 每个字段的要点摘要不能少于100字
+4. 禁止输出JSON格式，使用上面的 ### 格式
+5. 禁止使用任何代码块标记（```）"""
+
+            outline_messages = [
+                {"role": "system", "content": f"你是一位资深{tp.get('label', '')}大纲规划专家。你的任务是规划内容结构，不写正文。大纲必须详尽、具体、有数据支撑。"},
+                {"role": "user", "content": outline_prompt},
+            ]
+            outline_response = _run_async(self.llm_router.chat(outline_messages))
+            outline_text = outline_response.strip()
+            logger.info(f"Two-stage: Phase 1 (outline) completed, length={len(outline_text)}")
+
+            # 解析大纲为结构化数据
+            outline = self._parse_outline_to_structure(outline_text, tp['data_schema'])
+
+            # ==================== 第二阶段：基于大纲生成完整数据 ====================
+            # 将大纲作为上下文，一次性生成完整 JSON 数据
+            # 这样 LLM 有了详细的结构规划，生成的内容会更完整、不遗漏
+
+            expand_prompt = f"""请根据以下详细大纲，生成一份完整的【{tp['label']}】数据。
+
+## 任务目标
+{goal}
+
+## 详细大纲（请严格按照大纲中的要点和策略展开）
+{outline_text}
+
+## 内容质量要求
+1. **严格按照大纲展开**：大纲中的每个要点都必须完整展开，不能遗漏
+2. **内容详实**：每个字段必须包含充分的内容，不可敷衍
+3. **数据丰富**：包含具体数据、统计值、百分比等量化信息
+4. **专业深度**：使用专业术语，体现医学/科研领域的专业水平
+5. **中文撰写**：所有内容使用中文撰写（英文术语保留原文）
+
+## 各字段详细度要求
+{tp['quality_requirements']}
+
+## 输出格式
+请严格按照以下 JSON Schema 格式输出完整数据。只输出 JSON 数据，不要包含任何其他说明文字。
+注意：JSON中的字符串值必须是完整、详细的内容，不能是简短的占位符。
+
+```json
+{tp['data_schema']}
+```"""
+
+            expand_messages = [
+                {"role": "system", "content": f"{tp['system']} 你现在要根据详细大纲生成完整内容，大纲已经规划好了每个字段的要点和写作策略，请严格遵循大纲展开。"},
+                {"role": "user", "content": expand_prompt},
+            ]
+            expand_response = _run_async(self.llm_router.chat(expand_messages))
+
+            resp_str = expand_response.strip()
+            if "```json" in resp_str:
+                resp_str = resp_str.split("```json")[1].split("```")[0].strip()
+            elif "```" in resp_str:
+                resp_str = resp_str.split("```")[1].split("```")[0].strip()
+
+            expanded_data = json.loads(resp_str)
+            logger.info(f"Two-stage: Phase 2 completed, {len(expanded_data)} top-level fields generated")
+            return expanded_data
+
+        except Exception as e:
+            logger.error(f"Two-stage generation error: {e}")
+            return None
+
+    def _identify_expandable_fields(self, schema_str: str, data: Dict[str, Any]) -> List[Dict]:
+        """从 schema 和大纲数据中识别需要展开的字段
+
+        Returns:
+            [{"path": "introduction", "type": "string", "description": "引言"}, ...]
+        """
+        fields = []
+
+        # 定义各类型的关键展开字段
+        long_text_fields = {
+            'paper': ['abstract', 'introduction', 'methods', 'results', 'discussion', 'conclusion'],
+            'grant': ['rationale', 'research_content', 'objectives', 'key_problems', 'methodology', 'feasibility', 'innovation', 'timeline', 'expected_outcomes'],
+            'protocol': ['statistical_analysis'],
+            'response_letter': ['opening', 'closing'],
+            'research_report': [],
+            'teaching': [],
+        }
+
+        array_fields = {
+            'paper': ['references', 'keywords'],
+            'grant': [],
+            'protocol': ['inclusion_criteria', 'exclusion_criteria'],
+            'response_letter': ['responses'],
+            'meta_analysis': ['studies'],
+            'budget': ['items'],
+            'survival': [],
+            'journal_db': [],
+            'research_report': ['background', 'methods', 'results', 'discussion', 'conclusions', 'acknowledgments'],
+            'teaching': [],
+            'bioinformatics': ['sample_info', 'mutation_summary', 'pathways', 'survival', 'conclusions', 'recommendations'],
+        }
+
+        # 从 data 的 key 中推断 dtype（简化处理，通过外层调用传入 tp 即可）
+        # 这里直接遍历 data 的顶层和常见嵌套字段
+        for key, value in data.items():
+            if isinstance(value, str) and len(value) < 500:
+                desc_map = {
+                    'abstract': '摘要', 'introduction': '引言', 'methods': '方法',
+                    'results': '结果', 'discussion': '讨论', 'conclusion': '结论',
+                    'rationale': '立项依据', 'research_content': '研究内容',
+                    'methodology': '研究方案', 'innovation': '创新点',
+                    'feasibility': '可行性分析', 'timeline': '年度计划',
+                    'expected_outcomes': '预期成果', 'objectives': '研究目标',
+                    'key_problems': '关键科学问题', 'statistical_analysis': '统计分析',
+                    'title': '标题', 'opening': '开头', 'closing': '结尾',
+                    'description': '描述', 'summary': '总结',
+                }
+                fields.append({
+                    'path': key,
+                    'type': 'string',
+                    'description': desc_map.get(key, key),
+                })
+            elif isinstance(value, list) and len(value) > 0:
+                fields.append({
+                    'path': key,
+                    'type': 'array',
+                    'description': key,
+                })
+            elif isinstance(value, dict):
+                # 嵌套字典：递归检查
+                for sub_key, sub_value in value.items():
+                    if isinstance(sub_value, str) and len(sub_value) < 500:
+                        fields.append({
+                            'path': f"{key}.{sub_key}",
+                            'type': 'string',
+                            'description': f"{key} - {sub_key}",
+                        })
+                    elif isinstance(sub_value, list) and len(sub_value) > 0:
+                        fields.append({
+                            'path': f"{key}.{sub_key}",
+                            'type': 'array',
+                            'description': f"{key} - {sub_key}",
+                        })
+
+        return fields
+
+    def _get_nested_value(self, data: Dict, path: str) -> Any:
+        """获取嵌套字典中的值，支持 'a.b.c' 路径"""
+        keys = path.split('.')
+        current = data
+        for key in keys:
+            if isinstance(current, dict) and key in current:
+                current = current[key]
+            else:
+                return None
+        return current
+
+    def _set_nested_value(self, data: Dict, path: str, value: Any) -> None:
+        """设置嵌套字典中的值，支持 'a.b.c' 路径"""
+        keys = path.split('.')
+        current = data
+        for key in keys[:-1]:
+            if key in current:
+                current = current[key]
+            else:
+                return
+        current[keys[-1]] = value
+
+    def _select_review_model(self) -> Dict[str, Any]:
+        """选择评审模型：与当前默认模型不同，实现交叉评审
+
+        优先使用不同的模型族作为评审官。如果只有一个可用模型，回退到默认模型。
+
+        Returns:
+            {"provider": "xxx", "model": "xxx", "description": "xxx"} 或 {"description": "默认模型"}
+        """
+        try:
+            current_provider = self.config.get('llm.default_provider', '')
+            current_model = self.config.get(f'llm.providers.{current_provider}.default_model', '')
+
+            # 评审模型优先级表（按"评审能力"排序，优先选择更强的模型）
+            review_candidates = [
+                'openai/gpt-4o',          # 最强
+                'qwen/qwen3-235b-a22b-instruct-2507',  # 旗舰版
+                'qwen/qwen3.5-27b',      # 3.5
+                'deepseek/deepseek-v4-flash',  # 快速版
+                'stepfun-ai/step-3.5-flash',
+                'bytedance/seed-oss-36b-instruct',
+            ]
+
+            available_models = self.config.get(f'llm.providers.{current_provider}.available_models', [])
+            if not available_models:
+                available_models = []
+
+            # 从 available_models 中获取所有可用模型 ID
+            available_model_ids = []
+            for m in available_models:
+                if isinstance(m, dict) and 'id' in m:
+                    available_model_ids.append(m['id'])
+
+            # 选择与当前模型不同的评审模型
+            for candidate in review_candidates:
+                if candidate != current_model and candidate in available_model_ids:
+                    return {
+                        'provider': current_provider,
+                        'model': candidate,
+                        'description': f"交叉评审模型: {candidate}",
+                    }
+
+            # 如果当前模型不在候选列表中，尝试用候选列表中第一个可用模型
+            for candidate in review_candidates:
+                if candidate in available_model_ids:
+                    return {
+                        'provider': current_provider,
+                        'model': candidate,
+                        'description': f"交叉评审模型: {candidate}",
+                    }
+
+            # 如果有多个 provider，尝试用不同 provider
+            providers = self.config.get('llm.providers', {})
+            for provider_name in providers:
+                if provider_name != current_provider:
+                    provider_models = providers[provider_name].get('available_models', [])
+                    for m in provider_models:
+                        if isinstance(m, dict) and 'id' in m:
+                            return {
+                                'provider': provider_name,
+                                'model': m['id'],
+                                'description': f"交叉评审模型: {provider_name}/{m['id']}",
+                            }
+
+            # 无可用交叉模型，回退到默认
+            return {'description': '默认模型（无交叉模型可用）'}
+
+        except Exception as e:
+            logger.warning(f"Select review model error: {e}")
+            return {'description': '默认模型（选择失败）'}
+
+    def _extract_field_names(self, schema_str: str) -> str:
+        """从 JSON schema 示例中提取顶层字段名列表"""
+        try:
+            # 尝试解析 schema 字符串
+            schema = json.loads(schema_str)
+            if isinstance(schema, dict):
+                fields = list(schema.keys())
+                return "\n".join([f"- {f}" for f in fields])
+            elif isinstance(schema, list) and len(schema) > 0:
+                first = schema[0]
+                if isinstance(first, dict):
+                    fields = list(first.keys())
+                    return "\n".join([f"- {f}" for f in fields])
+        except Exception:
+            pass
+        # 如果解析失败，从字符串中提取可能的字段名
+        import re
+        fields = re.findall(r'"(\w+)":', schema_str)
+        return "\n".join([f"- {f}" for f in fields[:20]])
+
+    def _parse_outline_to_structure(self, outline_text: str, schema_str: str) -> Dict[str, Any]:
+        """将纯文本大纲解析为结构化字典
+
+        解析格式：
+        ### 字段名：xxx
+        **要点摘要**：内容...
+        **写作策略**：内容...
+        """
+        import re
+
+        result = {}
+        # 按 "### 字段名" 分割文本
+        sections = re.split(r'\n###\s+', outline_text)
+
+        for section in sections:
+            section = section.strip()
+            if not section:
+                continue
+
+            # 提取字段名
+            field_match = re.match(r'(?:字段名[：:]\s*)?(\w+)', section)
+            if not field_match:
+                continue
+
+            field_name = field_match.group(1).strip()
+
+            # 提取要点摘要
+            summary_match = re.search(r'[\*\*]?要点摘要[\*\*]?[：:]\s*(.+?)(?=\n\s*[\*\*]?写作策略|\n###|\Z)', section, re.DOTALL)
+            if summary_match:
+                summary = summary_match.group(1).strip()
+            else:
+                # 尝试其他格式
+                summary_match = re.search(r'[:：]\s*(.+?)(?=\n\s*(?:写作策略|###)|\Z)', section, re.DOTALL)
+                summary = summary_match.group(1).strip() if summary_match else section[:500]
+
+            result[field_name] = summary
+
+        return result
+
     def _check_deliverable_hard_rules(self, dtype: str, data: Dict[str, Any]) -> tuple:
         """代码级硬规则校验：检查交付物数据是否满足最低质量标准
         
@@ -999,6 +1330,213 @@ class MedicalAgent:
         
         passed = len(issues) == 0
         return passed, issues
+    
+    def _extract_title_from_reference(self, ref_str: str) -> str:
+        """从引用字符串中提取标题
+        
+        LLM生成的引用格式通常为：
+        1. 作者. 标题. 期刊. 年份;卷(期):页码.
+        
+        Returns:
+            提取出的标题，如果无法提取则返回原始字符串
+        """
+        import re
+        if not ref_str:
+            return ""
+        
+        # 去掉前导序号（如 "1. " 或 "[1] " 或 "1 ")
+        cleaned = re.sub(r'^(\d+[\.\s\]]+\s*)', '', ref_str.strip())
+        
+        # 去掉 DOI/URL/PMID 等后缀
+        cleaned = re.sub(r'\s*(doi:|https?://|PMID:|Epub).*', '', cleaned, flags=re.IGNORECASE)
+        
+        # 尝试按句点分割，取中间最长的片段作为标题
+        parts = re.split(r'[\.\。]\s*', cleaned)
+        parts = [p.strip() for p in parts if len(p.strip()) > 3]
+        
+        if not parts:
+            return cleaned[:200]
+        
+        # 启发式：标题通常是中间最长的片段
+        # 过滤掉明显是年份的片段（纯4位数字）和明显是期刊缩写的短片段
+        candidates = []
+        for p in parts:
+            p_stripped = p.strip()
+            if re.match(r'^\d{4}$', p_stripped):
+                continue  # 跳过年份
+            if re.match(r'^\d{4};', p_stripped):
+                continue  # 跳过年份;卷期
+            if len(p_stripped) < 5:
+                continue  # 跳过太短片段
+            candidates.append(p_stripped)
+        
+        if candidates:
+            # 取最长的候选作为标题
+            return max(candidates, key=len)
+        
+        return cleaned[:200]
+    
+    def _verify_references(self, data: Dict[str, Any], goal: str, dtype: str) -> Dict[str, Any]:
+        """验证交付物中的参考文献真实性，用PubMed真实文献替换无法验证的引用
+        
+        Args:
+            data: 交付物数据（会被原地修改，替换references）
+            goal: 任务目标（用于搜索相关真实文献）
+            dtype: 交付物类型
+        
+        Returns:
+            验证结果统计 {
+                'verified_count': int,
+                'replaced_count': int,
+                'failed_count': int,
+                'total_count': int,
+                'details': list,
+                'new_references': list
+            }
+        """
+        import re
+        import time
+        
+        result = {
+            'verified_count': 0,
+            'replaced_count': 0,
+            'failed_count': 0,
+            'total_count': 0,
+            'details': [],
+            'new_references': []
+        }
+        
+        # 只有包含 references 字段的类型才需要验证
+        if dtype not in ('paper', 'grant', 'protocol'):
+            return result
+        
+        refs = data.get('references', [])
+        if not refs:
+            return result
+        
+        if isinstance(refs, str):
+            # 尝试按行分割
+            refs = [r.strip() for r in refs.split('\n') if r.strip()]
+        
+        result['total_count'] = len(refs)
+        pubmed = self.knowledge_base.pubmed_searcher
+        # 预分配等长列表，保持索引对齐
+        new_refs = [None] * len(refs)
+        failed_refs = []
+        
+        # 第一阶段：逐条验证现有引用
+        for idx, ref in enumerate(refs):
+            if not ref or not isinstance(ref, str):
+                new_refs[idx] = ref
+                continue
+            
+            title = self._extract_title_from_reference(ref)
+            if not title or len(title) < 5:
+                new_refs[idx] = ref
+                failed_refs.append((idx, ref, '无法提取标题'))
+                continue
+            
+            try:
+                verify_result = pubmed.verify_reference(title)
+                detail = {
+                    'index': idx,
+                    'original': ref[:150],
+                    'title_extracted': title[:150],
+                    'verified': verify_result['verified'],
+                    'matched': verify_result['matched'],
+                    'reason': verify_result['reason']
+                }
+                
+                if verify_result['matched'] and verify_result['pubmed_result']:
+                    # 验证成功：在PubMed中找到高相似度匹配，使用PubMed格式化引用替换
+                    formatted = pubmed.format_citation(verify_result['pubmed_result'], style='vancouver')
+                    new_refs[idx] = formatted
+                    result['verified_count'] += 1
+                    detail['action'] = 'verified_and_replaced'
+                    detail['new_citation'] = formatted[:200]
+                else:
+                    # 未确认匹配（包括：PubMed无结果、或找到候选但相似度不足）
+                    # 统一标记为待替换，不增加 verified_count
+                    new_refs[idx] = ref
+                    failed_refs.append((idx, ref, verify_result['reason']))
+                    detail['action'] = 'marked_for_replacement'
+                
+                result['details'].append(detail)
+                
+            except Exception as e:
+                logger.warning(f"Reference verification error for ref #{idx}: {e}")
+                new_refs[idx] = ref
+                failed_refs.append((idx, ref, f'验证异常: {str(e)}'))
+        
+        # 第二阶段：对验证失败的引用，搜索相关真实文献替换
+        if failed_refs:
+            logger.info(f"PubMed verification: {len(failed_refs)} references need replacement for goal='{goal[:60]}...'")
+            
+            try:
+                # 从 goal 中提取关键词进行 PubMed 搜索
+                search_query = goal.strip()
+                # 如果 goal 太长，截断到前 200 字符
+                if len(search_query) > 200:
+                    search_query = search_query[:200]
+                
+                # 搜索真实文献，数量 = 失败数量 + 2（预留）
+                needed = len(failed_refs) + 2
+                real_articles = pubmed.search(search_query, max_results=min(needed, 10))
+                
+                if real_articles:
+                    # 格式化真实文献为引用
+                    formatted_real = [pubmed.format_citation(a, style='vancouver') for a in real_articles]
+                    
+                    # 用真实文献替换失败的引用
+                    for i, (orig_idx, orig_ref, reason) in enumerate(failed_refs):
+                        if i < len(formatted_real):
+                            new_refs[orig_idx] = formatted_real[i]
+                            result['replaced_count'] += 1
+                            result['details'].append({
+                                'index': orig_idx,
+                                'original': orig_ref[:150],
+                                'action': 'replaced_with_pubmed',
+                                'new_citation': formatted_real[i][:200],
+                                'reason': reason
+                            })
+                        else:
+                            # 没有足够真实文献，保留原引用但标记
+                            result['failed_count'] += 1
+                            result['details'].append({
+                                'index': orig_idx,
+                                'original': orig_ref[:150],
+                                'action': 'failed_no_replacement',
+                                'reason': reason
+                            })
+                else:
+                    # PubMed 搜索也没找到，全部标记为失败
+                    for orig_idx, orig_ref, reason in failed_refs:
+                        result['failed_count'] += 1
+                        result['details'].append({
+                            'index': orig_idx,
+                            'original': orig_ref[:150],
+                            'action': 'failed_no_replacement',
+                            'reason': reason
+                        })
+            except Exception as e:
+                logger.warning(f"PubMed replacement search failed: {e}")
+                for orig_idx, orig_ref, reason in failed_refs:
+                    result['failed_count'] += 1
+        
+        # 清理 new_refs 中的空值
+        new_refs = [r for r in new_refs if r]
+        
+        # 更新 data
+        if new_refs:
+            data['references'] = new_refs
+            result['new_references'] = new_refs[:5]  # 只记录前5条用于展示
+        
+        logger.info(
+            f"Reference verification completed: "
+            f"total={result['total_count']}, verified={result['verified_count']}, "
+            f"replaced={result['replaced_count']}, failed={result['failed_count']}"
+        )
+        return result
     
     def _generate_deliverable(self, dtype: str, goal: str, subtasks: Dict[str, Any], output_dir: str) -> Optional[Dict[str, Any]]:
         """使用 LLM 生成交付物数据并导出为文件（增强版：内容详实、数据丰富）
@@ -1142,8 +1680,12 @@ class MedicalAgent:
 
             for quality_round in range(max_quality_rounds):
                 if quality_round == 0:
-                    # 首轮生成
-                    gen_prompt = f"""根据以下任务目标和子任务执行结果，生成一份高质量、内容详实的【{tp['label']}】。
+                    # ========== 两阶段生成：先大纲后逐段展开 ==========
+                    data = self._two_stage_generate(tp, goal, subtasks_summary)
+                    if data is None:
+                        # 两阶段生成失败，降级为一次性生成
+                        logger.warning("Two-stage generation failed, falling back to single-pass")
+                        gen_prompt = f"""根据以下任务目标和子任务执行结果，生成一份高质量、内容详实的【{tp['label']}】。
 
 ## 任务目标
 {goal}
@@ -1168,10 +1710,17 @@ class MedicalAgent:
 ```json
 {tp['data_schema']}
 ```"""
-                    messages = [
-                        {"role": "system", "content": tp['system']},
-                        {"role": "user", "content": gen_prompt},
-                    ]
+                        messages = [
+                            {"role": "system", "content": tp['system']},
+                            {"role": "user", "content": gen_prompt},
+                        ]
+                        response = _run_async(self.llm_router.chat(messages))
+                        resp_str = response.strip()
+                        if "```json" in resp_str:
+                            resp_str = resp_str.split("```json")[1].split("```")[0].strip()
+                        elif "```" in resp_str:
+                            resp_str = resp_str.split("```")[1].split("```")[0].strip()
+                        data = json.loads(resp_str)
                 else:
                     # 迭代优化：附带评语让 LLM 改进
                     gen_prompt = f"""你之前生成的【{tp['label']}】内容质量不够，需要改进。
@@ -1220,8 +1769,13 @@ class MedicalAgent:
                     hard_rules_passed = True
                     logger.info(f"Deliverable hard rules passed round {quality_round + 1}")
 
-                # --- LLM 自评分 ---
+                # --- 交叉评审：使用独立模型评审，避免自我偏袒 ---
                 data_preview = json.dumps(data, ensure_ascii=False, indent=2)[:8000]
+
+                # 选择评审模型：与当前默认模型不同
+                review_model_info = self._select_review_model()
+                review_model_desc = review_model_info['description'] if review_model_info else "当前模型"
+
                 review_prompt = f"""你是一位严格的质量评审专家。请对以下【{tp['label']}】的内容质量进行评分。
 
 ## 质量标准
@@ -1243,10 +1797,23 @@ class MedicalAgent:
 ```"""
 
                 review_messages = [
-                    {"role": "system", "content": "你是一位严格的质量评审专家，请客观、严格地评分。只有真正高质量的内容才能获得高分。"},
+                    {"role": "system", "content": "你是一位严格的质量评审专家，请客观、严格地评分。只有真正高质量的内容才能获得高分。你是独立的评审员，与内容生成者无关，请保持公正和严格。"},
                     {"role": "user", "content": review_prompt},
                 ]
-                review_response = _run_async(self.llm_router.chat(review_messages))
+
+                # 使用评审模型进行评分（如果可用）
+                try:
+                    review_kwargs = {}
+                    if review_model_info.get('provider'):
+                        review_kwargs['provider'] = review_model_info['provider']
+                    if review_model_info.get('model'):
+                        review_kwargs['model'] = review_model_info['model']
+                    review_response = _run_async(self.llm_router.chat(review_messages, **review_kwargs))
+                    logger.info(f"Cross-review used model: {review_model_desc}")
+                except Exception as e:
+                    # 评审模型调用失败，回退到默认模型
+                    logger.warning(f"Review model failed ({e}), falling back to default")
+                    review_response = _run_async(self.llm_router.chat(review_messages))
 
                 # 解析评分
                 review_str = review_response.strip()
@@ -1283,6 +1850,15 @@ class MedicalAgent:
             if data is None:
                 logger.error(f"All quality rounds failed for {dtype}, no valid data")
                 return None
+
+            # ========== P2: PubMed 引文真实性验证 ==========
+            ref_verify_result = None
+            if dtype in ('paper', 'grant', 'protocol'):
+                try:
+                    ref_verify_result = self._verify_references(data, goal, dtype)
+                except Exception as e:
+                    logger.warning(f"Reference verification failed for {dtype}: {e}")
+            # ========== P2 结束 ==========
 
             # 使用对应的导出器生成文件
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -1324,7 +1900,7 @@ class MedicalAgent:
 
             logger.info(f"Deliverable generated: {filepath} (hard_rules={hard_rules_passed}, quality_score={last_score}/10)")
 
-            return {
+            result_meta = {
                 'type': dtype,
                 'label': tp.get('label', dtype),
                 'format': tp['format'],
@@ -1334,6 +1910,17 @@ class MedicalAgent:
                 'quality_score': last_score,
                 'hard_rules_passed': hard_rules_passed,
             }
+            
+            # 添加引文验证结果到元数据
+            if ref_verify_result:
+                result_meta['ref_verification'] = {
+                    'total': ref_verify_result.get('total_count', 0),
+                    'verified': ref_verify_result.get('verified_count', 0),
+                    'replaced': ref_verify_result.get('replaced_count', 0),
+                    'failed': ref_verify_result.get('failed_count', 0),
+                }
+            
+            return result_meta
         except json.JSONDecodeError as e:
             logger.error(f"Deliverable JSON parse error for {dtype}: {e}")
             return None
