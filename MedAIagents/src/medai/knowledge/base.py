@@ -574,3 +574,124 @@ class MedicalKnowledgeBase:
     def get_statistics(self) -> Dict[str, Any]:
         """获取知识库统计信息"""
         return self.vector_db.get_statistics()
+    
+    # ========== 文件索引 ==========
+    
+    def index_file(self, file_path: str, category: str = "上传文档") -> Dict[str, Any]:
+        """解析文件并索引到知识库
+        
+        Args:
+            file_path: 文件路径
+            category: 文档分类
+        
+        Returns:
+            {success, doc_id?, message, chunk_count?}
+        """
+        parser = DocumentParser()
+        result = parser.parse_file(file_path)
+        
+        if not result.get("success"):
+            return result
+        
+        try:
+            # 将文档分块存入知识库
+            chunks = result["chunks"]
+            metadata = result["metadata"]
+            
+            if not chunks:
+                # 没有分块则整篇存入
+                doc = {
+                    'title': result["title"],
+                    'content': result["content"],
+                    'source': metadata["filename"],
+                    'category': category,
+                    'keywords': [metadata["extension"], category]
+                }
+                self.vector_db.add_documents([doc])
+                return {
+                    "success": True,
+                    "message": f"文件 '{metadata['filename']}' 索引完成",
+                    "chunk_count": 1,
+                }
+            
+            # 分块存入，每块作为一个文档
+            documents = []
+            for i, chunk in enumerate(chunks):
+                documents.append({
+                    'title': f"{result['title']} (片段 {i+1}/{len(chunks)})",
+                    'content': chunk,
+                    'source': metadata["filename"],
+                    'category': category,
+                    'keywords': [metadata["extension"], category, result["title"]]
+                })
+            
+            self.vector_db.add_documents(documents)
+            return {
+                "success": True,
+                "message": f"文件 '{metadata['filename']}' 索引完成，共 {len(chunks)} 个片段",
+                "chunk_count": len(chunks),
+            }
+        except Exception as e:
+            logger.error(f"索引文件失败 {file_path}: {e}")
+            return {"success": False, "error": str(e)}
+    
+    def list_uploaded_documents(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        """列出已上传/索引的文档"""
+        return self.vector_db.list_documents(limit, offset)
+    
+    def delete_uploaded_document(self, doc_id: int) -> bool:
+        """删除已索引的文档"""
+        return self.vector_db.delete_document(doc_id)
+    
+    # ========== IMA 知识库集成 ==========
+    
+    def get_ima_client(self) -> Optional[IMAClient]:
+        """获取 IMA 客户端（从配置读取凭证）"""
+        ima_config = self.config.get('knowledge.ima', {})
+        client_id = ima_config.get('client_id', '')
+        api_key = ima_config.get('api_key', '')
+        if client_id and api_key:
+            return IMAClient(client_id, api_key)
+        return None
+    
+    def configure_ima(self, client_id: str, api_key: str):
+        """配置 IMA 连接"""
+        self.config.set('knowledge.ima.client_id', client_id)
+        self.config.set('knowledge.ima.api_key', api_key)
+        self.config.save()
+    
+    async def search_ima_knowledge_bases(self, query: str = "", limit: int = 20) -> Dict[str, Any]:
+        """搜索/列出 IMA 知识库"""
+        client = self.get_ima_client()
+        if not client:
+            return {"success": False, "error": "IMA 未配置，请先设置 Client ID 和 API Key"}
+        try:
+            result = await client.search_knowledge_base(query, limit=limit)
+            await client.close()
+            return result
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    async def search_ima_knowledge(self, query: str, knowledge_base_id: str) -> Dict[str, Any]:
+        """在 IMA 知识库中搜索文件"""
+        client = self.get_ima_client()
+        if not client:
+            return {"success": False, "error": "IMA 未配置，请先设置 Client ID 和 API Key"}
+        try:
+            result = await client.search_knowledge(query, knowledge_base_id)
+            await client.close()
+            return result
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    async def list_ima_knowledge_contents(self, knowledge_base_id: str, folder_id: str = "") -> Dict[str, Any]:
+        """浏览 IMA 知识库内容"""
+        client = self.get_ima_client()
+        if not client:
+            return {"success": False, "error": "IMA 未配置，请先设置 Client ID 和 API Key"}
+        try:
+            result = await client.get_knowledge_list(knowledge_base_id, folder_id)
+            await client.close()
+            return result
+        except Exception as e:
+            return {"success": False, "error": str(e)}

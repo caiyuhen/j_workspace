@@ -348,6 +348,162 @@ async def search_knowledge(request: SearchRequest):
         return {"success": False, "error": str(e)}
 
 
+# ==================== 知识库管理 API ====================
+
+@app.post("/api/knowledge/upload")
+async def knowledge_upload(file: UploadFile = File(...), category: str = "上传文档"):
+    """上传文件并索引到本地知识库（支持 PDF/DOCX/TXT/MD）"""
+    try:
+        if kb is None:
+            return {"success": False, "error": "KnowledgeBase 未初始化"}
+        
+        # 保存到临时目录
+        upload_dir = os.path.join(tempfile.gettempdir(), "medai_uploads")
+        os.makedirs(upload_dir, exist_ok=True)
+        file_path = os.path.join(upload_dir, file.filename)
+        
+        content = await file.read()
+        with open(file_path, "wb") as f:
+            f.write(content)
+        
+        # 解析并索引
+        result = kb.index_file(file_path, category=category)
+        
+        return {
+            "success": result.get("success", False),
+            "message": result.get("message") or result.get("error", ""),
+            "filename": file.filename,
+            "size": len(content),
+            "chunk_count": result.get("chunk_count", 0),
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/knowledge/documents")
+async def knowledge_documents(limit: int = 100, offset: int = 0):
+    """列出已索引到本地知识库的文档"""
+    try:
+        if kb is None:
+            return {"success": False, "error": "KnowledgeBase 未初始化"}
+        
+        docs = kb.list_uploaded_documents(limit=limit, offset=offset)
+        return {
+            "success": True,
+            "documents": docs,
+            "count": len(docs),
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.delete("/api/knowledge/documents/{doc_id}")
+async def knowledge_delete_document(doc_id: int):
+    """删除本地知识库中的指定文档"""
+    try:
+        if kb is None:
+            return {"success": False, "error": "KnowledgeBase 未初始化"}
+        
+        deleted = kb.delete_uploaded_document(doc_id)
+        return {
+            "success": deleted,
+            "message": "已删除" if deleted else "未找到该文档",
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+class IMAConfigRequest(BaseModel):
+    client_id: str
+    api_key: str
+
+
+class IMASearchKBRequest(BaseModel):
+    query: str = ""
+    limit: int = 20
+
+
+class IMASearchRequest(BaseModel):
+    query: str
+    knowledge_base_id: str
+
+
+class IMAListContentsRequest(BaseModel):
+    knowledge_base_id: str
+    folder_id: str = ""
+
+
+@app.post("/api/knowledge/ima/config")
+async def ima_configure(request: IMAConfigRequest):
+    """配置 IMA 知识库连接（ClientID + APIKey）"""
+    try:
+        if kb is None:
+            return {"success": False, "error": "KnowledgeBase 未初始化"}
+        
+        kb.configure_ima(request.client_id.strip(), request.api_key.strip())
+        return {
+            "success": True,
+            "message": "IMA 配置已保存",
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/knowledge/ima/status")
+async def ima_status():
+    """获取 IMA 配置状态"""
+    try:
+        if kb is None:
+            return {"success": False, "configured": False, "error": "KnowledgeBase 未初始化"}
+        
+        client = kb.get_ima_client()
+        return {
+            "success": True,
+            "configured": client is not None,
+        }
+    except Exception as e:
+        return {"success": False, "configured": False, "error": str(e)}
+
+
+@app.post("/api/knowledge/ima/search-kb")
+async def ima_search_kb(request: IMASearchKBRequest):
+    """搜索/列出 IMA 知识库"""
+    try:
+        if kb is None:
+            return {"success": False, "error": "KnowledgeBase 未初始化"}
+        
+        result = await kb.search_ima_knowledge_bases(request.query, request.limit)
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/knowledge/ima/search")
+async def ima_search(request: IMASearchRequest):
+    """在 IMA 知识库中搜索文件"""
+    try:
+        if kb is None:
+            return {"success": False, "error": "KnowledgeBase 未初始化"}
+        
+        result = await kb.search_ima_knowledge(request.query, request.knowledge_base_id)
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/knowledge/ima/contents")
+async def ima_contents(request: IMAListContentsRequest):
+    """浏览 IMA 知识库中的文件和文件夹"""
+    try:
+        if kb is None:
+            return {"success": False, "error": "KnowledgeBase 未初始化"}
+        
+        result = await kb.list_ima_knowledge_contents(request.knowledge_base_id, request.folder_id)
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 @app.get("/api/history")
 async def get_history():
     """获取对话历史"""
