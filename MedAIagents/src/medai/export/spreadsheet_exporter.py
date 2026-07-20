@@ -1,5 +1,5 @@
 """
-Excel (.xlsx) 文档导出模块
+Excel (.xlsx) 文档导出模块 (美化版)
 Spreadsheet Exporter Module
 
 支持:
@@ -17,14 +17,18 @@ try:
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
-    from openpyxl.chart import BarChart, LineChart, Reference
+    from openpyxl.chart import BarChart, LineChart, Reference, PieChart
+    from openpyxl.formatting.rule import DataBarRule, ColorScaleRule, IconSetRule
+    from openpyxl.worksheet.datavalidation import DataValidation
     HAS_OPENPYXL = True
 except ImportError:
     HAS_OPENPYXL = False
 
+from .styles import ExcelColors, BRAND_NAME
+
 
 class BaseSpreadsheetExporter:
-    """Excel 导出基类"""
+    """Excel 导出基类 - 美化版"""
 
     def __init__(self):
         if not HAS_OPENPYXL:
@@ -33,26 +37,105 @@ class BaseSpreadsheetExporter:
         self.ws = self.wb.active
 
     def _setup_header_style(self, row: int, cols: int):
-        """设置表头样式"""
-        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-        header_font = Font(bold=True, color="FFFFFF", size=11)
-        header_align = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        """设置专业表头样式（医学蓝主题）"""
+        header_fill = PatternFill(
+            start_color=ExcelColors.PRIMARY,
+            end_color=ExcelColors.PRIMARY,
+            fill_type="solid"
+        )
+        header_font = Font(
+            bold=True,
+            color=ExcelColors.HEADER_TEXT,
+            size=11,
+            name="微软雅黑"
+        )
+        header_align = Alignment(
+            horizontal="center",
+            vertical="center",
+            wrap_text=True
+        )
+        thin_border = Border(
+            bottom=Side(style="medium", color=ExcelColors.PRIMARY_DK)
+        )
 
         for col in range(1, cols + 1):
             cell = self.ws.cell(row=row, column=col)
             cell.fill = header_fill
             cell.font = header_font
             cell.alignment = header_align
+            cell.border = thin_border
 
     def _apply_zebra_striping(self, start_row: int, end_row: int, cols: int):
-        """应用斑马纹"""
-        fill_even = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
-        fill_odd = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+        """应用斑马纹（浅蓝交替）"""
+        fill_even = PatternFill(
+            start_color=ExcelColors.ZEBRA_EVEN,
+            end_color=ExcelColors.ZEBRA_EVEN,
+            fill_type="solid"
+        )
+        fill_odd = PatternFill(
+            start_color=ExcelColors.ZEBRA_ODD,
+            end_color=ExcelColors.ZEBRA_ODD,
+            fill_type="solid"
+        )
+        thin_border = Border(
+            left=Side(style="thin", color=ExcelColors.BORDER),
+            right=Side(style="thin", color=ExcelColors.BORDER),
+            top=Side(style="thin", color=ExcelColors.BORDER),
+            bottom=Side(style="thin", color=ExcelColors.BORDER),
+        )
 
         for row in range(start_row, end_row + 1):
             fill = fill_even if (row - start_row) % 2 == 0 else fill_odd
             for col in range(1, cols + 1):
-                self.ws.cell(row=row, column=col).fill = fill
+                cell = self.ws.cell(row=row, column=col)
+                cell.fill = fill
+                cell.border = thin_border
+                cell.alignment = Alignment(vertical="center")
+
+    def _apply_data_bars(self, col_letter: str, start_row: int, end_row: int,
+                         color: str = "1E5AA8"):
+        """为列添加数据条条件格式"""
+        rule = DataBarRule(
+            start_type='min', end_type='max',
+            color=color,
+            showValue=True, minLength=None, maxLength=None
+        )
+        self.ws.conditional_formatting.add(
+            f'{col_letter}{start_row}:{col_letter}{end_row}', rule
+        )
+
+    def _apply_color_scale(self, col_letter: str, start_row: int, end_row: int):
+        """为列添加色阶条件格式（绿-白-红）"""
+        rule = ColorScaleRule(
+            start_type='min', start_color='C0392B',
+            mid_type='percentile', mid_value=50, mid_color='FFFFFF',
+            end_type='max', end_color='2E8B57'
+        )
+        self.ws.conditional_formatting.add(
+            f'{col_letter}{start_row}:{col_letter}{end_row}', rule
+        )
+
+    def _add_title_row(self, title_text: str, merge_range: str,
+                       height: int = 35):
+        """添加统一标题行"""
+        self.ws.merge_cells(merge_range)
+        title_cell = self.ws[merge_range.split(':')[0]]
+        title_cell.value = title_text
+        title_cell.font = Font(
+            bold=True, size=16, color=ExcelColors.PRIMARY_DK,
+            name="微软雅黑"
+        )
+        title_cell.alignment = Alignment(
+            horizontal="center", vertical="center"
+        )
+        row_num = int(''.join(filter(str.isdigit, merge_range.split(':')[0])))
+        self.ws.row_dimensions[row_num].height = height
+
+    def _add_brand_footer(self, row: int):
+        """添加品牌页脚"""
+        cell = self.ws.cell(row=row, column=1)
+        cell.value = f"Generated by {BRAND_NAME}  |  {datetime.now().strftime('%Y-%m-%d')}"
+        cell.font = Font(size=9, color=ExcelColors.TEXT_LT, italic=True)
 
     def _auto_column_width(self, min_width: int = 10, max_width: int = 50):
         """自动调整列宽"""
@@ -68,6 +151,16 @@ class BaseSpreadsheetExporter:
             adjusted_width = min(max(min_width, max_length + 2), max_width)
             self.ws.column_dimensions[column_letter].width = adjusted_width
 
+    def _freeze_header(self, freeze_row: int = 2):
+        """冻结表头行"""
+        self.ws.freeze_panes = f"A{freeze_row}"
+
+    def _add_auto_filter(self, start_row: int, end_row: int, cols: int):
+        """添加自动筛选"""
+        start_col = get_column_letter(1)
+        end_col = get_column_letter(cols)
+        self.ws.auto_filter.ref = f"{start_col}{start_row}:{end_col}{end_row}"
+
     def save(self, file_path: str):
         """保存工作簿"""
         os.makedirs(os.path.dirname(file_path) or '.', exist_ok=True)
@@ -76,7 +169,7 @@ class BaseSpreadsheetExporter:
 
 
 class MetaAnalysisExporter(BaseSpreadsheetExporter):
-    """Meta 分析结果导出器"""
+    """Meta 分析结果导出器 - 美化版"""
 
     def export_meta_analysis(self, result: Dict[str, Any], file_path: str) -> str:
         """
@@ -89,17 +182,14 @@ class MetaAnalysisExporter(BaseSpreadsheetExporter):
         self.ws.title = "Meta Analysis"
 
         # 标题
-        self.ws.merge_cells("A1:F1")
-        title_cell = self.ws["A1"]
-        title_cell.value = "Meta-Analysis Results"
-        title_cell.font = Font(bold=True, size=16, color="1F4E78")
-        title_cell.alignment = Alignment(horizontal="center", vertical="center")
-        self.ws.row_dimensions[1].height = 30
+        self._add_title_row("Meta-Analysis Results", "A1:F1", height=35)
 
         # 研究数据
         row = 3
         self.ws.cell(row=row, column=1, value="Study Data")
-        self.ws.cell(row=row, column=1).font = Font(bold=True, size=12)
+        self.ws.cell(row=row, column=1).font = Font(
+            bold=True, size=12, color=ExcelColors.PRIMARY_DK, name="微软雅黑"
+        )
         row += 1
 
         headers = ["Study", "Group A Events", "Group A Total", "Group B Events", "Group B Total", "Effect Size"]
@@ -121,10 +211,21 @@ class MetaAnalysisExporter(BaseSpreadsheetExporter):
         end_data_row = row + len(studies)
         self._apply_zebra_striping(start_data_row, end_data_row, len(headers))
 
+        # 为 Effect Size 列添加数据条
+        self._apply_data_bars('F', start_data_row, end_data_row)
+
         # 汇总统计
         row = end_data_row + 2
         self.ws.cell(row=row, column=1, value="Summary Statistics")
-        self.ws.cell(row=row, column=1).font = Font(bold=True, size=12)
+        self.ws.cell(row=row, column=1).font = Font(
+            bold=True, size=12, color=ExcelColors.PRIMARY_DK, name="微软雅黑"
+        )
+        row += 1
+
+        summary_headers = ["Statistic", "Value"]
+        self.ws.cell(row=row, column=1, value=summary_headers[0])
+        self.ws.cell(row=row, column=2, value=summary_headers[1])
+        self._setup_header_style(row, 2)
         row += 1
 
         summary_items = [
@@ -139,16 +240,22 @@ class MetaAnalysisExporter(BaseSpreadsheetExporter):
 
         for label, value in summary_items:
             self.ws.cell(row=row, column=1, value=label)
-            self.ws.cell(row=row, column=1).font = Font(bold=True)
+            self.ws.cell(row=row, column=1).font = Font(bold=True, name="微软雅黑")
             self.ws.cell(row=row, column=2, value=value)
             row += 1
 
+        # 冻结表头 + 自动筛选
+        self._freeze_header(freeze_row=start_data_row)
+        self._add_auto_filter(start_data_row, end_data_row, len(headers))
+
+        # 页脚
+        self._add_brand_footer(row + 1)
         self._auto_column_width()
         return self.save(file_path)
 
 
 class BudgetExporter(BaseSpreadsheetExporter):
-    """经费预算表导出器"""
+    """经费预算表导出器 - 美化版"""
 
     def export_budget(self, budget_data: Dict[str, Any], file_path: str) -> str:
         """
@@ -161,12 +268,8 @@ class BudgetExporter(BaseSpreadsheetExporter):
         self.ws.title = "Budget"
 
         # 标题
-        self.ws.merge_cells("A1:E1")
         title = budget_data.get("title", "Research Budget")
-        self.ws["A1"] = title
-        self.ws["A1"].font = Font(bold=True, size=16, color="1F4E78")
-        self.ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
-        self.ws.row_dimensions[1].height = 30
+        self._add_title_row(title, "A1:E1", height=35)
 
         # 表头
         row = 3
@@ -193,32 +296,48 @@ class BudgetExporter(BaseSpreadsheetExporter):
         end_data_row = row + len(items)
         self._apply_zebra_striping(start_data_row, end_data_row, len(headers))
 
+        # 为金额列添加数据条
+        self._apply_data_bars('C', start_data_row, end_data_row)
+
         # 合计行
         total_row = end_data_row + 1
+        total_fill = PatternFill(start_color=ExcelColors.PRIMARY_LT,
+                                  end_color=ExcelColors.PRIMARY_LT, fill_type="solid")
+        for c in range(1, len(headers) + 1):
+            cell = self.ws.cell(row=total_row, column=c)
+            cell.fill = total_fill
+            cell.font = Font(bold=True, name="微软雅黑")
+            cell.border = Border(
+                top=Side(style="medium", color=ExcelColors.PRIMARY)
+            )
         self.ws.cell(row=total_row, column=2, value="Total")
-        self.ws.cell(row=total_row, column=2).font = Font(bold=True)
         self.ws.cell(row=total_row, column=3, value=round(total, 2))
-        self.ws.cell(row=total_row, column=3).font = Font(bold=True)
         self.ws.cell(row=total_row, column=4, value="100%")
-        self.ws.cell(row=total_row, column=4).font = Font(bold=True)
 
-        # 添加边框
-        thin_border = Border(
-            left=Side(style="thin", color="D9DEE7"),
-            right=Side(style="thin", color="D9DEE7"),
-            top=Side(style="thin", color="D9DEE7"),
-            bottom=Side(style="thin", color="D9DEE7"),
-        )
-        for r in range(start_data_row, total_row + 1):
-            for c in range(1, len(headers) + 1):
-                self.ws.cell(row=r, column=c).border = thin_border
+        # 添加饼图（预算占比）
+        if len(items) > 0:
+            pie = PieChart()
+            pie.title = "Budget Distribution"
+            pie.style = 10
+            labels = Reference(self.ws, min_col=2, min_row=start_data_row, max_row=end_data_row)
+            data = Reference(self.ws, min_col=3, min_row=row, max_row=end_data_row)
+            pie.add_data(data, titles_from_data=True)
+            pie.set_categories(labels)
+            pie.width = 12
+            pie.height = 8
+            self.ws.add_chart(pie, f"G{row}")
+
+        # 冻结表头 + 自动筛选 + 页脚
+        self._freeze_header(freeze_row=start_data_row)
+        self._add_auto_filter(start_data_row, end_data_row, len(headers))
+        self._add_brand_footer(total_row + 3)
 
         self._auto_column_width()
         return self.save(file_path)
 
 
 class JournalDatabaseExporter(BaseSpreadsheetExporter):
-    """期刊数据库导出器"""
+    """期刊数据库导出器 - 美化版"""
 
     def export_journals(self, journals: List[Dict[str, Any]],
                         file_path: str) -> str:
@@ -232,11 +351,7 @@ class JournalDatabaseExporter(BaseSpreadsheetExporter):
         self.ws.title = "Journals"
 
         # 标题
-        self.ws.merge_cells("A1:H1")
-        self.ws["A1"] = "Medical Journal Database"
-        self.ws["A1"].font = Font(bold=True, size=16, color="1F4E78")
-        self.ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
-        self.ws.row_dimensions[1].height = 30
+        self._add_title_row("Medical Journal Database", "A1:H1", height=35)
 
         # 表头
         row = 3
@@ -260,12 +375,21 @@ class JournalDatabaseExporter(BaseSpreadsheetExporter):
 
         end_data_row = row + len(journals)
         self._apply_zebra_striping(start_data_row, end_data_row, len(headers))
+
+        # 为 IF 列添加色阶（高 IF 绿色，低 IF 红色）
+        self._apply_color_scale('C', start_data_row, end_data_row)
+
+        # 冻结表头 + 自动筛选 + 页脚
+        self._freeze_header(freeze_row=start_data_row)
+        self._add_auto_filter(start_data_row, end_data_row, len(headers))
+        self._add_brand_footer(end_data_row + 2)
+
         self._auto_column_width()
         return self.save(file_path)
 
 
 class SurvivalDataExporter(BaseSpreadsheetExporter):
-    """生存分析数据导出器"""
+    """生存分析数据导出器 - 美化版"""
 
     def export_survival_data(self, records: List[Dict[str, Any]],
                              file_path: str) -> str:
@@ -279,11 +403,7 @@ class SurvivalDataExporter(BaseSpreadsheetExporter):
         self.ws.title = "Survival Data"
 
         # 标题
-        self.ws.merge_cells("A1:F1")
-        self.ws["A1"] = "Survival Analysis Data"
-        self.ws["A1"].font = Font(bold=True, size=16, color="1F4E78")
-        self.ws["A1"].alignment = Alignment(horizontal="center", vertical="center")
-        self.ws.row_dimensions[1].height = 30
+        self._add_title_row("Survival Analysis Data", "A1:F1", height=35)
 
         # 表头
         row = 3
@@ -305,5 +425,14 @@ class SurvivalDataExporter(BaseSpreadsheetExporter):
 
         end_data_row = row + len(records)
         self._apply_zebra_striping(start_data_row, end_data_row, len(headers))
+
+        # 为 Time 列添加数据条
+        self._apply_data_bars('B', start_data_row, end_data_row)
+
+        # 冻结表头 + 自动筛选 + 页脚
+        self._freeze_header(freeze_row=start_data_row)
+        self._add_auto_filter(start_data_row, end_data_row, len(headers))
+        self._add_brand_footer(end_data_row + 2)
+
         self._auto_column_width()
         return self.save(file_path)

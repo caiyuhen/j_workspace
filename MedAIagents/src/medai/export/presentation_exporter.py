@@ -1,5 +1,5 @@
 """
-PowerPoint (.pptx) 文档导出模块
+PowerPoint (.pptx) 文档导出模块 (美化版)
 Presentation Exporter Module
 
 支持:
@@ -10,10 +10,11 @@ Presentation Exporter Module
 
 import os
 from typing import Dict, List, Any, Optional
+from datetime import datetime
 
 try:
     from pptx import Presentation
-    from pptx.util import Inches, Pt
+    from pptx.util import Inches, Pt, Emu
     from pptx.dml.color import RGBColor
     from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
     from pptx.enum.shapes import MSO_SHAPE
@@ -21,94 +22,401 @@ try:
 except ImportError:
     HAS_PPTX = False
 
+from .styles import PptxColors, BRAND_NAME, BRAND_TAGLINE
+
 
 class BasePresentationExporter:
-    """PPT 导出基类"""
+    """PPT 导出基类 - 美化版"""
+
+    # 幻灯片尺寸 16:9
+    SLIDE_WIDTH = Inches(13.333)
+    SLIDE_HEIGHT = Inches(7.5)
 
     def __init__(self):
         if not HAS_PPTX:
             raise ImportError("python-pptx is required. Install: pip install python-pptx")
         self.prs = Presentation()
-        self.prs.slide_width = Inches(13.333)
-        self.prs.slide_height = Inches(7.5)
+        self.prs.slide_width = self.SLIDE_WIDTH
+        self.prs.slide_height = self.SLIDE_HEIGHT
 
-    def add_title_slide(self, title: str, subtitle: str = ""):
-        """添加标题幻灯片"""
-        slide_layout = self.prs.slide_layouts[0]  # Title Slide
+    def _add_decor_bar(self, slide, top=True, height=Inches(0.08)):
+        """添加顶部或底部装饰条"""
+        if top:
+            shape = slide.shapes.add_shape(
+                MSO_SHAPE.RECTANGLE,
+                Inches(0), Inches(0),
+                self.SLIDE_WIDTH, height
+            )
+        else:
+            shape = slide.shapes.add_shape(
+                MSO_SHAPE.RECTANGLE,
+                Inches(0), self.SLIDE_HEIGHT - height,
+                self.SLIDE_WIDTH, height
+            )
+        shape.fill.solid()
+        shape.fill.fore_color.rgb = PptxColors.PRIMARY
+        shape.line.fill.background()
+        # 将装饰条置于底层
+        spTree = slide.shapes._spTree
+        sp = shape._element
+        spTree.remove(sp)
+        spTree.insert(2, sp)
+
+    def _add_brand_footer(self, slide):
+        """添加品牌页脚"""
+        footer = slide.shapes.add_textbox(
+            Inches(0.4), self.SLIDE_HEIGHT - Inches(0.35),
+            Inches(4), Inches(0.25)
+        )
+        tf = footer.text_frame
+        p = tf.paragraphs[0]
+        p.text = BRAND_NAME
+        p.font.size = Pt(8)
+        p.font.color.rgb = PptxColors.TEXT_LT
+
+    def _add_slide_number(self, slide, number: int):
+        """添加页码"""
+        num_box = slide.shapes.add_textbox(
+            self.SLIDE_WIDTH - Inches(1.0), self.SLIDE_HEIGHT - Inches(0.35),
+            Inches(0.8), Inches(0.25)
+        )
+        tf = num_box.text_frame
+        p = tf.paragraphs[0]
+        p.text = str(number)
+        p.font.size = Pt(10)
+        p.font.color.rgb = PptxColors.TEXT_LT
+        p.alignment = PP_ALIGN.RIGHT
+
+    def add_title_slide(self, title: str, subtitle: str = "", 
+                        author: str = "", doc_type: str = ""):
+        """添加专业标题幻灯片（美化版）"""
+        slide_layout = self.prs.slide_layouts[6]  # Blank
         slide = self.prs.slides.add_slide(slide_layout)
-        slide.shapes.title.text = title
-        if subtitle and len(slide.placeholders) > 1:
-            slide.placeholders[1].text = subtitle
+
+        # 背景渐变效果（用纯色矩形模拟）
+        bg = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            Inches(0), Inches(0),
+            self.SLIDE_WIDTH, self.SLIDE_HEIGHT
+        )
+        bg.fill.solid()
+        bg.fill.fore_color.rgb = PptxColors.PRIMARY_LT
+        bg.line.fill.background()
+        # 置于底层
+        spTree = slide.shapes._spTree
+        sp = bg._element
+        spTree.remove(sp)
+        spTree.insert(2, sp)
+
+        # 左侧色块装饰
+        left_bar = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            Inches(0), Inches(0),
+            Inches(0.15), self.SLIDE_HEIGHT
+        )
+        left_bar.fill.solid()
+        left_bar.fill.fore_color.rgb = PptxColors.PRIMARY
+        left_bar.line.fill.background()
+
+        # 品牌标识
+        brand = slide.shapes.add_textbox(
+            Inches(0.5), Inches(0.4), Inches(6), Inches(0.4)
+        )
+        tf = brand.text_frame
+        p = tf.paragraphs[0]
+        p.text = BRAND_NAME.upper()
+        p.font.size = Pt(12)
+        p.font.bold = True
+        p.font.color.rgb = PptxColors.PRIMARY
+
+        # 文档类型标签
+        if doc_type:
+            type_box = slide.shapes.add_textbox(
+                Inches(0.5), Inches(1.0), Inches(4), Inches(0.35)
+            )
+            tf = type_box.text_frame
+            p = tf.paragraphs[0]
+            p.text = doc_type
+            p.font.size = Pt(11)
+            p.font.color.rgb = PptxColors.PRIMARY
+
+        # 主标题
+        title_box = slide.shapes.add_textbox(
+            Inches(0.5), Inches(2.0), Inches(12), Inches(1.2)
+        )
+        tf = title_box.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        p.text = title
+        p.font.size = Pt(40)
+        p.font.bold = True
+        p.font.color.rgb = PptxColors.PRIMARY_DK
+
+        # 副标题
+        if subtitle:
+            sub_box = slide.shapes.add_textbox(
+                Inches(0.5), Inches(3.3), Inches(12), Inches(0.8)
+            )
+            tf = sub_box.text_frame
+            tf.word_wrap = True
+            p = tf.paragraphs[0]
+            p.text = subtitle
+            p.font.size = Pt(20)
+            p.font.color.rgb = PptxColors.TEXT_LT
+
+        # 作者
+        if author:
+            auth_box = slide.shapes.add_textbox(
+                Inches(0.5), Inches(4.2), Inches(6), Inches(0.4)
+            )
+            tf = auth_box.text_frame
+            p = tf.paragraphs[0]
+            p.text = author
+            p.font.size = Pt(14)
+            p.font.color.rgb = PptxColors.TEXT
+
+        # 日期
+        date_box = slide.shapes.add_textbox(
+            Inches(0.5), Inches(4.7), Inches(4), Inches(0.3)
+        )
+        tf = date_box.text_frame
+        p = tf.paragraphs[0]
+        p.text = datetime.now().strftime("%Y-%m-%d")
+        p.font.size = Pt(11)
+        p.font.color.rgb = PptxColors.TEXT_LT
+
+        # 底部装饰条
+        self._add_decor_bar(slide, top=False)
         return slide
 
-    def add_content_slide(self, title: str, content_items: List[str]):
-        """添加内容幻灯片"""
-        slide_layout = self.prs.slide_layouts[1]  # Title and Content
+    def add_content_slide(self, title: str, content_items: List[str],
+                          slide_number: int = 0):
+        """添加内容幻灯片（美化版）"""
+        slide_layout = self.prs.slide_layouts[6]  # Blank
         slide = self.prs.slides.add_slide(slide_layout)
-        slide.shapes.title.text = title
 
-        if content_items and len(slide.placeholders) > 1:
-            tf = slide.placeholders[1].text_frame
-            tf.clear()
-            for i, item in enumerate(content_items):
-                if i == 0:
-                    tf.paragraphs[0].text = item
-                else:
-                    p = tf.add_paragraph()
-                    p.text = item
-                    p.level = 0
+        # 白色背景
+        bg = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            Inches(0), Inches(0),
+            self.SLIDE_WIDTH, self.SLIDE_HEIGHT
+        )
+        bg.fill.solid()
+        bg.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        bg.line.fill.background()
+        spTree = slide.shapes._spTree
+        sp = bg._element
+        spTree.remove(sp)
+        spTree.insert(2, sp)
+
+        # 顶部装饰条
+        self._add_decor_bar(slide, top=True)
+
+        # 标题
+        title_box = slide.shapes.add_textbox(
+            Inches(0.5), Inches(0.25), Inches(12), Inches(0.7)
+        )
+        tf = title_box.text_frame
+        p = tf.paragraphs[0]
+        p.text = title
+        p.font.size = Pt(28)
+        p.font.bold = True
+        p.font.color.rgb = PptxColors.PRIMARY_DK
+
+        # 标题下划线装饰
+        underline = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            Inches(0.5), Inches(0.95),
+            Inches(1.5), Inches(0.03)
+        )
+        underline.fill.solid()
+        underline.fill.fore_color.rgb = PptxColors.PRIMARY
+        underline.line.fill.background()
+
+        # 内容区域
+        content_box = slide.shapes.add_textbox(
+            Inches(0.5), Inches(1.2), Inches(12.3), Inches(5.8)
+        )
+        tf = content_box.text_frame
+        tf.word_wrap = True
+
+        for i, item in enumerate(content_items):
+            if i == 0:
+                p = tf.paragraphs[0]
+            else:
+                p = tf.add_paragraph()
+            p.text = f"• {item}"
+            p.font.size = Pt(16)
+            p.font.color.rgb = PptxColors.TEXT
+            p.space_after = Pt(10)
+            p.level = 0
+
+        # 页脚
+        self._add_brand_footer(slide)
+        if slide_number > 0:
+            self._add_slide_number(slide, slide_number)
+
         return slide
 
     def add_two_column_slide(self, title: str, left_title: str,
                              left_items: List[str], right_title: str,
-                             right_items: List[str]):
-        """添加双栏幻灯片"""
-        slide_layout = self.prs.slide_layouts[5]  # Blank
+                             right_items: List[str], slide_number: int = 0):
+        """添加双栏幻灯片（美化版）"""
+        slide_layout = self.prs.slide_layouts[6]  # Blank
         slide = self.prs.slides.add_slide(slide_layout)
 
-        # 标题
-        title_shape = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3), Inches(12), Inches(0.8)
+        # 白色背景
+        bg = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            Inches(0), Inches(0),
+            self.SLIDE_WIDTH, self.SLIDE_HEIGHT
         )
-        title_shape.text_frame.text = title
-        title_shape.text_frame.paragraphs[0].font.size = Pt(32)
-        title_shape.text_frame.paragraphs[0].font.bold = True
+        bg.fill.solid()
+        bg.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        bg.line.fill.background()
+        spTree = slide.shapes._spTree
+        sp = bg._element
+        spTree.remove(sp)
+        spTree.insert(2, sp)
 
-        # 左栏
-        left_box = slide.shapes.add_textbox(
-            Inches(0.5), Inches(1.2), Inches(5.8), Inches(5.5)
+        # 顶部装饰条
+        self._add_decor_bar(slide, top=True)
+
+        # 标题
+        title_box = slide.shapes.add_textbox(
+            Inches(0.5), Inches(0.25), Inches(12), Inches(0.7)
         )
-        tf = left_box.text_frame
-        tf.word_wrap = True
+        tf = title_box.text_frame
+        p = tf.paragraphs[0]
+        p.text = title
+        p.font.size = Pt(28)
+        p.font.bold = True
+        p.font.color.rgb = PptxColors.PRIMARY_DK
+
+        # 标题下划线
+        underline = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            Inches(0.5), Inches(0.95),
+            Inches(1.5), Inches(0.03)
+        )
+        underline.fill.solid()
+        underline.fill.fore_color.rgb = PptxColors.PRIMARY
+        underline.line.fill.background()
+
+        # 左栏标题
+        left_title_box = slide.shapes.add_textbox(
+            Inches(0.5), Inches(1.2), Inches(5.8), Inches(0.5)
+        )
+        tf = left_title_box.text_frame
         p = tf.paragraphs[0]
         p.text = left_title
         p.font.size = Pt(20)
         p.font.bold = True
-        p.font.color.rgb = RGBColor(0x44, 0x72, 0xC4)
+        p.font.color.rgb = PptxColors.PRIMARY
 
+        # 左栏内容
+        left_box = slide.shapes.add_textbox(
+            Inches(0.5), Inches(1.7), Inches(5.8), Inches(5.0)
+        )
+        tf = left_box.text_frame
+        tf.word_wrap = True
         for item in left_items:
             p = tf.add_paragraph()
             p.text = f"• {item}"
             p.font.size = Pt(14)
+            p.font.color.rgb = PptxColors.TEXT
             p.space_after = Pt(8)
 
-        # 右栏
-        right_box = slide.shapes.add_textbox(
-            Inches(6.8), Inches(1.2), Inches(5.8), Inches(5.5)
+        # 右栏标题
+        right_title_box = slide.shapes.add_textbox(
+            Inches(6.8), Inches(1.2), Inches(5.8), Inches(0.5)
         )
-        tf = right_box.text_frame
-        tf.word_wrap = True
+        tf = right_title_box.text_frame
         p = tf.paragraphs[0]
         p.text = right_title
         p.font.size = Pt(20)
         p.font.bold = True
-        p.font.color.rgb = RGBColor(0x44, 0x72, 0xC4)
+        p.font.color.rgb = PptxColors.PRIMARY
 
+        # 右栏内容
+        right_box = slide.shapes.add_textbox(
+            Inches(6.8), Inches(1.7), Inches(5.8), Inches(5.0)
+        )
+        tf = right_box.text_frame
+        tf.word_wrap = True
         for item in right_items:
             p = tf.add_paragraph()
             p.text = f"• {item}"
             p.font.size = Pt(14)
+            p.font.color.rgb = PptxColors.TEXT
             p.space_after = Pt(8)
+
+        # 页脚
+        self._add_brand_footer(slide)
+        if slide_number > 0:
+            self._add_slide_number(slide, slide_number)
+
+        return slide
+
+    def add_image_slide(self, title: str, image_path: str,
+                        caption: str = "", slide_number: int = 0):
+        """添加图片幻灯片"""
+        slide_layout = self.prs.slide_layouts[6]  # Blank
+        slide = self.prs.slides.add_slide(slide_layout)
+
+        # 白色背景
+        bg = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            Inches(0), Inches(0),
+            self.SLIDE_WIDTH, self.SLIDE_HEIGHT
+        )
+        bg.fill.solid()
+        bg.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+        bg.line.fill.background()
+        spTree = slide.shapes._spTree
+        sp = bg._element
+        spTree.remove(sp)
+        spTree.insert(2, sp)
+
+        # 顶部装饰条
+        self._add_decor_bar(slide, top=True)
+
+        # 标题
+        title_box = slide.shapes.add_textbox(
+            Inches(0.5), Inches(0.25), Inches(12), Inches(0.7)
+        )
+        tf = title_box.text_frame
+        p = tf.paragraphs[0]
+        p.text = title
+        p.font.size = Pt(28)
+        p.font.bold = True
+        p.font.color.rgb = PptxColors.PRIMARY_DK
+
+        # 插入图片
+        if os.path.exists(image_path):
+            slide.shapes.add_picture(
+                image_path,
+                Inches(1.5), Inches(1.3),
+                width=Inches(10.3)
+            )
+
+        # 图注
+        if caption:
+            cap_box = slide.shapes.add_textbox(
+                Inches(0.5), Inches(6.5), Inches(12.3), Inches(0.5)
+            )
+            tf = cap_box.text_frame
+            p = tf.paragraphs[0]
+            p.text = caption
+            p.font.size = Pt(12)
+            p.font.italic = True
+            p.font.color.rgb = PptxColors.TEXT_LT
+            p.alignment = PP_ALIGN.CENTER
+
+        # 页脚
+        self._add_brand_footer(slide)
+        if slide_number > 0:
+            self._add_slide_number(slide, slide_number)
 
         return slide
 
@@ -120,7 +428,7 @@ class BasePresentationExporter:
 
 
 class ResearchPresentationExporter(BasePresentationExporter):
-    """科研汇报 PPT 导出器"""
+    """科研汇报 PPT 导出器 - 美化版"""
 
     def export_research_report(self, report_data: Dict[str, Any],
                                file_path: str) -> str:
@@ -133,45 +441,32 @@ class ResearchPresentationExporter(BasePresentationExporter):
         """
         # 标题页
         self.add_title_slide(
-            report_data.get("title", "Research Report"),
-            report_data.get("subtitle", "")
+            title=report_data.get("title", "Research Report"),
+            subtitle=report_data.get("subtitle", ""),
+            author=report_data.get("author", ""),
+            doc_type="科研汇报"
         )
 
-        # 背景
-        background = report_data.get("background", [])
-        if background:
-            self.add_content_slide("Background", background)
+        slides = [
+            ("Background", report_data.get("background", [])),
+            ("Methods", report_data.get("methods", [])),
+            ("Results", report_data.get("results", [])),
+            ("Discussion", report_data.get("discussion", [])),
+            ("Conclusions", report_data.get("conclusions", [])),
+            ("Acknowledgments", report_data.get("acknowledgments", [])),
+        ]
 
-        # 方法
-        methods = report_data.get("methods", [])
-        if methods:
-            self.add_content_slide("Methods", methods)
-
-        # 结果
-        results = report_data.get("results", [])
-        if results:
-            self.add_content_slide("Results", results)
-
-        # 讨论
-        discussion = report_data.get("discussion", [])
-        if discussion:
-            self.add_content_slide("Discussion", discussion)
-
-        # 结论
-        conclusions = report_data.get("conclusions", [])
-        if conclusions:
-            self.add_content_slide("Conclusions", conclusions)
-
-        # 致谢
-        acknowledgments = report_data.get("acknowledgments", [])
-        if acknowledgments:
-            self.add_content_slide("Acknowledgments", acknowledgments)
+        slide_num = 2
+        for title, items in slides:
+            if items:
+                self.add_content_slide(title, items, slide_number=slide_num)
+                slide_num += 1
 
         return self.save(file_path)
 
 
 class ImagingTeachingExporter(BasePresentationExporter):
-    """影像征象教学 PPT 导出器"""
+    """影像征象教学 PPT 导出器 - 美化版"""
 
     def export_teaching(self, signs: List[Dict[str, Any]],
                         file_path: str) -> str:
@@ -184,10 +479,12 @@ class ImagingTeachingExporter(BasePresentationExporter):
             file_path: 输出路径
         """
         self.add_title_slide(
-            "Common Imaging Signs",
-            "Radiology Teaching Series"
+            title="Common Imaging Signs",
+            subtitle="Radiology Teaching Series",
+            doc_type="影像教学"
         )
 
+        slide_num = 2
         for sign in signs:
             name = sign.get("name", "Unknown Sign")
             description = sign.get("description", "")
@@ -209,14 +506,16 @@ class ImagingTeachingExporter(BasePresentationExporter):
                 "Basic Information",
                 left_items,
                 "Related Diseases",
-                right_items
+                right_items,
+                slide_number=slide_num
             )
+            slide_num += 1
 
         return self.save(file_path)
 
 
 class BioinformaticsReportExporter(BasePresentationExporter):
-    """生物信息学可视化汇报 PPT 导出器"""
+    """生物信息学可视化汇报 PPT 导出器 - 美化版"""
 
     def export_bioinformatics_report(self, report_data: Dict[str, Any],
                                      file_path: str) -> str:
@@ -228,33 +527,24 @@ class BioinformaticsReportExporter(BasePresentationExporter):
             file_path: 输出路径
         """
         self.add_title_slide(
-            report_data.get("title", "Bioinformatics Analysis Report"),
-            report_data.get("subtitle", "")
+            title=report_data.get("title", "Bioinformatics Analysis Report"),
+            subtitle=report_data.get("subtitle", ""),
+            author=report_data.get("author", ""),
+            doc_type="生信分析"
         )
 
-        # 样本信息
-        sample_info = report_data.get("sample_info", [])
-        if sample_info:
-            self.add_content_slide("Sample Information", sample_info)
+        slides = [
+            ("Sample Information", report_data.get("sample_info", [])),
+            ("Mutation Landscape", report_data.get("mutation_summary", [])),
+            ("Pathway Enrichment", report_data.get("pathways", [])),
+            ("Survival Analysis", report_data.get("survival", [])),
+            ("Conclusions", report_data.get("conclusions", [])),
+        ]
 
-        # 突变谱
-        mutation_summary = report_data.get("mutation_summary", [])
-        if mutation_summary:
-            self.add_content_slide("Mutation Landscape", mutation_summary)
-
-        # 通路富集
-        pathways = report_data.get("pathways", [])
-        if pathways:
-            self.add_content_slide("Pathway Enrichment", pathways)
-
-        # 生存分析
-        survival = report_data.get("survival", [])
-        if survival:
-            self.add_content_slide("Survival Analysis", survival)
-
-        # 结论
-        conclusions = report_data.get("conclusions", [])
-        if conclusions:
-            self.add_content_slide("Conclusions", conclusions)
+        slide_num = 2
+        for title, items in slides:
+            if items:
+                self.add_content_slide(title, items, slide_number=slide_num)
+                slide_num += 1
 
         return self.save(file_path)

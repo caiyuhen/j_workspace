@@ -438,6 +438,101 @@ class LLMRouter:
         self.config.set('llm.default_provider', provider)
         logger.info(f"Switched default LLM provider to: {provider}")
     
+    def register_provider(self, name: str, provider_config: Dict[str, Any]) -> bool:
+        """动态注册一个新的 LLM Provider
+        
+        Args:
+            name: Provider 名称（英文小写，用作唯一标识）
+            provider_config: Provider 配置字典，需包含 api_key, base_url, default_model
+        
+        Returns:
+            是否注册成功
+        """
+        if not name or not isinstance(name, str):
+            raise ValueError("Provider 名称不能为空")
+        if not provider_config.get('api_key') or not provider_config.get('base_url'):
+            raise ValueError("Provider 配置必须包含 api_key 和 base_url")
+        
+        # 确定 provider 类
+        known_classes = {
+            'openai': OpenAIProvider,
+            'anthropic': AnthropicProvider,
+            'deepseek': DeepSeekProvider,
+            'cherryin': OpenAIProvider,
+            'siliconflow': OpenAIProvider,
+            'fireworks': OpenAIProvider,
+            'together': OpenAIProvider,
+            'groq': OpenAIProvider,
+            'qwen': OpenAIProvider,
+        }
+        provider_class = known_classes.get(name, OpenAIProvider)
+        
+        # 实例化并注册
+        try:
+            instance = provider_class(provider_config)
+            self._providers[name] = instance
+            logger.info(f"Dynamically registered LLM provider: {name}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to register provider {name}: {e}")
+            raise
+    
+    def remove_provider(self, name: str) -> bool:
+        """移除一个已注册的 LLM Provider
+        
+        Args:
+            name: Provider 名称
+        
+        Returns:
+            是否移除成功
+        """
+        if name not in self._providers:
+            raise ValueError(f"Provider '{name}' 未注册")
+        
+        # 不允许删除当前正在使用的默认 provider
+        if self.config.get('llm.default_provider') == name:
+            raise ValueError(f"无法删除当前正在使用的默认 Provider '{name}'，请先切换到其他 Provider")
+        
+        del self._providers[name]
+        logger.info(f"Removed LLM provider: {name}")
+        return True
+    
+    async def test_provider_connection(self, name: str) -> Dict[str, Any]:
+        """测试 Provider 连接是否正常
+        
+        Args:
+            name: Provider 名称
+        
+        Returns:
+            测试结果字典
+        """
+        if name not in self._providers:
+            return {"success": False, "error": f"Provider '{name}' 未注册"}
+        
+        provider = self._providers[name]
+        model = provider.default_model or "gpt-4o-mini"
+        
+        try:
+            response = await asyncio.wait_for(
+                provider.chat_completion(
+                    messages=[{"role": "user", "content": "Hi, respond with only 'OK'."}],
+                    model=model,
+                    max_tokens=16,
+                    temperature=0
+                ),
+                timeout=15.0
+            )
+            content = ""
+            if hasattr(response, 'choices'):
+                content = response.choices[0].message.content or ""
+            elif isinstance(response, str):
+                content = response
+            return {"success": True, "model": model, "response_preview": content[:50]}
+        except asyncio.TimeoutError:
+            return {"success": False, "error": "连接超时（15秒）"}
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
     @property
     def available_providers(self) -> List[str]:
         """获取所有可用提供商"""

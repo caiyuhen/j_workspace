@@ -160,7 +160,7 @@
         .plan-download-action { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; flex-shrink: 0; }
         .chat-input-area { background: white; padding: 14px 20px; border-top: 1px solid #e8e8e8; }
         .input-wrapper { display: flex; gap: 10px; align-items: flex-end; }
-        .chat-input { flex: 1; border: 2px solid #e8e8e8; border-radius: 12px; padding: 10px 14px; font-size: 14px; resize: none; min-height: 44px; max-height: 100px; font-family: inherit; }
+        .chat-input { flex: 1; border: 2px solid #e8e8e8; border-radius: 12px; padding: 10px 14px; font-size: 14px; resize: none; min-height: 44px; max-height: 120px; font-family: inherit; height: auto; overflow-y: hidden; line-height: 1.5; }
         .chat-input:focus { outline: none; border-color: #667eea; }
         .send-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; padding: 10px 20px; font-size: 13px; font-weight: 500; cursor: pointer; }
         .send-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4); }
@@ -277,9 +277,12 @@
                 <div id="page-notes" class="page">
                     <div class="card">
                         <div class="card-title"><span>📝</span><span>生成医学文书</span></div>
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
                             <span style="font-size:13px;color:#666">填写患者信息生成标准医学文书</span>
-                            <button class="btn btn-success" onclick="exportNote()">📥 导出文书</button>
+                            <div style="display:flex;align-items:center;gap:10px">
+                                <span id="exportStatus" style="font-size:12px;min-height:18px"></span>
+                                <button type="button" class="btn btn-success" id="exportNoteBtn">📥 导出文书</button>
+                            </div>
                         </div>
                         <div class="form-group">
                             <label class="form-label">文书类型</label>
@@ -517,7 +520,7 @@ print(calc_bmi(70, 1.75))"></textarea>
                     </div>
                     <div class="card">
                         <div class="card-title"><span>🔄</span><span>切换模型</span></div>
-                        <p style="font-size:13px;color:#666;margin-bottom:14px">点击模型卡片切换使用的 AI 模型。所有模型共用同一套 API Key（CherryIn 聚合平台）。</p>
+                        <p style="font-size:13px;color:#666;margin-bottom:14px">点击模型卡片切换使用的 AI 模型。</p>
                         <div id="modelsGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
                             <div class="loading-container"><div class="loading"></div>加载模型列表...</div>
                         </div>
@@ -525,13 +528,41 @@ print(calc_bmi(70, 1.75))"></textarea>
                     </div>
                     <div class="card">
                         <div class="card-title"><span>➕</span><span>添加独立 Provider</span></div>
-                        <p style="font-size:13px;color:#666;margin-bottom:14px">如需使用独立的 OpenAI / Claude / DeepSeek / 阿里云 API，请修改 <code>config.yaml</code> 文件取消对应 provider 的注释并配置 API Key。</p>
-                        <div style="background:#f8f9fa;padding:12px;border-radius:8px;font-size:12px;font-family:monospace">
- providers:<br>
- &nbsp;&nbsp;qwen:<br>
- &nbsp;&nbsp;&nbsp;&nbsp;api_key: ${DASHSCOPE_API_KEY}<br>
- &nbsp;&nbsp;&nbsp;&nbsp;base_url: https://dashscope.aliyuncs.com/compatible-mode/v1<br>
- &nbsp;&nbsp;&nbsp;&nbsp;default_model: qwen2.5-72b-instruct
+                        <p style="font-size:13px;color:#666;margin-bottom:14px">在界面上直接添加 OpenAI 兼容 API、Anthropic Claude、DeepSeek 等独立 Provider，无需手动编辑配置文件。</p>
+
+                        <!-- Provider 列表 -->
+                        <div id="providersList" style="margin-bottom:16px">
+                            <div class="loading-container"><div class="loading"></div>加载中...</div>
+                        </div>
+
+                        <!-- 添加 Provider 表单 -->
+                        <div id="addProviderForm" style="background:#f8f9fa;padding:16px;border-radius:10px;border:1px dashed #d9d9d9">
+                            <div style="font-size:14px;font-weight:600;color:#1a3a5f;margin-bottom:12px">新建 Provider</div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Provider 名称 *</label>
+                                    <input type="text" class="form-input" id="newProviderName" placeholder="例如: my_openai、siliconflow">
+                                    <div style="font-size:11px;color:#999;margin-top:4px">英文小写，唯一标识（如 openai、anthropic、deepseek）</div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">API Key *</label>
+                                    <input type="password" class="form-input" id="newProviderApiKey" placeholder="sk-...">
+                                </div>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">Base URL *</label>
+                                    <input type="text" class="form-input" id="newProviderBaseUrl" placeholder="https://api.openai.com/v1">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">默认模型</label>
+                                    <input type="text" class="form-input" id="newProviderModel" placeholder="gpt-4o-mini">
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:10px;align-items:center;margin-top:12px">
+                                <button class="btn btn-primary" onclick="addProvider()">添加 Provider</button>
+                                <span id="addProviderStatus" style="font-size:12px;min-height:18px"></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -640,6 +671,82 @@ print(calc_bmi(70, 1.75))"></textarea>
 let currentPage = 'chat';
 let currentSkillName = '';
 
+// textarea 自适应高度 + 按钮事件绑定（script 在 body 底部，DOM 已就绪，直接执行）
+(function() {
+    console.log('[MedAI] Init textarea + export button bindings');
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+        chatInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            const newHeight = Math.min(this.scrollHeight, 120);
+            this.style.height = newHeight + 'px';
+        });
+    }
+    const exportNoteBtn = document.getElementById('exportNoteBtn');
+    console.log('[MedAI] exportNoteBtn found:', !!exportNoteBtn);
+    if (exportNoteBtn) {
+        exportNoteBtn.addEventListener('click', async function(e) {
+            console.log('[MedAI] Export button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+
+            const statusSpan = document.getElementById('exportStatus');
+            const resultDiv = document.getElementById('noteResult');
+            const content = resultDiv.innerText.trim();
+            console.log('[MedAI] content length:', content.length);
+
+            if (!content || content.includes('正在生成')) {
+                statusSpan.innerHTML = '<span style="color:#d46b08;font-weight:500">⚠️ 请先生成文书</span>';
+                resultDiv.innerHTML = '<div class="safety-warning" style="margin-top:10px"><div class="warning-title">提示</div>请先生成文书后再导出</div>';
+                setTimeout(() => { statusSpan.textContent = ''; }, 3000);
+                return;
+            }
+
+            const originalText = exportNoteBtn.textContent;
+            exportNoteBtn.textContent = '⏳ 导出中...';
+            exportNoteBtn.disabled = true;
+            statusSpan.innerHTML = '<span style="color:#666">正在准备下载...</span>';
+
+            const filename = '医学文书_' + new Date().toISOString().slice(0,10) + '.txt';
+            try {
+                const response = await fetch('/api/export-note', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({content: content, filename: filename})
+                });
+                console.log('[MedAI] API response status:', response.status);
+                if (!response.ok) throw new Error('服务器返回 ' + response.status);
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+
+                // 使用 a.download 触发下载（比 iframe 更可靠）
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.style.display = 'none';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                    if (a.parentNode) document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                }, 200);
+
+                statusSpan.innerHTML = '<span style="color:#389e0d;font-weight:500">✓ 导出成功</span>';
+                resultDiv.innerHTML += '<div style="margin-top:8px;color:#2E8B57;font-size:12px">✓ 文书已导出: ' + filename + '</div>';
+                setTimeout(() => { statusSpan.textContent = ''; }, 3000);
+            } catch (err) {
+                console.error('[MedAI] Export error:', err);
+                statusSpan.innerHTML = '<span style="color:#cf1322;font-weight:500">✗ 导出失败</span>';
+                resultDiv.innerHTML += '<div style="margin-top:8px;color:#C0392B;font-size:12px">✗ 导出失败: ' + err.message + '</div>';
+                setTimeout(() => { statusSpan.textContent = ''; }, 5000);
+            } finally {
+                exportNoteBtn.textContent = originalText;
+                exportNoteBtn.disabled = false;
+            }
+        });
+    }
+})();
+
 // 页面切换
 function switchPage(page) {
     currentPage = page;
@@ -691,6 +798,8 @@ async function loadModels() {
             grid.innerHTML = html;
         }
     } catch (e) { console.error(e); }
+    // 同时加载 Provider 列表
+    loadProviders();
 }
 
 // 切换 Provider（保留原有功能）
@@ -723,6 +832,155 @@ async function switchModelId(modelId) {
         if (data.success) loadModels();
     } catch (e) {
         resultDiv.innerHTML = `<div class="safety-warning danger"><div class="warning-title">❌ 错误</div>${e.message}</div>`;
+    }
+}
+
+// ========== Provider 管理 ==========
+
+// Provider 图标映射
+function getProviderIcon(name) {
+    const icons = {cherryin:'🔮', openai:'🅾️', anthropic:'🅰️', deepseek:'🔷', qwen:'🇨🇳', siliconflow:'🌊', groq:'⚡', together:'🤝', fireworks:'🎆'};
+    return icons[name] || '🤖';
+}
+
+// 加载 Provider 列表
+async function loadProviders() {
+    const listDiv = document.getElementById('providersList');
+    if (!listDiv) return;
+    try {
+        const res = await fetch('/api/providers');
+        const data = await res.json();
+        if (data.success) {
+            if (!data.providers.length) {
+                listDiv.innerHTML = '<div style="color:#999;font-size:13px;padding:8px 0">暂无自定义 Provider，使用下方表单添加</div>';
+                return;
+            }
+            let html = '';
+            data.providers.forEach(p => {
+                const borderColor = p.is_default ? '#52c41a' : '#e8e8e8';
+                const statusColor = p.has_api_key ? '#52c41a' : '#faad14';
+                const statusText = p.has_api_key ? '已配置' : '未配置';
+                html += `<div style="display:flex;align-items:center;gap:12px;padding:12px;background:white;border:1px solid ${borderColor};border-radius:8px;margin-bottom:8px">
+                    <div style="font-size:24px;flex-shrink:0">${getProviderIcon(p.name)}</div>
+                    <div style="flex:1;min-width:0">
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                            <span style="font-size:14px;font-weight:600;color:#1a3a5f">${p.name}</span>
+                            ${p.is_default ? '<span style="background:#52c41a;color:white;font-size:10px;padding:1px 6px;border-radius:3px">默认</span>' : ''}
+                            <span style="background:${statusColor}20;color:${statusColor};font-size:10px;padding:1px 6px;border-radius:3px">${statusText}</span>
+                        </div>
+                        <div style="font-size:11px;color:#999;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${p.base_url}</div>
+                        <div style="font-size:11px;color:#888;margin-top:2px">模型: ${p.default_model || '-'} | Key: ${p.api_key_masked}</div>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-shrink:0">
+                        <button class="btn btn-primary" style="padding:4px 12px;font-size:11px" onclick="testProvider('${p.name}', this)">测试</button>
+                        <button class="btn" style="padding:4px 12px;font-size:11px;background:#fff1f0;color:#cf1322;border:1px solid #ffa39e" onclick="deleteProvider('${p.name}')">删除</button>
+                    </div>
+                </div>`;
+            });
+            listDiv.innerHTML = html;
+        }
+    } catch (e) {
+        listDiv.innerHTML = '<div style="color:#cf1322;font-size:13px">加载 Provider 列表失败</div>';
+    }
+}
+
+// 添加 Provider
+async function addProvider() {
+    const status = document.getElementById('addProviderStatus');
+    const name = document.getElementById('newProviderName').value.trim().toLowerCase();
+    const apiKey = document.getElementById('newProviderApiKey').value.trim();
+    const baseUrl = document.getElementById('newProviderBaseUrl').value.trim();
+    const defaultModel = document.getElementById('newProviderModel').value.trim();
+
+    if (!name || !apiKey || !baseUrl) {
+        status.innerHTML = '<span style="color:#cf1322">请填写名称、API Key 和 Base URL</span>';
+        return;
+    }
+
+    const origText = status.innerHTML;
+    status.innerHTML = '<span style="color:#666">添加中...</span>';
+    try {
+        const res = await fetch('/api/providers/add', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, api_key: apiKey, base_url: baseUrl, default_model: defaultModel})
+        });
+        const data = await res.json();
+        if (data.success) {
+            status.innerHTML = '<span style="color:#389e0d;font-weight:500">✓ ' + data.message + '</span>';
+            // 清空表单
+            document.getElementById('newProviderName').value = '';
+            document.getElementById('newProviderApiKey').value = '';
+            document.getElementById('newProviderBaseUrl').value = '';
+            document.getElementById('newProviderModel').value = '';
+            loadProviders();
+            loadModels(); // 刷新模型列表
+            setTimeout(() => { status.textContent = ''; }, 3000);
+        } else {
+            status.innerHTML = '<span style="color:#cf1322">✗ ' + data.error + '</span>';
+        }
+    } catch (e) {
+        status.innerHTML = '<span style="color:#cf1322">✗ ' + e.message + '</span>';
+    }
+}
+
+// 测试 Provider 连接
+async function testProvider(providerName, btnEl) {
+    const origText = btnEl.textContent;
+    btnEl.textContent = '测试中...';
+    btnEl.disabled = true;
+    try {
+        const res = await fetch('/api/providers/test', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({provider: providerName})
+        });
+        const data = await res.json();
+        if (data.success) {
+            btnEl.textContent = '✓ 通过';
+            btnEl.style.color = '#389e0d';
+            btnEl.style.borderColor = '#b7eb8f';
+            btnEl.style.background = '#f6ffed';
+        } else {
+            btnEl.textContent = '✗ 失败';
+            btnEl.style.color = '#cf1322';
+            btnEl.style.borderColor = '#ffa39e';
+            btnEl.style.background = '#fff1f0';
+            alert('连接测试失败: ' + data.error);
+        }
+    } catch (e) {
+        btnEl.textContent = '✗ 错误';
+        btnEl.style.color = '#cf1322';
+        alert('测试请求失败: ' + e.message);
+    } finally {
+        setTimeout(() => {
+            btnEl.textContent = origText;
+            btnEl.disabled = false;
+            btnEl.style.color = '';
+            btnEl.style.borderColor = '';
+            btnEl.style.background = '';
+        }, 3000);
+    }
+}
+
+// 删除 Provider
+async function deleteProvider(providerName) {
+    if (!confirm('确定要删除 Provider "' + providerName + '" 吗？此操作不可撤销。')) return;
+    try {
+        const res = await fetch('/api/providers/delete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({provider: providerName})
+        });
+        const data = await res.json();
+        if (data.success) {
+            loadProviders();
+            loadModels();
+        } else {
+            alert('删除失败: ' + data.error);
+        }
+    } catch (e) {
+        alert('删除失败: ' + e.message);
     }
 }
 
@@ -950,14 +1208,29 @@ async function loadAutoExports() {
     }
 }
 
-function exportNote() {
+function exportNote(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
     const content = document.getElementById('noteResult').innerText;
     if (!content || content.includes('正在生成')) { alert('请先生成文书'); return; }
     const blob = new Blob([content], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = `医学文书_${new Date().toISOString().slice(0,10)}.txt`; a.click();
-    window.URL.revokeObjectURL(url);
+    const filename = `医学文书_${new Date().toISOString().slice(0,10)}.txt`;
+    // 优先使用原生保存 API，避免 DOM 操作触发桌面环境异常
+    if (navigator.msSaveOrOpenBlob) {
+        navigator.msSaveOrOpenBlob(blob, filename);
+    } else if (navigator.saveBlob) {
+        navigator.saveBlob(blob, filename);
+    } else {
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.target = '_blank';
+        a.click();
+        setTimeout(() => window.URL.revokeObjectURL(url), 500);
+    }
 }
 
 // ========== 文件上传 ==========
