@@ -4,8 +4,11 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 import logging
+<<<<<<< HEAD
 import time
 import uuid
+=======
+>>>>>>> origin/main
 
 # Import local modules
 # Assuming server.py is in the root of RAG_Project
@@ -22,23 +25,30 @@ app = FastAPI(title="RAG Retrieval Service", description="Dedicated service for 
 rag_engine = None
 pubmed_client = None
 
+<<<<<<< HEAD
 import requests
 
+=======
+>>>>>>> origin/main
 class SearchRequest(BaseModel):
     query: str
     top_k: int = 5
     use_pubmed: bool = False
     filters: Optional[Dict[str, Any]] = None
+<<<<<<< HEAD
     file_paths: Optional[List[str]] = None
     summarize: bool = True
     return_citations: bool = True
     return_debug: bool = False
     score_threshold: Optional[float] = None
     source_filter: Optional[List[str]] = None
+=======
+>>>>>>> origin/main
 
 class SearchResponse(BaseModel):
     results: List[Dict[str, Any]]
     analysis: Optional[Dict[str, Any]] = None
+<<<<<<< HEAD
     summary: Optional[str] = None
     retrieval_meta: Optional[Dict[str, Any]] = None
 
@@ -82,6 +92,8 @@ def _collect_citations(results: List[Dict[str, Any]], limit: int = 5) -> List[Di
             "snippet": (item.get("text") or "")[:300]
         })
     return citations
+=======
+>>>>>>> origin/main
 
 @app.on_event("startup")
 async def startup_event():
@@ -105,6 +117,7 @@ async def startup_event():
 
 @app.post("/search", response_model=SearchResponse)
 async def search(request: SearchRequest):
+<<<<<<< HEAD
     if not request.query.strip():
         raise HTTPException(status_code=400, detail="query cannot be empty")
 
@@ -117,6 +130,10 @@ async def search(request: SearchRequest):
     pubmed_hits = 0
     external_hits = 0
     warning_messages = []
+=======
+    all_results = []
+    analysis_result = None
+>>>>>>> origin/main
 
     # 1. Milvus Retrieval (RAG Engine)
     if rag_engine:
@@ -134,6 +151,7 @@ async def search(request: SearchRequest):
                 for doc in rag_response["retrieved_docs"]:
                     if "source_type" not in doc:
                         doc["source_type"] = "Milvus"
+<<<<<<< HEAD
                     if _source_matches(doc.get("source_type"), source_filter) and _score_matches(doc.get("source_type"), doc.get("score"), request.score_threshold):
                         all_results.append(doc)
                         if _normalize_source(doc.get("source_type")) == "milvus":
@@ -147,6 +165,13 @@ async def search(request: SearchRequest):
             logger.error("RAG Engine search failed request_id=%s error=%s", request_id, e)
     else:
         warning_messages.append("rag_engine_unavailable")
+=======
+                    all_results.append(doc)
+            if "analysis" in rag_response:
+                analysis_result = rag_response["analysis"]
+        except Exception as e:
+            logger.error(f"RAG Engine search failed: {e}")
+>>>>>>> origin/main
 
     # 2. PubMed Retrieval
     if request.use_pubmed and pubmed_client:
@@ -154,12 +179,17 @@ async def search(request: SearchRequest):
             pubmed_docs = pubmed_client.search(request.query, max_results=request.top_k)
             # Convert to unified format
             for pd in pubmed_docs:
+<<<<<<< HEAD
                 doc = {
+=======
+                all_results.append({
+>>>>>>> origin/main
                     "text": f"Title: {pd.get('Title')}\nAbstract: {pd.get('Abstract')}",
                     "source": f"PubMed (PMID: {pd.get('PMID')})",
                     "score": 0.0, # PubMed doesn't return score in this client
                     "source_type": "PubMed",
                     "metadata": pd
+<<<<<<< HEAD
                 }
                 if _source_matches(doc.get("source_type"), source_filter) and _score_matches(doc.get("source_type"), doc.get("score"), request.score_threshold):
                     all_results.append(doc)
@@ -235,6 +265,17 @@ async def search(request: SearchRequest):
 async def root():
     return {"message": "RAG Service is running. Access /docs for API documentation."}
 
+=======
+                })
+        except Exception as e:
+            logger.error(f"PubMed search failed: {e}")
+
+    return {
+        "results": all_results,
+        "analysis": analysis_result
+    }
+
+>>>>>>> origin/main
 @app.get("/health")
 async def health():
     return {"status": "ok", "rag_engine": rag_engine is not None, "pubmed_client": pubmed_client is not None}

@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<<<<<<< HEAD
     <title>脊柱数字孪生多模态控制台</title>
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
     <style>
@@ -116,10 +117,98 @@
                     <div class="muted">运行后显示 comparison_data 和 patient_state 摘要。</div>
                 </div>
             </div>
+=======
+    <title>脊柱数字孪生控制台</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background-color: #f5f5f5; }
+        .container { display: flex; gap: 20px; }
+        .sidebar { width: 300px; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .main-content { flex: 1; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1, h2, h3 { color: #2c3e50; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input, select, button { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px; }
+        button { background-color: #3498db; color: white; border: none; cursor: pointer; transition: background 0.3s; }
+        button:hover { background-color: #2980b9; }
+        .card { border: 1px solid #eee; padding: 10px; margin-bottom: 10px; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
+        .card:hover { background-color: #f0f8ff; }
+        .card.active { background-color: #e1f5fe; border-color: #3498db; }
+        #plot-container { width: 100%; height: 600px; border: 1px solid #eee; margin-top: 20px; }
+        .status-msg { margin-top: 10px; padding: 10px; border-radius: 4px; display: none; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .loading { text-align: center; color: #666; font-style: italic; display: none; }
+    </style>
+</head>
+<body>
+    <h1>脊柱数字孪生控制台 (Spine Digital Twin Console)</h1>
+    
+    <div class="container">
+        <!-- Sidebar: Upload & Patient List -->
+        <div class="sidebar">
+            <h3>1. 上传新病例</h3>
+            <div class="form-group">
+                <input type="file" id="pdf-upload" accept=".pdf">
+                <button onclick="uploadPDF()">上传并提取数据 (OCR)</button>
+                <div id="upload-status" class="status-msg"></div>
+            </div>
+
+            <hr>
+
+            <h3>2. 选择患者</h3>
+            <button onclick="loadPatients()">刷新列表</button>
+            <div id="patient-list" style="max-height: 400px; overflow-y: auto; margin-top: 10px;">
+                <div style="text-align: center; color: #999;">点击刷新加载患者</div>
+            </div>
+        </div>
+
+        <!-- Main Content: Simulation & Visualization -->
+        <div class="main-content">
+            <h3>3. 配置模拟参数</h3>
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 1; display: none;">
+                    <label>治疗类型</label>
+                    <select id="treatment-type">
+                        <option value="Brace">支具治疗 (Brace)</option>
+                        <option value="PT">物理治疗 (PT)</option>
+                        <option value="Intensive">强化康复 (Intensive)</option>
+                        <option value="Surgery">手术治疗 (Surgery)</option>
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label>持续时间 (月)</label>
+                    <input type="number" id="duration" value="24" min="1" max="60">
+                </div>
+                <div style="flex: 1;">
+                    <label>依从性 (0.0 - 1.0)</label>
+                    <input type="number" id="compliance" value="0.9" min="0" max="1" step="0.1">
+                </div>
+            </div>
+            <button onclick="runSimulation()" style="margin-top: 10px; background-color: #27ae60;">运行模拟并生成可视化</button>
+            
+            <div id="simulation-status" class="loading">正在进行模拟计算和渲染，请稍候...</div>
+            <div id="error-msg" class="status-msg error"></div>
+
+            <h3>4. 演变可视化结果</h3>
+            <div style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
+                图表展示了三种情景的对比：
+                1. <strong>自然发展</strong> (无干预)
+                2. <strong>常规干预</strong> (当前选择的方案)
+                3. <strong>强化干预</strong> (高依从性/强化方案)
+            </div>
+            <div id="plot-container" style="height: 800px;"></div>
+            
+            <h3>5. 干预效果数据对比</h3>
+            <div id="comparison-table-container"></div>
+            
+            <div id="report-info" style="margin-top: 10px; color: #666;"></div>
+>>>>>>> origin/main
         </div>
     </div>
 
     <script>
+<<<<<<< HEAD
         const API_BASE = window.location.origin;
 
         function setStatus(type, message) {
@@ -414,10 +503,52 @@
             } else {
                 reviewFlag.className = "review-flag";
                 reviewFlag.textContent = "";
+=======
+        const API_BASE = window.location.origin; // Assume served from gateway
+        let currentPatient = null;
+
+        // Load patients on startup
+        window.onload = loadPatients;
+
+        async function uploadPDF() {
+            const fileInput = document.getElementById('pdf-upload');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert("请选择 PDF 文件");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            const statusDiv = document.getElementById('upload-status');
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status-msg';
+            statusDiv.textContent = '正在上传并 OCR 识别...';
+
+            try {
+                const response = await fetch(`${API_BASE}/upload/ocr`, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+                
+                if (response.ok) {
+                    statusDiv.className = 'status-msg success';
+                    statusDiv.textContent = '上传成功! ' + (result.ocr_result?.note || '');
+                    loadPatients(); // Refresh list
+                } else {
+                    throw new Error(result.detail || '上传失败');
+                }
+            } catch (error) {
+                statusDiv.className = 'status-msg error';
+                statusDiv.textContent = '错误: ' + error.message;
+>>>>>>> origin/main
             }
         }
 
         async function loadPatients() {
+<<<<<<< HEAD
             const listDiv = document.getElementById("patient-list");
             listDiv.innerHTML = "<div class='muted'>加载中...</div>";
             try {
@@ -446,6 +577,150 @@
             toggleWorkflowFields();
             loadPatients();
         };
+=======
+            const listDiv = document.getElementById('patient-list');
+            listDiv.innerHTML = '<div style="text-align: center;">加载中...</div>';
+
+            try {
+                // Direct call to patient service via gateway (needs a proxy endpoint or direct CORS if enabled)
+                // Since we don't have a direct gateway endpoint for listing patients, we might need to add one.
+                // Or we can try to access patient service directly if on localhost (dev mode).
+                // Let's assume we add a proxy endpoint in Gateway or use direct port 8003 for now if CORS allows.
+                // BEST PRACTICE: Add /patients endpoint to Gateway. I will do that in the backend code.
+                
+                const response = await fetch(`${API_BASE}/patients`); 
+                if (!response.ok) throw new Error("无法加载患者列表");
+                
+                const patients = await response.json();
+                listDiv.innerHTML = '';
+                
+                if (patients.length === 0) {
+                    listDiv.innerHTML = '<div style="text-align: center;">暂无数据</div>';
+                    return;
+                }
+
+                patients.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'card';
+                    // Clean up filename to get name
+                    const name = p.replace('.pdf', '').replace('_extracted.json', '');
+                    div.textContent = name;
+                    div.onclick = () => selectPatient(name, div);
+                    listDiv.appendChild(div);
+                });
+            } catch (error) {
+                listDiv.innerHTML = `<div style="color: red;">加载失败: ${error.message}</div>`;
+                // Fallback for dev: try direct port 8003
+                console.warn("Gateway /patients failed, trying direct...", error);
+            }
+        }
+
+        function selectPatient(name, element) {
+            currentPatient = name;
+            // Highlight UI
+            document.querySelectorAll('.card').forEach(c => c.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        async function runSimulation() {
+            if (!currentPatient) {
+                alert("请先选择一位患者");
+                return;
+            }
+
+            const statusDiv = document.getElementById('simulation-status');
+            const errorDiv = document.getElementById('error-msg');
+            const plotDiv = document.getElementById('plot-container');
+            
+            statusDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+            plotDiv.innerHTML = '';
+
+            const treatmentType = document.getElementById('treatment-type').value;
+            const duration = parseInt(document.getElementById('duration').value);
+            const compliance = parseFloat(document.getElementById('compliance').value);
+
+            try {
+                const response = await fetch(`${API_BASE}/report/generate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        patient_name: currentPatient,
+                        treatment_plan: {
+                            type: treatmentType,
+                            duration: duration,
+                            compliance: compliance
+                        }
+                    })
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.detail || '模拟失败');
+                }
+
+                statusDiv.style.display = 'none';
+                
+                // Render Plotly Chart
+                if (result.evolution_chart_json) {
+                    const plotData = result.evolution_chart_json;
+                    
+                    // Initial plot
+                    await Plotly.newPlot('plot-container', plotData.data, plotData.layout);
+                    
+                    // Add frames for animation if they exist
+                    if (plotData.frames) {
+                        await Plotly.addFrames('plot-container', plotData.frames);
+                    }
+                    
+                    // Render Comparison Table
+                    if (result.comparison_data) {
+                        const comp = result.comparison_data;
+                        const improvementIntervention = comp.improvement_intervention;
+                        const improvementIntensive = comp.improvement_intensive;
+                        
+                        const tableHtml = `
+                        <table border="1" style="width:100%; border-collapse: collapse; text-align: center; margin-top: 10px;">
+                            <tr style="background-color: #f2f2f2;">
+                                <th style="padding: 8px;">指标</th>
+                                <th style="padding: 8px;">初始状态</th>
+                                <th style="padding: 8px;">自然发展 (期末)</th>
+                                <th style="padding: 8px;">常规干预 (期末)</th>
+                                <th style="padding: 8px;">强化干预 (期末)</th>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px;">Cobb 角 (度)</td>
+                                <td style="padding: 8px;">${comp.initial_cobb.toFixed(1)}</td>
+                                <td style="padding: 8px;">${comp.final_control.toFixed(1)}</td>
+                                <td style="padding: 8px; font-weight: bold;">${comp.final_intervention.toFixed(1)}</td>
+                                <td style="padding: 8px; font-weight: bold; color: blue;">${comp.final_intensive.toFixed(1)}</td>
+                            </tr>
+                            <tr>
+                                <td style="padding: 8px;">相对于初始改善 (度)</td>
+                                <td style="padding: 8px;">-</td>
+                                <td style="padding: 8px; color: red;">${(comp.initial_cobb - comp.final_control).toFixed(1)}</td>
+                                <td style="padding: 8px; color: ${improvementIntervention > 0 ? 'green' : 'red'};">${improvementIntervention.toFixed(1)}</td>
+                                <td style="padding: 8px; color: ${improvementIntensive > 0 ? 'green' : 'red'};">${improvementIntensive.toFixed(1)}</td>
+                            </tr>
+                        </table>
+                        `;
+                        document.getElementById('comparison-table-container').innerHTML = tableHtml;
+                    }
+                    
+                    document.getElementById('report-info').textContent = 
+                        `报告生成时间: ${new Date().toLocaleString()} | 摘要: ${result.summary}`;
+                } else {
+                    throw new Error("返回数据中缺少可视化信息");
+                }
+
+            } catch (error) {
+                statusDiv.style.display = 'none';
+                errorDiv.style.display = 'block';
+                errorDiv.textContent = '错误: ' + error.message;
+            }
+        }
+>>>>>>> origin/main
     </script>
 </body>
 </html>

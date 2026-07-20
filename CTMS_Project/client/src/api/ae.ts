@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import api from '@/api';
 import type {
   AdverseEvent, CreateAEParams, UpdateAEParams,
@@ -45,6 +46,8 @@ export const aeApi = {
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
 import api from '@/api';
 import type {
   AdverseEvent, CreateAEParams, UpdateAEParams,
@@ -88,6 +91,9 @@ export const aeApi = {
     api.post(`/edc/ae/${aeId}/reports/${reportId}/submit`, data).then((r) => r.data.data),
 };
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

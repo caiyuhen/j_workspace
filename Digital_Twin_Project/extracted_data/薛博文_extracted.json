@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "raw_text": "\n--- 第 6 页 (OCR) ---\nMedTrack\nICT:\nDL - DR (3D Length) :\n最大后凸角度（ICT和ITL切线夹角）\n最大前凸角\n前凸顶点\n锥体旋转(算术平均值)\n锥体旋转(最大\n后凸顶\n锥体偏移(最小负值):\n锥体偏移(算数平均值):\n锥体旋转幅度\n锥体旋转（最小货\n骨盆扭转:\n锥体偏移(最)\n骨盆倾\n骨盆倾斜距\n冠状面偏\n失状面\n锥体偏移\n骨盆旋转\n分析数据列表\n移(VP-DM) :\n261mm\n负值)\n118mm\n值):\n值):\n10. 1mm\nmm\n. 1m\n5. 1mm\n(VP)\n采集时间：2024/5/2 14:07:17\n数据编号： 1\n编号：112405021402547353\n姓名：薛博）\n采集报告\nCoronal\nCoronal\nDM\nVP\n(Sa\n(Sa)\nLength):\nLength) :\nal Length) :\n1 Length):\n1 L\n1 Length) :\nLengt\nLength) :\nLength) :\nLength) :\nth):\n398[mm]\nh) :\n449[mm]\n39[mm]\n-34[mm]\n50[mm]\n13 [mm]\n-29[mm]\n393[mm]\n134 [mm]\n277 [mm]\n--- 第 7 页 (OCR) ---\nMedTrack\n分析数据列表\nransve\nransve\nansversal\nferse\nersal\nrsal\nersal\nevel\nevel\nve.\nve.\nvel\nleve\n采集时间：2024/5/2 14:07:17\n数据编号\n编号：\n采集报告\n112405021402547353\n薛博\nisvel\nvel\nvel\nra\n(D\nrsal\nrsal\nrsal\nsversa\nsa.\nrsal\nsal\nsal\nsa.\nrsal\nrsal\nevel\nevel\nevel\nvel\nvel\nvel\nve.\n--- 第 8 页 (OCR) ---\nMedTrack\n分析数据列表\nrsal\nersal\nrsal\nrs8\nrsa\nrsal\nrsa\n采集时间：2024/5/2 14:07:17\n数据编号\n编号：\n姓名：\n采集报告\n112405021402547353\n薛博\n09\n60\n0Q\n09",
   "extracted_pages": [
@@ -20,3 +21,27 @@
   "note": "使用了 pdfplumber 和/或 RapidOCR 提取。",
   "filename": "薛博文.pdf"
 }
+=======
+{
+  "raw_text": "\n--- 第 6 页 (OCR) ---\nMedTrack\nICT:\nDL - DR (3D Length) :\n最大后凸角度（ICT和ITL切线夹角）\n最大前凸角\n前凸顶点\n锥体旋转(算术平均值)\n锥体旋转(最大\n后凸顶\n锥体偏移(最小负值):\n锥体偏移(算数平均值):\n锥体旋转幅度\n锥体旋转（最小货\n骨盆扭转:\n锥体偏移(最)\n骨盆倾\n骨盆倾斜距\n冠状面偏\n失状面\n锥体偏移\n骨盆旋转\n分析数据列表\n移(VP-DM) :\n261mm\n负值)\n118mm\n值):\n值):\n10. 1mm\nmm\n. 1m\n5. 1mm\n(VP)\n采集时间：2024/5/2 14:07:17\n数据编号： 1\n编号：112405021402547353\n姓名：薛博）\n采集报告\nCoronal\nCoronal\nDM\nVP\n(Sa\n(Sa)\nLength):\nLength) :\nal Length) :\n1 Length):\n1 L\n1 Length) :\nLengt\nLength) :\nLength) :\nLength) :\nth):\n398[mm]\nh) :\n449[mm]\n39[mm]\n-34[mm]\n50[mm]\n13 [mm]\n-29[mm]\n393[mm]\n134 [mm]\n277 [mm]\n--- 第 7 页 (OCR) ---\nMedTrack\n分析数据列表\nransve\nransve\nansversal\nferse\nersal\nrsal\nersal\nevel\nevel\nve.\nve.\nvel\nleve\n采集时间：2024/5/2 14:07:17\n数据编号\n编号：\n采集报告\n112405021402547353\n薛博\nisvel\nvel\nvel\nra\n(D\nrsal\nrsal\nrsal\nsversa\nsa.\nrsal\nsal\nsal\nsa.\nrsal\nrsal\nevel\nevel\nevel\nvel\nvel\nvel\nve.\n--- 第 8 页 (OCR) ---\nMedTrack\n分析数据列表\nrsal\nersal\nrsal\nrs8\nrsa\nrsal\nrsa\n采集时间：2024/5/2 14:07:17\n数据编号\n编号：\n姓名：\n采集报告\n112405021402547353\n薛博\n09\n60\n0Q\n09",
+  "extracted_pages": [
+    {
+      "page": 6,
+      "content": "MedTrack\nICT:\nDL - DR (3D Length) :\n最大后凸角度（ICT和ITL切线夹角）\n最大前凸角\n前凸顶点\n锥体旋转(算术平均值)\n锥体旋转(最大\n后凸顶\n锥体偏移(最小负值):\n锥体偏移(算数平均值):\n锥体旋转幅度\n锥体旋转（最小货\n骨盆扭转:\n锥体偏移(最)\n骨盆倾\n骨盆倾斜距\n冠状面偏\n失状面\n锥体偏移\n骨盆旋转\n分析数据列表\n移(VP-DM) :\n261mm\n负值)\n118mm\n值):\n值):\n10. 1mm\nmm\n. 1m\n5. 1mm\n(VP)\n采集时间：2024/5/2 14:07:17\n数据编号： 1\n编号：112405021402547353\n姓名：薛博）\n采集报告\nCoronal\nCoronal\nDM\nVP\n(Sa\n(Sa)\nLength):\nLength) :\nal Length) :\n1 Length):\n1 L\n1 Length) :\nLengt\nLength) :\nLength) :\nLength) :\nth):\n398[mm]\nh) :\n449[mm]\n39[mm]\n-34[mm]\n50[mm]\n13 [mm]\n-29[mm]\n393[mm]\n134 [mm]\n277 [mm]",
+      "method": "ocr"
+    },
+    {
+      "page": 7,
+      "content": "MedTrack\n分析数据列表\nransve\nransve\nansversal\nferse\nersal\nrsal\nersal\nevel\nevel\nve.\nve.\nvel\nleve\n采集时间：2024/5/2 14:07:17\n数据编号\n编号：\n采集报告\n112405021402547353\n薛博\nisvel\nvel\nvel\nra\n(D\nrsal\nrsal\nrsal\nsversa\nsa.\nrsal\nsal\nsal\nsa.\nrsal\nrsal\nevel\nevel\nevel\nvel\nvel\nvel\nve.",
+      "method": "ocr"
+    },
+    {
+      "page": 8,
+      "content": "MedTrack\n分析数据列表\nrsal\nersal\nrsal\nrs8\nrsa\nrsal\nrsa\n采集时间：2024/5/2 14:07:17\n数据编号\n编号：\n姓名：\n采集报告\n112405021402547353\n薛博\n09\n60\n0Q\n09",
+      "method": "ocr"
+    }
+  ],
+  "note": "使用了 pdfplumber 和/或 RapidOCR 提取。",
+  "filename": "薛博文.pdf"
+}
+>>>>>>> origin/main

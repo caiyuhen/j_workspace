@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 $baseDir = $PSScriptRoot
 
@@ -46,6 +47,8 @@ finally {
     Write-Host "All services stopped."
 }
 =======
+=======
+>>>>>>> origin/main
 
 $baseDir = $PSScriptRoot
 
@@ -92,4 +95,7 @@ finally {
     }
     Write-Host "All services stopped."
 }
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

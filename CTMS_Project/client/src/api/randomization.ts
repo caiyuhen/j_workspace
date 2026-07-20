@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import api from './index';
 import type { ApiResponse, PaginatedResponse } from '@/types';
 import type {
@@ -42,6 +43,8 @@ export const randomizationApi = {
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
 import api from './index';
 import type { ApiResponse, PaginatedResponse } from '@/types';
 import type {
@@ -82,6 +85,9 @@ export const randomizationApi = {
     api.get(`/edc/randomization/export/${projectId}`, { responseType: 'blob' }).then((r) => r.data),
 };
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

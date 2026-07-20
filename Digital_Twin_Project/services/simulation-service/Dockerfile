@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # Use an official Python runtime as a parent image
 FROM python:3.9-slim
 
@@ -26,6 +27,8 @@ EXPOSE 8000
 # Run main.py when the container launches
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
 =======
+=======
+>>>>>>> origin/main
 # Use an official Python runtime as a parent image
 FROM python:3.9-slim
 
@@ -52,4 +55,7 @@ EXPOSE 8000
 
 # Run main.py when the container launches
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

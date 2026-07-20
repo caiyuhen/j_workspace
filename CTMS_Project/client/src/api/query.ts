@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import api from '@/api';
 import type {
   DataQuery, CreateQueryParams, ReplyQueryParams, ReassignQueryParams,
@@ -25,6 +26,8 @@ export const queryApi = {
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
 import api from '@/api';
 import type {
   DataQuery, CreateQueryParams, ReplyQueryParams, ReassignQueryParams,
@@ -48,6 +51,9 @@ export const queryApi = {
     api.post(`/edc/queries/${id}/reassign`, data).then((r) => r.data.data),
 };
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

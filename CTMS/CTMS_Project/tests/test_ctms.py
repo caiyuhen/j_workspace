@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -177,6 +178,8 @@ def test_other_modules() -> None:
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -352,6 +355,9 @@ def test_other_modules() -> None:
     ).json()["breached"] is True
     assert security_client.post("/rbac/assign", json={"username": "u1", "role": "CRA", "permission_group": "monitor"}).json()["assigned"] is True
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

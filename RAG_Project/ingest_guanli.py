@@ -2,7 +2,10 @@ import os
 import logging
 from pathlib import Path
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+<<<<<<< HEAD
 import config # Ensure HF_ENDPOINT is set
+=======
+>>>>>>> origin/main
 from vector_store import MilvusStore
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -55,4 +58,8 @@ def ingest_file(file_path):
         vector_store.insert_chunks(chunks_to_insert)
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     ingest_file("/home/user/RAG_Project/data/guanli/乳腺癌疾病管理路径.md")
+=======
+    ingest_file("/mnt/disk3/home/pg/RAG_Project/data/guanli/乳腺癌疾病管理路径.md")
+>>>>>>> origin/main

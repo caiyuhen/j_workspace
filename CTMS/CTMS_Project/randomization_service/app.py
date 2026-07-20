@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import random
 import uuid
 
@@ -79,6 +80,8 @@ def randomize(payload: RandomizeRequest) -> dict:
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
 import random
 import uuid
 
@@ -156,6 +159,9 @@ def randomize(payload: RandomizeRequest) -> dict:
     )
     return {"decision_id": decision_id, "group": assigned}
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

@@ -12,7 +12,11 @@ RUN apt-get update && apt-get install -y \
 
 # 安装 Python 依赖（利用缓存层）
 COPY requirements.txt .
+<<<<<<< HEAD
 RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt
+=======
+RUN pip install --no-cache-dir -r requirements.txt
+>>>>>>> origin/main
 
 # 复制代码
 COPY . .
@@ -24,6 +28,7 @@ RUN mkdir -p logs
 RUN useradd -m -u 1000 ctms && chown -R ctms:ctms /app
 USER ctms
 
+<<<<<<< HEAD
 EXPOSE 8443
 
 # 健康检查
@@ -31,3 +36,12 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:8443/health || exit 1
 
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8443", "--workers", "4"]
+=======
+EXPOSE 8000
+
+# 健康检查
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+>>>>>>> origin/main

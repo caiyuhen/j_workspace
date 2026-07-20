@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "raw_text": "\n--- 第 6 页 (OCR) ---\nMedTrack\nICT:\nDL - DR (3D Length) :\n最大后凸角度（ICT和ITL切线夹角\n最大前凸角\n前凸顶点\n锥体旋转(算术平均值)\n锥体偏移(最小负值):\n锥体偏移(最)\n锥体偏移(算数平均值):\n锥体旋转幅度\n锥体旋转（最小货\n锥体旋转(最大卫\n后凸顶\n骨盆倾\n冠状面偏\n失状而\n骨盆扭车\n锥体偏移\n骨盆便\n骨盆旋\n分析数据列表\n(VP-DM) :\n 262n\n79mm\n负值)\n值)\n值)\n3. 7\nmm\n7mm\n采集时间：2024/5/1 9:54:58\n数据编号：1\n编号：112405010950293086\n姓名：陈恬悦\n采集报告\nCor\nDM\n(Sa\nLength) :\nLength):\nal Length):\n1 Length) :\n1 Length):\nLengt\nLength) :\nLength) :\nLength) :\n395[mm]\n427[mm]\n3[mn\n5[mm]\n-56 [mm]\n-51[mm]\n391[mm]\nLmm\n113 [mm]\n296[mm]\n--- 第 7 页 (OCR) ---\nMedTrack\n分析数据列表\nransve\nransve\nansversal\nersal\nersal\nrs\nnsve\nrsal\neve]\nevel\nve.\nve.\nvel\n采集时间：2024/5/1 9:54:58\n数据编号\n编号：\n采集报告\n112405010950293086\n陈恬\nve\nve\nsvel\n(D\nrsal\nrsal\nersal\nsversa\nsa\nsal\nsa\nrsal\nsa.\nrsal\nsa.\nvel\nve.\n--- 第 8 页 (OCR) ---\nMedTrack\n分析数据列表\n00\n80\nrsa\nrs\nrsal\nrsa\n采集时间：2024/5/1 9\n数据编号：\n编号：\n姓名：\n采集报告\n112405010950293086\n陈恬\n60\n60\n09\n9: 54: 58",
   "extracted_pages": [
@@ -20,3 +21,27 @@
   "note": "使用了 pdfplumber 和/或 RapidOCR 提取。",
   "filename": "陈恬悦.pdf"
 }
+=======
+{
+  "raw_text": "\n--- 第 6 页 (OCR) ---\nMedTrack\nICT:\nDL - DR (3D Length) :\n最大后凸角度（ICT和ITL切线夹角\n最大前凸角\n前凸顶点\n锥体旋转(算术平均值)\n锥体偏移(最小负值):\n锥体偏移(最)\n锥体偏移(算数平均值):\n锥体旋转幅度\n锥体旋转（最小货\n锥体旋转(最大卫\n后凸顶\n骨盆倾\n冠状面偏\n失状而\n骨盆扭车\n锥体偏移\n骨盆便\n骨盆旋\n分析数据列表\n(VP-DM) :\n 262n\n79mm\n负值)\n值)\n值)\n3. 7\nmm\n7mm\n采集时间：2024/5/1 9:54:58\n数据编号：1\n编号：112405010950293086\n姓名：陈恬悦\n采集报告\nCor\nDM\n(Sa\nLength) :\nLength):\nal Length):\n1 Length) :\n1 Length):\nLengt\nLength) :\nLength) :\nLength) :\n395[mm]\n427[mm]\n3[mn\n5[mm]\n-56 [mm]\n-51[mm]\n391[mm]\nLmm\n113 [mm]\n296[mm]\n--- 第 7 页 (OCR) ---\nMedTrack\n分析数据列表\nransve\nransve\nansversal\nersal\nersal\nrs\nnsve\nrsal\neve]\nevel\nve.\nve.\nvel\n采集时间：2024/5/1 9:54:58\n数据编号\n编号：\n采集报告\n112405010950293086\n陈恬\nve\nve\nsvel\n(D\nrsal\nrsal\nersal\nsversa\nsa\nsal\nsa\nrsal\nsa.\nrsal\nsa.\nvel\nve.\n--- 第 8 页 (OCR) ---\nMedTrack\n分析数据列表\n00\n80\nrsa\nrs\nrsal\nrsa\n采集时间：2024/5/1 9\n数据编号：\n编号：\n姓名：\n采集报告\n112405010950293086\n陈恬\n60\n60\n09\n9: 54: 58",
+  "extracted_pages": [
+    {
+      "page": 6,
+      "content": "MedTrack\nICT:\nDL - DR (3D Length) :\n最大后凸角度（ICT和ITL切线夹角\n最大前凸角\n前凸顶点\n锥体旋转(算术平均值)\n锥体偏移(最小负值):\n锥体偏移(最)\n锥体偏移(算数平均值):\n锥体旋转幅度\n锥体旋转（最小货\n锥体旋转(最大卫\n后凸顶\n骨盆倾\n冠状面偏\n失状而\n骨盆扭车\n锥体偏移\n骨盆便\n骨盆旋\n分析数据列表\n(VP-DM) :\n 262n\n79mm\n负值)\n值)\n值)\n3. 7\nmm\n7mm\n采集时间：2024/5/1 9:54:58\n数据编号：1\n编号：112405010950293086\n姓名：陈恬悦\n采集报告\nCor\nDM\n(Sa\nLength) :\nLength):\nal Length):\n1 Length) :\n1 Length):\nLengt\nLength) :\nLength) :\nLength) :\n395[mm]\n427[mm]\n3[mn\n5[mm]\n-56 [mm]\n-51[mm]\n391[mm]\nLmm\n113 [mm]\n296[mm]",
+      "method": "ocr"
+    },
+    {
+      "page": 7,
+      "content": "MedTrack\n分析数据列表\nransve\nransve\nansversal\nersal\nersal\nrs\nnsve\nrsal\neve]\nevel\nve.\nve.\nvel\n采集时间：2024/5/1 9:54:58\n数据编号\n编号：\n采集报告\n112405010950293086\n陈恬\nve\nve\nsvel\n(D\nrsal\nrsal\nersal\nsversa\nsa\nsal\nsa\nrsal\nsa.\nrsal\nsa.\nvel\nve.",
+      "method": "ocr"
+    },
+    {
+      "page": 8,
+      "content": "MedTrack\n分析数据列表\n00\n80\nrsa\nrs\nrsal\nrsa\n采集时间：2024/5/1 9\n数据编号：\n编号：\n姓名：\n采集报告\n112405010950293086\n陈恬\n60\n60\n09\n9: 54: 58",
+      "method": "ocr"
+    }
+  ],
+  "note": "使用了 pdfplumber 和/或 RapidOCR 提取。",
+  "filename": "陈恬悦.pdf"
+}
+>>>>>>> origin/main

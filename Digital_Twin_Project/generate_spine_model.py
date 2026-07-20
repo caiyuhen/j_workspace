@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import json
 import numpy as np
 import plotly.graph_objects as go
@@ -209,6 +210,8 @@ if __name__ == "__main__":
         print("\n--- 正在生成预测模型 ---")
         generate_spine_model(predicted_file, output_dir)
 =======
+=======
+>>>>>>> origin/main
 import json
 import numpy as np
 import plotly.graph_objects as go
@@ -418,4 +421,7 @@ if __name__ == "__main__":
     if os.path.exists(predicted_file):
         print("\n--- 正在生成预测模型 ---")
         generate_spine_model(predicted_file, output_dir)
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

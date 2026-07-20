@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import {  Table, Modal, Form, Input, Select, Space, Button, Drawer, Descriptions, Tag, DatePicker, Row, Col, App, Upload } from 'antd';
 import { EditOutlined, EyeOutlined, DeleteOutlined, CheckCircleOutlined, ClockCircleOutlined, UploadOutlined } from '@ant-design/icons';
 =======
@@ -11,6 +12,10 @@ import { EditOutlined, EyeOutlined, DeleteOutlined, CheckCircleOutlined, ClockCi
 import {  Table, Modal, Form, Input, Select, Space, Button, Drawer, Descriptions, Tag, DatePicker, Row, Col , App } from 'antd';
 import { EditOutlined, EyeOutlined, DeleteOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+import {  Table, Modal, Form, Input, Select, Space, Button, Drawer, Descriptions, Tag, DatePicker, Row, Col , App } from 'antd';
+import { EditOutlined, EyeOutlined, DeleteOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+>>>>>>> origin/main
 import dayjs from 'dayjs';
 import PageHeader from '@/components/PageHeader';
 import StatusTag from '@/components/StatusTag';
@@ -18,6 +23,7 @@ import { documentApi } from '@/api/document';
 import { projectApi } from '@/api/project';
 import type { Document, CreateDocumentParams, DocumentVersion } from '@/types';
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 const categoryOptions = [
@@ -51,6 +57,8 @@ const documentTypeOptions = [
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
 const documentTypeOptions = [
   { value: 'TMF', label: 'TMF 试验主文档' },
   { value: 'ISF', label: 'ISF 研究者文件夹' },
@@ -72,9 +80,12 @@ const categoryOptions = [
   { value: 'pharmacy', label: '试验药物' },
   { value: 'finance', label: '财务' },
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
   { value: 'other', label: '其他' },
 ];
 
@@ -128,6 +139,7 @@ const DocumentsPage: React.FC = () => {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   const handleEdit = (record: any) => {
     setEditing(record);
     form.setFieldsValue({
@@ -142,6 +154,8 @@ const DocumentsPage: React.FC = () => {
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
   const handleEdit = (record: Document) => {
     setEditing(record);
     form.setFieldsValue({
@@ -150,15 +164,19 @@ const DocumentsPage: React.FC = () => {
       expiryDate: record.expiryDate ? dayjs(record.expiryDate) : undefined });
     setModalOpen(true);
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
   };
 
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
       setSubmitLoading(true);
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
       const params: any = {
@@ -208,6 +226,8 @@ const DocumentsPage: React.FC = () => {
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
       const params: CreateDocumentParams = {
         ...values,
         effectiveDate: values.effectiveDate?.format('YYYY-MM-DD'),
@@ -220,9 +240,12 @@ const DocumentsPage: React.FC = () => {
         message.success('创建文档成功');
       }
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
       setModalOpen(false);
       fetchData(pagination.page, pagination.pageSize);
     } catch (err: any) {
@@ -232,6 +255,7 @@ const DocumentsPage: React.FC = () => {
       }
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       message.error(err.message || err.response?.data?.error?.message || '操作失败');
 =======
       message.error(err.response?.data?.error?.message || '操作失败');
@@ -239,11 +263,15 @@ const DocumentsPage: React.FC = () => {
 =======
       message.error(err.response?.data?.error?.message || '操作失败');
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+      message.error(err.response?.data?.error?.message || '操作失败');
+>>>>>>> origin/main
     } finally {
       setSubmitLoading(false);
     }
   };
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
   const handleDelete = (record: any) => {
@@ -253,14 +281,19 @@ const DocumentsPage: React.FC = () => {
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
   const handleDelete = (record: Document) => {
     Modal.confirm({
       title: '确认删除',
       content: `确定要删除文档「${record.title}」吗？`,
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
       onOk: async () => {
         await documentApi.remove(record.id);
         message.success('删除成功');
@@ -270,6 +303,7 @@ const DocumentsPage: React.FC = () => {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   const handleViewDetail = async (record: any) => {
 =======
   const handleViewDetail = async (record: Document) => {
@@ -277,6 +311,9 @@ const DocumentsPage: React.FC = () => {
 =======
   const handleViewDetail = async (record: Document) => {
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+  const handleViewDetail = async (record: Document) => {
+>>>>>>> origin/main
     setSelectedDoc(record);
     setDetailOpen(true);
     setVersionsLoading(true);
@@ -292,6 +329,7 @@ const DocumentsPage: React.FC = () => {
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
   const handleApprove = (record: any, status: string) => {
     Modal.confirm({
       title: status === 'approved' ? '批准文档' : '拒绝文档',
@@ -299,14 +337,19 @@ const DocumentsPage: React.FC = () => {
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
   const handleApprove = (record: Document, status: string) => {
     Modal.confirm({
       title: status === 'approved' ? '批准文档' : '拒绝文档',
       content: `确定要${status === 'approved' ? '批准' : '拒绝'}文档「${record.title}」吗？`,
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
       onOk: async () => {
         await documentApi.updateStatus(record.id, { status });
         message.success(`文档已${status === 'approved' ? '批准' : '拒绝'}`);
@@ -315,6 +358,7 @@ const DocumentsPage: React.FC = () => {
   };
 
   const columns = [
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
     { title: '文档编号', dataIndex: 'documentCode', width: 130 },
@@ -327,11 +371,16 @@ const DocumentsPage: React.FC = () => {
     { title: '文档编号', dataIndex: 'documentNumber', width: 130 },
     { title: '标题', dataIndex: 'title', width: 220, ellipsis: true },
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+    { title: '文档编号', dataIndex: 'documentNumber', width: 130 },
+    { title: '标题', dataIndex: 'title', width: 220, ellipsis: true },
+>>>>>>> origin/main
     {
       title: '类型',
       dataIndex: 'documentType',
       width: 130,
       render: (v: string) => documentTypeOptions.find(o => o.value === v)?.label || v },
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
     { title: '分类', dataIndex: 'tmfSection', width: 100, render: (v: string) => categoryOptions.find(o => o.value === v)?.label || v },
@@ -346,6 +395,8 @@ const DocumentsPage: React.FC = () => {
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
     { title: '分类', dataIndex: 'category', width: 100, render: (v: string) => categoryOptions.find(o => o.value === v)?.label || v },
     { title: '版本', dataIndex: 'version', width: 60, align: 'center' as const },
     {
@@ -356,14 +407,18 @@ const DocumentsPage: React.FC = () => {
         ? <Tag color="success" icon={<CheckCircleOutlined />}>已完成</Tag>
         : <Tag color="warning" icon={<ClockCircleOutlined />}>未完成</Tag> },
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
     {
       title: '文档状态',
       dataIndex: 'status',
       width: 90,
       render: (v: string) => <StatusTag status={v} category="document" /> },
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
     { title: '上传人', dataIndex: ['uploadedBy'], width: 100 },
@@ -373,6 +428,9 @@ const DocumentsPage: React.FC = () => {
 =======
     { title: '作者', dataIndex: ['author', 'displayName'], width: 100 },
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+    { title: '作者', dataIndex: ['author', 'displayName'], width: 100 },
+>>>>>>> origin/main
     {
       title: '更新时间',
       dataIndex: 'updatedAt',
@@ -383,6 +441,7 @@ const DocumentsPage: React.FC = () => {
       width: 220,
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
       render: (_: any, record: any) => (
 =======
       render: (_: any, record: Document) => (
@@ -390,6 +449,9 @@ const DocumentsPage: React.FC = () => {
 =======
       render: (_: any, record: Document) => (
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+      render: (_: any, record: Document) => (
+>>>>>>> origin/main
         <Space size="small">
           <Button type="link" size="small" icon={<EyeOutlined />} onClick={() => handleViewDetail(record)}>查看</Button>
           <Button type="link" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)}>编辑</Button>
@@ -444,6 +506,7 @@ const DocumentsPage: React.FC = () => {
       >
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
         <Form form={form} layout="vertical" initialValues={{ documentType: 'other', isRequired: false }}>
           <Form.Item name="projectId" label="关联项目" rules={[{ required: true, message: '请选择关联项目' }]}>
             <Select options={projects} placeholder="请选择项目" showSearch optionFilterProp="label" disabled={!!editing} />
@@ -457,12 +520,18 @@ const DocumentsPage: React.FC = () => {
           <Form.Item name="projectId" label="关联项目" rules={[{ required: true, message: '请选择关联项目' }]}>
             <Select options={projects} placeholder="请选择项目" showSearch optionFilterProp="label" />
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+        <Form form={form} layout="vertical" initialValues={{ documentType: 'TMF', isRequired: false }}>
+          <Form.Item name="projectId" label="关联项目" rules={[{ required: true, message: '请选择关联项目' }]}>
+            <Select options={projects} placeholder="请选择项目" showSearch optionFilterProp="label" />
+>>>>>>> origin/main
           </Form.Item>
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item name="documentNumber" label="文档编号" rules={[{ required: true }]}>
                 <Input 
                   placeholder="如: TMF-001" 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
                   disabled={!!editing}
@@ -476,6 +545,10 @@ const DocumentsPage: React.FC = () => {
                   suffix={
                     <a onClick={() => {
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+                  suffix={
+                    <a onClick={() => {
+>>>>>>> origin/main
                       const randomSuffix = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
                       form.setFieldsValue({ documentNumber: `TMF-${randomSuffix}` });
                     }}>自动生成</a>
@@ -524,6 +597,7 @@ const DocumentsPage: React.FC = () => {
           </Form.Item>
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
           <Form.Item 
             name="file" 
             label="上传附件 (可选)" 
@@ -538,11 +612,14 @@ const DocumentsPage: React.FC = () => {
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
         </Form>
       </Modal>
 
       {/* 详情抽屉 */}
       <Drawer
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
         title={
@@ -561,6 +638,9 @@ const DocumentsPage: React.FC = () => {
 =======
         title={selectedDoc ? `${selectedDoc.documentNumber} - ${selectedDoc.title}` : '文档详情'}
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+        title={selectedDoc ? `${selectedDoc.documentNumber} - ${selectedDoc.title}` : '文档详情'}
+>>>>>>> origin/main
         open={detailOpen}
         onClose={() => setDetailOpen(false)}
         size="large"
@@ -568,6 +648,7 @@ const DocumentsPage: React.FC = () => {
         {selectedDoc && (
           <>
             <Descriptions column={2} bordered size="small" style={{ marginBottom: 16 }}>
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
               <Descriptions.Item label="文档编号">{selectedDoc.documentCode}</Descriptions.Item>
@@ -584,6 +665,8 @@ const DocumentsPage: React.FC = () => {
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
               <Descriptions.Item label="文档编号">{selectedDoc.documentNumber}</Descriptions.Item>
               <Descriptions.Item label="类型">{documentTypeOptions.find(o => o.value === selectedDoc.documentType)?.label}</Descriptions.Item>
               <Descriptions.Item label="版本">V{selectedDoc.version}</Descriptions.Item>
@@ -596,14 +679,18 @@ const DocumentsPage: React.FC = () => {
               </Descriptions.Item>
               <Descriptions.Item label="生效日期">{selectedDoc.effectiveDate ? dayjs(selectedDoc.effectiveDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
               <Descriptions.Item label="过期日期">{selectedDoc.expiryDate ? dayjs(selectedDoc.expiryDate).format('YYYY-MM-DD') : '-'}</Descriptions.Item>
               <Descriptions.Item label="描述" span={2}>{selectedDoc.description || '-'}</Descriptions.Item>
             </Descriptions>
 
             <h4 style={{ marginTop: 16, marginBottom: 8 }}>版本历史</h4>
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
             <div style={{ marginBottom: 16 }}>
@@ -642,6 +729,8 @@ const DocumentsPage: React.FC = () => {
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
             <Table rowKey="id" size="small" dataSource={versions} loading={versionsLoading} pagination={false}
               columns={[
                 { title: '版本', dataIndex: 'version', width: 60 },
@@ -651,9 +740,12 @@ const DocumentsPage: React.FC = () => {
                 { title: '上传时间', dataIndex: 'createdAt', width: 140, render: (v: string) => v ? dayjs(v).format('YYYY-MM-DD HH:mm') : '-' },
                 { title: '状态', dataIndex: 'status', width: 80, render: (v: string) => <StatusTag status={v} category="document" /> },
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
               ]}
             />
           </>

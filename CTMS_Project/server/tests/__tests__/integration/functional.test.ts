@@ -51,10 +51,14 @@ describe('系统功能测试', () => {
       const res = await request(app)
         .post(`${BASE}/auth/login`)
 <<<<<<< HEAD
+<<<<<<< HEAD
         .send({ username: 'zhangsan', password: 'Test@2024' });
 =======
         .send({ username: 'admin', password: 'Admin123' });
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+        .send({ username: 'admin', password: 'Admin123' });
+>>>>>>> origin/main
 
       expect([200, 201]).toContain(res.status);
       if (res.status === 200 || res.status === 201) {

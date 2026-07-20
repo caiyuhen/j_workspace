@@ -9,7 +9,11 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logger = logging.getLogger(__name__)
 
 # 大模型后端实际暴露的 API 接口地址
+<<<<<<< HEAD
 LLM_URL = "http://192.168.0.214:8802/chat"
+=======
+LLM_URL = "http://192.168.0.126:8802/chat"
+>>>>>>> origin/main
 CHAT_HISTORY_DB = {}
 
 def get_clinical_diagnosis(patient_id: str, prompt: str, twin_context: dict) -> dict:
@@ -32,7 +36,10 @@ def get_clinical_diagnosis(patient_id: str, prompt: str, twin_context: dict) -> 
         "use_adapter": True,
         "history": [],
         "temperature": 0.5,
+<<<<<<< HEAD
         "repetition_penalty": 1.15,
+=======
+>>>>>>> origin/main
         "max_new_tokens": 1024
     }
     
@@ -78,8 +85,12 @@ def generate_clinical_suggestion(prompt: str, use_rag: bool = True) -> dict:
         "prompt": prompt,
         "use_rag": use_rag,
         "use_adapter": True,
+<<<<<<< HEAD
         "temperature": 0.3,
         "repetition_penalty": 1.15,
+=======
+        "temperature": 0.2,
+>>>>>>> origin/main
         "max_new_tokens": 1024
     }
     try:

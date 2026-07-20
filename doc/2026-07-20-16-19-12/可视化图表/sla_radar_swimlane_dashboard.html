@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>蚂蚁阿福 · 安康通 · 爱牵挂 — 三大服务体系可视化分析</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-radial-bar@1.1.0/build/index.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #f5f7fa;
+            --bg-card: #ffffff;
+            --text-primary: #1a1a2e;
+            --text-secondary: #555;
+            --text-muted: #888;
+            --border-color: #e0e0e0;
+            --ant-color: #1677ff;
+            --ankang-color: #52c41a;
+            --aiqiangua-color: #fa8c16;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow-md);
+        }
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+        .header p {
+            font-size: 15px;
+            opacity: 0.9;
+        }
+        .company-legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+        .legend-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+        }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(560px, 1fr));
+            gap: 24px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .card {
+            background: var(--bg-card);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-color);
+            transition: box-shadow 0.3s ease;
+        }
+        .card:hover {
+            box-shadow: var(--shadow-md);
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card-title .icon {
+            font-size: 22px;
+        }
+        .card-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 360px;
+        }
+        .chart-container.tall {
+            height: 420px;
+        }
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+        .summary-card {
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .summary-card.ant { background: linear-gradient(135deg, #e6f0ff, #d6e8ff); border-left: 4px solid var(--ant-color); }
+        .summary-card.ankang { background: linear-gradient(135deg, #f0fff0, #e8ffe8); border-left: 4px solid var(--ankang-color); }
+        .summary-card.ai { background: linear-gradient(135deg, #fff7e6, #ffefcc); border-left: 4px solid var(--aiqiangua-color); }
+        .summary-card h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .summary-card .value {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 4px 0;
+        }
+        .summary-card .label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        .swimlane {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .swimlane-row {
+            display: flex;
+            align-items: stretch;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .swimlane-label {
+            width: 140px;
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+            text-align: center;
+        }
+        .swimlane-label .company-name {
+            font-size: 15px;
+            margin-bottom: 4px;
+        }
+        .swimlane-label .flow-type {
+            font-size: 11px;
+            opacity: 0.9;
+        }
+        .swimlane-steps {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 8px;
+            gap: 4px;
+            background: #fafafa;
+            overflow-x: auto;
+        }
+        .step {
+            flex: 1;
+            min-width: 110px;
+            padding: 10px 8px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            font-size: 11px;
+            position: relative;
+        }
+        .step-number {
+            display: inline-block;
+            width: 22px;
+            height: 22px;
+            line-height: 22px;
+            border-radius: 50%;
+            background: var(--text-primary);
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .step-title {
+            font-weight: 600;
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+        .step-time {
+            color: var(--text-muted);
+            font-size: 10px;
+        }
+        .arrow {
+            display: flex;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 18px;
+            padding: 0 2px;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-top: 12px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 10px 12px;
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+        }
+        th {
+            background: #f0f2f5;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        td.company-cell {
+            font-weight: 600;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge.green { background: #d4edda; color: #155724; }
+        .badge.orange { background: #fff3cd; color: #856404; }
+        .badge.blue { background: #d1ecf1; color: #0c5460; }
+        .badge.red { background: #f8d7da; color: #721c24; }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        @media (max-width: 768px) {
+            .dashboard { grid-template-columns: 1fr; }
+            .summary-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>蚂蚁阿福 · 安康通 · 爱牵挂</h1>
+        <p>智慧养老与AI健康服务 — 三大服务体系可视化对比分析</p>
+        <div class="company-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#1677ff"></div>蚂蚁阿福</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#52c41a"></div>安康通</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#fa8c16"></div>爱牵挂</div>
+        </div>
+    </div>
+
+    <div class="dashboard">
+
+        <!-- 概览卡片 -->
+        <div class="card full-width">
+            <div class="card-title"><span class="icon">📊</span>核心指标概览</div>
+            <div class="card-subtitle">三家公司核心运营指标一览</div>
+            <div class="summary-grid">
+                <div class="summary-card ant">
+                    <h3>蚂蚁阿福</h3>
+                    <div class="value" style="color:#1677ff">1500万</div>
+                    <div class="label">月活用户 (MAU)</div>
+                    <div style="margin-top:8px;font-size:12px;">AI响应 5秒 · 满意度 4.8分</div>
+                </div>
+                <div class="summary-card ankang">
+                    <h3>安康通</h3>
+                    <div class="value" style="color:#52c41a">2800万</div>
+                    <div class="label">服务老人数</div>
+                    <div style="margin-top:8px;font-size:12px;">人工响应 10秒 · 满意度 4.7分</div>
+                </div>
+                <div class="summary-card ai">
+                    <h3>爱牵挂</h3>
+                    <div class="value" style="color:#fa8c16">50万+</div>
+                    <div class="label">家庭用户数</div>
+                    <div style="margin-top:8px;font-size:12px;">人工响应 10秒 · 满意度 4.6分</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLA 响应时效对比 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">⚡</span>SLA 响应时效对比</div>
+            <div class="card-subtitle">呼叫响应、到场时间、工单处理时长（数值越低越好）</div>
+            <div class="chart-container">
+                <canvas id="slaResponseChart"></canvas>
+            </div>
+        </div>
+
+        <!-- SLA 服务质量对比 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">⭐</span>SLA 服务质量对比</div>
+            <div class="card-subtitle">满意度、NPS、首次解决率、投诉率（数值越高越好，投诉率越低越好）</div>
+            <div class="chart-container">
+                <canvas id="slaQualityChart"></canvas>
+            </div>
+        </div>
+
+        <!-- SLA 成本效率对比 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">💰</span>SLA 成本效率对比</div>
+            <div class="card-subtitle">单次服务成本、ROI、人均服务量对比</div>
+            <div class="chart-container">
+                <canvas id="slaCostChart"></canvas>
+            </div>
+        </div>
+
+        <!-- SLA 安全效果对比 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">🛡️</span>SLA 安全效果对比</div>
+            <div class="card-subtitle">事故处置成功率、误报率、漏报率、预警提前量</div>
+            <div class="chart-container">
+                <canvas id="slaSafetyChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 能力边界雷达图 - 蚂蚁阿福 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">🎯</span>蚂蚁阿福 能力边界雷达图</div>
+            <div class="card-subtitle">核心能力 vs 放弃能力 vs 不做能力（满分10分）</div>
+            <div class="chart-container">
+                <canvas id="radarAnt"></canvas>
+            </div>
+        </div>
+
+        <!-- 能力边界雷达图 - 安康通 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">🎯</span>安康通 能力边界雷达图</div>
+            <div class="card-subtitle">核心能力 vs 放弃能力 vs 不做能力（满分10分）</div>
+            <div class="chart-container">
+                <canvas id="radarAnkang"></canvas>
+            </div>
+        </div>
+
+        <!-- 能力边界雷达图 - 爱牵挂 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">🎯</span>爱牵挂 能力边界雷达图</div>
+            <div class="card-subtitle">核心能力 vs 放弃能力 vs 不做能力（满分10分）</div>
+            <div class="chart-container">
+                <canvas id="radarAi"></canvas>
+            </div>
+        </div>
+
+        <!-- 三家能力综合对比雷达 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">🔄</span>三家公司能力综合对比</div>
+            <div class="card-subtitle">软件能力 · 硬件能力 · 人工服务 · AI技术 · 服务网络 · 成本控制</div>
+            <div class="chart-container">
+                <canvas id="radarAll"></canvas>
+            </div>
+        </div>
+
+        <!-- 场景覆盖对比 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">📋</span>场景覆盖对比</div>
+            <div class="card-subtitle">基础服务 / 安全应急 / 安全服务 三大体系场景数</div>
+            <div class="chart-container">
+                <canvas id="sceneChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 服务成本结构对比 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">📈</span>服务成本结构对比</div>
+            <div class="card-subtitle">人力 / 系统 / 场地 / 通信 成本占比（堆叠条形图）</div>
+            <div class="chart-container">
+                <canvas id="costChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 单老人年服务成本对比 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">💵</span>单老人年服务成本对比</div>
+            <div class="card-subtitle">覆盖1万老人区域，年度总成本及人均成本</div>
+            <div class="chart-container">
+                <canvas id="perCostChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 质检培训风控对比 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">✅</span>质检 · 培训 · 风控 体系对比</div>
+            <div class="card-subtitle">各维度评分对比（满分10分）</div>
+            <div class="chart-container">
+                <canvas id="qaChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 服务流程泳道图 -->
+        <div class="card full-width">
+            <div class="card-title"><span class="icon">🏊</span>服务流程泳道图（5步SOP对比）</div>
+            <div class="card-subtitle">基础服务（安康通） · 安全应急服务（爱牵挂） · 安全服务（蚂蚁阿福）</div>
+            <div class="swimlane">
+                <!-- 安康通 - 基础服务 -->
+                <div class="swimlane-row">
+                    <div class="swimlane-label" style="background:#52c41a">
+                        <div class="company-name">安康通</div>
+                        <div class="flow-type">基础服务流程</div>
+                    </div>
+                    <div class="swimlane-steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-title">需求评估</div>
+                            <div class="step-time">签约前1-2天</div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-title">服务匹配</div>
+                            <div class="step-time">评估后1天内</div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-title">上门服务</div>
+                            <div class="step-time">按计划执行</div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-number">4</div>
+                            <div class="step-title">质量评价</div>
+                            <div class="step-time">服务后24h内</div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-number">5</div>
+                            <div class="step-title">续单转化</div>
+                            <div class="step-time">周期结束前7天</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 爱牵挂 - 安全应急 -->
+                <div class="swimlane-row">
+                    <div class="swimlane-label" style="background:#fa8c16">
+                        <div class="company-name">爱牵挂</div>
+                        <div class="flow-type">安全应急流程</div>
+                    </div>
+                    <div class="swimlane-steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-title">风险感知</div>
+                            <div class="step-time">实时</div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-title">10秒人工响应</div>
+                            <div class="step-time">&lt;10秒</div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-title">15分钟到场</div>
+                            <div class="step-time">城区12分钟</div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-number">4</div>
+                            <div class="step-title">事后回访</div>
+                            <div class="step-time">24h内</div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-number">5</div>
+                            <div class="step-title">数据归档</div>
+                            <div class="step-time">事件结束后</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- 蚂蚁阿福 - 安全服务 -->
+                <div class="swimlane-row">
+                    <div class="swimlane-label" style="background:#1677ff">
+                        <div class="company-name">蚂蚁阿福</div>
+                        <div class="flow-type">安全服务流程</div>
+                    </div>
+                    <div class="swimlane-steps">
+                        <div class="step">
+                            <div class="step-number">1</div>
+                            <div class="step-title">数据接入</div>
+                            <div class="step-time">实时</div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-number">2</div>
+                            <div class="step-title">AI分析</div>
+                            <div class="step-time">实时</div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-number">3</div>
+                            <div class="step-title">人工干预</div>
+                            <div class="step-time">按需</div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-number">4</div>
+                            <div class="step-title">持续跟踪</div>
+                            <div class="step-time">按需</div>
+                        </div>
+                        <div class="arrow">→</div>
+                        <div class="step">
+                            <div class="step-number">5</div>
+                            <div class="step-title">报告生成</div>
+                            <div class="step-time">日/周/月</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 续费率对比 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">🔁</span>续费率对比</div>
+            <div class="card-subtitle">不同类型用户的续费率/留存率对比</div>
+            <div class="chart-container">
+                <canvas id="renewalChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 盈利模式对比 -->
+        <div class="card">
+            <div class="card-title"><span class="icon">🏢</span>盈利模式对比</div>
+            <div class="card-subtitle">各公司收入构成占比</div>
+            <div class="chart-container tall">
+                <canvas id="revenueChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 详细SLA指标表 -->
+        <div class="card full-width">
+            <div class="card-title"><span class="icon">📋</span>SLA 指标完整对比表</div>
+            <div class="card-subtitle">18项量化指标 · 含计算公式、目标值、实际达成</div>
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>指标类别</th>
+                            <th>指标名称</th>
+                            <th>目标值</th>
+                            <th style="color:#1677ff">蚂蚁阿福</th>
+                            <th style="color:#52c41a">安康通</th>
+                            <th style="color:#fa8c16">爱牵挂</th>
+                            <th>行业平均</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td rowspan="3" style="vertical-align:middle;font-weight:600;background:#f0f2f5;">响应时效</td>
+                            <td>响应时间</td>
+                            <td>&lt;10秒</td>
+                            <td class="company-cell" style="color:#1677ff">5秒</td>
+                            <td>10秒</td>
+                            <td>10秒</td>
+                            <td>&lt;15秒</td>
+                        </tr>
+                        <tr>
+                            <td>城区到场时间</td>
+                            <td>&lt;15分钟</td>
+                            <td><span class="badge blue">N/A</span></td>
+                            <td>12分钟</td>
+                            <td>12分钟</td>
+                            <td>&lt;20分钟</td>
+                        </tr>
+                        <tr>
+                            <td>工单处理时长</td>
+                            <td>&lt;4小时</td>
+                            <td class="company-cell" style="color:#1677ff">2小时</td>
+                            <td>4小时</td>
+                            <td>3.5小时</td>
+                            <td>&lt;6小时</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="3" style="vertical-align:middle;font-weight:600;background:#f0f2f5;">服务质量</td>
+                            <td>服务满意度</td>
+                            <td>&gt;4.7分</td>
+                            <td class="company-cell" style="color:#1677ff">4.8分</td>
+                            <td>4.7分</td>
+                            <td>4.6分</td>
+                            <td>&gt;4.5分</td>
+                        </tr>
+                        <tr>
+                            <td>首次解决率</td>
+                            <td>&gt;85%</td>
+                            <td class="company-cell" style="color:#1677ff">90%</td>
+                            <td>85%</td>
+                            <td>82%</td>
+                            <td>&gt;80%</td>
+                        </tr>
+                        <tr>
+                            <td>投诉率</td>
+                            <td>&lt;1%</td>
+                            <td class="company-cell" style="color:#1677ff">0.5%</td>
+                            <td>1%</td>
+                            <td>1.5%</td>
+                            <td>&lt;2%</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="3" style="vertical-align:middle;font-weight:600;background:#f0f2f5;">安全效果</td>
+                            <td>事故处置成功率</td>
+                            <td>&gt;95%</td>
+                            <td><span class="badge blue">N/A</span></td>
+                            <td class="company-cell" style="color:#52c41a">96%</td>
+                            <td>95%</td>
+                            <td>&gt;90%</td>
+                        </tr>
+                        <tr>
+                            <td>误报率</td>
+                            <td>&lt;5%</td>
+                            <td><span class="badge blue">N/A</span></td>
+                            <td>3.5%</td>
+                            <td>3.5%</td>
+                            <td>&lt;5%</td>
+                        </tr>
+                        <tr>
+                            <td>预警提前量</td>
+                            <td>&gt;30分钟</td>
+                            <td class="company-cell" style="color:#1677ff">45分钟</td>
+                            <td>35分钟</td>
+                            <td>30分钟</td>
+                            <td>&gt;20分钟</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="2" style="vertical-align:middle;font-weight:600;background:#f0f2f5;">效率指标</td>
+                            <td>工单完成率</td>
+                            <td>&gt;90%</td>
+                            <td class="company-cell" style="color:#1677ff">95%</td>
+                            <td>92%</td>
+                            <td>90%</td>
+                            <td>&gt;85%</td>
+                        </tr>
+                        <tr>
+                            <td>人均服务量</td>
+                            <td>&gt;200通/日</td>
+                            <td class="company-cell" style="color:#1677ff">1000人/日</td>
+                            <td>30人/护理员</td>
+                            <td>50人/坐席</td>
+                            <td>20-30人</td>
+                        </tr>
+                        <tr>
+                            <td rowspan="2" style="vertical-align:middle;font-weight:600;background:#f0f2f5;">成本指标</td>
+                            <td>单次服务成本</td>
+                            <td>&lt;50元</td>
+                            <td class="company-cell" style="color:#1677ff">30元</td>
+                            <td>45元</td>
+                            <td>40元</td>
+                            <td>50-60元</td>
+                        </tr>
+                        <tr>
+                            <td>ROI</td>
+                            <td>&gt;1.5</td>
+                            <td class="company-cell" style="color:#1677ff">2.5</td>
+                            <td>1.8</td>
+                            <td>1.6</td>
+                            <td>&gt;1.2</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="footer">
+        <p>数据来源：公司公告、行业研报、公开报道 · 部分数据为估算值</p>
+        <p>生成时间：2026年7月20日</p>
+    </div>
+
+    <script>
+        Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+        Chart.defaults.color = '#555';
+        Chart.defaults.font.size = 12;
+
+        const COLORS = {
+            ant: '#1677ff',
+            ankang: '#52c41a',
+            ai: '#fa8c16',
+            antBg: 'rgba(22, 119, 255, 0.15)',
+            ankangBg: 'rgba(82, 196, 26, 0.15)',
+            aiBg: 'rgba(250, 140, 22, 0.15)',
+        };
+
+        // === 1. SLA 响应时效对比（柱状图，越低越好） ===
+        new Chart(document.getElementById('slaResponseChart'), {
+            type: 'bar',
+            data: {
+                labels: ['响应时间(秒)', '城区到场(分钟)', '工单处理(小时)'],
+                datasets: [
+                    { label: '蚂蚁阿福', data: [5, null, 2], backgroundColor: COLORS.antBg, borderColor: COLORS.ant, borderWidth: 2 },
+                    { label: '安康通', data: [10, 12, 4], backgroundColor: COLORS.ankangBg, borderColor: COLORS.ankang, borderWidth: 2 },
+                    { label: '爱牵挂', data: [10, 12, 3.5], backgroundColor: COLORS.aiBg, borderColor: COLORS.ai, borderWidth: 2 },
+                    { label: '目标值', data: [10, 15, 4], backgroundColor: 'rgba(255,99,132,0.1)', borderColor: '#ff6384', borderWidth: 2, borderDash: [5,5] }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, title: { display: true, text: '数值（越低越好）' } } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // === 2. SLA 服务质量对比 ===
+        new Chart(document.getElementById('slaQualityChart'), {
+            type: 'bar',
+            data: {
+                labels: ['满意度(分)', 'NPS', '首次解决率(%)', '投诉率(%×10)'],
+                datasets: [
+                    { label: '蚂蚁阿福', data: [4.8, 60, 90, 5], backgroundColor: COLORS.antBg, borderColor: COLORS.ant, borderWidth: 2 },
+                    { label: '安康通', data: [4.7, 55, 85, 10], backgroundColor: COLORS.ankangBg, borderColor: COLORS.ankang, borderWidth: 2 },
+                    { label: '爱牵挂', data: [4.6, 50, 82, 15], backgroundColor: COLORS.aiBg, borderColor: COLORS.ai, borderWidth: 2 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, title: { display: true, text: '数值（越高越好）' } } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // === 3. SLA 成本效率对比 ===
+        new Chart(document.getElementById('slaCostChart'), {
+            type: 'bar',
+            data: {
+                labels: ['单次服务成本(元)', 'ROI(×10)', '人均服务量(×10)'],
+                datasets: [
+                    { label: '蚂蚁阿福', data: [30, 25, 100], backgroundColor: COLORS.antBg, borderColor: COLORS.ant, borderWidth: 2 },
+                    { label: '安康通', data: [45, 18, 3], backgroundColor: COLORS.ankangBg, borderColor: COLORS.ankang, borderWidth: 2 },
+                    { label: '爱牵挂', data: [40, 16, 5], backgroundColor: COLORS.aiBg, borderColor: COLORS.ai, borderWidth: 2 },
+                    { label: '行业平均', data: [55, 12, 2.5], backgroundColor: 'rgba(255,99,132,0.1)', borderColor: '#ff6384', borderWidth: 2, borderDash: [5,5] }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, title: { display: true, text: '数值' } } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // === 4. SLA 安全效果对比 ===
+        new Chart(document.getElementById('slaSafetyChart'), {
+            type: 'bar',
+            data: {
+                labels: ['事故处置成功率(%)', '误报率(%)', '漏报率(%)', '预警提前量(分钟)'],
+                datasets: [
+                    { label: '蚂蚁阿福', data: [null, null, null, 45], backgroundColor: COLORS.antBg, borderColor: COLORS.ant, borderWidth: 2 },
+                    { label: '安康通', data: [96, 3.5, 0.8, 35], backgroundColor: COLORS.ankangBg, borderColor: COLORS.ankang, borderWidth: 2 },
+                    { label: '爱牵挂', data: [95, 3.5, 1, 30], backgroundColor: COLORS.aiBg, borderColor: COLORS.ai, borderWidth: 2 },
+                    { label: '目标值', data: [95, 5, 1, 30], backgroundColor: 'rgba(255,99,132,0.1)', borderColor: '#ff6384', borderWidth: 2, borderDash: [5,5] }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, title: { display: true, text: '数值' } } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // === 5-7. 能力边界雷达图 ===
+        const capabilityLabels = ['AI问诊', '报告解读', '健康档案', '预约挂号', '药品电商', '健康陪伴', '在线医生', '医学标注', '上门服务', '紧急救助'];
+
+        new Chart(document.getElementById('radarAnt'), {
+            type: 'radar',
+            data: {
+                labels: ['AI问诊', '报告解读', '健康档案', '预约挂号', '药品电商', '健康陪伴', '在线医生', '上门服务'],
+                datasets: [
+                    { label: '核心能力', data: [10, 10, 10, 10, 9, 9, 10, 0], backgroundColor: 'rgba(22,119,255,0.2)', borderColor: COLORS.ant, borderWidth: 2, pointBackgroundColor: COLORS.ant, pointRadius: 4 },
+                    { label: '不做能力', data: [0, 0, 0, 0, 0, 0, 0, 2], backgroundColor: 'rgba(255,99,132,0.1)', borderColor: '#ff6384', borderWidth: 2, borderDash: [5,5], pointBackgroundColor: '#ff6384', pointRadius: 3 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { r: { beginAtZero: true, max: 10, ticks: { stepSize: 2 } } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        new Chart(document.getElementById('radarAnkang'), {
+            type: 'radar',
+            data: {
+                labels: ['智慧平台', '数字孪生', '工单系统', '紧急呼叫设备', '毫米波雷达', '呼叫中心', '上门服务', '健康咨询'],
+                datasets: [
+                    { label: '核心能力', data: [10, 10, 10, 9, 9, 10, 10, 9], backgroundColor: 'rgba(82,196,26,0.2)', borderColor: COLORS.ankang, borderWidth: 2, pointBackgroundColor: COLORS.ankang, pointRadius: 4 },
+                    { label: '不做能力', data: [0, 0, 0, 0, 0, 0, 0, 0], backgroundColor: 'rgba(255,99,132,0.1)', borderColor: '#ff6384', borderWidth: 2, borderDash: [5,5], pointBackgroundColor: '#ff6384', pointRadius: 3 },
+                    { label: '放弃能力(自建护理院)', data: [2, 0, 0, 0, 0, 0, 2, 0], backgroundColor: 'rgba(255,193,7,0.15)', borderColor: '#ffc107', borderWidth: 2, borderDash: [3,3], pointBackgroundColor: '#ffc107', pointRadius: 3 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { r: { beginAtZero: true, max: 10, ticks: { stepSize: 2 } } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        new Chart(document.getElementById('radarAi'), {
+            type: 'radar',
+            data: {
+                labels: ['SaaS平台', 'AI算法', '数据对接', '智能穿戴', '毫米波雷达', '居家监测', '呼叫中心', '远程监护'],
+                datasets: [
+                    { label: '核心能力', data: [10, 10, 10, 9, 9, 9, 10, 9], backgroundColor: 'rgba(250,140,22,0.2)', borderColor: COLORS.ai, borderWidth: 2, pointBackgroundColor: COLORS.ai, pointRadius: 4 },
+                    { label: '放弃能力(自建呼叫中心)', data: [0, 0, 0, 0, 0, 0, 2, 0], backgroundColor: 'rgba(255,193,7,0.15)', borderColor: '#ffc107', borderWidth: 2, borderDash: [3,3], pointBackgroundColor: '#ffc107', pointRadius: 3 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { r: { beginAtZero: true, max: 10, ticks: { stepSize: 2 } } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // === 8. 三家能力综合对比雷达 ===
+        new Chart(document.getElementById('radarAll'), {
+            type: 'radar',
+            data: {
+                labels: ['软件能力', '硬件能力', '人工服务', 'AI技术', '服务网络', '成本控制'],
+                datasets: [
+                    { label: '蚂蚁阿福', data: [9, 2, 6, 10, 8, 9], backgroundColor: 'rgba(22,119,255,0.15)', borderColor: COLORS.ant, borderWidth: 2, pointBackgroundColor: COLORS.ant, pointRadius: 4 },
+                    { label: '安康通', data: [8, 7, 9, 6, 10, 5], backgroundColor: 'rgba(82,196,26,0.15)', borderColor: COLORS.ankang, borderWidth: 2, pointBackgroundColor: COLORS.ankang, pointRadius: 4 },
+                    { label: '爱牵挂', data: [7, 9, 5, 5, 6, 7], backgroundColor: 'rgba(250,140,22,0.15)', borderColor: COLORS.ai, borderWidth: 2, pointBackgroundColor: COLORS.ai, pointRadius: 4 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { r: { beginAtZero: true, max: 10, ticks: { stepSize: 2 } } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // === 9. 场景覆盖对比 ===
+        new Chart(document.getElementById('sceneChart'), {
+            type: 'bar',
+            data: {
+                labels: ['基础服务场景', '安全应急场景', '安全服务场景'],
+                datasets: [
+                    { label: '蚂蚁阿福', data: [3, 0, 6], backgroundColor: COLORS.ant },
+                    { label: '安康通', data: [15, 6, 5], backgroundColor: COLORS.ankang },
+                    { label: '爱牵挂', data: [12, 6, 8], backgroundColor: COLORS.ai }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, title: { display: true, text: '场景数量' } } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // === 10. 服务成本结构对比（堆叠条形图） ===
+        new Chart(document.getElementById('costChart'), {
+            type: 'bar',
+            data: {
+                labels: ['蚂蚁阿福', '安康通', '爱牵挂'],
+                datasets: [
+                    { label: '人力成本', data: [30, 60, 40], backgroundColor: 'rgba(255,99,132,0.7)' },
+                    { label: '系统成本', data: [40, 10, 25], backgroundColor: 'rgba(54,162,235,0.7)' },
+                    { label: '场地成本', data: [10, 15, 5], backgroundColor: 'rgba(255,206,86,0.7)' },
+                    { label: '通信成本', data: [10, 10, 15], backgroundColor: 'rgba(75,192,192,0.7)' },
+                    { label: '其他', data: [10, 5, 15], backgroundColor: 'rgba(153,102,255,0.7)' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true, max: 100, title: { display: true, text: '占比 (%)' } }
+                },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // === 11. 单老人年服务成本 ===
+        new Chart(document.getElementById('perCostChart'), {
+            type: 'bar',
+            data: {
+                labels: ['年度总成本(万元)', '单老人年成本(元)'],
+                datasets: [
+                    { label: '蚂蚁阿福', data: [208, 2080], backgroundColor: COLORS.antBg, borderColor: COLORS.ant, borderWidth: 2 },
+                    { label: '安康通', data: [106, 1065], backgroundColor: COLORS.ankangBg, borderColor: COLORS.ankang, borderWidth: 2 },
+                    { label: '爱牵挂', data: [75, 750], backgroundColor: COLORS.aiBg, borderColor: COLORS.ai, borderWidth: 2 },
+                    { label: '行业平均', data: [100, 1150], backgroundColor: 'rgba(255,99,132,0.1)', borderColor: '#ff6384', borderWidth: 2, borderDash: [5,5] }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, title: { display: true, text: '数值' } } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // === 12. 质检培训风控对比 ===
+        new Chart(document.getElementById('qaChart'), {
+            type: 'radar',
+            data: {
+                labels: ['AI质检覆盖', '人工质检深度', '培训体系完整度', '持证上岗率', '风控措施', '应急演练'],
+                datasets: [
+                    { label: '蚂蚁阿福', data: [10, 7, 9, 8, 9, 5], backgroundColor: 'rgba(22,119,255,0.15)', borderColor: COLORS.ant, borderWidth: 2, pointBackgroundColor: COLORS.ant, pointRadius: 4 },
+                    { label: '安康通', data: [8, 9, 8, 10, 9, 8], backgroundColor: 'rgba(82,196,26,0.15)', borderColor: COLORS.ankang, borderWidth: 2, pointBackgroundColor: COLORS.ankang, pointRadius: 4 },
+                    { label: '爱牵挂', data: [8, 6, 7, 7, 7, 8], backgroundColor: 'rgba(250,140,22,0.15)', borderColor: COLORS.ai, borderWidth: 2, pointBackgroundColor: COLORS.ai, pointRadius: 4 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { r: { beginAtZero: true, max: 10, ticks: { stepSize: 2 } } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // === 13. 续费率对比 ===
+        new Chart(document.getElementById('renewalChart'), {
+            type: 'bar',
+            data: {
+                labels: ['政府项目续约率', '长护险用户留存', 'B端机构续约', '家庭用户首年留存', '事故后续费率'],
+                datasets: [
+                    { label: '蚂蚁阿福', data: [null, null, 70, 30, null], backgroundColor: COLORS.antBg, borderColor: COLORS.ant, borderWidth: 2 },
+                    { label: '安康通', data: [85, 80, 75, 40, 95], backgroundColor: COLORS.ankangBg, borderColor: COLORS.ankang, borderWidth: 2 },
+                    { label: '爱牵挂', data: [70, null, 80, 65, 100], backgroundColor: COLORS.aiBg, borderColor: COLORS.ai, borderWidth: 2 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '续费率/留存率 (%)' } } },
+                plugins: { legend: { position: 'bottom' } }
+            }
+        });
+
+        // === 14. 盈利模式对比（堆叠柱状图） ===
+        new Chart(document.getElementById('revenueChart'), {
+            type: 'bar',
+            data: {
+                labels: ['蚂蚁阿福', '安康通', '爱牵挂'],
+                datasets: [
+                    { label: '保险/金融分销', data: [35, 0, 0], backgroundColor: 'rgba(255,99,132,0.7)' },
+                    { label: '体检/药品电商', data: [25, 0, 0], backgroundColor: 'rgba(54,162,235,0.7)' },
+                    { label: 'B端SaaS', data: [20, 0, 15], backgroundColor: 'rgba(255,206,86,0.7)' },
+                    { label: '政府项目(B2G)', data: [0, 50, 20], backgroundColor: 'rgba(75,192,192,0.7)' },
+                    { label: '私人付费服务', data: [0, 30, 0], backgroundColor: 'rgba(153,102,255,0.7)' },
+                    { label: '长护险', data: [0, 20, 0], backgroundColor: 'rgba(255,159,64,0.7)' },
+                    { label: '硬件销售', data: [0, 0, 40], backgroundColor: 'rgba(199,199,199,0.7)' },
+                    { label: '订阅服务', data: [20, 0, 25], backgroundColor: 'rgba(83,102,255,0.7)' }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true, beginAtZero: true, max: 100, title: { display: true, text: '收入占比 (%)' } }
+                },
+                plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
+            }
+        });
+    </script>
+</body>
+</html>

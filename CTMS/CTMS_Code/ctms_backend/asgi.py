@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 """
 ASGI config for ctms_backend project.
 
@@ -19,6 +20,8 @@ application = get_asgi_application()
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
 """
 ASGI config for ctms_backend project.
 
@@ -36,6 +39,9 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ctms_backend.settings")
 
 application = get_asgi_application()
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

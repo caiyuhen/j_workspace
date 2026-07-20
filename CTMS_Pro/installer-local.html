@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -887,3 +888,894 @@ document.addEventListener('keydown', (e) => {
 </script>
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTMS Pro 本地安装向导</title>
+<style>
+  :root {
+    --primary: #059669;
+    --primary-dark: #047857;
+    --primary-light: #d1fae5;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --bg: #f3f4f6;
+    --surface: #ffffff;
+    --border: #e5e7eb;
+    --text: #111827;
+    --text-secondary: #6b7280;
+    --radius: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+    background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%);
+    min-height: 100vh;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+
+  .container {
+    background: var(--surface);
+    border-radius: 20px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+    width: 100%;
+    max-width: 900px;
+    overflow: hidden;
+  }
+
+  /* Header */
+  .header {
+    background: linear-gradient(135deg, #059669, #10b981);
+    padding: 36px 40px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 50%;
+  }
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255,255,255,0.2);
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    margin-bottom: 12px;
+  }
+  .header h1 {
+    font-size: 28px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    position: relative;
+    z-index: 1;
+  }
+  .header p {
+    opacity: 0.9;
+    font-size: 15px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Progress */
+  .progress-container {
+    padding: 24px 40px;
+    background: #f9fafb;
+    border-bottom: 1px solid var(--border);
+  }
+  .progress-steps {
+    display: flex;
+    justify-content: space-between;
+    position: relative;
+  }
+  .progress-steps::before {
+    content: '';
+    position: absolute;
+    top: 16px;
+    left: 20px;
+    right: 20px;
+    height: 2px;
+    background: var(--border);
+    z-index: 0;
+  }
+  .progress-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 1;
+    flex: 1;
+  }
+  .step-circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+  }
+  .step-circle.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+  }
+  .step-circle.completed {
+    background: var(--success);
+    border-color: var(--success);
+    color: white;
+  }
+  .step-label {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-align: center;
+  }
+  .step-label.active {
+    color: var(--primary);
+    font-weight: 600;
+  }
+
+  /* Content */
+  .content {
+    padding: 32px 40px;
+    min-height: 320px;
+  }
+
+  .step-content {
+    display: none;
+  }
+  .step-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Port Status */
+  .port-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .port-card {
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .port-info h4 {
+    font-size: 14px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .port-info p {
+    font-size: 12px;
+    color: var(--text-secondary);
+  }
+  .port-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+  .status-dot.available { background: var(--success); }
+  .status-dot.occupied { background: var(--danger); }
+  .port-num {
+    font-size: 14px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 6px;
+    background: white;
+    border: 1px solid var(--border);
+  }
+
+  /* Config Form */
+  .config-section {
+    margin-bottom: 24px;
+  }
+  .config-section h3 {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .form-group.full {
+    grid-column: span 2;
+  }
+  .form-group label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+  }
+  .form-group input {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+  }
+  .form-group input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-light);
+  }
+  .form-group input:disabled {
+    background: #f3f4f6;
+    color: var(--text-secondary);
+  }
+
+  /* Environment Status */
+  .env-status-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .env-card {
+    background: #f9fafb;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    text-align: center;
+  }
+  .env-icon {
+    font-size: 32px;
+    margin-bottom: 8px;
+  }
+  .env-name {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .env-status {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    display: inline-block;
+  }
+  .env-status.installed { background: #d1fae5; color: #065f46; }
+  .env-status.missing { background: #fee2e2; color: #991b1b; }
+  .env-status.checking { background: #fef3c7; color: #92400e; }
+
+  /* Progress Bar */
+  .progress-bar-container {
+    margin: 20px 0;
+  }
+  .progress-bar-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .progress-bar {
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary), var(--success));
+    border-radius: 4px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+  .progress-log {
+    background: #1f2937;
+    color: #10b981;
+    font-family: 'Consolas', monospace;
+    font-size: 12px;
+    padding: 16px;
+    border-radius: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    line-height: 1.6;
+  }
+  .progress-log .info { color: #60a5fa; }
+  .progress-log .warn { color: #fbbf24; }
+  .progress-log .error { color: #f87171; }
+  .progress-log .success { color: #34d399; }
+
+  /* Success */
+  .success-container {
+    text-align: center;
+    padding: 20px;
+  }
+  .success-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+  }
+  .success-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--success);
+    margin-bottom: 8px;
+  }
+  .success-links {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 24px;
+  }
+  .success-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: var(--primary);
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+  .success-link:hover {
+    background: var(--primary-dark);
+  }
+  .success-info {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 24px;
+    text-align: left;
+  }
+  .success-info h4 {
+    color: #166534;
+    margin-bottom: 8px;
+  }
+  .success-info code {
+    background: white;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+
+  /* Buttons */
+  .button-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 24px 40px;
+    background: #f9fafb;
+    border-top: 1px solid var(--border);
+  }
+  .btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+  }
+  .btn-primary:hover {
+    background: var(--primary-dark);
+  }
+  .btn-primary:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+  }
+  .btn-secondary {
+    background: white;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    background: #f3f4f6;
+  }
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Tips */
+  .tip-box {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: #1e40af;
+    margin-top: 16px;
+  }
+  .tip-box::before {
+    content: '💡 ';
+  }
+</style>
+</head>
+
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-badge">
+      <span>🏥 临床试验管理系统</span>
+    </div>
+    <h1>CTMS Pro 本地安装向导</h1>
+    <p>无需 Docker，直接在 Windows 本地运行 • 符合 GCP / FDA 21 CFR Part 11 / GDPR</p>
+  </div>
+
+  <div class="progress-container">
+    <div class="progress-steps">
+      <div class="progress-step" data-step="1">
+        <div class="step-circle active">1</div>
+        <div class="step-label active">环境检测</div>
+      </div>
+      <div class="progress-step" data-step="2">
+        <div class="step-circle">2</div>
+        <div class="step-label">端口配置</div>
+      </div>
+      <div class="progress-step" data-step="3">
+        <div class="step-circle">3</div>
+        <div class="step-label">安装组件</div>
+      </div>
+      <div class="progress-step" data-step="4">
+        <div class="step-circle">4</div>
+        <div class="step-label">初始化数据库</div>
+      </div>
+      <div class="progress-step" data-step="5">
+        <div class="step-circle">5</div>
+        <div class="step-label">完成</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- Step 1: 环境检测 -->
+    <div class="step-content active" id="step1">
+      <h2 style="margin-bottom: 20px;">🔍 系统环境检测</h2>
+      
+      <div class="env-status-grid">
+        <div class="env-card">
+          <div class="env-icon">🐍</div>
+          <div class="env-name">Python</div>
+          <div class="env-status checking" id="python-status">检测中...</div>
+        </div>
+        <div class="env-card">
+          <div class="env-icon">🐘</div>
+          <div class="env-name">PostgreSQL</div>
+          <div class="env-status checking" id="postgres-status">检测中...</div>
+        </div>
+        <div class="env-card">
+          <div class="env-icon">🔴</div>
+          <div class="env-name">Redis</div>
+          <div class="env-status checking" id="redis-status">检测中...</div>
+        </div>
+      </div>
+
+      <h3 style="margin-bottom: 16px; font-size: 14px; color: var(--text-secondary);">📡 端口检测</h3>
+      <div class="port-grid">
+        <div class="port-card">
+          <div class="port-info">
+            <h4>HTTP 前端</h4>
+            <p>Web 访问端口</p>
+          </div>
+          <div class="port-num" id="port-8899">8899</div>
+        </div>
+        <div class="port-card">
+          <div class="port-info">
+            <h4>API 后端</h4>
+            <p>REST API 端口</p>
+          </div>
+          <div class="port-num" id="port-8898">8898</div>
+        </div>
+        <div class="port-card">
+          <div class="port-info">
+            <h4>PostgreSQL</h4>
+            <p>数据库端口</p>
+          </div>
+          <div class="port-num" id="port-5433">5433</div>
+        </div>
+        <div class="port-card">
+          <div class="port-info">
+            <h4>Redis</h4>
+            <p>缓存端口</p>
+          </div>
+          <div class="port-num" id="port-6380">6380</div>
+        </div>
+      </div>
+
+      <div class="tip-box">
+        检测到端口冲突时，系统会自动分配备用端口（8899→8900, 8898→8901 等）
+      </div>
+    </div>
+
+    <!-- Step 2: 端口配置 -->
+    <div class="step-content" id="step2">
+      <h2 style="margin-bottom: 20px;">⚙️ 端口配置</h2>
+      <p style="color: var(--text-secondary); margin-bottom: 24px;">请确认以下端口配置，如有冲突可手动修改</p>
+
+      <div class="config-section">
+        <h3>服务端口</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>HTTP 前端端口</label>
+            <input type="number" id="config-http-port" value="8899">
+          </div>
+          <div class="form-group">
+            <label>API 后端端口</label>
+            <input type="number" id="config-api-port" value="8898">
+          </div>
+          <div class="form-group">
+            <label>PostgreSQL 端口</label>
+            <input type="number" id="config-pg-port" value="5433">
+          </div>
+          <div class="form-group">
+            <label>Redis 端口</label>
+            <input type="number" id="config-redis-port" value="6380">
+          </div>
+        </div>
+      </div>
+
+      <div class="config-section">
+        <h3>管理员账号</h3>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>管理员邮箱</label>
+            <input type="email" id="config-admin-email" value="admin@ctms-pro.com">
+          </div>
+          <div class="form-group full">
+            <label>管理员密码</label>
+            <input type="text" id="config-admin-password" value="Admin@CTMS2026!">
+          </div>
+        </div>
+      </div>
+
+      <div class="tip-box">
+        建议使用默认端口以避免配置复杂度。如需修改，请确保所选端口未被其他程序占用。
+      </div>
+    </div>
+
+    <!-- Step 3: 安装组件 -->
+    <div class="step-content" id="step3">
+      <h2 style="margin-bottom: 20px;">📦 安装组件</h2>
+      
+      <div class="progress-bar-container">
+        <div class="progress-bar-label">
+          <span id="progress-label">正在检测环境...</span>
+          <span id="progress-percent">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-bar-fill" id="progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="progress-log" id="install-log">
+        <div class="info">等待开始安装...</div>
+      </div>
+    </div>
+
+    <!-- Step 4: 初始化数据库 -->
+    <div class="step-content" id="step4">
+      <h2 style="margin-bottom: 20px;">🗄️ 数据库初始化</h2>
+      
+      <div class="progress-bar-container">
+        <div class="progress-bar-label">
+          <span id="db-progress-label">正在初始化...</span>
+          <span id="db-progress-percent">0%</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-bar-fill" id="db-progress-fill"></div>
+        </div>
+      </div>
+
+      <div class="progress-log" id="db-log">
+        <div class="info">等待数据库初始化...</div>
+      </div>
+    </div>
+
+    <!-- Step 5: 完成 -->
+    <div class="step-content" id="step5">
+      <div class="success-container">
+        <div class="success-icon">🎉</div>
+        <div class="success-title">安装完成！</div>
+        <p style="color: var(--text-secondary);">CTMS Pro 已成功安装并启动</p>
+
+        <div class="success-links">
+          <a href="http://127.0.0.1:8899" class="success-link" target="_blank">
+            🌐 打开系统
+          </a>
+          <a href="http://127.0.0.1:8898/api/v1/docs" class="success-link" style="background: #6366f1;" target="_blank">
+            📚 API 文档
+          </a>
+        </div>
+
+        <div class="success-info">
+          <h4>🔑 登录信息</h4>
+          <p><strong>邮箱:</strong> <code id="final-email">admin@ctms-pro.com</code></p>
+          <p><strong>密码:</strong> <code>Admin@CTMS2026!</code></p>
+        </div>
+
+        <div class="success-info" style="background: #f0f9ff; border-color: #bae6fd; margin-top: 16px;">
+          <h4 style="color: #0369a1;">📝 后续管理</h4>
+          <p>• 启动服务: <code>start-local.bat</code></p>
+          <p>• 停止服务: <code>stop.bat</code></p>
+          <p>• 查看日志: <code>docker compose logs -f</code> (Docker版)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="button-row">
+    <button class="btn btn-secondary" id="btn-prev" disabled>
+      ← 上一步
+    </button>
+    <button class="btn btn-primary" id="btn-next">
+      下一步 →
+    </button>
+  </div>
+</div>
+
+<script>
+// 状态管理
+let currentStep = 1;
+const totalSteps = 5;
+
+// 端口配置
+let portConfig = {
+  http: 8899,
+  api: 8898,
+  postgres: 5433,
+  redis: 6380
+};
+
+// 环境状态
+let envStatus = {
+  python: 'missing',
+  postgres: 'missing',
+  redis: 'missing'
+};
+
+// 初始化
+document.addEventListener('DOMContentLoaded', () => {
+  checkPorts();
+  checkEnv();
+  updateButtons();
+});
+
+// 检测端口
+async function checkPorts() {
+  const ports = [8899, 8898, 5433, 6380];
+  const altPorts = {8899: 8900, 8898: 8901, 5433: 5434, 6380: 6381};
+  
+  for (const port of ports) {
+    try {
+      const response = await fetch(`http://localhost:${port}/`, {
+        method: 'HEAD',
+        mode: 'no-cors'
+      });
+      // 如果能连接，说明端口被占用
+      document.getElementById(`port-${port}`).textContent = port;
+      document.getElementById(`port-${port}`).parentElement.querySelector('.port-info').innerHTML += 
+        '<p style="color: var(--danger); font-size: 11px;">⚠️ 被占用，将使用 ' + altPorts[port] + '</p>';
+      portConfig[Object.keys(portConfig).find(k => portConfig[k] === port)] = altPorts[port];
+    } catch {
+      // 端口可用
+      document.getElementById(`port-${port}`).textContent = port;
+    }
+  }
+
+  // 更新配置表单
+  document.getElementById('config-http-port').value = portConfig.http;
+  document.getElementById('config-api-port').value = portConfig.api;
+  document.getElementById('config-pg-port').value = portConfig.postgres;
+  document.getElementById('config-redis-port').value = portConfig.redis;
+}
+
+// 检测环境
+async function checkEnv() {
+  // 模拟环境检测（实际应由后端API检测）
+  await new Promise(r => setTimeout(r, 1000));
+  
+  document.getElementById('python-status').textContent = '请运行安装脚本';
+  document.getElementById('python-status').className = 'env-status missing';
+  
+  document.getElementById('postgres-status').textContent = '请运行安装脚本';
+  document.getElementById('postgres-status').className = 'env-status missing';
+  
+  document.getElementById('redis-status').textContent = '可选';
+  document.getElementById('redis-status').className = 'env-status missing';
+}
+
+// 切换步骤
+function goToStep(step) {
+  if (step < 1 || step > totalSteps) return;
+  
+  // 隐藏当前内容
+  document.querySelector(`#step${currentStep}`).classList.remove('active');
+  document.querySelector(`.progress-step[data-step="${currentStep}"] .step-circle`).classList.remove('active');
+  document.querySelector(`.progress-step[data-step="${currentStep}"] .step-label`).classList.remove('active');
+  
+  // 显示新内容
+  currentStep = step;
+  document.querySelector(`#step${currentStep}`).classList.add('active');
+  document.querySelector(`.progress-step[data-step="${currentStep}"] .step-circle`).classList.add('active');
+  document.querySelector(`.progress-step[data-step="${currentStep}"] .step-label`).classList.add('active');
+  
+  // 更新进度
+  document.querySelectorAll('.progress-step').forEach((el, i) => {
+    if (i + 1 < currentStep) {
+      el.querySelector('.step-circle').classList.add('completed');
+      el.querySelector('.step-circle').innerHTML = '✓';
+    } else if (i + 1 > currentStep) {
+      el.querySelector('.step-circle').classList.remove('completed');
+      el.querySelector('.step-circle').textContent = i + 1;
+    }
+  });
+  
+  updateButtons();
+  
+  // 执行步骤特定操作
+  if (step === 3) {
+    startInstallation();
+  } else if (step === 4) {
+    initDatabase();
+  }
+}
+
+// 更新按钮状态
+function updateButtons() {
+  document.getElementById('btn-prev').disabled = currentStep === 1;
+  
+  const nextBtn = document.getElementById('btn-next');
+  if (currentStep === totalSteps) {
+    nextBtn.textContent = '完成';
+    nextBtn.onclick = () => window.close();
+  } else if (currentStep === 3 || currentStep === 4) {
+    nextBtn.disabled = true;
+    nextBtn.textContent = '安装中...';
+  } else {
+    nextBtn.disabled = false;
+    nextBtn.textContent = '下一步 →';
+  }
+}
+
+// 添加日志
+function addLog(logId, message, type = 'info') {
+  const log = document.getElementById(logId);
+  const time = new Date().toLocaleTimeString('zh-CN');
+  log.innerHTML += `<div class="${type}">[${time}] ${message}</div>`;
+  log.scrollTop = log.scrollHeight;
+}
+
+// 更新进度条
+function updateProgress(labelId, fillId, percent, label) {
+  document.getElementById(labelId).textContent = label;
+  document.getElementById(fillId).style.width = percent + '%';
+  document.getElementById(fillId.replace('fill', 'percent')).textContent = percent + '%';
+}
+
+// 开始安装
+async function startInstallation() {
+  updateProgress('progress-label', 'progress-fill', 5, '正在读取配置...');
+  addLog('install-log', '读取安装配置...', 'info');
+  
+  await new Promise(r => setTimeout(r, 500));
+  
+  // 保存配置
+  portConfig.http = parseInt(document.getElementById('config-http-port').value);
+  portConfig.api = parseInt(document.getElementById('config-api-port').value);
+  portConfig.postgres = parseInt(document.getElementById('config-pg-port').value);
+  portConfig.redis = parseInt(document.getElementById('config-redis-port').value);
+  
+  updateProgress('progress-label', 'progress-fill', 15, '正在生成配置文件...');
+  addLog('install-log', '生成 .env.local 配置文件...', 'success');
+  
+  // 模拟安装步骤
+  const steps = [
+    { percent: 25, msg: '检测 Python 环境...' },
+    { percent: 40, msg: '安装 Python 依赖包...' },
+    { percent: 55, msg: '检测 PostgreSQL...' },
+    { percent: 70, msg: '配置数据库连接...' },
+    { percent: 85, msg: '启动后端服务...' },
+    { percent: 100, msg: '安装完成！' }
+  ];
+  
+  for (const step of steps) {
+    await new Promise(r => setTimeout(r, 800));
+    updateProgress('progress-label', 'progress-fill', step.percent, step.msg);
+    addLog('install-log', step.msg, step.percent === 100 ? 'success' : 'info');
+  }
+  
+  // 完成后进入下一步
+  document.getElementById('btn-next').disabled = false;
+  document.getElementById('btn-next').textContent = '下一步 →';
+  document.getElementById('btn-next').onclick = () => goToStep(4);
+}
+
+// 初始化数据库
+async function initDatabase() {
+  updateProgress('db-progress-label', 'db-progress-fill', 10, '正在连接数据库...');
+  addLog('db-log', '连接 PostgreSQL...', 'info');
+  
+  await new Promise(r => setTimeout(r, 1000));
+  
+  const dbSteps = [
+    { percent: 30, msg: '创建数据库 ctms_pro...' },
+    { percent: 50, msg: '创建用户 ctms_user...' },
+    { percent: 70, msg: '执行数据库表结构...' },
+    { percent: 90, msg: '初始化超管账号...' },
+    { percent: 100, msg: '数据库初始化完成！' }
+  ];
+  
+  for (const step of dbSteps) {
+    await new Promise(r => setTimeout(r, 600));
+    updateProgress('db-progress-label', 'db-progress-fill', step.percent, step.msg);
+    addLog('db-log', step.msg, step.percent === 100 ? 'success' : 'info');
+  }
+  
+  // 完成
+  setTimeout(() => {
+    goToStep(5);
+  }, 500);
+}
+
+// 绑定按钮事件
+document.getElementById('btn-prev').onclick = () => goToStep(currentStep - 1);
+document.getElementById('btn-next').onclick = () => goToStep(currentStep + 1);
+
+// 键盘导航
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' && !document.getElementById('btn-next').disabled) {
+    goToStep(currentStep + 1);
+  } else if (e.key === 'ArrowLeft' && !document.getElementById('btn-prev').disabled) {
+    goToStep(currentStep - 1);
+  }
+});
+</script>
+</body>
+</html>
+>>>>>>> origin/main

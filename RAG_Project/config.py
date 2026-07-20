@@ -7,8 +7,13 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 DATA_DIR = os.path.join(BASE_DIR, "data")
 # Milvus Configuration
+<<<<<<< HEAD
 MILVUS_HOST = os.getenv("MILVUS_HOST", "127.0.0.1")
 MILVUS_PORT = os.getenv("MILVUS_PORT", "19530")
+=======
+MILVUS_HOST = "127.0.0.1"
+MILVUS_PORT = "19530"
+>>>>>>> origin/main
 COLLECTION_NAME = "medical_rag" # Renamed for general medical use
 VECTOR_DIM = 512  # Updated to 512 dim to match loaded model output
 

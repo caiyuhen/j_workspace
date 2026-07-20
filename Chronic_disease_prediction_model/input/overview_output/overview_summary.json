@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "disease_count": 14,
   "used_rows": 1000,
@@ -26,4 +27,34 @@
   "retrain_trigger_count": 0,
   "best_f1_target": "kidney_disease",
   "worst_f1_target": "depression"
+=======
+{
+  "disease_count": 14,
+  "used_rows": 1000,
+  "means": {
+    "accuracy": 0.9532142857142857,
+    "precision": 0.9561272568718422,
+    "recall": 0.9421796372272527,
+    "f1": 0.9484019106053526,
+    "auroc": 0.9781145982004672
+  },
+  "mins": {
+    "accuracy": 0.665,
+    "precision": 0.684931506849315,
+    "recall": 0.5319148936170213,
+    "f1": 0.5988023952095808,
+    "auroc": 0.754415897230028
+  },
+  "maxs": {
+    "accuracy": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "auroc": 1.0
+  },
+  "drift_alert_count": 6,
+  "retrain_trigger_count": 0,
+  "best_f1_target": "kidney_disease",
+  "worst_f1_target": "depression"
+>>>>>>> origin/main
 }

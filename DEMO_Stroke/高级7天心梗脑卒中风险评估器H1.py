@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -758,6 +759,8 @@ def main():
 
 if __name__ == "__main__":
 =======
+=======
+>>>>>>> origin/main
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
@@ -1516,5 +1519,8 @@ def main():
     return summary
 
 if __name__ == "__main__":
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
     main()

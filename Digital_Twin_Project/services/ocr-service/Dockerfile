@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # 使用官方 Python 运行时作为父镜像
 FROM python:3.9-slim
 
@@ -27,6 +28,8 @@ EXPOSE 8004
 # 启动命令
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8004"]
 =======
+=======
+>>>>>>> origin/main
 # 使用官方 Python 运行时作为父镜像
 FROM python:3.9-slim
 
@@ -54,4 +57,7 @@ EXPOSE 8004
 
 # 启动命令
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8004"]
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

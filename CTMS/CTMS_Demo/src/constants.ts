@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 export const ROLES = [
   { key: 'pm', label: '项目经理 (PM)', description: '整体项目管控（方案制定、中心筛选、预算、进度、合规）' },
@@ -23,6 +24,8 @@ export const STAGES = [
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
 
 export const ROLES = [
   { key: 'pm', label: '项目经理 (PM)', description: '整体项目管控（方案制定、中心筛选、预算、进度、合规）' },
@@ -44,6 +47,9 @@ export const STAGES = [
   { key: 'closeout', label: '6. 试验关闭与总结', description: '文件归档、数据锁定、总结报告、关闭中心' },
 ];
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

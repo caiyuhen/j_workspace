@@ -14,7 +14,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 # 1. MongoDB Setup
+<<<<<<< HEAD
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://jdjd:JdJdllmix2308@mongodb:27017/")
+=======
+MONGO_URI = "mongodb://jdjd:JdJdllmix2308@localhost:27017/"
+>>>>>>> origin/main
 try:
     mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
     mongo_client.server_info()
@@ -316,8 +320,13 @@ def parse_markdown_to_rules(file_path):
 # 4. Ingestion Process
 def ingest():
     logger.info("Starting Full Ingestion Process...")
+<<<<<<< HEAD
 
     file_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data/guanli/乳腺癌疾病管理路径.md")
+=======
+    
+    file_path = "/mnt/disk3/home/pg/RAG_Project/data/guanli/乳腺癌.md"
+>>>>>>> origin/main
     rules_data = parse_markdown_to_rules(file_path)
     logger.info(f"Parsed {len(rules_data)} rules from markdown document.")
     

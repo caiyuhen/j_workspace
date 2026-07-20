@@ -115,6 +115,7 @@
     };
 
     async function bootstrapApp() {
+<<<<<<< HEAD
       // 提取 URL 中的 token 并临时保存为 user_token
       const urlParams = new URLSearchParams(window.location.search);
       const urlToken = urlParams.get('token');
@@ -126,6 +127,8 @@
         window.history.replaceState({}, document.title, window.location.pathname);
       }
 
+=======
+>>>>>>> origin/main
       try {
         if (window.CTMS_API && CTMS_API.Auth.isLoggedIn()) {
           const me = await CTMS_API.Auth.getMe();
@@ -138,6 +141,7 @@
           if (window.syncCTMSDataFromPostgreSQL) {
             await window.syncCTMSDataFromPostgreSQL();
           }
+<<<<<<< HEAD
 
           // 在控制台输出临时保存的 user_token（调试用，用于已有登录状态时）
           const userToken = sessionStorage.getItem('user_token');
@@ -146,6 +150,8 @@
             console.log('user_token:', userToken);
           }
 
+=======
+>>>>>>> origin/main
           mountMainLayout();
           return;
         }

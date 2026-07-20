@@ -39,7 +39,11 @@ class MilvusStore:
         print("Falling back to Milvus Lite (local file)...")
         try:
             import os
+<<<<<<< HEAD
             db_name = os.path.join(os.path.dirname(os.path.abspath(__file__)), "milvus_medical.db")
+=======
+            db_name = "milvus_medical.db"
+>>>>>>> origin/main
             if os.path.exists(db_name):
                     print(f"Found existing Lite DB: {db_name}")
             connections.connect("default", uri=db_name)
