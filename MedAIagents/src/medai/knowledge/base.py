@@ -5,6 +5,7 @@ Medical Knowledge Base Module
 
 import os
 import json
+import time
 import requests
 from typing import List, Dict, Any, Optional
 from loguru import logger
@@ -12,6 +13,8 @@ from abc import ABC, abstractmethod
 import sqlite3
 
 from ..config import Config
+from .document_parser import DocumentParser
+from .ima_client import IMAClient
 
 
 class VectorDBBase(ABC):
@@ -116,18 +119,40 @@ class SimpleVectorDB(VectorDBBase):
         rows = self.cursor.fetchall()
         return [row[0] for row in rows]
     
+    def list_documents(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
+        """列出所有文档"""
+        self.cursor.execute(
+            '''SELECT id, title, content, source, category, keywords, created_at 
+               FROM documents 
+               ORDER BY created_at DESC 
+               LIMIT ? OFFSET ?''',
+            (limit, offset)
+        )
+        rows = self.cursor.fetchall()
+        results = []
+        for row in rows:
+            results.append({
+                'id': row[0],
+                'title': row[1],
+                'content_preview': row[2][:200] + '...' if len(row[2]) > 200 else row[2],
+                'source': row[3],
+                'category': row[4],
+                'keywords': row[5],
+                'created_at': row[6],
+            })
+        return results
+    
+    def delete_document(self, doc_id: int) -> bool:
+        """删除指定文档"""
+        self.cursor.execute('DELETE FROM documents WHERE id = ?', (doc_id,))
+        self.conn.commit()
+        return self.cursor.rowcount > 0
+    
     def get_statistics(self) -> Dict[str, Any]:
         """获取统计信息"""
         self.cursor.execute('SELECT COUNT(*) FROM documents')
         total = self.cursor.fetchone()[0]
-        
-        self.cursor.execute('SELECT category, COUNT(*) FROM documents GROUP BY category')
-        by_category = {row[0]: row[1] for row in self.cursor.fetchall()}
-        
-        return {
-            'total_documents': total,
-            'by_category': by_category
-        }
+        return {'total_documents': total, 'collection': self.collection_name}
 
 
 class PubMedSearcher:
