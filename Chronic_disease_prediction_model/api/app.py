@@ -324,6 +324,7 @@ def predict():
         if payload is None or "records" not in payload:
             return jsonify({"success": False, "error": "records_missing"}), 400
         records = payload["records"]
+<<<<<<< HEAD
 
         # 数据类型转换逻辑
         non_numeric_fields = {"patient_id", "exam_date"}
@@ -348,6 +349,8 @@ def predict():
                             "message": error_msg
                         }), 400
 
+=======
+>>>>>>> origin/main
         df = pd.DataFrame(records)
         model_type = payload.get("model_type", "xgb_multi")
         requested_thresholds = payload.get("thresholds")

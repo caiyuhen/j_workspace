@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 import argparse
 import json
 import os
@@ -397,6 +398,8 @@ def main():
 
 if __name__ == "__main__":
 =======
+=======
+>>>>>>> origin/main
 import argparse
 import json
 import os
@@ -794,5 +797,8 @@ def main():
 
 
 if __name__ == "__main__":
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
     sys.exit(main())

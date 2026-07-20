@@ -14,4 +14,7 @@ pymilvus
 sentence-transformers
 torch
 numpy
+<<<<<<< HEAD
 pymongo
+=======
+>>>>>>> origin/main

@@ -606,10 +606,14 @@ describe('Flow 7: 综合模块可用性检查', () => {
   ];
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   test.each(endpoints)('$desc 端点可访问', async ({ method, path }: any) => {
 =======
   test.each(endpoints)('$desc 端点可访问', async ({ method, path }) => {
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+  test.each(endpoints)('$desc 端点可访问', async ({ method, path }) => {
+>>>>>>> origin/main
     if (!token) return;
 
     const res = await (request(app) as any)[method](path)

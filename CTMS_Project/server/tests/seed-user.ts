@@ -1,10 +1,14 @@
 // 快速插入测试用户
 import { PrismaClient } from '@prisma/client';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import bcrypt from 'bcryptjs';
 =======
 import bcrypt from 'bcrypt';
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+import bcrypt from 'bcrypt';
+>>>>>>> origin/main
 
 const prisma = new PrismaClient();
 

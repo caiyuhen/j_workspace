@@ -60,7 +60,11 @@ def extract_data(collection_name):
     return chunks
 
 def main():
+<<<<<<< HEAD
     connections.connect("default", host="milvus", port="19530")
+=======
+    connections.connect("default", host="127.0.0.1", port="19530")
+>>>>>>> origin/main
     
     collections_to_migrate = ["lung_cancer_rag", "medical_knowledge"]
     all_chunks = []

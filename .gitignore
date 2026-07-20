@@ -3,7 +3,10 @@
 *.tar
 *.gz
 *.rar
+<<<<<<< HEAD
 *.7z
+=======
+>>>>>>> origin/main
 
 # Logs
 *.log
@@ -16,6 +19,7 @@ __pycache__/
 *$py.class
 .venv
 venv/
+<<<<<<< HEAD
 venv310/
 **/venv310/
 .env
@@ -23,13 +27,19 @@ venv310/
 dist/
 build/
 *.whl
+=======
+.env
+>>>>>>> origin/main
 
 # Node
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+<<<<<<< HEAD
 .pnpm-store/
+=======
+>>>>>>> origin/main
 
 # IDE
 .idea/
@@ -41,17 +51,25 @@ yarn-error.log*
 *.dcm
 *.pth
 Image_project - 副本/
+<<<<<<< HEAD
 
+=======
+>>>>>>> origin/main
 # ML Artifacts
 checkpoint-*/
 output/
 *_cache.pkl
+<<<<<<< HEAD
 
+=======
+ 
+>>>>>>> origin/main
 # Nested repos/workspaces
 openclaw-main/workspace/
 
 # Word temp files
 ~$*
+<<<<<<< HEAD
 *.docx
 *.doc
 *.xlsx
@@ -154,3 +172,5 @@ projects/
 **/postgres_data/
 **/mysql_data/
 **/redis_data/
+=======
+>>>>>>> origin/main

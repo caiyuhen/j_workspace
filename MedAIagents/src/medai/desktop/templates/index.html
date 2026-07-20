@@ -194,6 +194,7 @@
                 <div class="nav-item" data-page="export" onclick="switchPage('export')"><span class="nav-icon">📤</span><span>导出下载</span></div>
                 <div class="nav-item" data-page="upload" onclick="switchPage('upload')"><span class="nav-icon">📁</span><span>文件上传</span></div>
                 <div class="nav-item" data-page="knowledge" onclick="switchPage('knowledge')"><span class="nav-icon">📚</span><span>知识库</span></div>
+                <div class="nav-item" data-page="mcp" onclick="switchPage('mcp')"><span class="nav-icon">🔌</span><span>MCP 服务</span></div>
                 <div class="nav-item" data-page="audit" onclick="switchPage('audit')"><span class="nav-icon">📋</span><span>审计日志</span></div>
             </nav>
             <div class="sidebar-footer">
@@ -623,6 +624,45 @@ print(calc_bmi(70, 1.75))"></textarea>
                     </div>
                 </div>
 
+                <!-- ==================== MCP 服务 ==================== -->
+                <div id="page-mcp" class="page">
+                    <div class="card">
+                        <div class="card-title"><span>🔌</span><span>内置 MCP Server</span></div>
+                        <p style="font-size:13px;color:#666;margin-bottom:14px">MedAIagents 内置 MCP Server，将医学工具通过标准 MCP 协议暴露给外部 AI Agent 调用。</p>
+                        <div id="mcpServerStatus" style="margin-bottom:12px">
+                            <div class="loading-container"><div class="loading"></div>加载中...</div>
+                        </div>
+                        <div id="mcpToolsList" style="margin-top:12px">
+                            <div style="font-size:14px;font-weight:600;color:#1a3a5f;margin-bottom:10px">已暴露的工具</div>
+                            <div id="mcpToolsGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px">
+                                <div class="loading-container"><div class="loading"></div>加载中...</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:16px;padding:12px;background:#f0f5ff;border-radius:8px;font-size:12px;color:#1a3a5f">
+                            <div style="font-weight:600;margin-bottom:6px">📎 外部连接方式</div>
+                            <div>SSE 端点: <code style="background:white;padding:2px 6px;border-radius:3px">http://127.0.0.1:8228/mcp/sse</code></div>
+                            <div style="margin-top:4px">Message 端点: <code style="background:white;padding:2px 6px;border-radius:3px">http://127.0.0.1:8228/mcp/message</code></div>
+                            <div style="margin-top:6px;font-size:11px;color:#666">支持 Trae / Cursor / Claude Desktop 等 MCP 客户端通过 SSE 传输连接。</div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-title"><span>🧪</span><span>MCP 工具调试</span></div>
+                        <p style="font-size:13px;color:#666;margin-bottom:14px">直接调用 MCP 工具进行测试，验证工具返回结果。</p>
+                        <div class="form-group">
+                            <label class="form-label">工具名称</label>
+                            <select class="form-input" id="mcpDebugTool" onchange="updateMCPDebugSchema()">
+                                <option value="">选择工具...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">参数 (JSON)</label>
+                            <textarea class="form-input" id="mcpDebugArgs" rows="4" placeholder='{"symptoms": ["头痛", "发热"], "age": 35, "gender": "男"}'></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="callMCPDebug()">调用工具</button>
+                        <div id="mcpDebugResult" style="margin-top:12px"></div>
+                    </div>
+                </div>
+
                 <!-- ==================== 导出下载 ==================== -->
                 <div id="page-export" class="page">
                     <div class="card" style="margin-bottom: 16px;">
@@ -825,6 +865,7 @@ function switchPage(page) {
     if (page === 'audit') loadAuditLogs();
     if (page === 'export') loadAutoExports();
     if (page === 'knowledge') { loadUploadedDocs(); loadIMAStatus(); }
+    if (page === 'mcp') { loadMCPStatus(); }
 }
 
 // 加载模型状态
@@ -1739,6 +1780,91 @@ async function searchInIMAKB() {
         }
     } catch (e) {
         resultDiv.innerHTML = '<div style="color:#cf1322;font-size:13px">搜索失败: ' + e.message + '</div>';
+    }
+}
+
+// ========== MCP Server 管理 ==========
+
+let mcpToolsCache = [];
+
+async function loadMCPStatus() {
+    const statusDiv = document.getElementById('mcpServerStatus');
+    const toolsGrid = document.getElementById('mcpToolsGrid');
+    const toolSelect = document.getElementById('mcpDebugTool');
+    
+    try {
+        const res = await fetch('/api/mcp/status');
+        const data = await res.json();
+        
+        if (data.success && data.enabled) {
+            statusDiv.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:10px;background:#f6ffed;border:1px solid #b7eb8f;border-radius:8px">' +
+                '<span style="font-size:20px">🟢</span>' +
+                '<div><div style="font-weight:600;color:#389e0d">MCP Server 运行中</div>' +
+                '<div style="font-size:12px;color:#666">' + data.server_name + ' v' + data.version + ' | ' + data.tool_count + ' 个工具可用</div></div>' +
+                '</div>';
+            
+            // 渲染工具卡片
+            if (data.tools && data.tools.length > 0) {
+                mcpToolsCache = data.tools;
+                let html = '';
+                data.tools.forEach(tool => {
+                    html += `<div class="research-tool-card">
+                        <div style="font-size:20px;margin-bottom:6px">🔧</div>
+                        <div style="font-size:13px;font-weight:600;color:#1a3a5f">${tool.name}</div>
+                        <div style="font-size:11px;color:#888;margin-top:4px">${tool.description}</div>
+                    </div>`;
+                });
+                toolsGrid.innerHTML = html;
+                
+                // 填充调试下拉框
+                toolSelect.innerHTML = '<option value="">选择工具...</option>';
+                data.tools.forEach(tool => {
+                    toolSelect.innerHTML += `<option value="${tool.name}">${tool.name}</option>`;
+                });
+            } else {
+                toolsGrid.innerHTML = '<div style="color:#999;font-size:13px">暂无可用工具</div>';
+            }
+        } else {
+            statusDiv.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:10px;background:#fff1f0;border:1px solid #ffa39e;border-radius:8px">' +
+                '<span style="font-size:20px">🔴</span>' +
+                '<div><div style="font-weight:600;color:#cf1322">MCP Server 未运行</div>' +
+                '<div style="font-size:12px;color:#666">' + (data.message || '请刷新页面重试') + '</div></div>' +
+                '</div>';
+            toolsGrid.innerHTML = '<div style="color:#999;font-size:13px">Server 未启动</div>';
+        }
+    } catch (e) {
+        statusDiv.innerHTML = '<div style="color:#cf1322;font-size:13px">加载 MCP 状态失败: ' + e.message + '</div>';
+    }
+}
+
+async function callMCPDebug() {
+    const toolName = document.getElementById('mcpDebugTool').value;
+    const argsText = document.getElementById('mcpDebugArgs').value.trim();
+    const resultDiv = document.getElementById('mcpDebugResult');
+    
+    if (!toolName) { resultDiv.innerHTML = '<span style="color:#cf1322">请选择工具</span>'; return; }
+    
+    let args = {};
+    if (argsText) {
+        try { args = JSON.parse(argsText); }
+        catch (e) { resultDiv.innerHTML = '<span style="color:#cf1322">参数 JSON 格式错误</span>'; return; }
+    }
+    
+    resultDiv.innerHTML = '<div class="loading-container"><div class="loading"></div>调用中...</div>';
+    try {
+        const res = await fetch('/api/mcp/tools/call', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: toolName, arguments: args})
+        });
+        const data = await res.json();
+        if (data.success) {
+            resultDiv.innerHTML = '<div class="result-box"><div class="result-title">✅ 调用成功</div><pre style="margin-top:8px;font-size:12px;background:#f8f9fa;padding:10px;border-radius:6px;overflow:auto;max-height:300px">' + JSON.stringify(data.result, null, 2) + '</pre></div>';
+        } else {
+            resultDiv.innerHTML = '<div class="safety-warning danger"><div class="warning-title">❌ 调用失败</div>' + (data.error || '未知错误') + '</div>';
+        }
+    } catch (e) {
+        resultDiv.innerHTML = '<div style="color:#cf1322;font-size:13px">调用失败: ' + e.message + '</div>';
     }
 }
 

@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 {
   "patient_name": "黄渲渲",
   "treatment_plan": {
@@ -5344,6 +5345,8 @@
     }
   ]
 =======
+=======
+>>>>>>> origin/main
 {
   "patient_name": "黄渲渲",
   "treatment_plan": {
@@ -10688,5 +10691,8 @@
       }
     }
   ]
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
 }

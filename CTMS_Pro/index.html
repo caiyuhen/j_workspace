@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -99,3 +100,87 @@
   </script>
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CTMS Pro - 临床试验管理系统</title>
+  <meta name="description" content="临床试验管理系统 - 符合GCP、FDA 21 CFR Part 11、GDPR标准">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="assets/css/main.css">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* 额外补充样式 */
+    #header { position: sticky; top: 0; }
+    #sidebar { overflow-y: auto; }
+    .nav-sub-items { display: none; }
+    .nav-item.expanded + .nav-sub-items { display: block; }
+    .collapsed .nav-section-title,
+    .collapsed .nav-label,
+    .collapsed .nav-badge,
+    .collapsed .logo-text,
+    .collapsed .logo-sub { display: none; }
+    .collapsed .nav-item { justify-content: center; padding: 12px; }
+    .collapsed .sidebar-logo { justify-content: center; }
+    /* 登录页特殊样式 */
+    #login-screen { width: 100%; }
+    @media print {
+      #sidebar, #header { display: none; }
+      #main-content { margin: 0; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="login-screen"></div>
+  </div>
+
+  <script src="assets/js/api-client.js?v=8"></script>
+  <!-- 数据层 -->
+  <script src="assets/js/data.js?v=8"></script>
+  <!-- 应用核心 -->
+  <script src="assets/js/app.js?v=8"></script>
+  <!-- 页面模块 -->
+  <script src="assets/js/pages-trials.js?v=10"></script>
+  <script src="assets/js/pages-patients.js?v=28"></script>
+  <script src="assets/js/pages-others.js?v=42"></script>
+  <!-- 登录 -->
+  <script src="assets/js/login.js?v=4"></script>
+
+  <script>
+    async function bootstrapApp() {
+      try {
+        if (window.CTMS_API && CTMS_API.Auth.isLoggedIn()) {
+          const me = await CTMS_API.Auth.getMe();
+          CTMS_DATA.currentUser = {
+            name: me.full_name || me.username || '用户',
+            role: me.role_name || me.role || '-',
+            dept: me.department || '-',
+            avatar: (me.full_name || me.username || '用').slice(0, 1),
+          };
+          if (window.syncCTMSDataFromPostgreSQL) {
+            await window.syncCTMSDataFromPostgreSQL();
+          }
+          mountMainLayout();
+          return;
+        }
+      } catch (e) {
+        if (window.CTMS_API) CTMS_API.Token.clearTokens();
+      }
+      renderLogin();
+    }
+
+    bootstrapApp();
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && document.getElementById('login-screen').innerHTML) {
+        doLogin();
+      }
+    });
+  </script>
+</body>
+</html>
+>>>>>>> origin/main

@@ -14,9 +14,15 @@ RUN if [ -f /etc/apt/sources.list.d/debian.sources ]; then \
     fi
 
 # Install system dependencies required for OpenCV
+<<<<<<< HEAD
 # Changed libgl1-mesa-glx to libgl1 to fix missing package issue on newer Debian versions
 RUN apt-get update --fix-missing && apt-get install -y --no-install-recommends \
     libgl1 \
+=======
+# Added --fix-missing to handle potential transient network issues
+RUN apt-get update --fix-missing && apt-get install -y --no-install-recommends \
+    libgl1-mesa-glx \
+>>>>>>> origin/main
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 

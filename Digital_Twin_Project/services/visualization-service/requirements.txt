@@ -1,5 +1,13 @@
+<<<<<<< HEAD
 fastapi
 uvicorn
 plotly
 numpy
 pandas
+=======
+fastapi
+uvicorn
+plotly
+numpy
+pandas
+>>>>>>> origin/main

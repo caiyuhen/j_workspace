@@ -1,4 +1,11 @@
+<<<<<<< HEAD
 fastapi
 uvicorn
 numpy
 scipy
+=======
+fastapi
+uvicorn
+numpy
+scipy
+>>>>>>> origin/main

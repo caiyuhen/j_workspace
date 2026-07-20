@@ -9,7 +9,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 # FastAPI 相关
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Request, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
@@ -24,6 +24,7 @@ from medai.cdss import ClinicalDecisionSupport
 from medai.knowledge import MedicalKnowledgeBase
 from medai.emr import ICD10Coder, EMRNoteGenerator
 from medai.security import SecurityManager
+from medai.mcp import MedicalMCPServer
 
 
 # Pydantic 模型
@@ -134,11 +135,12 @@ kb: Optional[MedicalKnowledgeBase] = None
 icd_coder: Optional[ICD10Coder] = None
 note_generator: Optional[EMRNoteGenerator] = None
 security: Optional[SecurityManager] = None
+mcp_server: Optional[MedicalMCPServer] = None
 
 
 def initialize_services():
     """初始化所有服务"""
-    global agent, cdss, kb, icd_coder, note_generator, security
+    global agent, cdss, kb, icd_coder, note_generator, security, mcp_server
     try:
         config = Config()
         agent = MedicalAgent(config)
@@ -147,6 +149,14 @@ def initialize_services():
         icd_coder = ICD10Coder(config)
         note_generator = EMRNoteGenerator(config)
         security = SecurityManager(config)
+        
+        # 初始化 MCP Server（暴露医学工具）
+        mcp_server = MedicalMCPServer(
+            name="MedAIagents",
+            version="1.0.0",
+            tool_registry=agent.tool_registry,
+            tool_executor=agent.tool_executor,
+        )
         print("✅ 所有服务初始化成功")
     except Exception as e:
         print(f"⚠️  服务初始化警告: {e}")
@@ -538,6 +548,100 @@ async def get_audit_logs(limit: int = 50):
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+# ==================== MCP Server API ====================
+
+@app.get("/api/mcp/status")
+async def mcp_status():
+    """获取 MCP Server 状态"""
+    try:
+        if mcp_server is None:
+            return {"success": True, "enabled": False, "message": "MCP Server 未初始化"}
+        
+        tools = mcp_server._get_mcp_tools()
+        return {
+            "success": True,
+            "enabled": True,
+            "server_name": mcp_server.name,
+            "version": mcp_server.version,
+            "initialized": mcp_server._initialized,
+            "tool_count": len(tools),
+            "tools": [{"name": t.name, "description": t.description} for t in tools],
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/mcp/tools/call")
+async def mcp_call_tool(request: Request):
+    """直接调用 MCP 工具（HTTP 代理，便于前端调试）"""
+    try:
+        if mcp_server is None:
+            return {"success": False, "error": "MCP Server 未初始化"}
+        
+        body = await request.json()
+        name = body.get("name", "")
+        arguments = body.get("arguments", {})
+        
+        result = mcp_server._call_tool(name, arguments)
+        return {
+            "success": not result.is_error,
+            "result": result.content,
+            "is_error": result.is_error,
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+# MCP SSE 端点（标准 MCP over SSE 传输）
+@app.get("/mcp/sse")
+async def mcp_sse_endpoint(request: Request):
+    """MCP SSE 传输端点"""
+    from fastapi.responses import StreamingResponse
+    import asyncio
+    
+    if mcp_server is None:
+        return {"success": False, "error": "MCP Server 未初始化"}
+    
+    async def event_stream():
+        """SSE 事件流生成器"""
+        # 发送 endpoint 事件（MCP 协议要求）
+        yield f"event: endpoint\ndata: /mcp/message\n\n"
+        
+        # 保持连接，等待客户端通过 POST /mcp/message 发送消息
+        while True:
+            await asyncio.sleep(1)
+    
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        }
+    )
+
+
+# MCP Message 端点（接收客户端 JSON-RPC 请求）
+@app.post("/mcp/message")
+async def mcp_message_endpoint(request: Request):
+    """MCP Message 端点 — 接收 JSON-RPC 请求并返回响应"""
+    try:
+        if mcp_server is None:
+            return {"jsonrpc": "2.0", "id": None, "error": {"code": -32000, "message": "MCP Server not initialized"}}
+        
+        body = await request.json()
+        response = await mcp_server.handle_request(body)
+        
+        if response is None:
+            # 通知类型，返回 202 Accepted
+            return Response(status_code=202)
+        
+        return response
+    except Exception as e:
+        logger.error(f"MCP message handling error: {e}")
+        return {"jsonrpc": "2.0", "id": None, "error": {"code": -32603, "message": str(e)}}
 
 
 @app.get("/api/stats")

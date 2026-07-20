@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import pytz
@@ -452,6 +453,8 @@ if __name__ == "__main__":
     else:
         # 否则使用交互式模式
 =======
+=======
+>>>>>>> origin/main
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import pytz
@@ -904,5 +907,8 @@ if __name__ == "__main__":
         main()
     else:
         # 否则使用交互式模式
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
         extract_data_interactive()

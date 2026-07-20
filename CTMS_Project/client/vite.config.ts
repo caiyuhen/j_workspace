@@ -12,6 +12,7 @@ export default defineConfig({
   server: {
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     port: 5779,
     proxy: {
       '/api': {
@@ -19,14 +20,19 @@ export default defineConfig({
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
     port: 5173,
     proxy: {
       '/api': {
         target: 'http://localhost:3000',
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
         changeOrigin: true,
       },
     },

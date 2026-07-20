@@ -1,4 +1,7 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> origin/main
 # 脊柱数字孪生数据字典 (Spine Digital Twin Data Dictionary)
 
 本文档旨在解释 `extracted_data.json` 及 3D 建模系统中使用的各项医学数据指标的含义。
@@ -55,6 +58,7 @@
 *   **L1 - L5**: 腰椎 (Lumbar Vertebrae) 第1至第5节。
 *   **C7**: 第7颈椎 (Cervical Vertebra 7)。
 *   **S1**: 第1骶椎 (Sacral Vertebra 1)。
+<<<<<<< HEAD
 =======
 # 脊柱数字孪生数据字典 (Spine Digital Twin Data Dictionary)
 
@@ -113,3 +117,5 @@
 *   **C7**: 第7颈椎 (Cervical Vertebra 7)。
 *   **S1**: 第1骶椎 (Sacral Vertebra 1)。
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

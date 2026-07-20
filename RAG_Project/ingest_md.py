@@ -21,8 +21,15 @@ def ingest_md_files(source_dir):
         separators=["\n\n", "\n", "。", "！", "？", ".", "!", "?", " ", ""]
     )
     
+<<<<<<< HEAD
     # Recursively find all markdown files
     for file_path in source_path.rglob("*.md"):
+=======
+    for file_path in source_path.glob("*.md"):
+        if '乳腺' not in file_path.name:
+            continue
+            
+>>>>>>> origin/main
         logging.info(f"Processing: {file_path.name}")
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -54,5 +61,9 @@ def ingest_md_files(source_dir):
             vector_store.insert_chunks(chunks_to_insert)
 
 if __name__ == "__main__":
+<<<<<<< HEAD
     # Point to the root data directory to capture all subdirectories
     ingest_md_files("/app/data")
+=======
+    ingest_md_files("/mnt/disk3/home/pg/RAG_Project/data/ragv6")
+>>>>>>> origin/main

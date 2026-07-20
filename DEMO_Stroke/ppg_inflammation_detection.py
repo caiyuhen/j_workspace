@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 """
 PPG炎症检测模块
 基于PPG信号的系统性炎症检测和评估
@@ -695,6 +696,8 @@ class PPGInflammationDetector:
             return 'fair'
         else:
 =======
+=======
+>>>>>>> origin/main
 """
 PPG炎症检测模块
 基于PPG信号的系统性炎症检测和评估
@@ -1390,5 +1393,8 @@ class PPGInflammationDetector:
         elif good_count >= 1:
             return 'fair'
         else:
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
             return 'poor'

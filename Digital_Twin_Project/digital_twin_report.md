@@ -1,4 +1,5 @@
 <<<<<<< HEAD
+<<<<<<< HEAD
 # 脊柱数字孪生报告 (Spine Digital Twin Report)
 
 本报告总结了基于 OCR 提取数据生成的 3D 脊柱模型。
@@ -160,6 +161,8 @@
 ---
 
 =======
+=======
+>>>>>>> origin/main
 # 脊柱数字孪生报告 (Spine Digital Twin Report)
 
 本报告总结了基于 OCR 提取数据生成的 3D 脊柱模型。
@@ -320,4 +323,7 @@
 
 ---
 
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

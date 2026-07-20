@@ -1,5 +1,6 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 from django.db import models
 from trials.models import Site
 from simple_history.models import HistoricalRecords
@@ -117,6 +118,8 @@ class SignatureLog(models.Model):
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
 from django.db import models
 from trials.models import Site
 from simple_history.models import HistoricalRecords
@@ -232,6 +235,9 @@ class SignatureLog(models.Model):
     def __str__(self):
         return f"Signed by {self.signer} on {self.signed_at}"
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main

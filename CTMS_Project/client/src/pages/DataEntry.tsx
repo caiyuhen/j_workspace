@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import {  Table, Form, Input, Select, Space, Button, Drawer, Tag, Card, Row, Col, Spin, Empty, App } from 'antd';
 =======
 import {  Table, Form, Input, Select, Space, Button, Drawer, Tag, Card, Row, Col, Spin, Empty, List , App } from 'antd';
@@ -8,6 +9,9 @@ import {  Table, Form, Input, Select, Space, Button, Drawer, Tag, Card, Row, Col
 =======
 import {  Table, Form, Input, Select, Space, Button, Drawer, Tag, Card, Row, Col, Spin, Empty, List , App } from 'antd';
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+import {  Table, Form, Input, Select, Space, Button, Drawer, Tag, Card, Row, Col, Spin, Empty, List , App } from 'antd';
+>>>>>>> origin/main
 import { SaveOutlined, HistoryOutlined, CheckCircleOutlined, EditOutlined, QuestionCircleOutlined, LockOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import PageHeader from '@/components/PageHeader';
@@ -248,6 +252,7 @@ const DataEntryPage: React.FC = () => {
         ) : (
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {changeHistory.map((h, index) => (
               <Card key={index} size="small" title={h.reason || '数据修改'}>
@@ -263,6 +268,8 @@ const DataEntryPage: React.FC = () => {
 =======
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
           <List
             dataSource={changeHistory}
             renderItem={(h) => {
@@ -287,9 +294,12 @@ const DataEntryPage: React.FC = () => {
             }}
           />
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
 =======
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
         )}
       </Drawer>
     </>

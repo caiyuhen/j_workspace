@@ -70,6 +70,7 @@ async function getList(query: Record<string, any>) {
   ]);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   const userIds = [...new Set(documents.map(d => d.uploadedBy || d.createdBy).filter(Boolean))];
   const users = await prisma.user.findMany({ where: { id: { in: userIds as string[] } }, select: { id: true, displayName: true } });
     const userMap = Object.fromEntries(users.map(u => [u.id, u.displayName]));
@@ -83,6 +84,9 @@ async function getList(query: Record<string, any>) {
 =======
   return buildPaginatedResult(documents, total, pagination);
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+  return buildPaginatedResult(documents, total, pagination);
+>>>>>>> origin/main
 }
 
 async function getById(id: string) {
@@ -196,6 +200,7 @@ async function getVersions(documentId: string) {
   if (!doc) throw new NotFoundError('TmfDocument', documentId);
 
 <<<<<<< HEAD
+<<<<<<< HEAD
   const versions = await prisma.tmfDocumentVersion.findMany({
     where: { documentId },
     orderBy: { uploadedAt: 'desc' },
@@ -210,11 +215,16 @@ async function getVersions(documentId: string) {
     uploadedBy: userMap[v.uploadedBy] || v.uploadedBy,
   }));
 =======
+=======
+>>>>>>> origin/main
   return prisma.tmfDocumentVersion.findMany({
     where: { documentId },
     orderBy: { uploadedAt: 'desc' },
   });
+<<<<<<< HEAD
 >>>>>>> 9750b2979c0547a41eee960f69d088078d2151a8
+=======
+>>>>>>> origin/main
 }
 
 // ========== 状态管理（审批） ==========
