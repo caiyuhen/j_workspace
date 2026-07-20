@@ -115,6 +115,11 @@ class ExportRequest(BaseModel):
     format: str = "docx"
 
 
+class ExportNoteRequest(BaseModel):
+    content: str
+    filename: str = ""
+
+
 class ModelSwitchRequest(BaseModel):
     provider: str
 
@@ -275,6 +280,32 @@ async def generate_note(request: NoteRequest):
         }
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+
+@app.post("/api/export-note")
+async def export_note(request: ExportNoteRequest):
+    """导出医学文书为文本文件（绕过前端下载触发桌面环境异常）"""
+    try:
+        content = request.content
+        if not content:
+            raise HTTPException(status_code=400, detail="内容为空")
+        
+        filename = request.filename or f"医学文书_{datetime.now().strftime('%Y%m%d')}.txt"
+        if not filename.endswith('.txt'):
+            filename += '.txt'
+        
+        # 使用 UTF-8 编码
+        encoded_filename = quote(filename)
+        
+        return StreamingResponse(
+            io.BytesIO(content.encode('utf-8')),
+            media_type="text/plain; charset=utf-8",
+            headers={
+                "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/api/icd10")
@@ -583,6 +614,143 @@ async def switch_model_id(request: ModelSwitchIdRequest):
             "provider": provider,
             "model_id": request.model_id,
             "message": f"已切换到模型: {request.model_id}"
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+class AddProviderRequest(BaseModel):
+    name: str
+    api_key: str
+    base_url: str
+    default_model: str = ""
+    temperature: float = 0.3
+    max_tokens: int = 4096
+    description: str = ""
+
+
+class TestProviderRequest(BaseModel):
+    provider: str
+
+
+class DeleteProviderRequest(BaseModel):
+    provider: str
+
+
+@app.get("/api/providers")
+async def list_providers():
+    """列出所有 Provider（含模型数量和连接状态概要）"""
+    try:
+        config = Config()
+        providers = config.get('llm.providers', {})
+        default_provider = config.get('llm.default_provider', '')
+        
+        result = []
+        for name, pconf in providers.items():
+            api_key = pconf.get('api_key', '')
+            masked_key = (api_key[:8] + '...') if len(api_key) > 8 else ('***' if api_key else '未配置')
+            models = pconf.get('available_models', [])
+            result.append({
+                "name": name,
+                "base_url": pconf.get('base_url', ''),
+                "default_model": pconf.get('default_model', ''),
+                "api_key_masked": masked_key,
+                "has_api_key": bool(api_key and not api_key.startswith('${')),
+                "temperature": pconf.get('temperature', 0.3),
+                "max_tokens": pconf.get('max_tokens', 4096),
+                "model_count": len(models),
+                "is_default": name == default_provider,
+            })
+        
+        return {"success": True, "default_provider": default_provider, "providers": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/providers/add")
+async def add_provider(request: AddProviderRequest):
+    """添加新的 Provider 并持久化到 config.yaml"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        
+        name = request.name.strip().lower()
+        if not name:
+            return {"success": False, "error": "Provider 名称不能为空"}
+        if not name.isidentifier():
+            return {"success": False, "error": "Provider 名称只能包含英文字母、数字和下划线"}
+        
+        config = Config()
+        existing = config.get(f'llm.providers.{name}')
+        if existing:
+            return {"success": False, "error": f"Provider '{name}' 已存在，请使用其他名称"}
+        
+        # 构建配置
+        provider_config = {
+            'api_key': request.api_key.strip(),
+            'base_url': request.base_url.strip().rstrip('/'),
+            'default_model': request.default_model.strip(),
+            'temperature': request.temperature,
+            'max_tokens': request.max_tokens,
+            'available_models': [],
+        }
+        if request.description:
+            provider_config['description'] = request.description
+        
+        # 写入内存配置
+        config.set(f'llm.providers.{name}', provider_config)
+        
+        # 动态注册到 LLM Router（会创建 SDK 实例）
+        agent.llm_router.register_provider(name, provider_config)
+        
+        # 持久化到 config.yaml
+        config.save()
+        
+        return {
+            "success": True,
+            "provider": name,
+            "message": f"Provider '{name}' 添加成功"
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/providers/test")
+async def test_provider(request: TestProviderRequest):
+    """测试 Provider 连接"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        
+        result = await agent.llm_router.test_provider_connection(request.provider)
+        return result
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/api/providers/delete")
+async def delete_provider(request: DeleteProviderRequest):
+    """删除 Provider 并持久化到 config.yaml"""
+    try:
+        if agent is None:
+            return {"success": False, "error": "Agent 未初始化"}
+        
+        name = request.provider.strip()
+        config = Config()
+        
+        # 从 LLM Router 中移除
+        agent.llm_router.remove_provider(name)
+        
+        # 从配置中删除
+        config.delete(f'llm.providers.{name}')
+        
+        # 持久化到 config.yaml
+        config.save()
+        
+        return {
+            "success": True,
+            "provider": name,
+            "message": f"Provider '{name}' 已删除"
         }
     except Exception as e:
         return {"success": False, "error": str(e)}

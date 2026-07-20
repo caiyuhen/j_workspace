@@ -4,6 +4,7 @@ Configuration Management Module
 """
 
 import os
+import copy
 import yaml
 from typing import Any, Dict, Optional
 from dotenv import load_dotenv
@@ -14,6 +15,7 @@ class Config:
     
     _instance: Optional['Config'] = None
     _config: Dict[str, Any] = {}
+    _config_path: str = ""
     
     def __new__(cls, config_path: str = None):
         """单例模式"""
@@ -33,6 +35,8 @@ class Config:
                 os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
                 'config.yaml'
             )
+        
+        self._config_path = config_path
         
         # 加载YAML配置
         if os.path.exists(config_path):
@@ -125,3 +129,57 @@ class Config:
     def all_config(self) -> Dict[str, Any]:
         """获取所有配置"""
         return self._config.copy()
+    
+    def save(self):
+        """将当前内存配置保存回 config.yaml，api_key 脱敏为环境变量占位符"""
+        if not self._config_path:
+            return False
+        
+        # 深拷贝，避免修改内存中的真实 api_key
+        save_config = copy.deepcopy(self._config)
+        providers = save_config.get('llm', {}).get('providers', {})
+        known_env_map = {
+            'cherryin': 'CHERRYIN_API_KEY',
+            'openai': 'OPENAI_API_KEY',
+            'anthropic': 'ANTHROPIC_API_KEY',
+            'deepseek': 'DEEPSEEK_API_KEY',
+            'qwen': 'DASHSCOPE_API_KEY',
+            'siliconflow': 'SILICONFLOW_API_KEY',
+            'fireworks': 'FIREWORKS_API_KEY',
+            'together': 'TOGETHER_API_KEY',
+            'groq': 'GROQ_API_KEY',
+        }
+        for pname, pconfig in providers.items():
+            if isinstance(pconfig, dict) and 'api_key' in pconfig:
+                key_val = pconfig['api_key']
+                if key_val and isinstance(key_val, str):
+                    env_var = known_env_map.get(pname)
+                    if env_var and not (key_val.startswith('${') and key_val.endswith('}')):
+                        pconfig['api_key'] = '${' + env_var + '}'
+        
+        with open(self._config_path, 'w', encoding='utf-8') as f:
+            yaml.dump(save_config, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+        return True
+    
+    def delete(self, key: str) -> bool:
+        """删除配置项
+        
+        Args:
+            key: 配置键名，支持点号分隔 (如 'llm.providers.myprovider')
+        
+        Returns:
+            是否成功删除
+        """
+        keys = key.split('.')
+        config = self._config
+        
+        for k in keys[:-1]:
+            if isinstance(config, dict) and k in config:
+                config = config[k]
+            else:
+                return False
+        
+        if isinstance(config, dict) and keys[-1] in config:
+            del config[keys[-1]]
+            return True
+        return False
