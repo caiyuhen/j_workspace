@@ -174,3 +174,7 @@ projects/
 **/redis_data/
 =======
 >>>>>>> origin/main
+
+# Large files exceeding GitHub 100MB limit
+minio/minio.exe
+dataPlaform/omop-platform/inputdata/comprehensive_emr_3m.csv
