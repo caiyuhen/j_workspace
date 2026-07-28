@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-iteration,train_logloss,val_logloss
-1,0.014432747750092513,0.15591582035587118
-=======
-iteration,train_logloss,val_logloss
-1,0.014432747750092513,0.15591582035587118
->>>>>>> origin/main
+version https://git-lfs.github.com/spec/v1
+oid sha256:a0ecd82a803432b0265411baf2100dde83e2f3c2994644585a4a7e3b044da551
+size 201
