@@ -1,0 +1,275 @@
+body * {
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+body {
+  font-family: PingFangSC-Regular, Roboto, Helvetica Neue, Helvetica, Tahoma,
+    Arial, PingFang SC-Light, Microsoft YaHei;
+}
+
+input {
+  background-color: transparent;
+  border: 0;
+}
+
+button {
+  margin: 0;
+  padding: 0;
+  border: 1px solid transparent;
+  outline: none;
+  background-color: transparent;
+}
+
+button:active {
+  opacity: 0.6;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-row {
+  display: flex;
+  flex-direction: row;
+}
+
+.justify-start {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.justify-center {
+  display: flex;
+  justify-content: center;
+}
+
+.justify-end {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.justify-evenly {
+  display: flex;
+  justify-content: space-evenly;
+}
+
+.justify-around {
+  display: flex;
+  justify-content: space-around;
+}
+
+.justify-between {
+  display: flex;
+  justify-content: space-between;
+}
+
+.align-start {
+  display: flex;
+  align-items: flex-start;
+}
+
+.align-center {
+  display: flex;
+  align-items: center;
+}
+
+.align-end {
+  display: flex;
+  align-items: flex-end;
+}
+
+
+
+body,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+p,
+dl,
+dd,
+ul,
+ol,
+form,
+input {
+  margin: 0;
+  padding: 0;
+  font-family: 'myCoolFont';
+}
+
+em,
+i,
+s {
+  font-style: normal;
+  text-transform: uppercase;
+}
+
+li {
+  list-style: none;
+}
+
+a,
+s,
+a:hover {
+  text-decoration: none;
+}
+
+img {
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  height: auto;
+  border: 0;
+  vertical-align: middle;
+}
+
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+input,
+textarea {
+  border: none;
+  outline: none;
+}
+
+/* body,button,input,select,textarea{font:12px/1.5 'microsoft yahei',Tahoma,arial,'Hiragino Sans GB',\5b8b\4f53} */
+/* body,button,input,select,textarea{font:12px/1.5 'nezha',\5b8b\4f53}  */
+input,
+textarea {
+  resize: none;
+  border: none;
+  outline: none;
+}
+
+a,
+a:focus {
+  outline: none;
+}
+
+.clearfix:after {
+  content: '\20';
+  display: block;
+  height: 0;
+  clear: both;
+}
+
+.clearfix {
+  *zoom: 1;
+}
+
+.clear {
+  display: block;
+  height: 0;
+  clear: both;
+  font-size: 0;
+  line-height: 0;
+  overflow: hidden;
+}
+
+.noBg {
+  background: none !important;
+}
+
+.noBd {
+  border: 0 !important;
+}
+
+.noMg {
+  margin: 0 !important;
+}
+
+.fl {
+  float: left;
+  display: inline;
+}
+
+.fr {
+  float: right;
+  display: inline;
+}
+
+.fn {
+  float: none;
+}
+
+.tl {
+  text-align: left;
+}
+
+.tr {
+  text-align: right;
+}
+
+.tc {
+  text-align: center;
+}
+
+.hide {
+  display: none;
+}
+
+.show {
+  display: block;
+}
+
+.mt10 {
+  margin-top: 10px;
+}
+
+.df {
+  display: flex;
+}
+
+.dfjs {
+  display: flex;
+  justify-content: space-between;
+}
+
+.bgGery {
+  background: #f9f9f9;
+}
+
+.imgHover {
+  width: 100%;
+  overflow: hidden;
+}
+
+.imgHover img {
+  transition: all ease-in-out 0.6s;
+}
+
+/*项目*/
+body {
+  background: #fff;
+  color: #333;
+  /*margin-bottom: 400px;*/
+  overflow-x: hidden;
+}
+
+a {
+  color: #333;
+  text-decoration: none;
+  transition: all 0.5s ease 0s;
+}
+
+/* a:hover{ color: #d70c19; } */
+dt {
+  font-weight: normal;
+}
+
+section {
+  margin-bottom: 0;
+}
+
+.pcdn {
+  display: none;
+}
+
+.pcdb {
+  display: block;
+}

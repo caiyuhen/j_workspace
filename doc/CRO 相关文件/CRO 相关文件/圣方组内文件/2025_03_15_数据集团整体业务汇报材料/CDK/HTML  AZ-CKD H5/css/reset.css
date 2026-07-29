@@ -1,0 +1,367 @@
+.slideHover {
+  left: 0;
+  position: fixed;
+  top: 20%;
+  z-index: 999;
+  transition: all .5s;
+  background-color: rgba(255, 255, 255, 1);
+  width: 25px;
+  height: 40px;
+  border-top-right-radius: 10px;
+  border-bottom-right-radius: 10px;
+  border: 1px solid #eee;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  box-shadow: 0
+}
+
+.slideHover.show {
+  left: 96px;
+
+}
+
+.slideHover.show .slideHoverImg {
+  transform: rotate(-90deg);
+}
+
+.slideHover.show .xtx-elevato {
+  left: 0%;
+}
+
+.slideHover .slideHoverImg {
+  text-align: center;
+  transform: rotate(90deg);
+  margin: 0 auto;
+}
+
+.slideHover.show .xtx-elevator {
+  left: 0%;
+}
+
+.xtx-elevator {
+  left: -100px;
+  display: block;
+  background-color: rgba(255, 255, 255, 1);
+  width: 96px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  margin-top: 50px;
+  justify-content: flex-center;
+  cursor: pointer;
+  position: fixed;
+  top: 0%;
+  z-index: 999;
+  transition: all .5s;
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.xtx-elevator .xtx-elevator-list {
+  width: 100%;
+  background: #fff;
+  float: right;
+  border: 1px solid #f5f5f5;
+  position: relative;
+  font-size: 14px;
+  text-align: center;
+  padding: 10px 0;
+}
+
+.xtx-elevator .xtx-elevator-list li {
+  margin-bottom: 15px;
+}
+
+.xtx-elevator .xtx-elevator-list li img {
+  margin: 0 auto;
+}
+
+.xtx-elevator .xtx-elevator-list li a {
+  display: block;
+}
+
+/* .xtx-elevator .xtx-elevator-list li a:hover, */
+.xtx-elevator .xtx-elevator-list li a span.active,
+.xtx-elevator .xtx-elevator-list li a.active {
+  font-weight: 700;
+  color: rgba(31, 141, 237, 1);
+}
+
+.xtx-elevator .xtx-elevator-list li a i {
+  display: block;
+  width: 16px;
+  height: 16px;
+  position: relative;
+  left: 4px;
+  background-position: 8px -106px;
+  font-size: 20px;
+  transform: rotate(-90deg);
+}
+
+
+.fontGIN span {
+  font-size: 17px !important;
+}
+
+.fontGIN001 {
+  font-size: 15px !important;
+}
+
+
+.groupGIN {
+  transition: all ease-in .6s;
+  cursor: pointer;
+}
+
+.groupGIN:hover {
+  background: url(../img/SketchPng5ef4385489864c4dd221871cefccc8032bba17cc352717f7ba43d0b7eecf42fd.png) center no-repeat;
+
+}
+
+.groupGIN:hover .image-wrapperGIN {
+  background-color: rgba(255, 255, 255, 1);
+}
+
+.list-items_1-0:hover .image-wrapperGIN img {
+  content: url(../img/icon001_hover.png);
+}
+
+.list-items_1-2:hover .image-wrapperGIN img {
+  content: url(../img/icon002_hover.png);
+}
+
+.list-items_1-3:hover .image-wrapperGIN img {
+  content: url(../img/icon003_hover.png);
+}
+
+.list-items_1-4:hover .image-wrapperGIN img {
+  content: url(../img/icon004_hover.png);
+}
+
+.list-items_1-5:hover .image-wrapperGIN img {
+  content: url(../img/icon005_hover.png);
+}
+
+.groupGIN:hover .textGIN {
+  color: #ffffff;
+}
+
+.group_7 {
+  position: relative;
+  width: 1920px;
+  height: 678px;
+  background: url(../img/bg001.png) 100% no-repeat;
+  background-size: 100% 100%;
+  margin-top: 90px;
+}
+
+.stepBg {
+  height: 250px;
+  background: url(../img/SketchPng0b1edf8665744ae57c42d31d0e89f5e5f1071cce4c5e622ef35173f21a4ab0d9.png) -1px 0px no-repeat;
+  background-size: 1202px 213px;
+  width: 1200px;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.paragraph_7 {
+  width: auto;
+  height: auto;
+  margin: 90px auto 0;
+}
+
+.group_44,
+.box_22,
+.block_10 {
+  box-shadow: none;
+}
+
+.block_10 {
+  top: 594px;
+}
+
+.box_26,
+.box_23 {
+  height: 102px;
+  background: url(../img/SketchPng0febb737740ee0937fe2cf431190b88e611ccc523748569b68ff16761a911dcb.png) center no-repeat;
+  width: 102px;
+}
+
+.section_14 {
+  height: 160px;
+  background: url(../img/SketchPng05e8b72bfc30451aca97bd85ffdd725e7d4efc92adf0531253aca5db8d3e5235.png) no-repeat;
+  background-size: 56%;
+  background-position: center center;
+  width: 160px;
+}
+
+.text-wrapper_85 {
+  width: auto;
+}
+
+.box_15 {
+  position: relative;
+  z-index: 9;
+}
+
+
+.group_35,
+.block_7,
+.box_24,
+.group_39,
+.box_25 {
+  background-image: none;
+
+}
+
+.zIndex02 {
+  position: relative;
+  z-index: 2;
+}
+
+
+.tableFa {
+  width: 1200px;
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 40px auto 10px;
+  background: #fff;
+  height: 530px;
+  overflow-y: scroll;
+}
+
+.tableFa tr th:first-child,
+.tableFa tr td:first-child {
+  padding: 0 0 0 30px;
+}
+
+.tableFa tr th {
+  position: relative;
+}
+
+.thead {
+  /* table-layout: fixed; */
+  position: sticky;
+  top: 0;
+
+}
+
+.tableFa tr th:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  transform: translateY(-17px);
+  right: 30px;
+  width: 1px;
+  width: 1px;
+  height: 33px;
+  background: #F0F0F0;
+  border: 0px solid rgba(0, 0, 0, 0.88);
+}
+
+.tableFa tr th:first-child:after {
+  right: 0px;
+}
+
+.tableFa tr th:nth-of-type(2),
+.tableFa tr td:nth-of-type(2) {
+  padding: 0 0 0 30px;
+}
+
+
+
+.tableFa thead th {
+  padding: 5px 0;
+  height: 60px;
+  background: #1F8DED;
+  box-shadow: inset 0px -1px 0px 0px #F0F0F0;
+  font-family: MicrosoftYaHei, MicrosoftYaHei;
+  font-weight: bold;
+  font-size: 20px;
+  color: #FFFFFF;
+  text-align: left;
+  font-style: normal;
+  text-transform: none;
+
+}
+
+.tableFa td {
+  font-family: MicrosoftYaHei;
+  font-size: 16px;
+  color: rgba(0, 0, 0, 0.88);
+  line-height: 44px;
+  text-align: left;
+  font-style: normal;
+  text-transform: none;
+}
+
+/* css 偶数行 */
+.tableFa tr:nth-child(even) {
+  background: rgba(65, 179, 201, 0.05);
+  box-shadow: inset 0px -1px 0px 0px #F0F0F0;
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+}
+
+
+
+.tableFa .dot {
+  width: 8px;
+  height: 8px;
+  background: #22D1FF;
+  border-radius: 10px;
+  border: 1px solid #FFFFFF;
+  display: inline-block;
+  margin-right: 6px;
+}
+
+.tableFa .sun {
+  width: 18px;
+  height: 18px;
+  display: inline-block;
+  background: url(../img/sun.png) no-repeat center center;
+  background-size: 80%;
+}
+
+.specialScrollBarY {
+
+  /* 全局样式，谁用给谁加下，注意x轴滚动条还是y轴滚动条 */
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 100%;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border-radius: 5px;
+    -webkit-box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+    background: #d9d9d9;
+  }
+
+  ::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    background: #eee
+  }
+}
+
+.specialScrollBarX {
+
+  /* 全局样式，谁用给谁加下，注意x轴滚动条还是y轴滚动条 */
+  ::-webkit-scrollbar {
+    width: 100%;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border-radius: 5px;
+    -webkit-box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+    background: #d9d9d9;
+  }
+
+  ::-webkit-scrollbar-track {
+    -webkit-box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+    background: #eee
+  }
+}
