@@ -1,0 +1,10 @@
+b2bebe9e249302979a73a8e492c310801aa1bfd7 commit	refs/heads/main
+e5f6d9c2a263e2d86d9a6f946dcaf9b48e9ffe08 commit	refs/heads/master
+abd6d1d411ba064f5ba7cd8684e701348c091fff commit	refs/original/refs/heads/main
+72d9d374b33992eac3e7fb2f1fba63a32aeca00a commit	refs/original/refs/remotes/local-gitlab/main
+1a8d4ed04fc366be67d6a163c9f43e593ee4e513 commit	refs/original/refs/remotes/origin/main
+17846999dab12e0d43adc4f2cf3421cd16515ae6 commit	refs/remotes/local-gitlab/HEAD
+17846999dab12e0d43adc4f2cf3421cd16515ae6 commit	refs/remotes/local-gitlab/main
+dc7d05216330ace30798076cd5a3e63521673c4b commit	refs/remotes/local-gitlab/master
+eca2b1684d1a981b0bf46ba9644a4805ecdc6c8a commit	refs/remotes/origin/HEAD
+eca2b1684d1a981b0bf46ba9644a4805ecdc6c8a commit	refs/remotes/origin/main
