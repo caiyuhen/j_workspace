@@ -15,3 +15,20 @@ class ProjectResponse(BaseModel):
     name: str
     description: str
     workspace_key: str
+
+
+class RegisterFileRequest(BaseModel):
+    project_id: int
+    kind: str
+    name: str
+    storage_path: str
+    checksum: str
+
+
+class FileResponse(BaseModel):
+    id: int
+    project_id: int
+    kind: str
+    name: str
+    storage_path: str
+    checksum: str

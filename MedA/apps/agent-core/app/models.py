@@ -31,3 +31,20 @@ class AuditEvent(SQLModel, table=True):
     action: str
     client_type: str
     trace_id: str
+
+
+class FileRecord(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int
+    kind: str
+    name: str
+    storage_path: str
+    checksum: str
+
+
+class ArtifactRecord(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int
+    artifact_type: str
+    title: str
+    source_file_id: int | None = None
