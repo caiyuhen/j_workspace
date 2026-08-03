@@ -1,0 +1,13 @@
+{
+  "name": "meda",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/web",
+    "apps/admin",
+    "apps/desktop"
+  ],
+  "dependencies": {
+    "meda": "file:"
+  }
+}
