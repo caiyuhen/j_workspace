@@ -4,6 +4,8 @@ from sqlmodel import Session, select
 from app.db import get_session
 from app.models import Membership, Organization, ResearchProject
 from app.schemas import CreateProjectRequest, ProjectResponse
+from app.services.audit import record_audit_event
+from app.services.events import broker
 
 router = APIRouter(prefix="/api/projects", tags=["projects"])
 
@@ -51,5 +53,26 @@ def create_project(
 
     if project.id is None:
         raise HTTPException(status_code=500, detail="project id missing after commit")
+
+    record_audit_event(
+        session,
+        actor=payload.owner_user_id,
+        organization_slug=payload.organization_slug,
+        resource_type="research_project",
+        resource_id=str(project.id),
+        action="project.created",
+        client_type="web",
+        trace_id=f"project-{project.id}",
+    )
+    session.commit()
+
+    broker.publish(
+        "project.created",
+        {
+            "project_id": project.id,
+            "workspace_key": project.workspace_key,
+            "organization_slug": project.organization_slug,
+        },
+    )
 
     return ProjectResponse.model_validate(project, from_attributes=True)

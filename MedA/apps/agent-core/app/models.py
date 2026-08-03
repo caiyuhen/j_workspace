@@ -20,3 +20,14 @@ class ResearchProject(SQLModel, table=True):
     name: str
     description: str
     workspace_key: str
+
+
+class AuditEvent(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    actor: str
+    organization_slug: str
+    resource_type: str
+    resource_id: str
+    action: str
+    client_type: str
+    trace_id: str
