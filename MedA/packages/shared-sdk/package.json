@@ -2,5 +2,13 @@
   "name": "@meda/shared-sdk",
   "version": "0.1.0",
   "type": "module",
-  "main": "src/client.ts"
+  "main": "src/client.ts",
+  "exports": {
+    ".": "./src/client.ts",
+    "./session": "./src/session.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  }
 }
