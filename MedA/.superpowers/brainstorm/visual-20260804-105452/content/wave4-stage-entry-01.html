@@ -1,0 +1,264 @@
+<style>
+  .intro {
+    margin-bottom: 20px;
+  }
+
+  .tag {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(103, 80, 164, 0.14);
+    color: #6f55d9;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .preview {
+    height: 320px;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(126, 132, 150, 0.16);
+    background: linear-gradient(180deg, rgba(255,255,255,0.97), rgba(245,247,252,0.97));
+  }
+
+  .topbar {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    background: #f6f7fb;
+    border-bottom: 1px solid rgba(126, 132, 150, 0.12);
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #c9cedb;
+  }
+
+  .body {
+    display: grid;
+    grid-template-columns: 68px 1fr;
+    height: calc(100% - 42px);
+  }
+
+  .rail {
+    background: #151928;
+    padding: 14px 12px;
+  }
+
+  .rail-pill {
+    height: 28px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.1);
+    margin-bottom: 10px;
+  }
+
+  .main {
+    padding: 14px;
+    box-sizing: border-box;
+    background: #ffffff;
+  }
+
+  .hero, .block, .stage, .list, .side, .mini {
+    border-radius: 14px;
+    border: 1px solid rgba(126, 132, 150, 0.12);
+    background: #f6f7fb;
+  }
+
+  .hero {
+    height: 84px;
+    margin-bottom: 12px;
+    background: linear-gradient(135deg, #6f55d9, #8f73ff);
+    border: none;
+    box-shadow: 0 16px 28px rgba(111, 85, 217, 0.2);
+  }
+
+  .grid-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .block {
+    height: 102px;
+    padding: 10px;
+  }
+
+  .stage-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .stage {
+    height: 92px;
+  }
+
+  .content-row {
+    display: grid;
+    grid-template-columns: 1.2fr .8fr;
+    gap: 12px;
+  }
+
+  .list {
+    height: 118px;
+  }
+
+  .side {
+    height: 118px;
+  }
+
+  .stack {
+    display: grid;
+    gap: 12px;
+  }
+
+  .mini {
+    height: 70px;
+  }
+
+  .label {
+    margin-top: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #5a6175;
+  }
+
+  @media (max-width: 1100px) {
+    .cards {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="intro">
+  <h2>Wave 4：科研流程模块入口页先做成哪种结构</h2>
+  <p class="subtitle">这不是最终深业务页，而是首页阶段卡片点进去后的第一层真实工作页。重点是先决定它更像“入口枢纽”、“任务板”，还是“产物总览”。</p>
+  <div class="tag">Recommended: A</div>
+</div>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="preview">
+        <div class="topbar">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <div class="body">
+          <div class="rail">
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+          </div>
+          <div class="main">
+            <div class="hero"></div>
+            <div class="stage-row">
+              <div class="stage"></div>
+              <div class="stage"></div>
+              <div class="stage"></div>
+              <div class="stage"></div>
+            </div>
+            <div class="content-row">
+              <div class="list"></div>
+              <div class="side"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. 阶段入口枢纽</h3>
+      <p>顶部先讲清当前阶段目标和状态，中段给阶段内关键子入口，下段放最近任务与核心产物。</p>
+      <div class="label">最适合 Wave 4。既不是空壳，也不会一下子掉进深业务实现。</div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="preview">
+        <div class="topbar">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <div class="body">
+          <div class="rail">
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+          </div>
+          <div class="main">
+            <div class="hero"></div>
+            <div class="grid-two">
+              <div class="block"></div>
+              <div class="block"></div>
+              <div class="block"></div>
+              <div class="block"></div>
+            </div>
+            <div style="height:12px"></div>
+            <div class="list"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. 任务板优先</h3>
+      <p>进入页面就先看当前阶段所有任务、负责人、状态，再从任务反推产物和入口。</p>
+      <div class="label">执行感最强，但会更快碰到任务系统的深模型和流程约束。</div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="preview">
+        <div class="topbar">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <div class="body">
+          <div class="rail">
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+          </div>
+          <div class="main">
+            <div class="hero"></div>
+            <div class="stack">
+              <div class="list"></div>
+              <div class="grid-two">
+                <div class="mini"></div>
+                <div class="mini"></div>
+              </div>
+              <div class="grid-two">
+                <div class="mini"></div>
+                <div class="mini"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. 产物与证据优先</h3>
+      <p>先展示当前阶段已形成的产物、证据和版本，再从产物去回看任务与操作入口。</p>
+      <div class="label">很适合可追溯性，但对 Wave 4 来说会更偏结果回看，不够像入口页。</div>
+    </div>
+  </div>
+</div>

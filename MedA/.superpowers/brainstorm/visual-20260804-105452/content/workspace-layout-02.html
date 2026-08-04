@@ -1,0 +1,350 @@
+<style>
+  .intro {
+    margin-bottom: 22px;
+  }
+
+  .note {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(103, 80, 164, 0.14);
+    color: #6f55d9;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .preview {
+    height: 330px;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 1px solid rgba(126, 132, 150, 0.16);
+    background: linear-gradient(180deg, rgba(255,255,255,0.97), rgba(245,247,252,0.97));
+  }
+
+  .topbar {
+    height: 42px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    background: #f6f7fb;
+    border-bottom: 1px solid rgba(126, 132, 150, 0.12);
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #c9cedb;
+  }
+
+  .frame {
+    display: grid;
+    grid-template-columns: 68px 210px 1fr 270px;
+    height: calc(100% - 42px);
+  }
+
+  .rail {
+    background: #151928;
+    padding: 14px 12px;
+  }
+
+  .rail-pill {
+    height: 28px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.1);
+    margin-bottom: 10px;
+  }
+
+  .sidebar,
+  .main,
+  .right {
+    padding: 14px;
+    box-sizing: border-box;
+  }
+
+  .sidebar {
+    background: #fbfbfe;
+    border-right: 1px solid rgba(126, 132, 150, 0.12);
+  }
+
+  .right {
+    background: #fbfbfe;
+    border-left: 1px solid rgba(126, 132, 150, 0.12);
+  }
+
+  .main {
+    background: #ffffff;
+  }
+
+  .title,
+  .sub,
+  .line,
+  .pill,
+  .module,
+  .kpi,
+  .stage,
+  .feed,
+  .hero,
+  .banner {
+    border-radius: 12px;
+  }
+
+  .title {
+    width: 56%;
+    height: 10px;
+    background: #1b2130;
+    margin-bottom: 10px;
+  }
+
+  .sub {
+    width: 76%;
+    height: 10px;
+    background: #d8deea;
+    margin-bottom: 12px;
+  }
+
+  .line {
+    height: 9px;
+    background: #d8deea;
+    margin-bottom: 8px;
+  }
+
+  .pill-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .pill {
+    width: 58px;
+    height: 20px;
+    background: #e8ecf6;
+  }
+
+  .module {
+    height: 72px;
+    background: #f4f6fb;
+    border: 1px solid rgba(126, 132, 150, 0.12);
+    margin-bottom: 10px;
+  }
+
+  .hero {
+    height: 92px;
+    background: linear-gradient(135deg, #6f55d9, #8f73ff);
+    margin-bottom: 12px;
+    box-shadow: 0 16px 28px rgba(111, 85, 217, 0.22);
+  }
+
+  .banner {
+    height: 62px;
+    background: linear-gradient(135deg, #2f6df6, #59a1ff);
+    margin-bottom: 12px;
+  }
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .kpi {
+    height: 76px;
+    background: #f4f6fb;
+    border: 1px solid rgba(126, 132, 150, 0.12);
+  }
+
+  .stage-row {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .stage {
+    height: 88px;
+    background: #f4f6fb;
+    border: 1px solid rgba(126, 132, 150, 0.12);
+  }
+
+  .feed {
+    height: 102px;
+    background: #f7f8fc;
+    border: 1px solid rgba(126, 132, 150, 0.12);
+    margin-bottom: 10px;
+  }
+
+  .caption {
+    margin-top: 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #5a6175;
+  }
+
+  @media (max-width: 1100px) {
+    .cards {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="intro">
+  <h2>A 方案继续细化：中间主区第一屏放什么</h2>
+  <p class="subtitle">左导航 + 中主区 + 右侧助手已经定了。现在只决定首页进入后，用户第一眼看到的是哪一类核心信息。</p>
+  <div class="note">Recommended: C</div>
+</div>
+
+<div class="cards">
+  <div class="card" data-choice="a1" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="preview">
+        <div class="topbar">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <div class="frame">
+          <div class="rail">
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+          </div>
+          <div class="sidebar">
+            <div class="title"></div>
+            <div class="sub"></div>
+            <div class="pill-row"><div class="pill"></div><div class="pill"></div></div>
+            <div class="module"></div>
+            <div class="module"></div>
+            <div class="module"></div>
+          </div>
+          <div class="main">
+            <div class="hero"></div>
+            <div class="kpi-row">
+              <div class="kpi"></div>
+              <div class="kpi"></div>
+              <div class="kpi"></div>
+            </div>
+            <div class="feed"></div>
+            <div class="feed"></div>
+          </div>
+          <div class="right">
+            <div class="title"></div>
+            <div class="module"></div>
+            <div class="module"></div>
+            <div class="feed"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A1. 项目总览优先</h3>
+      <p>先展示项目摘要、关键指标、近期动态，再进入具体任务。稳，但会更像 dashboard。</p>
+      <div class="caption">优点是管理感强，缺点是“下一步做什么”不够直接。</div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b1" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="preview">
+        <div class="topbar">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <div class="frame">
+          <div class="rail">
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+          </div>
+          <div class="sidebar">
+            <div class="title"></div>
+            <div class="sub"></div>
+            <div class="pill-row"><div class="pill"></div><div class="pill"></div></div>
+            <div class="module"></div>
+            <div class="module"></div>
+            <div class="module"></div>
+          </div>
+          <div class="main">
+            <div class="banner"></div>
+            <div class="feed"></div>
+            <div class="feed"></div>
+            <div class="feed"></div>
+          </div>
+          <div class="right">
+            <div class="title"></div>
+            <div class="module"></div>
+            <div class="module"></div>
+            <div class="module"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B1. 当前任务优先</h3>
+      <p>首页直达“继续上次工作”“待办队列”“最新产物”，操作效率最高。</p>
+      <div class="caption">优点是强执行流，缺点是项目全貌会被压缩到次级区域。</div>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c1" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="preview">
+        <div class="topbar">
+          <div class="dot"></div>
+          <div class="dot"></div>
+          <div class="dot"></div>
+        </div>
+        <div class="frame">
+          <div class="rail">
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+            <div class="rail-pill"></div>
+          </div>
+          <div class="sidebar">
+            <div class="title"></div>
+            <div class="sub"></div>
+            <div class="pill-row"><div class="pill"></div><div class="pill"></div></div>
+            <div class="module"></div>
+            <div class="module"></div>
+            <div class="module"></div>
+          </div>
+          <div class="main">
+            <div class="hero"></div>
+            <div class="stage-row">
+              <div class="stage"></div>
+              <div class="stage"></div>
+              <div class="stage"></div>
+              <div class="stage"></div>
+              <div class="stage"></div>
+            </div>
+            <div class="feed"></div>
+            <div class="feed"></div>
+          </div>
+          <div class="right">
+            <div class="title"></div>
+            <div class="module"></div>
+            <div class="module"></div>
+            <div class="feed"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C1. 混合首页</h3>
+      <p>顶部放项目总状态与主 CTA，中段直接给科研流程阶段卡片，下段放最近任务/产物/协作动态。</p>
+      <div class="caption">最平衡，既保留 Hermes 式工作台入口，又把 MedA 的科研流程显性化。</div>
+    </div>
+  </div>
+</div>

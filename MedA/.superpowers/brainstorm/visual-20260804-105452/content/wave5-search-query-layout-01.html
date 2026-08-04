@@ -1,0 +1,109 @@
+<h2>检索式管理第一屏应该长什么样？</h2>
+<p class="subtitle">你已经选了“检索式编辑器优先”。这一步只看编辑区骨架，不看深交互。</p>
+
+<div class="cards">
+  <div class="card" data-choice="a" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">A. 三段式编辑器</div>
+        <div class="mockup-body" style="display:grid;grid-template-columns:1.05fr 1.2fr 0.95fr;gap:12px;min-height:320px">
+          <div style="border:1px solid #d7dce5;border-radius:14px;padding:12px;background:#f8fafc">
+            <div class="label">词组与字段</div>
+            <div class="placeholder" style="height:54px;margin-top:10px">PICO 词组</div>
+            <div class="placeholder" style="height:54px;margin-top:10px">主题词 / 自由词</div>
+            <div class="placeholder" style="height:54px;margin-top:10px">字段限定</div>
+            <div class="placeholder" style="height:54px;margin-top:10px">快捷片段</div>
+          </div>
+          <div style="border:1px solid #d7dce5;border-radius:14px;padding:12px;background:#ffffff">
+            <div class="label">布尔组合编辑区</div>
+            <div class="placeholder" style="height:46px;margin-top:10px">版本 / 保存 / 执行</div>
+            <div class="placeholder" style="height:88px;margin-top:10px">检索式草稿区</div>
+            <div class="placeholder" style="height:88px;margin-top:10px">布尔组合块</div>
+            <div class="placeholder" style="height:52px;margin-top:10px">校验提示</div>
+          </div>
+          <div style="border:1px solid #d7dce5;border-radius:14px;padding:12px;background:#f8fafc">
+            <div class="label">预览与助手</div>
+            <div class="placeholder" style="height:60px;margin-top:10px">命中量预览</div>
+            <div class="placeholder" style="height:92px;margin-top:10px">数据库覆盖</div>
+            <div class="placeholder" style="height:92px;margin-top:10px">助手建议</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. 三段式编辑器</h3>
+      <p>左边组织词组，中间专注写检索式，右边看预览与建议。我当前最推荐这个。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="b" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">B. 双栏主编排</div>
+        <div class="mockup-body" style="display:grid;grid-template-columns:1.15fr 0.85fr;gap:12px;min-height:320px">
+          <div style="display:grid;grid-template-rows:auto 1fr;gap:12px">
+            <div style="border:1px solid #d7dce5;border-radius:14px;padding:12px;background:#ffffff">
+              <div class="label">顶部版本条</div>
+              <div class="placeholder" style="height:46px;margin-top:10px">版本 / 保存 / 执行</div>
+            </div>
+            <div style="display:grid;grid-template-columns:0.9fr 1.1fr;gap:12px">
+              <div style="border:1px solid #d7dce5;border-radius:14px;padding:12px;background:#f8fafc">
+                <div class="label">词组区</div>
+                <div class="placeholder" style="height:62px;margin-top:10px">关键词集合</div>
+                <div class="placeholder" style="height:62px;margin-top:10px">字段限定</div>
+                <div class="placeholder" style="height:62px;margin-top:10px">术语推荐</div>
+              </div>
+              <div style="border:1px solid #d7dce5;border-radius:14px;padding:12px;background:#ffffff">
+                <div class="label">主编辑器</div>
+                <div class="placeholder" style="height:110px;margin-top:10px">检索式文本 / 块编辑</div>
+                <div class="placeholder" style="height:110px;margin-top:10px">语法校验与说明</div>
+              </div>
+            </div>
+          </div>
+          <div style="border:1px solid #d7dce5;border-radius:14px;padding:12px;background:#f8fafc">
+            <div class="label">右侧预览</div>
+            <div class="placeholder" style="height:64px;margin-top:10px">命中量</div>
+            <div class="placeholder" style="height:96px;margin-top:10px">来源库</div>
+            <div class="placeholder" style="height:96px;margin-top:10px">历史版本</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. 双栏主编排</h3>
+      <p>更像传统专业工作台，主编辑区更大，但词组组织和结果预览会稍微挤一点。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="c" onclick="toggleSelect(this)">
+    <div class="card-image">
+      <div class="mockup">
+        <div class="mockup-header">C. 上下式流程页</div>
+        <div class="mockup-body" style="display:grid;grid-template-rows:auto auto 1fr;gap:12px;min-height:320px">
+          <div style="border:1px solid #d7dce5;border-radius:14px;padding:12px;background:#ffffff">
+            <div class="label">顶部操作栏</div>
+            <div class="placeholder" style="height:46px;margin-top:10px">版本 / 保存 / 执行 / 导出</div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div style="border:1px solid #d7dce5;border-radius:14px;padding:12px;background:#f8fafc">
+              <div class="label">词组与字段</div>
+              <div class="placeholder" style="height:92px;margin-top:10px">关键词组织</div>
+            </div>
+            <div style="border:1px solid #d7dce5;border-radius:14px;padding:12px;background:#f8fafc">
+              <div class="label">命中预览</div>
+              <div class="placeholder" style="height:92px;margin-top:10px">结果摘要</div>
+            </div>
+          </div>
+          <div style="border:1px solid #d7dce5;border-radius:14px;padding:12px;background:#ffffff">
+            <div class="label">主编辑器</div>
+            <div class="placeholder" style="height:148px;margin-top:10px">检索式块编辑器</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. 上下式流程页</h3>
+      <p>阅读顺序清楚，但不如 A/B 那么像“持续编辑”的主工作台，更像任务页。</p>
+    </div>
+  </div>
+</div>

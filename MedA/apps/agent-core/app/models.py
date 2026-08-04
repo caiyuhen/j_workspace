@@ -27,6 +27,41 @@ class ResearchProject(SQLModel, table=True):
     workspace_key: str
 
 
+class ResearchTaskRecord(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id")
+    title: str
+    stage_key: str
+    status: str
+
+
+class SearchQuery(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id")
+    name: str
+    stage_key: str = "search"
+    latest_version: str = "v0"
+
+
+class SearchQueryDraft(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    query_id: int = Field(foreign_key="searchquery.id")
+    based_on_version: str = "v0"
+    grouped_terms_json: str
+    expression_blocks_json: str
+    selected_sources_json: str
+    query_dirty: bool = False
+
+
+class SearchQueryVersion(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    query_id: int = Field(foreign_key="searchquery.id")
+    version_label: str
+    grouped_terms_json: str
+    expression_blocks_json: str
+    selected_sources_json: str
+
+
 class AuditEvent(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     actor: str
