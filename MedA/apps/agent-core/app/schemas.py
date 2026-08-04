@@ -32,3 +32,30 @@ class FileResponse(BaseModel):
     name: str
     storage_path: str
     checksum: str
+
+
+class DevLoginRequest(BaseModel):
+    organization_slug: str
+    organization_name: str
+    user_id: str
+    display_name: str
+    role: str
+    client_type: str
+
+
+class SessionUserResponse(BaseModel):
+    user_id: str
+    display_name: str
+
+
+class SessionOrganizationResponse(BaseModel):
+    slug: str
+    name: str
+
+
+class SessionResponse(BaseModel):
+    token: str
+    user: SessionUserResponse
+    organization: SessionOrganizationResponse
+    role: str
+    client_type: str

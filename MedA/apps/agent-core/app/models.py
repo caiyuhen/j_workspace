@@ -1,6 +1,11 @@
 from sqlmodel import Field, SQLModel
 
 
+class User(SQLModel, table=True):
+    user_id: str = Field(primary_key=True)
+    display_name: str
+
+
 class Organization(SQLModel, table=True):
     slug: str = Field(primary_key=True)
     name: str
@@ -8,7 +13,7 @@ class Organization(SQLModel, table=True):
 
 class Membership(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    user_id: str
+    user_id: str = Field(foreign_key="user.user_id")
     organization_slug: str = Field(foreign_key="organization.slug")
     role: str = "org_admin"
 
@@ -48,3 +53,11 @@ class ArtifactRecord(SQLModel, table=True):
     artifact_type: str
     title: str
     source_file_id: int | None = None
+
+
+class AuthSession(SQLModel, table=True):
+    token: str = Field(primary_key=True)
+    user_id: str = Field(foreign_key="user.user_id")
+    organization_slug: str = Field(foreign_key="organization.slug")
+    role: str
+    client_type: str

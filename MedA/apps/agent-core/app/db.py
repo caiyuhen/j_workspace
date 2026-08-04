@@ -14,6 +14,10 @@ def init_db() -> None:
     SQLModel.metadata.create_all(engine)
 
 
+def reset_db() -> None:
+    SQLModel.metadata.drop_all(engine)
+
+
 def get_session() -> Generator[Session, None, None]:
     with Session(engine) as session:
         yield session
