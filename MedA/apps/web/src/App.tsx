@@ -1,25 +1,45 @@
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 
-import { createClient, type ProjectSummary } from "@meda/shared-sdk";
+import {
+  createBrowserSessionStore,
+  createClient,
+  type ProjectSummary,
+  type SessionContext,
+} from "@meda/shared-sdk";
+
+import { LoginForm } from "./components/LoginForm";
+import { WorkspaceShell } from "./components/WorkspaceShell";
 
 export default function App() {
+  const sessionStore = useMemo(() => createBrowserSessionStore(), []);
+  const client = useMemo(
+    () => createClient("http://localhost:8000", sessionStore),
+    [sessionStore],
+  );
+  const [session, setSession] = useState<SessionContext | null>(null);
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
 
-  useEffect(() => {
-    createClient().listProjects().then(setProjects);
-  }, []);
+  const handleLogin = async (payload: {
+    organizationSlug: string;
+    userId: string;
+  }) => {
+    const nextSession = await client.devLogin({
+      organization_slug: payload.organizationSlug,
+      organization_name: "Demo Hospital",
+      user_id: payload.userId,
+      display_name: "Dr. Chen",
+      role: "org_admin",
+      client_type: "web",
+    });
+    const nextProjects = await client.listProjects();
 
-  return (
-    <main>
-      <h1>MedA Web Shell</h1>
-      <ul>
-        {projects.map((project) => (
-          <li key={project.id}>
-            <strong>{project.name}</strong>
-            <span>{project.workspace_key}</span>
-          </li>
-        ))}
-      </ul>
-    </main>
-  );
+    setSession(nextSession);
+    setProjects(nextProjects);
+  };
+
+  if (session === null) {
+    return <LoginForm onSubmit={handleLogin} />;
+  }
+
+  return <WorkspaceShell session={session} projects={projects} />;
 }
