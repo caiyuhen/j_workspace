@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import Session, select
 
 from app.db import get_session
+from app.deps.auth import SessionContext, get_current_session
 from app.models import Membership, Organization, ResearchProject
 from app.schemas import CreateProjectRequest, ProjectResponse
 from app.services.audit import record_audit_event
@@ -11,8 +12,15 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 
 
 @router.get("", response_model=list[ProjectResponse])
-def list_projects(session: Session = Depends(get_session)) -> list[ProjectResponse]:
-    projects = session.exec(select(ResearchProject)).all()
+def list_projects(
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> list[ProjectResponse]:
+    projects = session.exec(
+        select(ResearchProject).where(
+            ResearchProject.organization_slug == context.organization_slug
+        )
+    ).all()
     return [ProjectResponse.model_validate(project, from_attributes=True) for project in projects]
 
 
