@@ -12,6 +12,7 @@ from app.schemas import (
     WorkspaceHomeResponse,
 )
 from app.services.search_query import (
+    SearchQueryNotFoundError,
     derive_search_query_draft,
     get_or_create_search_query_editor,
     get_search_query_snapshot,
@@ -24,15 +25,25 @@ from app.services.workspace import build_workspace_home
 router = APIRouter(prefix="/api/workspace", tags=["workspace"])
 
 
+def _load_project_or_404(
+    session: Session,
+    project_id: int,
+    context: SessionContext,
+) -> ResearchProject:
+    project = session.get(ResearchProject, project_id)
+    if project is None or project.organization_slug != context.organization_slug:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="project not found")
+
+    return project
+
+
 @router.get("/projects/{project_id}/home", response_model=WorkspaceHomeResponse)
 def get_workspace_home(
     project_id: int,
     context: SessionContext = Depends(get_current_session),
     session: Session = Depends(get_session),
 ) -> WorkspaceHomeResponse:
-    project = session.get(ResearchProject, project_id)
-    if project is None or project.organization_slug != context.organization_slug:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="project not found")
+    project = _load_project_or_404(session, project_id, context)
 
     return build_workspace_home(session, project)
 
@@ -44,9 +55,7 @@ def get_stage_entry(
     context: SessionContext = Depends(get_current_session),
     session: Session = Depends(get_session),
 ) -> StageEntryResponse:
-    project = session.get(ResearchProject, project_id)
-    if project is None or project.organization_slug != context.organization_slug:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="project not found")
+    project = _load_project_or_404(session, project_id, context)
 
     stage_entry = build_stage_entry(session, project, stage_key)
     if stage_entry is None:
@@ -66,14 +75,22 @@ def get_search_query_editor(
     context: SessionContext = Depends(get_current_session),
     session: Session = Depends(get_session),
 ) -> SearchQueryEditorResponse:
-    project = session.get(ResearchProject, project_id)
-    if project is None or project.organization_slug != context.organization_slug:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="project not found")
+    project = _load_project_or_404(session, project_id, context)
 
-    if query_id is not None and version is not None:
-        return get_search_query_snapshot(session, project, query_id, version)
+    try:
+        if version is not None:
+            if query_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="query_id is required when version is provided",
+                )
+            return get_search_query_snapshot(session, project, query_id, version)
 
-    return get_or_create_search_query_editor(session, project)
+        return get_or_create_search_query_editor(session, project, query_id)
+    except SearchQueryNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(error)
+        ) from error
 
 
 @router.post(
@@ -86,11 +103,14 @@ def post_search_query_save(
     context: SessionContext = Depends(get_current_session),
     session: Session = Depends(get_session),
 ) -> SearchQueryEditorResponse:
-    project = session.get(ResearchProject, project_id)
-    if project is None or project.organization_slug != context.organization_slug:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="project not found")
+    project = _load_project_or_404(session, project_id, context)
 
-    return save_search_query_draft(session, project, payload)
+    try:
+        return save_search_query_draft(session, project, payload)
+    except SearchQueryNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(error)
+        ) from error
 
 
 @router.post(
@@ -103,11 +123,14 @@ def post_search_query_save_as_version(
     context: SessionContext = Depends(get_current_session),
     session: Session = Depends(get_session),
 ) -> SearchQueryEditorResponse:
-    project = session.get(ResearchProject, project_id)
-    if project is None or project.organization_slug != context.organization_slug:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="project not found")
+    project = _load_project_or_404(session, project_id, context)
 
-    return save_search_query_version(session, project, payload)
+    try:
+        return save_search_query_version(session, project, payload)
+    except SearchQueryNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(error)
+        ) from error
 
 
 @router.post(
@@ -120,8 +143,11 @@ def post_search_query_derive_draft(
     context: SessionContext = Depends(get_current_session),
     session: Session = Depends(get_session),
 ) -> SearchQueryEditorResponse:
-    project = session.get(ResearchProject, project_id)
-    if project is None or project.organization_slug != context.organization_slug:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="project not found")
+    project = _load_project_or_404(session, project_id, context)
 
-    return derive_search_query_draft(session, project, payload)
+    try:
+        return derive_search_query_draft(session, project, payload)
+    except SearchQueryNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(error)
+        ) from error

@@ -158,3 +158,136 @@ def test_query_builder_opens_snapshot_and_derives_new_draft() -> None:
     assert derive.status_code == 200
     assert derive.json()["query_mode"] == "draft"
     assert derive.json()["query_version"] == "v1"
+
+
+def test_query_builder_rejects_invalid_query_id_with_404() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    response = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder"
+        "?query_id=99999&version=v1",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_query_builder_rejects_invalid_version_with_404() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    initial = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder",
+        headers={"Authorization": f"Bearer {token}"},
+    ).json()
+
+    response = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder"
+        f"?query_id={initial['query_id']}&version=v99",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 404
+
+
+def test_query_builder_save_rejects_unknown_query_with_404() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    initial = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder",
+        headers={"Authorization": f"Bearer {token}"},
+    ).json()
+
+    response = client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder/save",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "query_id": 99999,
+            "query_name": "糖尿病检索式",
+            "selected_sources": initial["selected_sources"],
+            "grouped_terms": initial["grouped_terms"],
+            "expression_blocks": initial["expression_blocks"],
+        },
+    )
+
+    assert response.status_code == 404
+
+
+def test_query_builder_query_id_only_opens_that_query_draft() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    initial = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder",
+        headers={"Authorization": f"Bearer {token}"},
+    ).json()
+
+    client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder/save",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "query_id": initial["query_id"],
+            "query_name": "糖尿病检索式",
+            "selected_sources": initial["selected_sources"],
+            "grouped_terms": initial["grouped_terms"],
+            "expression_blocks": initial["expression_blocks"],
+        },
+    )
+
+    response = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder"
+        f"?query_id={initial['query_id']}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["query_id"] == initial["query_id"]
+    assert response.json()["query_mode"] == "draft"
+    assert response.json()["query_name"] == "糖尿病检索式"
+
+    missing = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder"
+        "?query_id=99999",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert missing.status_code == 404
+
+
+def test_derived_draft_keeps_version_anchor_after_reload() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    initial = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder",
+        headers={"Authorization": f"Bearer {token}"},
+    ).json()
+
+    client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder/save-as-version",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "query_id": initial["query_id"],
+            "query_name": initial["query_name"],
+            "selected_sources": initial["selected_sources"],
+            "grouped_terms": initial["grouped_terms"],
+            "expression_blocks": initial["expression_blocks"],
+        },
+    )
+
+    client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder/derive-draft",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"query_id": initial["query_id"], "version_label": "v1"},
+    )
+
+    reloaded = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    assert reloaded.status_code == 200
+    assert reloaded.json()["query_mode"] == "draft"
+    assert reloaded.json()["query_version"] == "v1"

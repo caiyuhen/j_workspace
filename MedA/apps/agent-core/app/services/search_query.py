@@ -16,6 +16,49 @@ from app.schemas import (
 )
 
 
+class SearchQueryNotFoundError(Exception):
+    """Raised when a query, draft, or version cannot be resolved for a project."""
+
+
+def _load_query_for_project(
+    session: Session,
+    project: ResearchProject,
+    query_id: int,
+) -> SearchQuery:
+    query = session.get(SearchQuery, query_id)
+    if query is None or query.project_id != (project.id or 0):
+        raise SearchQueryNotFoundError("query not found")
+
+    return query
+
+
+def _load_draft(session: Session, query_id: int) -> SearchQueryDraft:
+    draft = session.exec(
+        select(SearchQueryDraft).where(SearchQueryDraft.query_id == query_id)
+    ).first()
+    if draft is None:
+        raise SearchQueryNotFoundError("draft not found")
+
+    return draft
+
+
+def _load_version(
+    session: Session,
+    query_id: int,
+    version_label: str,
+) -> SearchQueryVersion:
+    version = session.exec(
+        select(SearchQueryVersion).where(
+            SearchQueryVersion.query_id == query_id,
+            SearchQueryVersion.version_label == version_label,
+        )
+    ).first()
+    if version is None:
+        raise SearchQueryNotFoundError("version not found")
+
+    return version
+
+
 def _default_grouped_terms() -> list[SearchTermGroupSummary]:
     return [
         SearchTermGroupSummary(
@@ -112,11 +155,16 @@ def _build_preview_summary(selected_sources: list[str], source: str) -> SearchPr
 def get_or_create_search_query_editor(
     session: Session,
     project: ResearchProject,
+    query_id: int | None = None,
 ) -> SearchQueryEditorResponse:
     project_id = project.id or 0
-    query = session.exec(
-        select(SearchQuery).where(SearchQuery.project_id == project_id)
-    ).first()
+
+    if query_id is not None:
+        query = _load_query_for_project(session, project, query_id)
+    else:
+        query = session.exec(
+            select(SearchQuery).where(SearchQuery.project_id == project_id)
+        ).first()
 
     if query is None:
         grouped_terms = _default_grouped_terms()
@@ -142,9 +190,7 @@ def get_or_create_search_query_editor(
         session.commit()
         session.refresh(draft)
     else:
-        draft = session.exec(
-            select(SearchQueryDraft).where(SearchQueryDraft.query_id == (query.id or 0))
-        ).one()
+        draft = _load_draft(session, query.id or 0)
         grouped_terms = [
             SearchTermGroupSummary(**item) for item in json.loads(draft.grouped_terms_json)
         ]
@@ -155,6 +201,9 @@ def get_or_create_search_query_editor(
 
     selected_sources = json.loads(draft.selected_sources_json)
     validation_messages = _build_validation_messages(grouped_terms, expression_blocks)
+
+    # Return the real version anchor so UI can show what version this draft is based on
+    query_version = draft.based_on_version if draft.based_on_version != "v0" else "draft"
 
     return SearchQueryEditorResponse(
         project=WorkspaceProjectSummary(
@@ -167,7 +216,7 @@ def get_or_create_search_query_editor(
         stage_key="search",
         query_id=query.id or 0,
         query_name=query.name,
-        query_version="draft",
+        query_version=query_version,
         query_dirty=draft.query_dirty,
         query_mode="draft",
         selected_sources=selected_sources,
@@ -183,13 +232,8 @@ def save_search_query_draft(
     project: ResearchProject,
     payload: SaveSearchQueryDraftRequest,
 ) -> SearchQueryEditorResponse:
-    query = session.get(SearchQuery, payload.query_id)
-    draft = session.exec(
-        select(SearchQueryDraft).where(SearchQueryDraft.query_id == payload.query_id)
-    ).one()
-
-    if query is None or query.project_id != (project.id or 0):
-        raise ValueError("query not found")
+    query = _load_query_for_project(session, project, payload.query_id)
+    draft = _load_draft(session, payload.query_id)
 
     query.name = payload.query_name
     draft.grouped_terms_json = json.dumps(
@@ -206,7 +250,7 @@ def save_search_query_draft(
     session.add(draft)
     session.commit()
 
-    return get_or_create_search_query_editor(session, project)
+    return get_or_create_search_query_editor(session, project, query.id or 0)
 
 
 def save_search_query_version(
@@ -215,13 +259,8 @@ def save_search_query_version(
     payload: SaveSearchQueryDraftRequest,
 ) -> SearchQueryEditorResponse:
     save_search_query_draft(session, project, payload)
-    query = session.get(SearchQuery, payload.query_id)
-    draft = session.exec(
-        select(SearchQueryDraft).where(SearchQueryDraft.query_id == payload.query_id)
-    ).one()
-
-    if query is None:
-        raise ValueError("query not found")
+    query = _load_query_for_project(session, project, payload.query_id)
+    draft = _load_draft(session, payload.query_id)
 
     current_index = int(query.latest_version.removeprefix("v"))
     next_version = f"v{current_index + 1}"
@@ -239,8 +278,7 @@ def save_search_query_version(
     session.add(draft)
     session.commit()
 
-    updated = get_or_create_search_query_editor(session, project)
-    return updated.model_copy(update={"query_version": next_version})
+    return get_or_create_search_query_editor(session, project, query.id or 0)
 
 
 def get_search_query_snapshot(
@@ -249,16 +287,8 @@ def get_search_query_snapshot(
     query_id: int,
     version_label: str,
 ) -> SearchQueryEditorResponse:
-    query = session.get(SearchQuery, query_id)
-    version = session.exec(
-        select(SearchQueryVersion).where(
-            SearchQueryVersion.query_id == query_id,
-            SearchQueryVersion.version_label == version_label,
-        )
-    ).one()
-
-    if query is None or query.project_id != (project.id or 0):
-        raise ValueError("query not found")
+    query = _load_query_for_project(session, project, query_id)
+    version = _load_version(session, query_id, version_label)
 
     grouped_terms = [
         SearchTermGroupSummary(**item) for item in json.loads(version.grouped_terms_json)
@@ -296,19 +326,9 @@ def derive_search_query_draft(
     project: ResearchProject,
     payload: DeriveSearchQueryDraftRequest,
 ) -> SearchQueryEditorResponse:
-    query = session.get(SearchQuery, payload.query_id)
-    draft = session.exec(
-        select(SearchQueryDraft).where(SearchQueryDraft.query_id == payload.query_id)
-    ).one()
-    version = session.exec(
-        select(SearchQueryVersion).where(
-            SearchQueryVersion.query_id == payload.query_id,
-            SearchQueryVersion.version_label == payload.version_label,
-        )
-    ).one()
-
-    if query is None or query.project_id != (project.id or 0):
-        raise ValueError("query not found")
+    query = _load_query_for_project(session, project, payload.query_id)
+    draft = _load_draft(session, payload.query_id)
+    version = _load_version(session, payload.query_id, payload.version_label)
 
     draft.grouped_terms_json = version.grouped_terms_json
     draft.expression_blocks_json = version.expression_blocks_json
@@ -318,5 +338,4 @@ def derive_search_query_draft(
     session.add(draft)
     session.commit()
 
-    updated = get_or_create_search_query_editor(session, project)
-    return updated.model_copy(update={"query_version": payload.version_label})
+    return get_or_create_search_query_editor(session, project, query.id or 0)
