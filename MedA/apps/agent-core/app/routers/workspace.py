@@ -7,7 +7,10 @@ from app.models import ResearchProject
 from app.schemas import (
     DeriveSearchQueryDraftRequest,
     SaveSearchQueryDraftRequest,
+    SaveSearchSourceConfigRequest,
     SearchQueryEditorResponse,
+    SearchSourceCatalogResponse,
+    SearchSourceConfigResponse,
     StageEntryResponse,
     WorkspaceHomeResponse,
 )
@@ -18,6 +21,12 @@ from app.services.search_query import (
     get_search_query_snapshot,
     save_search_query_draft,
     save_search_query_version,
+)
+from app.services.search_source import (
+    SearchSourceConfigError,
+    build_source_catalog,
+    get_source_config,
+    save_source_config,
 )
 from app.services.stage_entry import build_stage_entry
 from app.services.workspace import build_workspace_home
@@ -150,4 +159,45 @@ def post_search_query_derive_draft(
     except SearchQueryNotFoundError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=str(error)
+        ) from error
+
+
+@router.get("/sources/catalog", response_model=SearchSourceCatalogResponse)
+def get_search_source_catalog(
+    context: SessionContext = Depends(get_current_session),
+) -> SearchSourceCatalogResponse:
+    return build_source_catalog()
+
+
+@router.get(
+    "/projects/{project_id}/stages/search/sources",
+    response_model=SearchSourceConfigResponse,
+)
+def get_search_source_config(
+    project_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> SearchSourceConfigResponse:
+    project = _load_project_or_404(session, project_id, context)
+
+    return get_source_config(session, project)
+
+
+@router.put(
+    "/projects/{project_id}/stages/search/sources",
+    response_model=SearchSourceConfigResponse,
+)
+def put_search_source_config(
+    project_id: int,
+    payload: SaveSearchSourceConfigRequest,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> SearchSourceConfigResponse:
+    project = _load_project_or_404(session, project_id, context)
+
+    try:
+        return save_source_config(session, project, payload)
+    except SearchSourceConfigError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
         ) from error

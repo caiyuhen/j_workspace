@@ -200,3 +200,57 @@ class SaveSearchQueryDraftRequest(BaseModel):
 class DeriveSearchQueryDraftRequest(BaseModel):
     query_id: int
     version_label: str
+
+
+class SourceCatalogItemResponse(BaseModel):
+    key: str
+    label: str
+    description: str
+    supports_full_text: bool
+
+
+class CatalogOptionResponse(BaseModel):
+    key: str
+    label: str
+
+
+class SearchSourceCatalogResponse(BaseModel):
+    available_sources: list[SourceCatalogItemResponse]
+    search_field_options: list[CatalogOptionResponse]
+    language_options: list[CatalogOptionResponse]
+
+
+class AvailableSourceResponse(BaseModel):
+    key: str
+    label: str
+    description: str
+    supports_full_text: bool
+    enabled: bool
+
+
+class SourceImpactSummary(BaseModel):
+    enabled_count: int
+    coverage_hint: str
+    query_impact_hint: str
+
+
+class SearchSourceConfigResponse(BaseModel):
+    project: WorkspaceProjectSummary
+    stage_key: str
+    available_sources: list[AvailableSourceResponse]
+    enabled_source_keys: list[str]
+    search_fields: list[str]
+    year_from: int | None
+    year_to: int | None
+    languages: list[str]
+    config_dirty: bool
+    impact_summary: SourceImpactSummary
+    validation_messages: list[SearchValidationMessage]
+
+
+class SaveSearchSourceConfigRequest(BaseModel):
+    enabled_source_keys: list[str]
+    search_fields: list[str]
+    year_from: int | None = None
+    year_to: int | None = None
+    languages: list[str]

@@ -62,6 +62,17 @@ class SearchQueryVersion(SQLModel, table=True):
     selected_sources_json: str
 
 
+class SearchSourceConfig(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id")
+    enabled_sources_json: str
+    search_fields_json: str
+    year_from: int | None = None
+    year_to: int | None = None
+    languages_json: str
+    config_dirty: bool = False
+
+
 class AuditEvent(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     actor: str
