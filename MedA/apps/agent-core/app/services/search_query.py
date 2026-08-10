@@ -14,6 +14,8 @@ from app.schemas import (
     SearchValidationMessage,
     WorkspaceProjectSummary,
 )
+from app.services.search_source import enabled_source_keys_for_project
+from app.services.source_catalog import source_labels_for_keys
 
 
 class SearchQueryNotFoundError(Exception):
@@ -142,12 +144,17 @@ def _build_validation_messages(
     ]
 
 
-def _build_preview_summary(selected_sources: list[str], source: str) -> SearchPreviewSummary:
+def _build_preview_summary(
+    selected_source_labels: list[str],
+    source: str,
+) -> SearchPreviewSummary:
     return SearchPreviewSummary(
-        status="available" if selected_sources else "unavailable",
+        status="available" if selected_source_labels else "unavailable",
         coverage_hint="主题组覆盖 2 / 5",
-        database_scope_summary=", ".join(selected_sources) if selected_sources else "未选择数据库",
-        estimated_hit_band="80-150",
+        database_scope_summary=(
+            ", ".join(selected_source_labels) if selected_source_labels else "未选择数据库"
+        ),
+        estimated_hit_band="80-150" if selected_source_labels else "不可用",
         last_generated_from=source,
     )
 
@@ -199,8 +206,18 @@ def get_or_create_search_query_editor(
             for item in json.loads(draft.expression_blocks_json)
         ]
 
-    selected_sources = json.loads(draft.selected_sources_json)
+    # Wave 6: 来源不再从 draft 读，改为项目级配置驱动
+    enabled_keys = enabled_source_keys_for_project(session, project)
+    selected_sources = source_labels_for_keys(enabled_keys)
     validation_messages = _build_validation_messages(grouped_terms, expression_blocks)
+    if not enabled_keys:
+        validation_messages.append(
+            SearchValidationMessage(
+                level="error",
+                code="MISSING_SOURCE_CONFIG",
+                message="请先在数据库来源页启用至少一个来源。",
+            )
+        )
 
     # Return the real version anchor so UI can show what version this draft is based on
     query_version = draft.based_on_version if draft.based_on_version != "v0" else "draft"
