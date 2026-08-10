@@ -124,7 +124,7 @@ def test_source_config_creates_default_on_first_read() -> None:
     assert body["year_from"] is None
     assert body["year_to"] is None
     assert body["languages"] == ["en"]
-    assert body["config_dirty"] is False
+    assert "config_dirty" not in body
     assert body["impact_summary"]["enabled_count"] == 2
     assert body["validation_messages"] == []
 
@@ -324,3 +324,33 @@ def test_source_config_notes_narrow_year_range() -> None:
 
     assert response.status_code == 200
     assert "NARROW_YEAR_RANGE" in codes
+
+
+def test_source_config_keeps_single_row_per_project_stage() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    for _ in range(3):
+        client.get(
+            f"/api/workspace/projects/{project_id}/stages/search/sources",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        client.put(
+            f"/api/workspace/projects/{project_id}/stages/search/sources",
+            headers={"Authorization": f"Bearer {token}"},
+            json={
+                "enabled_source_keys": ["pubmed"],
+                "search_fields": ["title"],
+                "year_from": None,
+                "year_to": None,
+                "languages": ["en"],
+            },
+        )
+
+    body = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/sources",
+        headers={"Authorization": f"Bearer {token}"},
+    ).json()
+
+    assert body["enabled_source_keys"] == ["pubmed"]
+    assert "config_dirty" not in body

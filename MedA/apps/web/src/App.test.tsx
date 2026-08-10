@@ -231,6 +231,21 @@ const sourceConfigResponse = {
 
 const getSearchSourceConfig = vi.fn(async () => sourceConfigResponse);
 
+const getSourceCatalog = vi.fn(async () => ({
+  available_sources: sourceConfigResponse.available_sources.map(
+    ({ enabled, ...item }) => item,
+  ),
+  search_field_options: [
+    { key: "title", label: "标题" },
+    { key: "abstract", label: "摘要" },
+    { key: "mesh", label: "主题词" },
+  ],
+  language_options: [
+    { key: "en", label: "英文" },
+    { key: "zh", label: "中文" },
+  ],
+}));
+
 const saveSearchSourceConfig = vi.fn(async () => ({
   ...sourceConfigResponse,
   available_sources: [
@@ -311,6 +326,7 @@ vi.mock("@meda/shared-sdk", () => ({
     saveSearchQueryVersion,
     deriveSearchQueryDraft,
     getSearchSourceConfig,
+    getSourceCatalog,
     saveSearchSourceConfig,
     getMe: vi.fn(),
   }),
@@ -401,4 +417,42 @@ test("web workspace opens source config and saves an extra database", async () =
   expect(
     await screen.findByText("已启用 2 个数据库：PubMed, Cochrane Library"),
   ).toBeInTheDocument();
+});
+
+test("web workspace edits search fields, year range and languages", async () => {
+  render(<App />);
+
+  fireEvent.change(screen.getByLabelText("机构标识"), {
+    target: { value: "demo-hospital" },
+  });
+  fireEvent.change(screen.getByLabelText("用户编号"), {
+    target: { value: "u-001" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "进入工作台" }));
+
+  fireEvent.click(await screen.findByRole("button", { name: "检索" }));
+  fireEvent.click(await screen.findByRole("button", { name: "数据库来源" }));
+
+  expect(getSourceCatalog).toHaveBeenCalled();
+  expect(
+    await screen.findByRole("checkbox", { name: "主题词" }),
+  ).not.toBeChecked();
+
+  fireEvent.click(screen.getByRole("checkbox", { name: "主题词" }));
+  fireEvent.click(screen.getByRole("checkbox", { name: "中文" }));
+  fireEvent.change(screen.getByLabelText("起始年份"), {
+    target: { value: "2015" },
+  });
+  fireEvent.change(screen.getByLabelText("结束年份"), {
+    target: { value: "2025" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "保存配置" }));
+
+  expect(saveSearchSourceConfig).toHaveBeenCalledWith(1, {
+    enabled_source_keys: ["pubmed"],
+    search_fields: ["title", "abstract", "mesh"],
+    year_from: 2015,
+    year_to: 2025,
+    languages: ["en", "zh"],
+  });
 });

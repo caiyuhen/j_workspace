@@ -4,7 +4,9 @@ import {
   createBrowserSessionStore,
   createClient,
   type ProjectSummary,
+  type SaveSearchSourceConfigPayload,
   type SearchQueryEditorSummary,
+  type SearchSourceCatalog,
   type SearchSourceConfigSummary,
   type SessionContext,
   type StageEntrySummary,
@@ -30,6 +32,8 @@ export default function App() {
     useState<SearchQueryEditorSummary | null>(null);
   const [sourceConfig, setSourceConfig] =
     useState<SearchSourceConfigSummary | null>(null);
+  const [sourceCatalog, setSourceCatalog] =
+    useState<SearchSourceCatalog | null>(null);
 
   const handleLogin = async (payload: {
     organizationSlug: string;
@@ -114,19 +118,17 @@ export default function App() {
   };
 
   const handleOpenSourceConfig = async (projectId: number) => {
-    const nextConfig = await client.getSearchSourceConfig(projectId);
+    const [nextConfig, nextCatalog] = await Promise.all([
+      client.getSearchSourceConfig(projectId),
+      client.getSourceCatalog(),
+    ]);
     setSourceConfig(nextConfig);
+    setSourceCatalog(nextCatalog);
   };
 
   const handleSaveSourceConfig = async (
     projectId: number,
-    payload: {
-      enabled_source_keys: string[];
-      search_fields: string[];
-      year_from: number | null;
-      year_to: number | null;
-      languages: string[];
-    },
+    payload: SaveSearchSourceConfigPayload,
   ) => {
     const nextConfig = await client.saveSearchSourceConfig(projectId, payload);
     setSourceConfig(nextConfig);
@@ -153,6 +155,7 @@ export default function App() {
       onSaveSearchQueryVersion={handleSaveSearchQueryVersion}
       onDeriveSearchQueryDraft={handleDeriveSearchQueryDraft}
       sourceConfig={sourceConfig}
+      sourceCatalog={sourceCatalog}
       onOpenSourceConfig={handleOpenSourceConfig}
       onSaveSourceConfig={handleSaveSourceConfig}
     />

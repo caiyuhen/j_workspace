@@ -2,15 +2,18 @@ import { useMemo, useState } from "react";
 
 import type {
   ProjectSummary,
+  SaveSearchSourceConfigPayload,
   SearchQueryEditorSummary,
+  SearchSourceCatalog,
   SearchSourceConfigSummary,
   SessionContext,
   StageEntrySummary,
   WorkspaceHomeSummary,
 } from "@meda/shared-sdk";
 
+import { SearchSourceConfigScreen } from "@meda/shared-ui";
+
 import { SearchQueryBuilderScreen } from "./workspace/SearchQueryBuilderScreen";
-import { SearchSourceConfigScreen } from "./workspace/SearchSourceConfigScreen";
 import { StageEntryScreen } from "./workspace/StageEntryScreen";
 import { SummaryButton } from "./workspace/SummaryButton";
 
@@ -33,16 +36,11 @@ type WorkspaceShellProps = {
     version: string,
   ) => Promise<void>;
   sourceConfig: SearchSourceConfigSummary | null;
+  sourceCatalog: SearchSourceCatalog | null;
   onOpenSourceConfig: (projectId: number) => Promise<void>;
   onSaveSourceConfig: (
     projectId: number,
-    payload: {
-      enabled_source_keys: string[];
-      search_fields: string[];
-      year_from: number | null;
-      year_to: number | null;
-      languages: string[];
-    },
+    payload: SaveSearchSourceConfigPayload,
   ) => Promise<void>;
 };
 
@@ -180,6 +178,7 @@ export function WorkspaceShell({
   onSaveSearchQueryVersion,
   onDeriveSearchQueryDraft,
   sourceConfig,
+  sourceCatalog,
   onOpenSourceConfig,
   onSaveSourceConfig,
 }: WorkspaceShellProps) {
@@ -233,6 +232,8 @@ export function WorkspaceShell({
         <LeftRail projects={projects} workspaceHome={workspaceHome} />
         <SearchSourceConfigScreen
           config={sourceConfig}
+          searchFieldOptions={sourceCatalog?.search_field_options ?? []}
+          languageOptions={sourceCatalog?.language_options ?? []}
           onBackToStageEntry={() => setScreen("stage-entry")}
           onSave={(payload) =>
             onSaveSourceConfig(workspaceHome.project.id, payload)

@@ -1,0 +1,17 @@
+{
+  "name": "@meda/shared-ui",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@meda/shared-sdk": "0.1.0",
+    "@types/react": "^18.3.3",
+    "typescript": "^5.5.4"
+  }
+}

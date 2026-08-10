@@ -5,6 +5,7 @@ import {
   createMemorySessionStore,
   type ProjectSummary,
   type SearchQueryEditorSummary,
+  type SearchSourceCatalog,
   type SearchSourceConfigSummary,
   type SessionContext,
   type StageEntrySummary,
@@ -13,8 +14,9 @@ import {
   type WorkspaceStageSummary,
 } from "@meda/shared-sdk";
 
+import { SearchSourceConfigScreen } from "@meda/shared-ui";
+
 import { SearchQueryBuilderScreen } from "./components/SearchQueryBuilderScreen";
-import { SearchSourceConfigScreen } from "./components/SearchSourceConfigScreen";
 import { StageEntryScreen } from "./components/StageEntryScreen";
 
 type Screen =
@@ -104,6 +106,8 @@ export default function App() {
     useState<SearchQueryEditorSummary | null>(null);
   const [sourceConfig, setSourceConfig] =
     useState<SearchSourceConfigSummary | null>(null);
+  const [sourceCatalog, setSourceCatalog] =
+    useState<SearchSourceCatalog | null>(null);
   const [screen, setScreen] = useState<Screen>("home");
 
   useEffect(() => {
@@ -242,9 +246,12 @@ export default function App() {
             }
 
             if (entryKey === "sources") {
-              setSourceConfig(
-                await client.getSearchSourceConfig(workspaceHome.project.id),
-              );
+              const [nextConfig, nextCatalog] = await Promise.all([
+                client.getSearchSourceConfig(workspaceHome.project.id),
+                client.getSourceCatalog(),
+              ]);
+              setSourceConfig(nextConfig);
+              setSourceCatalog(nextCatalog);
               setScreen("source-config");
               return;
             }
@@ -434,6 +441,8 @@ export default function App() {
 
         <SearchSourceConfigScreen
           config={sourceConfig}
+          searchFieldOptions={sourceCatalog?.search_field_options ?? []}
+          languageOptions={sourceCatalog?.language_options ?? []}
           onBackToStageEntry={() => setScreen("stage-entry")}
           onSave={async (payload) => {
             setSourceConfig(

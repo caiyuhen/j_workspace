@@ -243,7 +243,6 @@ class SearchSourceConfigResponse(BaseModel):
     year_from: int | None
     year_to: int | None
     languages: list[str]
-    config_dirty: bool
     impact_summary: SourceImpactSummary
     validation_messages: list[SearchValidationMessage]
 

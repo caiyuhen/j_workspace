@@ -203,7 +203,6 @@ def _build_response(
         year_from=config.year_from,
         year_to=config.year_to,
         languages=languages,
-        config_dirty=config.config_dirty,
         impact_summary=SourceImpactSummary(
             enabled_count=len(enabled_keys),
             coverage_hint=coverage_hint,
@@ -238,7 +237,6 @@ def save_source_config(
     config.languages_json = json.dumps(payload.languages, ensure_ascii=False)
     config.year_from = payload.year_from
     config.year_to = payload.year_to
-    config.config_dirty = False
     session.add(config)
     session.commit()
     session.refresh(config)

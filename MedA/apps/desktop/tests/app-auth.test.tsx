@@ -71,6 +71,21 @@ const sourceConfigResponse = {
 
 const getSearchSourceConfig = vi.fn(async () => sourceConfigResponse);
 
+const getSourceCatalog = vi.fn(async () => ({
+  available_sources: sourceConfigResponse.available_sources.map(
+    ({ enabled, ...item }) => item,
+  ),
+  search_field_options: [
+    { key: "title", label: "标题" },
+    { key: "abstract", label: "摘要" },
+    { key: "mesh", label: "主题词" },
+  ],
+  language_options: [
+    { key: "en", label: "英文" },
+    { key: "zh", label: "中文" },
+  ],
+}));
+
 const saveSearchSourceConfig = vi.fn(async () => ({
   ...sourceConfigResponse,
   enabled_source_keys: ["pubmed", "cochrane"],
@@ -238,6 +253,7 @@ vi.mock("@meda/shared-sdk", () => ({
     saveSearchQueryVersion,
     deriveSearchQueryDraft: vi.fn(),
     getSearchSourceConfig,
+    getSourceCatalog,
     saveSearchSourceConfig,
   }),
 }));
