@@ -41,6 +41,13 @@ const getStageEntry = vi.fn(async () => ({
       status: "ready",
       target: "/workspace/stage/search/query-builder",
     },
+    {
+      key: "sources",
+      title: "数据库来源",
+      description: "配置检索覆盖的数据库范围",
+      status: "ready",
+      target: "/workspace/projects/1/stages/search/sources",
+    },
   ],
   recent_tasks: [
     {
@@ -183,6 +190,61 @@ const saveSearchQueryVersion = vi.fn(async () => ({
 
 const deriveSearchQueryDraft = vi.fn();
 
+const sourceConfigResponse = {
+  project: {
+    id: 1,
+    name: "糖尿病真实世界研究",
+    workspace_key: "demo-hospital/糖尿病真实世界研究",
+    current_stage: "检索",
+    updated_at_label: "刚刚更新",
+  },
+  stage_key: "search",
+  available_sources: [
+    {
+      key: "pubmed",
+      label: "PubMed",
+      description: "美国国立医学图书馆生物医学文献库",
+      supports_full_text: false,
+      enabled: true,
+    },
+    {
+      key: "cochrane",
+      label: "Cochrane Library",
+      description: "系统评价与随机对照试验证据库",
+      supports_full_text: true,
+      enabled: false,
+    },
+  ],
+  enabled_source_keys: ["pubmed"],
+  search_fields: ["title", "abstract"],
+  year_from: null,
+  year_to: null,
+  languages: ["en"],
+  config_dirty: false,
+  impact_summary: {
+    enabled_count: 1,
+    coverage_hint: "已启用 1 个数据库：PubMed",
+    query_impact_hint: "当前检索式的预览将基于这 1 个库重新计算",
+  },
+  validation_messages: [],
+};
+
+const getSearchSourceConfig = vi.fn(async () => sourceConfigResponse);
+
+const saveSearchSourceConfig = vi.fn(async () => ({
+  ...sourceConfigResponse,
+  available_sources: [
+    { ...sourceConfigResponse.available_sources[0], enabled: true },
+    { ...sourceConfigResponse.available_sources[1], enabled: true },
+  ],
+  enabled_source_keys: ["pubmed", "cochrane"],
+  impact_summary: {
+    enabled_count: 2,
+    coverage_hint: "已启用 2 个数据库：PubMed, Cochrane Library",
+    query_impact_hint: "当前检索式的预览将基于这 2 个库重新计算",
+  },
+}));
+
 vi.mock("@meda/shared-sdk", () => ({
   createBrowserSessionStore: () => sessionStore,
   createClient: () => ({
@@ -248,6 +310,8 @@ vi.mock("@meda/shared-sdk", () => ({
     saveSearchQueryDraft,
     saveSearchQueryVersion,
     deriveSearchQueryDraft,
+    getSearchSourceConfig,
+    saveSearchSourceConfig,
     getMe: vi.fn(),
   }),
 }));
@@ -301,4 +365,40 @@ test("web workspace opens query builder and creates a version", async () => {
 
   expect(saveSearchQueryVersion).toHaveBeenCalled();
   expect(await screen.findByText("当前版本：v1")).toBeInTheDocument();
+});
+
+test("web workspace opens source config and saves an extra database", async () => {
+  render(<App />);
+
+  fireEvent.change(screen.getByLabelText("机构标识"), {
+    target: { value: "demo-hospital" },
+  });
+  fireEvent.change(screen.getByLabelText("用户编号"), {
+    target: { value: "u-001" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "进入工作台" }));
+
+  fireEvent.click(await screen.findByRole("button", { name: "检索" }));
+  fireEvent.click(await screen.findByRole("button", { name: "数据库来源" }));
+
+  expect(getSearchSourceConfig).toHaveBeenCalledWith(1);
+  expect(
+    await screen.findByRole("heading", { name: "数据库来源" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("已启用 1 个数据库：PubMed")).toBeInTheDocument();
+  expect(screen.getByLabelText("启用 Cochrane Library")).not.toBeChecked();
+
+  fireEvent.click(screen.getByLabelText("启用 Cochrane Library"));
+  fireEvent.click(screen.getByRole("button", { name: "保存配置" }));
+
+  expect(saveSearchSourceConfig).toHaveBeenCalledWith(1, {
+    enabled_source_keys: ["pubmed", "cochrane"],
+    search_fields: ["title", "abstract"],
+    year_from: null,
+    year_to: null,
+    languages: ["en"],
+  });
+  expect(
+    await screen.findByText("已启用 2 个数据库：PubMed, Cochrane Library"),
+  ).toBeInTheDocument();
 });

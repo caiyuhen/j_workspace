@@ -5,6 +5,7 @@ import {
   createClient,
   type ProjectSummary,
   type SearchQueryEditorSummary,
+  type SearchSourceConfigSummary,
   type SessionContext,
   type StageEntrySummary,
   type WorkspaceHomeSummary,
@@ -27,6 +28,8 @@ export default function App() {
   const [stageEntry, setStageEntry] = useState<StageEntrySummary | null>(null);
   const [searchQueryEditor, setSearchQueryEditor] =
     useState<SearchQueryEditorSummary | null>(null);
+  const [sourceConfig, setSourceConfig] =
+    useState<SearchSourceConfigSummary | null>(null);
 
   const handleLogin = async (payload: {
     organizationSlug: string;
@@ -51,6 +54,7 @@ export default function App() {
     setWorkspaceHome(nextWorkspaceHome);
     setStageEntry(null);
     setSearchQueryEditor(null);
+    setSourceConfig(null);
   };
 
   const handleOpenStage = async (projectId: number, stageKey: string) => {
@@ -109,6 +113,25 @@ export default function App() {
     setSearchQueryEditor(nextEditor);
   };
 
+  const handleOpenSourceConfig = async (projectId: number) => {
+    const nextConfig = await client.getSearchSourceConfig(projectId);
+    setSourceConfig(nextConfig);
+  };
+
+  const handleSaveSourceConfig = async (
+    projectId: number,
+    payload: {
+      enabled_source_keys: string[];
+      search_fields: string[];
+      year_from: number | null;
+      year_to: number | null;
+      languages: string[];
+    },
+  ) => {
+    const nextConfig = await client.saveSearchSourceConfig(projectId, payload);
+    setSourceConfig(nextConfig);
+  };
+
   if (session === null) {
     return <LoginForm onSubmit={handleLogin} />;
   }
@@ -129,6 +152,9 @@ export default function App() {
       onSaveSearchQueryDraft={handleSaveSearchQueryDraft}
       onSaveSearchQueryVersion={handleSaveSearchQueryVersion}
       onDeriveSearchQueryDraft={handleDeriveSearchQueryDraft}
+      sourceConfig={sourceConfig}
+      onOpenSourceConfig={handleOpenSourceConfig}
+      onSaveSourceConfig={handleSaveSourceConfig}
     />
   );
 }

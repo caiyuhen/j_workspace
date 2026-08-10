@@ -3,12 +3,14 @@ import { useMemo, useState } from "react";
 import type {
   ProjectSummary,
   SearchQueryEditorSummary,
+  SearchSourceConfigSummary,
   SessionContext,
   StageEntrySummary,
   WorkspaceHomeSummary,
 } from "@meda/shared-sdk";
 
 import { SearchQueryBuilderScreen } from "./workspace/SearchQueryBuilderScreen";
+import { SearchSourceConfigScreen } from "./workspace/SearchSourceConfigScreen";
 import { StageEntryScreen } from "./workspace/StageEntryScreen";
 import { SummaryButton } from "./workspace/SummaryButton";
 
@@ -30,6 +32,18 @@ type WorkspaceShellProps = {
     queryId: number,
     version: string,
   ) => Promise<void>;
+  sourceConfig: SearchSourceConfigSummary | null;
+  onOpenSourceConfig: (projectId: number) => Promise<void>;
+  onSaveSourceConfig: (
+    projectId: number,
+    payload: {
+      enabled_source_keys: string[];
+      search_fields: string[];
+      year_from: number | null;
+      year_to: number | null;
+      languages: string[];
+    },
+  ) => Promise<void>;
 };
 
 type Screen =
@@ -39,6 +53,7 @@ type Screen =
   | "assistant"
   | "stage-entry"
   | "query-builder"
+  | "source-config"
   | "stage-subentry";
 
 const shellStyle = {
@@ -164,6 +179,9 @@ export function WorkspaceShell({
   onSaveSearchQueryDraft,
   onSaveSearchQueryVersion,
   onDeriveSearchQueryDraft,
+  sourceConfig,
+  onOpenSourceConfig,
+  onSaveSourceConfig,
 }: WorkspaceShellProps) {
   const [screen, setScreen] = useState<Screen>("home");
 
@@ -209,6 +227,21 @@ export function WorkspaceShell({
     );
   }
 
+  if (screen === "source-config" && sourceConfig !== null) {
+    return (
+      <main style={shellStyle}>
+        <LeftRail projects={projects} workspaceHome={workspaceHome} />
+        <SearchSourceConfigScreen
+          config={sourceConfig}
+          onBackToStageEntry={() => setScreen("stage-entry")}
+          onSave={(payload) =>
+            onSaveSourceConfig(workspaceHome.project.id, payload)
+          }
+        />
+      </main>
+    );
+  }
+
   if (screen === "stage-entry" && stageEntry !== null) {
     return (
       <main style={shellStyle}>
@@ -226,6 +259,12 @@ export function WorkspaceShell({
             if (entryKey === "query-builder") {
               await onOpenSearchQueryBuilder(workspaceHome.project.id);
               setScreen("query-builder");
+              return;
+            }
+
+            if (entryKey === "sources") {
+              await onOpenSourceConfig(workspaceHome.project.id);
+              setScreen("source-config");
               return;
             }
 
