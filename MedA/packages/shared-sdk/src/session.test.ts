@@ -366,4 +366,119 @@ describe("workspace client", () => {
     expect(data.query_mode).toBe("draft");
     expect(data.query_version).toBe("v1");
   });
+
+  it("fetches the source catalog", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        available_sources: [
+          {
+            key: "pubmed",
+            label: "PubMed",
+            description: "美国国立医学图书馆生物医学文献库",
+            supports_full_text: false,
+          },
+        ],
+        search_field_options: [{ key: "title", label: "标题" }],
+        language_options: [{ key: "en", label: "英文" }],
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const catalog = await client.getSourceCatalog();
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/sources/catalog",
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    expect(catalog.available_sources[0].key).toBe("pubmed");
+    expect(catalog.search_field_options[0].label).toBe("标题");
+  });
+
+  it("fetches the search source config", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        project: {
+          id: 1,
+          name: "糖尿病真实世界研究",
+          workspace_key: "demo-hospital/糖尿病真实世界研究",
+          current_stage: "检索",
+          updated_at_label: "刚刚更新",
+        },
+        stage_key: "search",
+        available_sources: [],
+        enabled_source_keys: ["pubmed", "embase"],
+        search_fields: ["title", "abstract"],
+        year_from: null,
+        year_to: null,
+        languages: ["en"],
+        config_dirty: false,
+        impact_summary: {
+          enabled_count: 2,
+          coverage_hint: "已启用 2 个数据库：PubMed, Embase",
+          query_impact_hint: "当前检索式的预览将基于这 2 个库重新计算",
+        },
+        validation_messages: [],
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const config = await client.getSearchSourceConfig(1);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/1/stages/search/sources",
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    expect(config.enabled_source_keys).toEqual(["pubmed", "embase"]);
+    expect(config.impact_summary.enabled_count).toBe(2);
+  });
+
+  it("saves the search source config", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        project: {
+          id: 1,
+          name: "糖尿病真实世界研究",
+          workspace_key: "demo-hospital/糖尿病真实世界研究",
+          current_stage: "检索",
+          updated_at_label: "刚刚更新",
+        },
+        stage_key: "search",
+        available_sources: [],
+        enabled_source_keys: ["pubmed", "cochrane"],
+        search_fields: ["title"],
+        year_from: 2015,
+        year_to: 2025,
+        languages: ["en"],
+        config_dirty: false,
+        impact_summary: {
+          enabled_count: 2,
+          coverage_hint: "已启用 2 个数据库：PubMed, Cochrane Library",
+          query_impact_hint: "当前检索式的预览将基于这 2 个库重新计算",
+        },
+        validation_messages: [],
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const config = await client.saveSearchSourceConfig(1, {
+      enabled_source_keys: ["pubmed", "cochrane"],
+      search_fields: ["title"],
+      year_from: 2015,
+      year_to: 2025,
+      languages: ["en"],
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/1/stages/search/sources",
+      expect.objectContaining({ method: "PUT" }),
+    );
+    expect(config.enabled_source_keys).toEqual(["pubmed", "cochrane"]);
+    expect(config.year_from).toBe(2015);
+  });
 });

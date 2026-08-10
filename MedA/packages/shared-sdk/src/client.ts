@@ -156,6 +156,56 @@ export type DeriveSearchQueryDraftPayload = {
   version_label: string;
 };
 
+export type SourceCatalogItem = {
+  key: string;
+  label: string;
+  description: string;
+  supports_full_text: boolean;
+};
+
+export type CatalogOption = {
+  key: string;
+  label: string;
+};
+
+export type SearchSourceCatalog = {
+  available_sources: SourceCatalogItem[];
+  search_field_options: CatalogOption[];
+  language_options: CatalogOption[];
+};
+
+export type AvailableSource = SourceCatalogItem & {
+  enabled: boolean;
+};
+
+export type SourceImpactSummary = {
+  enabled_count: number;
+  coverage_hint: string;
+  query_impact_hint: string;
+};
+
+export type SearchSourceConfigSummary = {
+  project: WorkspaceProjectSummary;
+  stage_key: string;
+  available_sources: AvailableSource[];
+  enabled_source_keys: string[];
+  search_fields: string[];
+  year_from: number | null;
+  year_to: number | null;
+  languages: string[];
+  config_dirty: boolean;
+  impact_summary: SourceImpactSummary;
+  validation_messages: SearchValidationMessage[];
+};
+
+export type SaveSearchSourceConfigPayload = {
+  enabled_source_keys: string[];
+  search_fields: string[];
+  year_from: number | null;
+  year_to: number | null;
+  languages: string[];
+};
+
 export type DevLoginPayload = {
   organization_slug: string;
   organization_name: string;
@@ -343,6 +393,58 @@ export function createClient(
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.detail ?? "search query derive failed");
+      }
+
+      return data;
+    },
+
+    async getSourceCatalog(): Promise<SearchSourceCatalog> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/sources/catalog`,
+        {
+          headers: buildHeaders(),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "source catalog failed");
+      }
+
+      return data;
+    },
+
+    async getSearchSourceConfig(
+      projectId: number,
+    ): Promise<SearchSourceConfigSummary> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/sources`,
+        {
+          headers: buildHeaders(),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "source config failed");
+      }
+
+      return data;
+    },
+
+    async saveSearchSourceConfig(
+      projectId: number,
+      payload: SaveSearchSourceConfigPayload,
+    ): Promise<SearchSourceConfigSummary> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/sources`,
+        {
+          method: "PUT",
+          headers: buildHeaders(),
+          body: JSON.stringify(payload),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "source config save failed");
       }
 
       return data;
