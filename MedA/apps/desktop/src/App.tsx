@@ -5,6 +5,7 @@ import {
   createMemorySessionStore,
   type ProjectSummary,
   type SearchQueryEditorSummary,
+  type SearchSourceConfigSummary,
   type SessionContext,
   type StageEntrySummary,
   type WorkspaceHomeSummary,
@@ -13,6 +14,7 @@ import {
 } from "@meda/shared-sdk";
 
 import { SearchQueryBuilderScreen } from "./components/SearchQueryBuilderScreen";
+import { SearchSourceConfigScreen } from "./components/SearchSourceConfigScreen";
 import { StageEntryScreen } from "./components/StageEntryScreen";
 
 type Screen =
@@ -22,6 +24,7 @@ type Screen =
   | "assistant"
   | "stage-entry"
   | "query-builder"
+  | "source-config"
   | "stage-subentry";
 
 const shellStyle = {
@@ -99,6 +102,8 @@ export default function App() {
   const [stageEntry, setStageEntry] = useState<StageEntrySummary | null>(null);
   const [searchQueryEditor, setSearchQueryEditor] =
     useState<SearchQueryEditorSummary | null>(null);
+  const [sourceConfig, setSourceConfig] =
+    useState<SearchSourceConfigSummary | null>(null);
   const [screen, setScreen] = useState<Screen>("home");
 
   useEffect(() => {
@@ -236,6 +241,14 @@ export default function App() {
               return;
             }
 
+            if (entryKey === "sources") {
+              setSourceConfig(
+                await client.getSearchSourceConfig(workspaceHome.project.id),
+              );
+              setScreen("source-config");
+              return;
+            }
+
             setScreen("stage-subentry");
           }}
         />
@@ -339,6 +352,95 @@ export default function App() {
                 grouped_terms: searchQueryEditor.grouped_terms,
                 expression_blocks: searchQueryEditor.expression_blocks,
               }),
+            );
+          }}
+        />
+      </main>
+    );
+  }
+
+  if (screen === "source-config" && sourceConfig !== null) {
+    return (
+      <main style={shellStyle}>
+        <section
+          style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: "20px" }}
+        >
+          <div>
+            <div
+              style={{ fontSize: "12px", color: "#6b7280", letterSpacing: "0.08em" }}
+            >
+              MEDA DESKTOP
+            </div>
+            <h1 style={{ margin: "8px 0 0", fontSize: "24px" }}>
+              MedA Desktop Workspace
+            </h1>
+          </div>
+
+          <nav aria-label="主导航">
+            <ul
+              style={{ ...listStyle, display: "flex", flexDirection: "column", gap: "10px" }}
+            >
+              {["工作台", "项目", "数据 / 资料", "Agent", "产物", "管理"].map((item) => (
+                <li key={item}>
+                  <div
+                    style={{
+                      borderRadius: "12px",
+                      padding: "10px 12px",
+                      background: item === "工作台" ? "#eef2ff" : "#f8fafc",
+                      color: item === "工作台" ? "#3730a3" : "#334155",
+                      fontWeight: item === "工作台" ? 600 : 500,
+                    }}
+                  >
+                    {item}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <section>
+            <h2 style={{ margin: "0 0 12px", fontSize: "16px" }}>项目上下文</h2>
+            <ul
+              style={{ ...listStyle, display: "flex", flexDirection: "column", gap: "10px" }}
+            >
+              {projects.map((project) => (
+                <li key={project.id}>
+                  <div
+                    style={{
+                      border:
+                        project.id === workspaceHome.project.id
+                          ? "1px solid #c7d2fe"
+                          : "1px solid #e5e7eb",
+                      background:
+                        project.id === workspaceHome.project.id
+                          ? "#f8faff"
+                          : "#ffffff",
+                      borderRadius: "14px",
+                      padding: "12px 14px",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{project.name}</div>
+                    <div
+                      style={{ marginTop: "4px", color: "#6b7280", fontSize: "13px" }}
+                    >
+                      {project.workspace_key}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </section>
+
+        <SearchSourceConfigScreen
+          config={sourceConfig}
+          onBackToStageEntry={() => setScreen("stage-entry")}
+          onSave={async (payload) => {
+            setSourceConfig(
+              await client.saveSearchSourceConfig(
+                workspaceHome.project.id,
+                payload,
+              ),
             );
           }}
         />
