@@ -291,3 +291,129 @@ def test_derived_draft_keeps_version_anchor_after_reload() -> None:
     assert reloaded.status_code == 200
     assert reloaded.json()["query_mode"] == "draft"
     assert reloaded.json()["query_version"] == "v1"
+
+
+def test_query_builder_reads_sources_from_project_config() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    client.put(
+        f"/api/workspace/projects/{project_id}/stages/search/sources",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "enabled_source_keys": ["pubmed", "cochrane", "cnki"],
+            "search_fields": ["title", "abstract"],
+            "year_from": None,
+            "year_to": None,
+            "languages": ["en"],
+        },
+    )
+
+    body = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder",
+        headers={"Authorization": f"Bearer {token}"},
+    ).json()
+
+    assert body["selected_sources"] == ["PubMed", "Cochrane Library", "中国知网 CNKI"]
+    assert body["preview_summary"]["status"] == "available"
+    assert body["preview_summary"]["database_scope_summary"] == (
+        "PubMed, Cochrane Library, 中国知网 CNKI"
+    )
+
+
+def test_query_builder_preview_degrades_when_no_sources_enabled() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    client.put(
+        f"/api/workspace/projects/{project_id}/stages/search/sources",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "enabled_source_keys": [],
+            "search_fields": ["title"],
+            "year_from": None,
+            "year_to": None,
+            "languages": ["en"],
+        },
+    )
+
+    body = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder",
+        headers={"Authorization": f"Bearer {token}"},
+    ).json()
+    codes = [item["code"] for item in body["validation_messages"]]
+
+    assert body["selected_sources"] == []
+    assert body["preview_summary"]["status"] == "unavailable"
+    assert body["preview_summary"]["database_scope_summary"] == "未选择数据库"
+    assert "MISSING_SOURCE_CONFIG" in codes
+    assert next(
+        item["level"]
+        for item in body["validation_messages"]
+        if item["code"] == "MISSING_SOURCE_CONFIG"
+    ) == "error"
+
+
+def test_version_snapshot_keeps_its_own_sources_after_config_change() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    initial = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder",
+        headers={"Authorization": f"Bearer {token}"},
+    ).json()
+
+    client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder/save-as-version",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "query_id": initial["query_id"],
+            "query_name": initial["query_name"],
+            "selected_sources": initial["selected_sources"],
+            "grouped_terms": initial["grouped_terms"],
+            "expression_blocks": initial["expression_blocks"],
+        },
+    )
+
+    client.put(
+        f"/api/workspace/projects/{project_id}/stages/search/sources",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "enabled_source_keys": ["wanfang"],
+            "search_fields": ["title"],
+            "year_from": None,
+            "year_to": None,
+            "languages": ["zh"],
+        },
+    )
+
+    snapshot = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder"
+        f"?query_id={initial['query_id']}&version=v1",
+        headers={"Authorization": f"Bearer {token}"},
+    ).json()
+    current = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/query-builder",
+        headers={"Authorization": f"Bearer {token}"},
+    ).json()
+
+    assert snapshot["query_mode"] == "snapshot"
+    assert snapshot["selected_sources"] == ["PubMed", "Embase"]
+    assert current["selected_sources"] == ["万方数据"]
+
+
+def test_stage_entry_points_sources_card_to_project_deep_page() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    body = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search",
+        headers={"Authorization": f"Bearer {token}"},
+    ).json()
+    sources_card = next(
+        card for card in body["entry_cards"] if card["key"] == "sources"
+    )
+
+    assert sources_card["target"] == (
+        f"/workspace/projects/{project_id}/stages/search/sources"
+    )

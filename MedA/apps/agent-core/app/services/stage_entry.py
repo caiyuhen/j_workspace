@@ -377,12 +377,13 @@ def build_stage_entry(
         primary_action = primary_action.model_copy(
             update={"target": f"/workspace/projects/{project_id}/stages/search/query-builder"}
         )
+        project_deep_page_keys = {"query-builder", "sources"}
         entry_cards = [
             card.model_copy(
                 update={
                     "target": (
-                        f"/workspace/projects/{project_id}/stages/search/query-builder"
-                        if card.key == "query-builder"
+                        f"/workspace/projects/{project_id}/stages/search/{card.key}"
+                        if card.key in project_deep_page_keys
                         else card.target
                     )
                 }

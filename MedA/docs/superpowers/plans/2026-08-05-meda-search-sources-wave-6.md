@@ -1140,27 +1140,25 @@ Expected: 前三个新测试 PASS，`test_stage_entry_points_sources_card_to_pro
 
 - [ ] **Step 7: 升级 stage_entry 的 sources 卡片**
 
-在 `apps/agent-core/app/services/stage_entry.py` 中找到 `build_stage_entry` 里处理 `query-builder` 卡片 target 的逻辑，把 `sources` 也纳入项目级路由改写。将卡片 target 改写段落替换为：
+在 `apps/agent-core/app/services/stage_entry.py` 的 `build_stage_entry` 中，找到 `if stage_key == "search":` 分支内的 `entry_cards` 列表推导（约 380-391 行）。当前它只改写 `query-builder` 一个卡片，把整个列表推导替换为：
 
 ```python
-    project_deep_page_keys = {"query-builder", "sources"}
-    entry_cards = [
-        StageEntryCardSummary(
-            key=card["key"],
-            title=card["title"],
-            description=card["description"],
-            status=card["status"],
-            target=(
-                f"/workspace/projects/{project.id}/stages/{stage_key}/{card['key']}"
-                if stage_key == "search" and card["key"] in project_deep_page_keys
-                else card["target"]
-            ),
-        )
-        for card in config["entry_cards"]
-    ]
+        project_deep_page_keys = {"query-builder", "sources"}
+        entry_cards = [
+            card.model_copy(
+                update={
+                    "target": (
+                        f"/workspace/projects/{project_id}/stages/search/{card.key}"
+                        if card.key in project_deep_page_keys
+                        else card.target
+                    )
+                }
+            )
+            for card in config["entry_cards"]
+        ]
 ```
 
-若现有实现的变量名或结构不同，保持既有写法，只把判定条件从单一 `query-builder` 扩展为 `project_deep_page_keys` 集合。
+注意：`config["entry_cards"]` 里存的是 `StageEntryCardSummary` 实例（不是 dict），所以用 `card.key` / `card.target` 属性访问与 `model_copy`。`primary_action` 的改写逻辑保持不变，不要动它。
 
 - [ ] **Step 8: 运行测试确认通过**
 
