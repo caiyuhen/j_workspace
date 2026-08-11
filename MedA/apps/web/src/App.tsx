@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import {
   createBrowserSessionStore,
   createClient,
+  type ImportLiteraturePayload,
+  type LiteratureLibrarySummary,
   type ProjectSummary,
   type SaveSearchSourceConfigPayload,
   type SearchQueryEditorSummary,
@@ -34,6 +36,8 @@ export default function App() {
     useState<SearchSourceConfigSummary | null>(null);
   const [sourceCatalog, setSourceCatalog] =
     useState<SearchSourceCatalog | null>(null);
+  const [literatureLibrary, setLiteratureLibrary] =
+    useState<LiteratureLibrarySummary | null>(null);
 
   const handleLogin = async (payload: {
     organizationSlug: string;
@@ -59,6 +63,7 @@ export default function App() {
     setStageEntry(null);
     setSearchQueryEditor(null);
     setSourceConfig(null);
+    setLiteratureLibrary(null);
   };
 
   const handleOpenStage = async (projectId: number, stageKey: string) => {
@@ -134,6 +139,27 @@ export default function App() {
     setSourceConfig(nextConfig);
   };
 
+  const handleOpenLiteratureLibrary = async (projectId: number) => {
+    const nextLibrary = await client.getLiteratureLibrary(projectId);
+    setLiteratureLibrary(nextLibrary);
+  };
+
+  const handleImportLiterature = async (
+    projectId: number,
+    payload: ImportLiteraturePayload,
+  ) => {
+    const nextLibrary = await client.importLiterature(projectId, payload);
+    setLiteratureLibrary(nextLibrary);
+  };
+
+  const handleConfirmLiteratureUnique = async (
+    projectId: number,
+    recordId: number,
+  ) => {
+    const nextLibrary = await client.confirmLiteratureUnique(projectId, recordId);
+    setLiteratureLibrary(nextLibrary);
+  };
+
   if (session === null) {
     return <LoginForm onSubmit={handleLogin} />;
   }
@@ -158,6 +184,10 @@ export default function App() {
       sourceCatalog={sourceCatalog}
       onOpenSourceConfig={handleOpenSourceConfig}
       onSaveSourceConfig={handleSaveSourceConfig}
+      literatureLibrary={literatureLibrary}
+      onOpenLiteratureLibrary={handleOpenLiteratureLibrary}
+      onImportLiterature={handleImportLiterature}
+      onConfirmLiteratureUnique={handleConfirmLiteratureUnique}
     />
   );
 }

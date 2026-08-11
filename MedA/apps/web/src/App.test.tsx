@@ -48,6 +48,13 @@ const getStageEntry = vi.fn(async () => ({
       status: "ready",
       target: "/workspace/projects/1/stages/search/sources",
     },
+    {
+      key: "literature",
+      title: "文献条目库",
+      description: "导入与去重项目文献集合",
+      status: "ready",
+      target: "/workspace/projects/1/stages/search/literature",
+    },
   ],
   recent_tasks: [
     {
@@ -260,6 +267,94 @@ const saveSearchSourceConfig = vi.fn(async () => ({
   },
 }));
 
+const literatureResponse = {
+  project: {
+    id: 1,
+    name: "糖尿病真实世界研究",
+    workspace_key: "demo-hospital/糖尿病真实世界研究",
+    current_stage: "检索",
+    updated_at_label: "刚刚更新",
+  },
+  stage_key: "search",
+  records: [
+    {
+      id: 11,
+      title: "Metformin and cardiovascular outcomes",
+      authors: "Chen L",
+      journal: "Lancet",
+      year: 2023,
+      doi: "10.1016/S2213-8587",
+      pmid: "37123456",
+      source_key: "pubmed",
+      source_label: "PubMed",
+      dedupe_status: "unique",
+      duplicate_of_id: null,
+    },
+    {
+      id: 12,
+      title: "Duplicated paper",
+      authors: "Zhang Y",
+      journal: "NEJM",
+      year: 2023,
+      doi: "10.1016/S2213-8587",
+      pmid: "",
+      source_key: "embase",
+      source_label: "Embase",
+      dedupe_status: "duplicate",
+      duplicate_of_id: 11,
+    },
+  ],
+  stats: {
+    total_count: 2,
+    unique_count: 1,
+    duplicate_count: 1,
+    by_source: [
+      { source_key: "pubmed", source_label: "PubMed", count: 1 },
+      { source_key: "embase", source_label: "Embase", count: 1 },
+    ],
+  },
+  recent_batches: [],
+  available_sources: [
+    {
+      key: "pubmed",
+      label: "PubMed",
+      description: "美国国立医学图书馆生物医学文献库",
+      supports_full_text: false,
+    },
+    {
+      key: "embase",
+      label: "Embase",
+      description: "爱思唯尔生物医学与药理学文献库",
+      supports_full_text: false,
+    },
+  ],
+  last_import_result: null,
+};
+
+const getLiteratureLibrary = vi.fn(async () => literatureResponse);
+
+const importLiterature = vi.fn(async () => ({
+  ...literatureResponse,
+  last_import_result: {
+    imported_count: 2,
+    duplicate_count: 1,
+    skipped_count: 0,
+  },
+}));
+
+const confirmLiteratureUnique = vi.fn(async () => ({
+  ...literatureResponse,
+  records: [
+    literatureResponse.records[0],
+    {
+      ...literatureResponse.records[1],
+      dedupe_status: "confirmed_unique",
+      duplicate_of_id: null,
+    },
+  ],
+  stats: { ...literatureResponse.stats, unique_count: 2, duplicate_count: 0 },
+}));
+
 vi.mock("@meda/shared-sdk", () => ({
   createBrowserSessionStore: () => sessionStore,
   createClient: () => ({
@@ -328,6 +423,9 @@ vi.mock("@meda/shared-sdk", () => ({
     getSearchSourceConfig,
     getSourceCatalog,
     saveSearchSourceConfig,
+    getLiteratureLibrary,
+    importLiterature,
+    confirmLiteratureUnique,
     getMe: vi.fn(),
   }),
 }));
@@ -455,4 +553,48 @@ test("web workspace edits search fields, year range and languages", async () => 
     year_to: 2025,
     languages: ["en", "zh"],
   });
+});
+
+test("web workspace imports literature and confirms a duplicate", async () => {
+  render(<App />);
+
+  fireEvent.change(screen.getByLabelText("机构标识"), {
+    target: { value: "demo-hospital" },
+  });
+  fireEvent.change(screen.getByLabelText("用户编号"), {
+    target: { value: "u-001" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "进入工作台" }));
+
+  fireEvent.click(await screen.findByRole("button", { name: "检索" }));
+  fireEvent.click(await screen.findByRole("button", { name: "文献条目库" }));
+
+  expect(getLiteratureLibrary).toHaveBeenCalledWith(1);
+  expect(
+    await screen.findByRole("heading", { name: "文献条目库" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("共 2 条 · 唯一 1 条 · 重复 1 条")).toBeInTheDocument();
+  expect(
+    screen.getByText("Metformin and cardiovascular outcomes"),
+  ).toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText("粘贴文献条目"), {
+    target: { value: "title: A pasted paper" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "导入" }));
+
+  expect(importLiterature).toHaveBeenCalledWith(1, {
+    source_key: "pubmed",
+    raw_text: "title: A pasted paper",
+  });
+  expect(
+    await screen.findByText("本次导入 2 条 · 重复 1 条 · 跳过 0 条"),
+  ).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "标记为独立文献" }));
+
+  expect(confirmLiteratureUnique).toHaveBeenCalledWith(1, 12);
+  expect(
+    await screen.findByText("共 2 条 · 唯一 2 条 · 重复 0 条"),
+  ).toBeInTheDocument();
 });

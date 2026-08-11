@@ -3,6 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import {
   createClient,
   createMemorySessionStore,
+  type ImportLiteraturePayload,
+  type LiteratureLibrarySummary,
   type ProjectSummary,
   type SearchQueryEditorSummary,
   type SearchSourceCatalog,
@@ -14,7 +16,7 @@ import {
   type WorkspaceStageSummary,
 } from "@meda/shared-sdk";
 
-import { SearchSourceConfigScreen } from "@meda/shared-ui";
+import { LiteratureLibraryScreen, SearchSourceConfigScreen } from "@meda/shared-ui";
 
 import { SearchQueryBuilderScreen } from "./components/SearchQueryBuilderScreen";
 import { StageEntryScreen } from "./components/StageEntryScreen";
@@ -27,6 +29,7 @@ type Screen =
   | "stage-entry"
   | "query-builder"
   | "source-config"
+  | "literature"
   | "stage-subentry";
 
 const shellStyle = {
@@ -108,6 +111,8 @@ export default function App() {
     useState<SearchSourceConfigSummary | null>(null);
   const [sourceCatalog, setSourceCatalog] =
     useState<SearchSourceCatalog | null>(null);
+  const [literatureLibrary, setLiteratureLibrary] =
+    useState<LiteratureLibrarySummary | null>(null);
   const [screen, setScreen] = useState<Screen>("home");
 
   useEffect(() => {
@@ -253,6 +258,14 @@ export default function App() {
               setSourceConfig(nextConfig);
               setSourceCatalog(nextCatalog);
               setScreen("source-config");
+              return;
+            }
+
+            if (entryKey === "literature") {
+              setLiteratureLibrary(
+                await client.getLiteratureLibrary(workspaceHome.project.id),
+              );
+              setScreen("literature");
               return;
             }
 
@@ -449,6 +462,100 @@ export default function App() {
               await client.saveSearchSourceConfig(
                 workspaceHome.project.id,
                 payload,
+              ),
+            );
+          }}
+        />
+      </main>
+    );
+  }
+
+  if (screen === "literature" && literatureLibrary !== null) {
+    return (
+      <main style={shellStyle}>
+        <section
+          style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: "20px" }}
+        >
+          <div>
+            <div
+              style={{ fontSize: "12px", color: "#6b7280", letterSpacing: "0.08em" }}
+            >
+              MEDA DESKTOP
+            </div>
+            <h1 style={{ margin: "8px 0 0", fontSize: "24px" }}>
+              MedA Desktop Workspace
+            </h1>
+          </div>
+
+          <nav aria-label="主导航">
+            <ul
+              style={{ ...listStyle, display: "flex", flexDirection: "column", gap: "10px" }}
+            >
+              {["工作台", "项目", "数据 / 资料", "Agent", "产物", "管理"].map((item) => (
+                <li key={item}>
+                  <div
+                    style={{
+                      borderRadius: "12px",
+                      padding: "10px 12px",
+                      background: item === "工作台" ? "#eef2ff" : "#f8fafc",
+                      color: item === "工作台" ? "#3730a3" : "#334155",
+                      fontWeight: item === "工作台" ? 600 : 500,
+                    }}
+                  >
+                    {item}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <section>
+            <h2 style={{ margin: "0 0 12px", fontSize: "16px" }}>项目上下文</h2>
+            <ul
+              style={{ ...listStyle, display: "flex", flexDirection: "column", gap: "10px" }}
+            >
+              {projects.map((project) => (
+                <li key={project.id}>
+                  <div
+                    style={{
+                      border:
+                        project.id === workspaceHome.project.id
+                          ? "1px solid #c7d2fe"
+                          : "1px solid #e5e7eb",
+                      background:
+                        project.id === workspaceHome.project.id
+                          ? "#f8faff"
+                          : "#ffffff",
+                      borderRadius: "14px",
+                      padding: "12px 14px",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{project.name}</div>
+                    <div
+                      style={{ marginTop: "4px", color: "#6b7280", fontSize: "13px" }}
+                    >
+                      {project.workspace_key}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </section>
+
+        <LiteratureLibraryScreen
+          library={literatureLibrary}
+          onBackToStageEntry={() => setScreen("stage-entry")}
+          onImport={async (payload: ImportLiteraturePayload) => {
+            setLiteratureLibrary(
+              await client.importLiterature(workspaceHome.project.id, payload),
+            );
+          }}
+          onConfirmUnique={async (recordId) => {
+            setLiteratureLibrary(
+              await client.confirmLiteratureUnique(
+                workspaceHome.project.id,
+                recordId,
               ),
             );
           }}

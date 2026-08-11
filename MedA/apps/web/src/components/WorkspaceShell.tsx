@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 
 import type {
+  ImportLiteraturePayload,
+  LiteratureLibrarySummary,
   ProjectSummary,
   SaveSearchSourceConfigPayload,
   SearchQueryEditorSummary,
@@ -11,7 +13,7 @@ import type {
   WorkspaceHomeSummary,
 } from "@meda/shared-sdk";
 
-import { SearchSourceConfigScreen } from "@meda/shared-ui";
+import { LiteratureLibraryScreen, SearchSourceConfigScreen } from "@meda/shared-ui";
 
 import { SearchQueryBuilderScreen } from "./workspace/SearchQueryBuilderScreen";
 import { StageEntryScreen } from "./workspace/StageEntryScreen";
@@ -42,6 +44,16 @@ type WorkspaceShellProps = {
     projectId: number,
     payload: SaveSearchSourceConfigPayload,
   ) => Promise<void>;
+  literatureLibrary: LiteratureLibrarySummary | null;
+  onOpenLiteratureLibrary: (projectId: number) => Promise<void>;
+  onImportLiterature: (
+    projectId: number,
+    payload: ImportLiteraturePayload,
+  ) => Promise<void>;
+  onConfirmLiteratureUnique: (
+    projectId: number,
+    recordId: number,
+  ) => Promise<void>;
 };
 
 type Screen =
@@ -52,6 +64,7 @@ type Screen =
   | "stage-entry"
   | "query-builder"
   | "source-config"
+  | "literature"
   | "stage-subentry";
 
 const shellStyle = {
@@ -181,6 +194,10 @@ export function WorkspaceShell({
   sourceCatalog,
   onOpenSourceConfig,
   onSaveSourceConfig,
+  literatureLibrary,
+  onOpenLiteratureLibrary,
+  onImportLiterature,
+  onConfirmLiteratureUnique,
 }: WorkspaceShellProps) {
   const [screen, setScreen] = useState<Screen>("home");
 
@@ -243,6 +260,24 @@ export function WorkspaceShell({
     );
   }
 
+  if (screen === "literature" && literatureLibrary !== null) {
+    return (
+      <main style={shellStyle}>
+        <LeftRail projects={projects} workspaceHome={workspaceHome} />
+        <LiteratureLibraryScreen
+          library={literatureLibrary}
+          onBackToStageEntry={() => setScreen("stage-entry")}
+          onImport={(payload) =>
+            onImportLiterature(workspaceHome.project.id, payload)
+          }
+          onConfirmUnique={(recordId) =>
+            onConfirmLiteratureUnique(workspaceHome.project.id, recordId)
+          }
+        />
+      </main>
+    );
+  }
+
   if (screen === "stage-entry" && stageEntry !== null) {
     return (
       <main style={shellStyle}>
@@ -266,6 +301,12 @@ export function WorkspaceShell({
             if (entryKey === "sources") {
               await onOpenSourceConfig(workspaceHome.project.id);
               setScreen("source-config");
+              return;
+            }
+
+            if (entryKey === "literature") {
+              await onOpenLiteratureLibrary(workspaceHome.project.id);
+              setScreen("literature");
               return;
             }
 
