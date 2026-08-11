@@ -39,7 +39,7 @@ const yearInputStyle = {
   padding: "8px 10px",
 };
 
-function toggleKey(current: string[], ordered: string[], key: string): string[] {
+export function toggleKey(current: string[], ordered: string[], key: string): string[] {
   if (current.includes(key)) {
     return current.filter((item) => item !== key);
   }
@@ -47,7 +47,7 @@ function toggleKey(current: string[], ordered: string[], key: string): string[] 
   return ordered.filter((item) => current.includes(item) || item === key);
 }
 
-function parseYear(raw: string): number | null {
+export function parseYear(raw: string): number | null {
   if (raw.trim() === "") {
     return null;
   }
