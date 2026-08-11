@@ -6,6 +6,8 @@ import type {
   ProjectSummary,
   SaveSearchSourceConfigPayload,
   SearchQueryEditorSummary,
+  SearchRunDetail as SearchRunDetailType,
+  SearchRunListResponse,
   SearchSourceCatalog,
   SearchSourceConfigSummary,
   SessionContext,
@@ -13,7 +15,12 @@ import type {
   WorkspaceHomeSummary,
 } from "@meda/shared-sdk";
 
-import { LiteratureLibraryScreen, SearchSourceConfigScreen } from "@meda/shared-ui";
+import {
+  LiteratureLibraryScreen,
+  SearchRunDetailScreen,
+  SearchRunListScreen,
+  SearchSourceConfigScreen,
+} from "@meda/shared-ui";
 
 import { SearchQueryBuilderScreen } from "./workspace/SearchQueryBuilderScreen";
 import { StageEntryScreen } from "./workspace/StageEntryScreen";
@@ -54,6 +61,14 @@ type WorkspaceShellProps = {
     projectId: number,
     recordId: number,
   ) => Promise<void>;
+  searchRuns: SearchRunListResponse | null;
+  searchRunDetail: SearchRunDetailType | null;
+  onCreateSearchRun: () => Promise<void>;
+  onOpenSearchRunDetail: (runId: number) => void;
+  onRetrySearchRunSource: (sourceKey: string) => Promise<void>;
+  onCancelSearchRun: () => Promise<void>;
+  onExportSearchRunCsv: () => void;
+  navigateParams: { runId?: number } | null;
 };
 
 type Screen =
@@ -65,7 +80,11 @@ type Screen =
   | "query-builder"
   | "source-config"
   | "literature"
+  | "search-runs"
+  | "search-run-detail"
   | "stage-subentry";
+
+type SearchTabKey = "query-builder" | "source-config" | "search-runs";
 
 const shellStyle = {
   minHeight: "100vh",
@@ -102,6 +121,18 @@ const buttonStyle = {
   textAlign: "left" as const,
   cursor: "pointer",
 };
+
+const tabStyle = (active: boolean) => ({
+  padding: "10px 18px",
+  borderRadius: "12px 12px 0 0",
+  border: active ? "1px solid #c7d2fe" : "1px solid transparent",
+  borderBottom: active ? "none" : undefined,
+  background: active ? "#ffffff" : "transparent",
+  color: active ? "#1e1b4b" : "#475569",
+  fontWeight: active ? 700 : 500,
+  cursor: "pointer",
+  fontSize: "14px",
+});
 
 function LeftRail({
   projects,
@@ -179,6 +210,40 @@ function LeftRail({
   );
 }
 
+function SearchStageTabs({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: SearchTabKey;
+  onTabChange: (tab: SearchTabKey) => void;
+}) {
+  const tabs: Array<{ key: SearchTabKey; label: string }> = [
+    { key: "query-builder", label: "检索式编辑器" },
+    { key: "source-config", label: "检索源配置" },
+    { key: "search-runs", label: "🆕 检索运行记录" },
+  ];
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "4px",
+        borderBottom: "1px solid #e5e7eb",
+        marginBottom: "0",
+      }}
+    >
+      {tabs.map((t) => (
+        <button
+          key={t.key}
+          onClick={() => onTabChange(t.key)}
+          style={tabStyle(activeTab === t.key)}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function WorkspaceShell({
   session,
   projects,
@@ -198,8 +263,17 @@ export function WorkspaceShell({
   onOpenLiteratureLibrary,
   onImportLiterature,
   onConfirmLiteratureUnique,
+  searchRuns,
+  searchRunDetail,
+  onCreateSearchRun,
+  onOpenSearchRunDetail,
+  onRetrySearchRunSource,
+  onCancelSearchRun,
+  onExportSearchRunCsv,
+  navigateParams,
 }: WorkspaceShellProps) {
   const [screen, setScreen] = useState<Screen>("home");
+  const [searchTab, setSearchTab] = useState<SearchTabKey>("query-builder");
 
   const projectWorkspaceKey = useMemo(
     () => workspaceHome.project.workspace_key,
@@ -222,63 +296,329 @@ export function WorkspaceShell({
     return <main style={{ padding: "24px" }}>阶段子入口承接页</main>;
   }
 
-  if (screen === "query-builder" && searchQueryEditor !== null) {
+  if (screen === "search-run-detail" && searchRunDetail !== null) {
     return (
       <main style={shellStyle}>
         <LeftRail projects={projects} workspaceHome={workspaceHome} />
-        <SearchQueryBuilderScreen
+        <SearchRunDetailScreen
+          detail={searchRunDetail}
+          onBackToRunList={() => setScreen("search-runs")}
+          onRetrySource={onRetrySearchRunSource}
+          onCancelRun={onCancelSearchRun}
+          onCsvExport={onExportSearchRunCsv}
+        />
+      </main>
+    );
+  }
+
+  if (screen === "query-builder") {
+    return (
+      <main style={shellStyle}>
+        <LeftRail projects={projects} workspaceHome={workspaceHome} />
+        {searchQueryEditor !== null ? (
+          <SearchQueryBuilderScreen
+            editor={searchQueryEditor}
+            onBackToStageEntry={() => setScreen("stage-entry")}
+            onSaveDraft={() => onSaveSearchQueryDraft(workspaceHome.project.id)}
+            onSaveVersion={() => onSaveSearchQueryVersion(workspaceHome.project.id)}
+            onDeriveDraft={() =>
+              onDeriveSearchQueryDraft(
+                workspaceHome.project.id,
+                searchQueryEditor.query_id,
+                searchQueryEditor.query_version,
+              )
+            }
+          />
+        ) : (
+          <section style={panelStyle}>
+            <div style={{ padding: "40px 0", textAlign: "center", color: "#6b7280" }}>
+              加载中…
+            </div>
+          </section>
+        )}
+      </main>
+    );
+  }
+
+  if (screen === "source-config") {
+    return (
+      <main style={shellStyle}>
+        <LeftRail projects={projects} workspaceHome={workspaceHome} />
+        {sourceConfig !== null ? (
+          <SearchSourceConfigScreen
+            config={sourceConfig}
+            searchFieldOptions={sourceCatalog?.search_field_options ?? []}
+            languageOptions={sourceCatalog?.language_options ?? []}
+            onBackToStageEntry={() => setScreen("stage-entry")}
+            onSave={(payload) =>
+              onSaveSourceConfig(workspaceHome.project.id, payload)
+            }
+          />
+        ) : (
+          <section style={panelStyle}>
+            <div style={{ padding: "40px 0", textAlign: "center", color: "#6b7280" }}>
+              加载中…
+            </div>
+          </section>
+        )}
+      </main>
+    );
+  }
+
+  if (screen === "search-runs") {
+    return (
+      <main style={shellStyle}>
+        <LeftRail projects={projects} workspaceHome={workspaceHome} />
+        <SearchRunListScreen
+          runs={searchRuns}
           editor={searchQueryEditor}
           onBackToStageEntry={() => setScreen("stage-entry")}
-          onSaveDraft={() => onSaveSearchQueryDraft(workspaceHome.project.id)}
-          onSaveVersion={() => onSaveSearchQueryVersion(workspaceHome.project.id)}
-          onDeriveDraft={() =>
-            onDeriveSearchQueryDraft(
-              workspaceHome.project.id,
-              searchQueryEditor.query_id,
-              searchQueryEditor.query_version,
-            )
-          }
+          onCreateRun={onCreateSearchRun}
+          onOpenRunDetail={onOpenSearchRunDetail}
         />
       </main>
     );
   }
 
-  if (screen === "source-config" && sourceConfig !== null) {
+  if (screen === "literature") {
     return (
       <main style={shellStyle}>
         <LeftRail projects={projects} workspaceHome={workspaceHome} />
-        <SearchSourceConfigScreen
-          config={sourceConfig}
-          searchFieldOptions={sourceCatalog?.search_field_options ?? []}
-          languageOptions={sourceCatalog?.language_options ?? []}
-          onBackToStageEntry={() => setScreen("stage-entry")}
-          onSave={(payload) =>
-            onSaveSourceConfig(workspaceHome.project.id, payload)
-          }
-        />
-      </main>
-    );
-  }
-
-  if (screen === "literature" && literatureLibrary !== null) {
-    return (
-      <main style={shellStyle}>
-        <LeftRail projects={projects} workspaceHome={workspaceHome} />
-        <LiteratureLibraryScreen
-          library={literatureLibrary}
-          onBackToStageEntry={() => setScreen("stage-entry")}
-          onImport={(payload) =>
-            onImportLiterature(workspaceHome.project.id, payload)
-          }
-          onConfirmUnique={(recordId) =>
-            onConfirmLiteratureUnique(workspaceHome.project.id, recordId)
-          }
-        />
+        {literatureLibrary !== null ? (
+          <LiteratureLibraryScreen
+            library={literatureLibrary}
+            onBackToStageEntry={() => setScreen("stage-entry")}
+            onImport={(payload) =>
+              onImportLiterature(workspaceHome.project.id, payload)
+            }
+            onConfirmUnique={(recordId) =>
+              onConfirmLiteratureUnique(workspaceHome.project.id, recordId)
+            }
+          />
+        ) : (
+          <section style={panelStyle}>
+            <div style={{ padding: "40px 0", textAlign: "center", color: "#6b7280" }}>
+              加载中…
+            </div>
+          </section>
+        )}
       </main>
     );
   }
 
   if (screen === "stage-entry" && stageEntry !== null) {
+    if (stageEntry.stage_key === "search") {
+      return (
+        <main style={shellStyle}>
+          <LeftRail projects={projects} workspaceHome={workspaceHome} />
+          <section style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+            <section style={{ ...panelStyle, paddingBottom: "0", borderRadius: "20px 20px 0 0", borderBottom: "none" }}>
+              <div style={{ color: "#6b7280", fontSize: "13px" }}>
+                {stageEntry.project.name}
+              </div>
+              <h2 style={{ margin: "8px 0 12px", fontSize: "30px" }}>
+                {stageEntry.stage_label}阶段
+              </h2>
+              <p style={{ margin: "0 0 8px" }}>当前状态：{stageEntry.stage_status}</p>
+              <p style={{ margin: 0 }}>{stageEntry.stage_goal}</p>
+              <button
+                style={{
+                  marginTop: "16px",
+                  border: "none",
+                  borderRadius: "999px",
+                  background: "#111827",
+                  color: "#f9fafb",
+                  padding: "10px 16px",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+                onClick={async () => {
+                  if (searchTab === "query-builder") {
+                    await onOpenSearchQueryBuilder(workspaceHome.project.id);
+                    setScreen("query-builder");
+                  } else if (searchTab === "source-config") {
+                    await onOpenSourceConfig(workspaceHome.project.id);
+                    setScreen("source-config");
+                  } else if (searchTab === "search-runs") {
+                    setScreen("search-runs");
+                  }
+                }}
+              >
+                {stageEntry.primary_action.label}
+              </button>
+              <div style={{ marginTop: "20px" }}>
+                <SearchStageTabs
+                  activeTab={searchTab}
+                  onTabChange={(t) => setSearchTab(t)}
+                />
+              </div>
+            </section>
+            <section style={{ ...panelStyle, borderRadius: searchTab === "query-builder" ? "0 0 20px 20px" : "20px", borderTop: searchTab === "query-builder" ? "none" : undefined }}>
+              <div style={{ display: searchTab === "query-builder" ? undefined : "none" }}>
+                {searchQueryEditor !== null ? (
+                  <SearchQueryBuilderScreen
+                    editor={searchQueryEditor}
+                    onBackToStageEntry={() => {}}
+                    onSaveDraft={() => onSaveSearchQueryDraft(workspaceHome.project.id)}
+                    onSaveVersion={() => onSaveSearchQueryVersion(workspaceHome.project.id)}
+                    onDeriveDraft={() =>
+                      onDeriveSearchQueryDraft(
+                        workspaceHome.project.id,
+                        searchQueryEditor.query_id,
+                        searchQueryEditor.query_version,
+                      )
+                    }
+                  />
+                ) : (
+                  <div style={{ padding: "40px 0", textAlign: "center", color: "#6b7280" }}>
+                    加载中…
+                  </div>
+                )}
+              </div>
+              <div style={{ display: searchTab === "source-config" ? undefined : "none" }}>
+                {sourceConfig !== null ? (
+                  <SearchSourceConfigScreen
+                    config={sourceConfig}
+                    searchFieldOptions={sourceCatalog?.search_field_options ?? []}
+                    languageOptions={sourceCatalog?.language_options ?? []}
+                    onBackToStageEntry={() => {}}
+                    onSave={(payload) =>
+                      onSaveSourceConfig(workspaceHome.project.id, payload)
+                    }
+                  />
+                ) : (
+                  <div style={{ padding: "40px 0", textAlign: "center", color: "#6b7280" }}>
+                    加载中…
+                  </div>
+                )}
+              </div>
+              <div style={{ display: searchTab === "search-runs" ? undefined : "none" }}>
+                <SearchRunListScreen
+                  runs={searchRuns}
+                  editor={searchQueryEditor}
+                  onBackToStageEntry={() => {}}
+                  onCreateRun={onCreateSearchRun}
+                  onOpenRunDetail={(runId) => {
+                    onOpenSearchRunDetail(runId);
+                    setScreen("search-run-detail");
+                  }}
+                />
+              </div>
+            </section>
+            <section style={{ ...panelStyle, marginTop: "20px" }}>
+              <h3 style={{ marginTop: 0 }}>子入口导航</h3>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "12px",
+                }}
+              >
+                {stageEntry.entry_cards.map((card) => (
+                  <SummaryButton
+                    key={card.key}
+                    item={card}
+                    onClick={async () => {
+                      if (card.key === "query-builder") {
+                        await onOpenSearchQueryBuilder(workspaceHome.project.id);
+                        setScreen("query-builder");
+                        return;
+                      }
+                      if (card.key === "sources") {
+                        await onOpenSourceConfig(workspaceHome.project.id);
+                        setScreen("source-config");
+                        return;
+                      }
+                      if (card.key === "literature") {
+                        await onOpenLiteratureLibrary(workspaceHome.project.id);
+                        setScreen("literature");
+                        return;
+                      }
+                      if (card.key === "search-runs") {
+                        setScreen("search-runs");
+                        return;
+                      }
+                      setScreen("stage-subentry");
+                    }}
+                  />
+                ))}
+              </div>
+            </section>
+            <section
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: "20px",
+                marginTop: "20px",
+              }}
+            >
+              <div style={panelStyle}>
+                <h3 style={{ marginTop: 0 }}>最近任务</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {stageEntry.recent_tasks.map((task) => (
+                    <SummaryButton
+                      key={task.title}
+                      item={task}
+                      onClick={() => setScreen("recent-tasks")}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div style={panelStyle}>
+                <h3 style={{ marginTop: 0 }}>最近产物</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {stageEntry.recent_artifacts.map((artifact) => (
+                    <SummaryButton
+                      key={artifact.title}
+                      item={artifact}
+                      onClick={() => setScreen("recent-artifacts")}
+                    />
+                  ))}
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <aside style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <section style={panelStyle}>
+              <h2 style={{ marginTop: 0 }}>阶段助手 + 下一步建议</h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {stageEntry.assistant_suggestions.map((item) => (
+                  <SummaryButton
+                    key={item.title}
+                    item={item}
+                    onClick={() => setScreen("assistant")}
+                  />
+                ))}
+              </div>
+            </section>
+            <section style={panelStyle}>
+              <h2 style={{ marginTop: 0 }}>阶段提示</h2>
+              <ul style={{ ...listStyle, display: "flex", flexDirection: "column", gap: "12px" }}>
+                {stageEntry.guidance_notes.map((note) => (
+                  <li
+                    key={note.title}
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "14px",
+                      padding: "12px 14px",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{note.title}</div>
+                    <div
+                      style={{ marginTop: "4px", color: "#6b7280", fontSize: "14px" }}
+                    >
+                      {note.detail}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </aside>
+        </main>
+      );
+    }
+
     return (
       <main style={shellStyle}>
         <LeftRail projects={projects} workspaceHome={workspaceHome} />
@@ -307,6 +647,11 @@ export function WorkspaceShell({
             if (entryKey === "literature") {
               await onOpenLiteratureLibrary(workspaceHome.project.id);
               setScreen("literature");
+              return;
+            }
+
+            if (entryKey === "search-runs") {
+              setScreen("search-runs");
               return;
             }
 
@@ -395,6 +740,12 @@ export function WorkspaceShell({
                 item={stage}
                 onClick={async () => {
                   await onOpenStage(workspaceHome.project.id, stage.key);
+                  if (stage.key === "search") {
+                    await Promise.all([
+                      onOpenSearchQueryBuilder(workspaceHome.project.id),
+                      onOpenSourceConfig(workspaceHome.project.id),
+                    ]);
+                  }
                   setScreen("stage-entry");
                 }}
               />

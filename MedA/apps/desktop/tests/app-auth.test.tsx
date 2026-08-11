@@ -292,6 +292,13 @@ vi.mock("@meda/shared-sdk", () => ({
           status: "ready",
           target: "/workspace/projects/1/stages/search/literature",
         },
+        {
+          key: "search-runs",
+          title: "检索运行记录",
+          description: "查看检索任务运行进度与结果",
+          status: "ready",
+          target: "/workspace/projects/1/stages/search/runs",
+        },
       ],
       recent_tasks: [
         {
@@ -353,6 +360,26 @@ vi.mock("@meda/shared-sdk", () => ({
     getLiteratureLibrary,
     importLiterature,
     confirmLiteratureUnique,
+    listSearchRuns: vi.fn(async () => ({
+      project: {
+        id: 1,
+        name: "糖尿病真实世界研究",
+      },
+      runs: [],
+    })),
+    createSearchRun: vi.fn(async () => ({
+      id: 1,
+      status: "pending",
+    })),
+    getSearchRunDetail: vi.fn(async () => ({
+      id: 1,
+      status: "running",
+      project: { id: 1, name: "糖尿病真实世界研究" },
+      created_at_label: "刚刚",
+      sources: [],
+    })),
+    retrySearchRun: vi.fn(async () => ({ ok: true })),
+    cancelSearchRun: vi.fn(async () => ({ ok: true })),
   }),
 }));
 
@@ -376,7 +403,7 @@ test("desktop workspace opens query builder and creates a version", async () => 
   render(<App />);
 
   fireEvent.click(await screen.findByRole("button", { name: "检索" }));
-  fireEvent.click(await screen.findByRole("button", { name: "进入检索式管理" }));
+  fireEvent.click(await screen.findByRole("button", { name: "检索式编辑器" }));
 
   expect(
     await screen.findByRole("heading", { name: "检索式管理" }),

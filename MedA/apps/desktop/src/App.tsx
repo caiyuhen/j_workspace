@@ -3,10 +3,13 @@ import { useEffect, useMemo, useState } from "react";
 import {
   createClient,
   createMemorySessionStore,
+  getSearchRunCsvUrl,
   type ImportLiteraturePayload,
   type LiteratureLibrarySummary,
   type ProjectSummary,
   type SearchQueryEditorSummary,
+  type SearchRunDetail,
+  type SearchRunListResponse,
   type SearchSourceCatalog,
   type SearchSourceConfigSummary,
   type SessionContext,
@@ -16,10 +19,17 @@ import {
   type WorkspaceStageSummary,
 } from "@meda/shared-sdk";
 
-import { LiteratureLibraryScreen, SearchSourceConfigScreen } from "@meda/shared-ui";
+import {
+  LiteratureLibraryScreen,
+  SearchRunDetailScreen,
+  SearchRunListScreen,
+  SearchSourceConfigScreen,
+} from "@meda/shared-ui";
 
 import { SearchQueryBuilderScreen } from "./components/SearchQueryBuilderScreen";
 import { StageEntryScreen } from "./components/StageEntryScreen";
+
+const API_BASE_URL = "http://localhost:8000";
 
 type Screen =
   | "home"
@@ -30,7 +40,11 @@ type Screen =
   | "query-builder"
   | "source-config"
   | "literature"
+  | "search-runs"
+  | "search-run-detail"
   | "stage-subentry";
+
+type SearchTabKey = "query-builder" | "source-config" | "search-runs";
 
 const shellStyle = {
   minHeight: "100vh",
@@ -68,6 +82,18 @@ const buttonStyle = {
   cursor: "pointer",
 };
 
+const tabStyle = (active: boolean) => ({
+  padding: "10px 18px",
+  borderRadius: "12px 12px 0 0",
+  border: active ? "1px solid #c7d2fe" : "1px solid transparent",
+  borderBottom: active ? "none" : undefined,
+  background: active ? "#ffffff" : "transparent",
+  color: active ? "#1e1b4b" : "#475569",
+  fontWeight: active ? 700 : 500,
+  cursor: "pointer",
+  fontSize: "14px",
+});
+
 function SummaryButton({
   item,
   onClick,
@@ -93,10 +119,44 @@ function SummaryButton({
   );
 }
 
+function SearchStageTabs({
+  activeTab,
+  onTabChange,
+}: {
+  activeTab: SearchTabKey;
+  onTabChange: (tab: SearchTabKey) => void;
+}) {
+  const tabs: Array<{ key: SearchTabKey; label: string }> = [
+    { key: "query-builder", label: "检索式编辑器" },
+    { key: "source-config", label: "检索源配置" },
+    { key: "search-runs", label: "🆕 检索运行记录" },
+  ];
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "4px",
+        borderBottom: "1px solid #e5e7eb",
+        marginBottom: "0",
+      }}
+    >
+      {tabs.map((t) => (
+        <button
+          key={t.key}
+          onClick={() => onTabChange(t.key)}
+          style={tabStyle(activeTab === t.key)}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export default function App() {
   const sessionStore = useMemo(() => createMemorySessionStore("meda_token"), []);
   const client = useMemo(
-    () => createClient("http://localhost:8000", sessionStore),
+    () => createClient(API_BASE_URL, sessionStore),
     [sessionStore],
   );
   const [session, setSession] = useState<SessionContext | null>(null);
@@ -113,7 +173,11 @@ export default function App() {
     useState<SearchSourceCatalog | null>(null);
   const [literatureLibrary, setLiteratureLibrary] =
     useState<LiteratureLibrarySummary | null>(null);
+  const [searchRuns, setSearchRuns] = useState<SearchRunListResponse | null>(null);
+  const [searchRunDetail, setSearchRunDetail] = useState<SearchRunDetail | null>(null);
+  const [currentRunId, setCurrentRunId] = useState<number | null>(null);
   const [screen, setScreen] = useState<Screen>("home");
+  const [searchTab, setSearchTab] = useState<SearchTabKey>("query-builder");
 
   useEffect(() => {
     client
@@ -137,6 +201,65 @@ export default function App() {
       });
   }, [client]);
 
+  const handleCreateSearchRun = async () => {
+    if (workspaceHome === null) return;
+    const projectId = workspaceHome.project.id;
+    const querySnapshot =
+      searchQueryEditor !== null
+        ? {
+            query_id: searchQueryEditor.query_id,
+            query_name: searchQueryEditor.query_name,
+            query_version: searchQueryEditor.query_version,
+            selected_sources: searchQueryEditor.selected_sources,
+            grouped_terms: searchQueryEditor.grouped_terms,
+            expression_blocks: searchQueryEditor.expression_blocks,
+          }
+        : {};
+    await client.createSearchRun(projectId, {
+      sources: ["pubmed", "cnki", "wanfang"],
+      query_snapshot: querySnapshot,
+    });
+    const nextRuns = await client.listSearchRuns(projectId).catch(() => null);
+    setSearchRuns(nextRuns);
+  };
+
+  const handleOpenSearchRunDetail = async (runId: number) => {
+    if (workspaceHome === null) return;
+    const projectId = workspaceHome.project.id;
+    setCurrentRunId(runId);
+    try {
+      const detail = await client.getSearchRunDetail(projectId, runId);
+      setSearchRunDetail(detail);
+    } catch {
+      setSearchRunDetail(null);
+    }
+    setScreen("search-run-detail");
+  };
+
+  const handleRetrySearchRunSource = async (sourceKey: string) => {
+    if (workspaceHome === null || currentRunId === null) return;
+    const projectId = workspaceHome.project.id;
+    const detail = await client.retrySearchRun(projectId, currentRunId, sourceKey);
+    setSearchRunDetail(detail);
+  };
+
+  const handleCancelSearchRun = async () => {
+    if (workspaceHome === null || currentRunId === null) return;
+    const projectId = workspaceHome.project.id;
+    await client.cancelSearchRun(projectId, currentRunId);
+    const detail = await client.getSearchRunDetail(projectId, currentRunId).catch(() => null);
+    setSearchRunDetail(detail);
+    const nextRuns = await client.listSearchRuns(projectId).catch(() => null);
+    setSearchRuns(nextRuns);
+  };
+
+  const handleExportSearchRunCsv = () => {
+    if (workspaceHome === null || currentRunId === null) return;
+    const projectId = workspaceHome.project.id;
+    const url = getSearchRunCsvUrl(API_BASE_URL, projectId, currentRunId);
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   if (session === null || workspaceHome === null) {
     return <main>Desktop session unavailable.</main>;
   }
@@ -153,9 +276,495 @@ export default function App() {
     return <main style={{ padding: "24px" }}>右侧助手触发面板</main>;
   }
 
+  if (screen === "stage-subentry") {
+    return <main style={{ padding: "24px" }}>阶段子入口承接页</main>;
+  }
+
+  if (screen === "search-run-detail") {
+    return (
+      <main style={shellStyle}>
+        <section
+          style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: "20px" }}
+        >
+          <div>
+            <div
+              style={{ fontSize: "12px", color: "#6b7280", letterSpacing: "0.08em" }}
+            >
+              MEDA DESKTOP
+            </div>
+            <h1 style={{ margin: "8px 0 0", fontSize: "24px" }}>
+              MedA Desktop Workspace
+            </h1>
+          </div>
+
+          <nav aria-label="主导航">
+            <ul
+              style={{ ...listStyle, display: "flex", flexDirection: "column", gap: "10px" }}
+            >
+              {["工作台", "项目", "数据 / 资料", "Agent", "产物", "管理"].map((item) => (
+                <li key={item}>
+                  <div
+                    style={{
+                      borderRadius: "12px",
+                      padding: "10px 12px",
+                      background: item === "工作台" ? "#eef2ff" : "#f8fafc",
+                      color: item === "工作台" ? "#3730a3" : "#334155",
+                      fontWeight: item === "工作台" ? 600 : 500,
+                    }}
+                  >
+                    {item}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <section>
+            <h2 style={{ margin: "0 0 12px", fontSize: "16px" }}>项目上下文</h2>
+            <ul
+              style={{ ...listStyle, display: "flex", flexDirection: "column", gap: "10px" }}
+            >
+              {projects.map((project) => (
+                <li key={project.id}>
+                  <div
+                    style={{
+                      border:
+                        project.id === workspaceHome.project.id
+                          ? "1px solid #c7d2fe"
+                          : "1px solid #e5e7eb",
+                      background:
+                        project.id === workspaceHome.project.id
+                          ? "#f8faff"
+                          : "#ffffff",
+                      borderRadius: "14px",
+                      padding: "12px 14px",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{project.name}</div>
+                    <div
+                      style={{ marginTop: "4px", color: "#6b7280", fontSize: "13px" }}
+                    >
+                      {project.workspace_key}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </section>
+
+        <SearchRunDetailScreen
+          detail={searchRunDetail}
+          onBackToRunList={() => setScreen("search-runs")}
+          onRetrySource={handleRetrySearchRunSource}
+          onCancelRun={handleCancelSearchRun}
+          onCsvExport={handleExportSearchRunCsv}
+        />
+      </main>
+    );
+  }
+
+  if (screen === "search-runs") {
+    return (
+      <main style={shellStyle}>
+        <section
+          style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: "20px" }}
+        >
+          <div>
+            <div
+              style={{ fontSize: "12px", color: "#6b7280", letterSpacing: "0.08em" }}
+            >
+              MEDA DESKTOP
+            </div>
+            <h1 style={{ margin: "8px 0 0", fontSize: "24px" }}>
+              MedA Desktop Workspace
+            </h1>
+          </div>
+
+          <nav aria-label="主导航">
+            <ul
+              style={{ ...listStyle, display: "flex", flexDirection: "column", gap: "10px" }}
+            >
+              {["工作台", "项目", "数据 / 资料", "Agent", "产物", "管理"].map((item) => (
+                <li key={item}>
+                  <div
+                    style={{
+                      borderRadius: "12px",
+                      padding: "10px 12px",
+                      background: item === "工作台" ? "#eef2ff" : "#f8fafc",
+                      color: item === "工作台" ? "#3730a3" : "#334155",
+                      fontWeight: item === "工作台" ? 600 : 500,
+                    }}
+                  >
+                    {item}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </nav>
+
+          <section>
+            <h2 style={{ margin: "0 0 12px", fontSize: "16px" }}>项目上下文</h2>
+            <ul
+              style={{ ...listStyle, display: "flex", flexDirection: "column", gap: "10px" }}
+            >
+              {projects.map((project) => (
+                <li key={project.id}>
+                  <div
+                    style={{
+                      border:
+                        project.id === workspaceHome.project.id
+                          ? "1px solid #c7d2fe"
+                          : "1px solid #e5e7eb",
+                      background:
+                        project.id === workspaceHome.project.id
+                          ? "#f8faff"
+                          : "#ffffff",
+                      borderRadius: "14px",
+                      padding: "12px 14px",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{project.name}</div>
+                    <div
+                      style={{ marginTop: "4px", color: "#6b7280", fontSize: "13px" }}
+                    >
+                      {project.workspace_key}
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </section>
+
+        <SearchRunListScreen
+          runs={searchRuns}
+          editor={searchQueryEditor}
+          onBackToStageEntry={() => setScreen("stage-entry")}
+          onCreateRun={handleCreateSearchRun}
+          onOpenRunDetail={handleOpenSearchRunDetail}
+        />
+      </main>
+    );
+  }
+
   if (screen === "stage-entry") {
     if (stageEntry === null) {
       return <main style={{ padding: "24px" }}>科研流程模块入口页</main>;
+    }
+
+    if (stageEntry.stage_key === "search") {
+      return (
+        <main style={shellStyle}>
+          <section
+            style={{ ...panelStyle, display: "flex", flexDirection: "column", gap: "20px" }}
+          >
+            <div>
+              <div
+                style={{ fontSize: "12px", color: "#6b7280", letterSpacing: "0.08em" }}
+              >
+                MEDA DESKTOP
+              </div>
+              <h1 style={{ margin: "8px 0 0", fontSize: "24px" }}>
+                MedA Desktop Workspace
+              </h1>
+            </div>
+
+            <nav aria-label="主导航">
+              <ul
+                style={{ ...listStyle, display: "flex", flexDirection: "column", gap: "10px" }}
+              >
+                {["工作台", "项目", "数据 / 资料", "Agent", "产物", "管理"].map((item) => (
+                  <li key={item}>
+                    <div
+                      style={{
+                        borderRadius: "12px",
+                        padding: "10px 12px",
+                        background: item === "工作台" ? "#eef2ff" : "#f8fafc",
+                        color: item === "工作台" ? "#3730a3" : "#334155",
+                        fontWeight: item === "工作台" ? 600 : 500,
+                      }}
+                    >
+                      {item}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+
+            <section>
+              <h2 style={{ margin: "0 0 12px", fontSize: "16px" }}>项目上下文</h2>
+              <ul
+                style={{ ...listStyle, display: "flex", flexDirection: "column", gap: "10px" }}
+              >
+                {projects.map((project) => (
+                  <li key={project.id}>
+                    <div
+                      style={{
+                        border:
+                          project.id === workspaceHome.project.id
+                            ? "1px solid #c7d2fe"
+                            : "1px solid #e5e7eb",
+                        background:
+                          project.id === workspaceHome.project.id
+                            ? "#f8faff"
+                            : "#ffffff",
+                        borderRadius: "14px",
+                        padding: "12px 14px",
+                      }}
+                    >
+                      <div style={{ fontWeight: 600 }}>{project.name}</div>
+                      <div
+                        style={{ marginTop: "4px", color: "#6b7280", fontSize: "13px" }}
+                      >
+                        {project.workspace_key}
+                      </div>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </section>
+
+          <section style={{ display: "flex", flexDirection: "column", gap: "0" }}>
+            <section style={{ ...panelStyle, paddingBottom: "0", borderRadius: "20px 20px 0 0", borderBottom: "none" }}>
+              <div style={{ color: "#6b7280", fontSize: "13px" }}>
+                {stageEntry.project.name}
+              </div>
+              <h2 style={{ margin: "8px 0 12px", fontSize: "30px" }}>
+                {stageEntry.stage_label}阶段
+              </h2>
+              <p style={{ margin: "0 0 8px" }}>当前状态：{stageEntry.stage_status}</p>
+              <p style={{ margin: 0 }}>{stageEntry.stage_goal}</p>
+              <button
+                style={{
+                  marginTop: "16px",
+                  border: "none",
+                  borderRadius: "999px",
+                  background: "#111827",
+                  color: "#f9fafb",
+                  padding: "10px 16px",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+                onClick={async () => {
+                  if (searchTab === "query-builder") {
+                    setSearchQueryEditor(
+                      await client.getSearchQueryEditor(workspaceHome.project.id),
+                    );
+                    setScreen("query-builder");
+                  } else if (searchTab === "source-config") {
+                    const [nextConfig, nextCatalog] = await Promise.all([
+                      client.getSearchSourceConfig(workspaceHome.project.id),
+                      client.getSourceCatalog(),
+                    ]);
+                    setSourceConfig(nextConfig);
+                    setSourceCatalog(nextCatalog);
+                    setScreen("source-config");
+                  } else if (searchTab === "search-runs") {
+                    setScreen("search-runs");
+                  }
+                }}
+              >
+                {stageEntry.primary_action.label}
+              </button>
+              <div style={{ marginTop: "20px" }}>
+                <SearchStageTabs
+                  activeTab={searchTab}
+                  onTabChange={(t) => setSearchTab(t)}
+                />
+              </div>
+            </section>
+            <section style={{ ...panelStyle, borderRadius: "20px" }}>
+              <div style={{ display: searchTab === "query-builder" ? undefined : "none" }}>
+                {searchQueryEditor !== null ? (
+                  <SearchQueryBuilderScreen
+                    editor={searchQueryEditor}
+                    onBackToStageEntry={() => {}}
+                    onSaveDraft={async () => {
+                      setSearchQueryEditor(
+                        await client.saveSearchQueryDraft(workspaceHome.project.id, {
+                          query_id: searchQueryEditor.query_id,
+                          query_name: searchQueryEditor.query_name,
+                          selected_sources: searchQueryEditor.selected_sources,
+                          grouped_terms: searchQueryEditor.grouped_terms,
+                          expression_blocks: searchQueryEditor.expression_blocks,
+                        }),
+                      );
+                    }}
+                    onSaveVersion={async () => {
+                      setSearchQueryEditor(
+                        await client.saveSearchQueryVersion(workspaceHome.project.id, {
+                          query_id: searchQueryEditor.query_id,
+                          query_name: searchQueryEditor.query_name,
+                          selected_sources: searchQueryEditor.selected_sources,
+                          grouped_terms: searchQueryEditor.grouped_terms,
+                          expression_blocks: searchQueryEditor.expression_blocks,
+                        }),
+                      );
+                    }}
+                  />
+                ) : (
+                  <div style={{ padding: "40px 0", textAlign: "center", color: "#6b7280" }}>
+                    加载中…
+                  </div>
+                )}
+              </div>
+              <div style={{ display: searchTab === "source-config" ? undefined : "none" }}>
+                {sourceConfig !== null ? (
+                  <SearchSourceConfigScreen
+                    config={sourceConfig}
+                    searchFieldOptions={sourceCatalog?.search_field_options ?? []}
+                    languageOptions={sourceCatalog?.language_options ?? []}
+                    onBackToStageEntry={() => {}}
+                    onSave={async (payload) => {
+                      setSourceConfig(
+                        await client.saveSearchSourceConfig(
+                          workspaceHome.project.id,
+                          payload,
+                        ),
+                      );
+                    }}
+                  />
+                ) : (
+                  <div style={{ padding: "40px 0", textAlign: "center", color: "#6b7280" }}>
+                    加载中…
+                  </div>
+                )}
+              </div>
+              <div style={{ display: searchTab === "search-runs" ? undefined : "none" }}>
+                <SearchRunListScreen
+                  runs={searchRuns}
+                  editor={searchQueryEditor}
+                  onBackToStageEntry={() => {}}
+                  onCreateRun={handleCreateSearchRun}
+                  onOpenRunDetail={handleOpenSearchRunDetail}
+                />
+              </div>
+            </section>
+            <section style={{ ...panelStyle, marginTop: "20px" }}>
+              <h3 style={{ marginTop: 0 }}>子入口导航</h3>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: "12px",
+                }}
+              >
+                {stageEntry.entry_cards.map((card) => (
+                  <SummaryButton
+                    key={card.key}
+                    item={card}
+                    onClick={async () => {
+                      if (card.key === "query-builder") {
+                        const nextEditor = await client.getSearchQueryEditor(
+                          workspaceHome.project.id,
+                        );
+                        setSearchQueryEditor(nextEditor);
+                        setScreen("query-builder");
+                        return;
+                      }
+                      if (card.key === "sources") {
+                        const [nextConfig, nextCatalog] = await Promise.all([
+                          client.getSearchSourceConfig(workspaceHome.project.id),
+                          client.getSourceCatalog(),
+                        ]);
+                        setSourceConfig(nextConfig);
+                        setSourceCatalog(nextCatalog);
+                        setScreen("source-config");
+                        return;
+                      }
+                      if (card.key === "literature") {
+                        const nextLibrary = await client.getLiteratureLibrary(
+                          workspaceHome.project.id,
+                        );
+                        setLiteratureLibrary(nextLibrary);
+                        setScreen("literature");
+                        return;
+                      }
+                      if (card.key === "search-runs") {
+                        setScreen("search-runs");
+                        return;
+                      }
+                      setScreen("stage-subentry");
+                    }}
+                  />
+                ))}
+              </div>
+            </section>
+            <section
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+                gap: "20px",
+                marginTop: "20px",
+              }}
+            >
+              <div style={panelStyle}>
+                <h3 style={{ marginTop: 0 }}>最近任务</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {stageEntry.recent_tasks.map((task) => (
+                    <SummaryButton
+                      key={task.title}
+                      item={task}
+                      onClick={() => setScreen("recent-tasks")}
+                    />
+                  ))}
+                </div>
+              </div>
+              <div style={panelStyle}>
+                <h3 style={{ marginTop: 0 }}>最近产物</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                  {stageEntry.recent_artifacts.map((artifact) => (
+                    <SummaryButton
+                      key={artifact.title}
+                      item={artifact}
+                      onClick={() => setScreen("recent-artifacts")}
+                    />
+                  ))}
+                </div>
+              </div>
+            </section>
+          </section>
+
+          <aside style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+            <section style={panelStyle}>
+              <h2 style={{ marginTop: 0 }}>阶段助手 + 下一步建议</h2>
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                {stageEntry.assistant_suggestions.map((item) => (
+                  <SummaryButton
+                    key={item.title}
+                    item={item}
+                    onClick={() => setScreen("assistant")}
+                  />
+                ))}
+              </div>
+            </section>
+            <section style={panelStyle}>
+              <h2 style={{ marginTop: 0 }}>阶段提示</h2>
+              <ul style={{ ...listStyle, display: "flex", flexDirection: "column", gap: "12px" }}>
+                {stageEntry.guidance_notes.map((note) => (
+                  <li
+                    key={note.title}
+                    style={{
+                      border: "1px solid #e5e7eb",
+                      borderRadius: "14px",
+                      padding: "12px 14px",
+                    }}
+                  >
+                    <div style={{ fontWeight: 600 }}>{note.title}</div>
+                    <div
+                      style={{ marginTop: "4px", color: "#6b7280", fontSize: "14px" }}
+                    >
+                      {note.detail}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          </aside>
+        </main>
+      );
     }
 
     return (
@@ -269,6 +878,11 @@ export default function App() {
               return;
             }
 
+            if (entryKey === "search-runs") {
+              setScreen("search-runs");
+              return;
+            }
+
             setScreen("stage-subentry");
           }}
         />
@@ -276,7 +890,7 @@ export default function App() {
     );
   }
 
-  if (screen === "query-builder" && searchQueryEditor !== null) {
+  if (screen === "query-builder") {
     return (
       <main style={shellStyle}>
         <section
@@ -349,37 +963,45 @@ export default function App() {
           </section>
         </section>
 
-        <SearchQueryBuilderScreen
-          editor={searchQueryEditor}
-          onBackToStageEntry={() => setScreen("stage-entry")}
-          onSaveDraft={async () => {
-            setSearchQueryEditor(
-              await client.saveSearchQueryDraft(workspaceHome.project.id, {
-                query_id: searchQueryEditor.query_id,
-                query_name: searchQueryEditor.query_name,
-                selected_sources: searchQueryEditor.selected_sources,
-                grouped_terms: searchQueryEditor.grouped_terms,
-                expression_blocks: searchQueryEditor.expression_blocks,
-              }),
-            );
-          }}
-          onSaveVersion={async () => {
-            setSearchQueryEditor(
-              await client.saveSearchQueryVersion(workspaceHome.project.id, {
-                query_id: searchQueryEditor.query_id,
-                query_name: searchQueryEditor.query_name,
-                selected_sources: searchQueryEditor.selected_sources,
-                grouped_terms: searchQueryEditor.grouped_terms,
-                expression_blocks: searchQueryEditor.expression_blocks,
-              }),
-            );
-          }}
-        />
+        {searchQueryEditor !== null ? (
+          <SearchQueryBuilderScreen
+            editor={searchQueryEditor}
+            onBackToStageEntry={() => setScreen("stage-entry")}
+            onSaveDraft={async () => {
+              setSearchQueryEditor(
+                await client.saveSearchQueryDraft(workspaceHome.project.id, {
+                  query_id: searchQueryEditor.query_id,
+                  query_name: searchQueryEditor.query_name,
+                  selected_sources: searchQueryEditor.selected_sources,
+                  grouped_terms: searchQueryEditor.grouped_terms,
+                  expression_blocks: searchQueryEditor.expression_blocks,
+                }),
+              );
+            }}
+            onSaveVersion={async () => {
+              setSearchQueryEditor(
+                await client.saveSearchQueryVersion(workspaceHome.project.id, {
+                  query_id: searchQueryEditor.query_id,
+                  query_name: searchQueryEditor.query_name,
+                  selected_sources: searchQueryEditor.selected_sources,
+                  grouped_terms: searchQueryEditor.grouped_terms,
+                  expression_blocks: searchQueryEditor.expression_blocks,
+                }),
+              );
+            }}
+          />
+        ) : (
+          <section style={panelStyle}>
+            <div style={{ padding: "40px 0", textAlign: "center", color: "#6b7280" }}>
+              加载中…
+            </div>
+          </section>
+        )}
       </main>
     );
   }
 
-  if (screen === "source-config" && sourceConfig !== null) {
+  if (screen === "source-config") {
     return (
       <main style={shellStyle}>
         <section
@@ -452,25 +1074,33 @@ export default function App() {
           </section>
         </section>
 
-        <SearchSourceConfigScreen
-          config={sourceConfig}
-          searchFieldOptions={sourceCatalog?.search_field_options ?? []}
-          languageOptions={sourceCatalog?.language_options ?? []}
-          onBackToStageEntry={() => setScreen("stage-entry")}
-          onSave={async (payload) => {
-            setSourceConfig(
-              await client.saveSearchSourceConfig(
-                workspaceHome.project.id,
-                payload,
-              ),
-            );
-          }}
-        />
+        {sourceConfig !== null ? (
+          <SearchSourceConfigScreen
+            config={sourceConfig}
+            searchFieldOptions={sourceCatalog?.search_field_options ?? []}
+            languageOptions={sourceCatalog?.language_options ?? []}
+            onBackToStageEntry={() => setScreen("stage-entry")}
+            onSave={async (payload) => {
+              setSourceConfig(
+                await client.saveSearchSourceConfig(
+                  workspaceHome.project.id,
+                  payload,
+                ),
+              );
+            }}
+          />
+        ) : (
+          <section style={panelStyle}>
+            <div style={{ padding: "40px 0", textAlign: "center", color: "#6b7280" }}>
+              加载中…
+            </div>
+          </section>
+        )}
       </main>
     );
   }
 
-  if (screen === "literature" && literatureLibrary !== null) {
+  if (screen === "literature") {
     return (
       <main style={shellStyle}>
         <section
@@ -543,29 +1173,33 @@ export default function App() {
           </section>
         </section>
 
-        <LiteratureLibraryScreen
-          library={literatureLibrary}
-          onBackToStageEntry={() => setScreen("stage-entry")}
-          onImport={async (payload: ImportLiteraturePayload) => {
-            setLiteratureLibrary(
-              await client.importLiterature(workspaceHome.project.id, payload),
-            );
-          }}
-          onConfirmUnique={async (recordId) => {
-            setLiteratureLibrary(
-              await client.confirmLiteratureUnique(
-                workspaceHome.project.id,
-                recordId,
-              ),
-            );
-          }}
-        />
+        {literatureLibrary !== null ? (
+          <LiteratureLibraryScreen
+            library={literatureLibrary}
+            onBackToStageEntry={() => setScreen("stage-entry")}
+            onImport={async (payload: ImportLiteraturePayload) => {
+              setLiteratureLibrary(
+                await client.importLiterature(workspaceHome.project.id, payload),
+              );
+            }}
+            onConfirmUnique={async (recordId) => {
+              setLiteratureLibrary(
+                await client.confirmLiteratureUnique(
+                  workspaceHome.project.id,
+                  recordId,
+                ),
+              );
+            }}
+          />
+        ) : (
+          <section style={panelStyle}>
+            <div style={{ padding: "40px 0", textAlign: "center", color: "#6b7280" }}>
+              加载中…
+            </div>
+          </section>
+        )}
       </main>
     );
-  }
-
-  if (screen === "stage-subentry") {
-    return <main style={{ padding: "24px" }}>阶段子入口承接页</main>;
   }
 
   return (
@@ -713,9 +1347,24 @@ export default function App() {
                 key={stage.key}
                 item={stage}
                 onClick={async () => {
-                  setStageEntry(
-                    await client.getStageEntry(workspaceHome.project.id, stage.key),
+                  const nextStageEntry = await client.getStageEntry(
+                    workspaceHome.project.id,
+                    stage.key,
                   );
+                  setStageEntry(nextStageEntry);
+                  if (stage.key === "search") {
+                    const [nextEditor, nextConfig, nextCatalog, nextRuns] =
+                      await Promise.all([
+                        client.getSearchQueryEditor(workspaceHome.project.id),
+                        client.getSearchSourceConfig(workspaceHome.project.id),
+                        client.getSourceCatalog(),
+                        client.listSearchRuns(workspaceHome.project.id).catch(() => null),
+                      ]);
+                    setSearchQueryEditor(nextEditor);
+                    setSourceConfig(nextConfig);
+                    setSourceCatalog(nextCatalog);
+                    setSearchRuns(nextRuns);
+                  }
                   setScreen("stage-entry");
                 }}
               />
@@ -772,7 +1421,9 @@ export default function App() {
                 }}
               >
                 <div style={{ fontWeight: 600 }}>{activity.title}</div>
-                <div style={{ marginTop: "4px", color: "#6b7280", fontSize: "14px" }}>
+                <div
+                  style={{ marginTop: "4px", color: "#6b7280", fontSize: "14px" }}
+                >
                   {activity.subtitle}
                 </div>
               </li>

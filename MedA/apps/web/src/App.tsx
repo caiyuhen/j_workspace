@@ -3,11 +3,14 @@ import { useMemo, useState } from "react";
 import {
   createBrowserSessionStore,
   createClient,
+  getSearchRunCsvUrl,
   type ImportLiteraturePayload,
   type LiteratureLibrarySummary,
   type ProjectSummary,
   type SaveSearchSourceConfigPayload,
   type SearchQueryEditorSummary,
+  type SearchRunDetail,
+  type SearchRunListResponse,
   type SearchSourceCatalog,
   type SearchSourceConfigSummary,
   type SessionContext,
@@ -18,10 +21,12 @@ import {
 import { LoginForm } from "./components/LoginForm";
 import { WorkspaceShell } from "./components/WorkspaceShell";
 
+const API_BASE_URL = "http://localhost:8000";
+
 export default function App() {
   const sessionStore = useMemo(() => createBrowserSessionStore(), []);
   const client = useMemo(
-    () => createClient("http://localhost:8000", sessionStore),
+    () => createClient(API_BASE_URL, sessionStore),
     [sessionStore],
   );
   const [session, setSession] = useState<SessionContext | null>(null);
@@ -38,6 +43,9 @@ export default function App() {
     useState<SearchSourceCatalog | null>(null);
   const [literatureLibrary, setLiteratureLibrary] =
     useState<LiteratureLibrarySummary | null>(null);
+  const [searchRuns, setSearchRuns] = useState<SearchRunListResponse | null>(null);
+  const [searchRunDetail, setSearchRunDetail] = useState<SearchRunDetail | null>(null);
+  const [currentRunId, setCurrentRunId] = useState<number | null>(null);
 
   const handleLogin = async (payload: {
     organizationSlug: string;
@@ -64,11 +72,19 @@ export default function App() {
     setSearchQueryEditor(null);
     setSourceConfig(null);
     setLiteratureLibrary(null);
+    setSearchRuns(null);
+    setSearchRunDetail(null);
   };
 
   const handleOpenStage = async (projectId: number, stageKey: string) => {
     const nextStageEntry = await client.getStageEntry(projectId, stageKey);
     setStageEntry(nextStageEntry);
+    if (stageKey === "search") {
+      const [nextRuns] = await Promise.all([
+        client.listSearchRuns(projectId).catch(() => null),
+      ]);
+      setSearchRuns(nextRuns);
+    }
   };
 
   const handleOpenSearchQueryBuilder = async (
@@ -160,6 +176,64 @@ export default function App() {
     setLiteratureLibrary(nextLibrary);
   };
 
+  const handleCreateSearchRun = async () => {
+    if (workspaceHome === null) return;
+    const projectId = workspaceHome.project.id;
+    const querySnapshot =
+      searchQueryEditor !== null
+        ? {
+            query_id: searchQueryEditor.query_id,
+            query_name: searchQueryEditor.query_name,
+            query_version: searchQueryEditor.query_version,
+            selected_sources: searchQueryEditor.selected_sources,
+            grouped_terms: searchQueryEditor.grouped_terms,
+            expression_blocks: searchQueryEditor.expression_blocks,
+          }
+        : {};
+    await client.createSearchRun(projectId, {
+      sources: ["pubmed", "cnki", "wanfang"],
+      query_snapshot: querySnapshot,
+    });
+    const nextRuns = await client.listSearchRuns(projectId).catch(() => null);
+    setSearchRuns(nextRuns);
+  };
+
+  const handleOpenSearchRunDetail = async (runId: number) => {
+    if (workspaceHome === null) return;
+    const projectId = workspaceHome.project.id;
+    setCurrentRunId(runId);
+    try {
+      const detail = await client.getSearchRunDetail(projectId, runId);
+      setSearchRunDetail(detail);
+    } catch {
+      setSearchRunDetail(null);
+    }
+  };
+
+  const handleRetrySearchRunSource = async (sourceKey: string) => {
+    if (workspaceHome === null || currentRunId === null) return;
+    const projectId = workspaceHome.project.id;
+    const detail = await client.retrySearchRun(projectId, currentRunId, sourceKey);
+    setSearchRunDetail(detail);
+  };
+
+  const handleCancelSearchRun = async () => {
+    if (workspaceHome === null || currentRunId === null) return;
+    const projectId = workspaceHome.project.id;
+    await client.cancelSearchRun(projectId, currentRunId);
+    const detail = await client.getSearchRunDetail(projectId, currentRunId).catch(() => null);
+    setSearchRunDetail(detail);
+    const nextRuns = await client.listSearchRuns(projectId).catch(() => null);
+    setSearchRuns(nextRuns);
+  };
+
+  const handleExportSearchRunCsv = () => {
+    if (workspaceHome === null || currentRunId === null) return;
+    const projectId = workspaceHome.project.id;
+    const url = getSearchRunCsvUrl(API_BASE_URL, projectId, currentRunId);
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   if (session === null) {
     return <LoginForm onSubmit={handleLogin} />;
   }
@@ -188,6 +262,14 @@ export default function App() {
       onOpenLiteratureLibrary={handleOpenLiteratureLibrary}
       onImportLiterature={handleImportLiterature}
       onConfirmLiteratureUnique={handleConfirmLiteratureUnique}
+      searchRuns={searchRuns}
+      searchRunDetail={searchRunDetail}
+      onCreateSearchRun={handleCreateSearchRun}
+      onOpenSearchRunDetail={handleOpenSearchRunDetail}
+      onRetrySearchRunSource={handleRetrySearchRunSource}
+      onCancelSearchRun={handleCancelSearchRun}
+      onExportSearchRunCsv={handleExportSearchRunCsv}
+      navigateParams={currentRunId !== null ? { runId: currentRunId } : null}
     />
   );
 }

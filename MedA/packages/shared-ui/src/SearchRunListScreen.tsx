@@ -1,40 +1,16 @@
-import React from "react";
+import type {
+  ProjectSummary,
+  SearchQueryEditorSummary,
+  SearchRunListItem,
+  SearchRunListResponse,
+} from "@meda/shared-sdk";
 
-export type SearchRunStatus =
-  | "pending"
-  | "running"
-  | "completed"
-  | "partial_failed"
-  | "failed"
-  | "cancelled";
-
-export type SearchRunSourceBadge = {
-  source_key: string;
-  source_label: string;
-  records_retrieved: number;
-  records_imported: number;
-};
-
-export type SearchRunMiniPrisma = {
-  identification: number;
-  screening: number;
-};
-
-export type SearchRunListItem = {
-  id: number;
-  status: SearchRunStatus;
-  created_at: string;
-  started_at?: string | null;
-  finished_at?: string | null;
-  progress_percent?: number | null;
-  sources: SearchRunSourceBadge[];
-  prisma: SearchRunMiniPrisma;
-};
-
-export type SearchRunListScreenProps = {
-  runs: SearchRunListItem[];
-  onCreateRun: () => void;
-  onSelectRun?: (runId: number) => void;
+type SearchRunListScreenProps = {
+  runs: SearchRunListResponse | null;
+  editor: SearchQueryEditorSummary | null;
+  onBackToStageEntry: () => void;
+  onCreateRun: () => Promise<void> | void;
+  onOpenRunDetail: (runId: number) => void;
 };
 
 const panelStyle = {
@@ -45,139 +21,73 @@ const panelStyle = {
   boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
 };
 
-export const STATUS_CHIP_STYLES: Record<
-  SearchRunStatus,
-  { background: string; color: string; label: string; className?: string }
+const STATUS_CHIP_STYLES: Record<
+  string,
+  { background: string; color: string; label: string }
 > = {
-  pending: {
-    background: "#f3f4f6",
-    color: "#4b5563",
-    label: "等待中",
-    className: "status-pending-grey",
-  },
-  running: {
-    background: "#dbeafe",
-    color: "#1d4ed8",
-    label: "运行中",
-    className: "status-running-blue",
-  },
-  completed: {
-    background: "#dcfce7",
-    color: "#047857",
-    label: "已完成",
-    className: "status-completed-green",
-  },
-  partial_failed: {
-    background: "#ffedd5",
-    color: "#c2410c",
-    label: "部分失败",
-    className: "status-partial_orange",
-  },
-  failed: {
-    background: "#fee2e2",
-    color: "#b91c1c",
-    label: "失败",
-    className: "status-failed-red",
-  },
-  cancelled: {
-    background: "#e5e7eb",
-    color: "#6b7280",
-    label: "已取消",
-    className: "status-cancelled-grey",
-  },
+  pending: { background: "#f3f4f6", color: "#4b5563", label: "等待中" },
+  running: { background: "#dbeafe", color: "#1d4ed8", label: "运行中" },
+  completed: { background: "#dcfce7", color: "#047857", label: "已完成" },
+  partial_failed: { background: "#ffedd5", color: "#c2410c", label: "部分失败" },
+  failed: { background: "#fee2e2", color: "#b91c1c", label: "失败" },
+  cancelled: { background: "#e5e7eb", color: "#6b7280", label: "已取消" },
 };
 
-export function formatRelativeTime(isoString: string): string {
-  const now = new Date().getTime();
-  const then = new Date(isoString).getTime();
-  const diffMs = now - then;
-  const diffSec = Math.floor(diffMs / 1000);
-
-  if (diffSec <= 0) return "刚刚";
-
-  if (diffSec < 60) return diffSec === 1 ? "1 秒前" : `${diffSec} 秒前`;
-
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return diffMin === 1 ? "1 分钟前" : `${diffMin} 分钟前`;
-
-  const diffHour = Math.floor(diffMin / 60);
-  if (diffHour < 24) return diffHour === 1 ? "1 小时前" : `${diffHour} 小时前`;
-
-  const diffDay = Math.floor(diffHour / 24);
-  if (diffDay <= 90) return diffDay === 1 ? "昨天" : `${diffDay} 天前`;
-
-  const date = new Date(isoString);
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
-function StatusChip({
-  status,
-  progressPercent,
-}: {
-  status: SearchRunStatus;
-  progressPercent?: number | null;
-}) {
-  const style = STATUS_CHIP_STYLES[status];
-  const showPulse = status === "running";
-  return (
-    <span
-      data-testid={`status-chip-${status}`}
-      className={style.className}
-      style={{
-        background: style.background,
-        color: style.color,
-        borderRadius: "999px",
-        padding: "4px 12px",
-        fontSize: "12px",
-        fontWeight: 600,
-        display: "inline-flex",
-        alignItems: "center",
-        gap: "6px",
-      }}
-    >
-      {showPulse && (
-        <span
-          data-testid="running-pulse-dot"
-          style={{
-            width: "8px",
-            height: "8px",
-            borderRadius: "50%",
-            background: style.color,
-          }}
-        />
-      )}
-      {style.label}
-      {progressPercent != null && status === "running"
-        ? ` ${progressPercent}%`
-        : ""}
-    </span>
-  );
+function resolveProject(
+  runs: SearchRunListResponse | null,
+  editor: SearchQueryEditorSummary | null,
+): ProjectSummary | null {
+  return runs?.project ?? editor?.project ?? null;
 }
 
 export function SearchRunListScreen({
   runs,
+  editor,
+  onBackToStageEntry,
   onCreateRun,
-  onSelectRun,
+  onOpenRunDetail,
 }: SearchRunListScreenProps) {
+  const project = resolveProject(runs, editor);
+  const runList: SearchRunListItem[] = runs?.runs ?? [];
+
   return (
     <section
       style={{ display: "flex", flexDirection: "column", gap: "20px" }}
       data-testid="search-run-list-screen"
     >
       <section style={panelStyle}>
+        <button
+          style={{
+            border: "1px solid #d0d7e2",
+            background: "#ffffff",
+            borderRadius: "999px",
+            padding: "8px 14px",
+            cursor: "pointer",
+            fontSize: "13px",
+          }}
+          onClick={onBackToStageEntry}
+        >
+          ← 返回检索阶段
+        </button>
+        {project !== null && (
+          <div style={{ color: "#6b7280", fontSize: "13px", marginTop: "16px" }}>
+            {project.name}
+          </div>
+        )}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
+            marginTop: "12px",
+            flexWrap: "wrap",
+            gap: "12px",
           }}
         >
-          <h2 style={{ margin: 0, fontSize: "30px" }}>检索运行记录</h2>
+          <h2 style={{ margin: 0, fontSize: "30px" }}>🆕 检索运行记录</h2>
           <button
             data-testid="btn-create-run"
+            aria-label="运行当前检索"
             style={{
               border: "none",
               background: "#111827",
@@ -188,109 +98,114 @@ export function SearchRunListScreen({
               fontWeight: 600,
               fontSize: "14px",
             }}
-            onClick={onCreateRun}
+            onClick={() => void onCreateRun()}
           >
-            运行当前检索
+            ▶ 运行当前检索
           </button>
         </div>
+        {editor !== null && (
+          <div
+            style={{
+              marginTop: "16px",
+              padding: "12px 14px",
+              borderRadius: "14px",
+              background: "#f8fafc",
+              border: "1px solid #e5e7eb",
+              color: "#475569",
+              fontSize: "14px",
+            }}
+          >
+            当前检索式：{editor.query_name}（{editor.query_version}），已选来源：
+            {editor.selected_sources.join(", ")}
+          </div>
+        )}
       </section>
 
       <section style={panelStyle}>
-        {runs.length === 0 ? (
-          <div style={{ color: "#6b7280", padding: "40px 0", textAlign: "center" }}>
-            暂无检索运行记录。点击右上角「运行当前检索」开始第一次检索。
-          </div>
-        ) : (
+        {runList.length === 0 ? (
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr",
-              gap: "12px",
+              color: "#6b7280",
+              padding: "40px 0",
+              textAlign: "center",
+              fontSize: "14px",
             }}
           >
-            {runs.map((run) => (
-              <div
-                key={run.id}
-                data-testid={`run-row-${run.id}`}
-                onClick={() => onSelectRun?.(run.id)}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "140px 140px 1fr auto",
-                  gap: "16px",
-                  alignItems: "center",
-                  padding: "14px 16px",
-                  border: "1px solid #e5e7eb",
-                  borderRadius: "12px",
-                  cursor: onSelectRun ? "pointer" : "default",
-                  background: onSelectRun ? "#ffffff" : "transparent",
-                }}
-              >
+            暂无检索运行记录。点击右上角「▶ 运行当前检索」开始第一次检索。
+          </div>
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "12px" }}>
+            {runList.map((run) => {
+              const statusChip = STATUS_CHIP_STYLES[run.status] ??
+                STATUS_CHIP_STYLES.pending;
+              return (
                 <div
-                  style={{
-                    color: "#6b7280",
-                    fontSize: "13px",
+                  key={run.id}
+                  data-testid={`run-row-${run.id}`}
+                  onClick={() => onOpenRunDetail(run.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onOpenRunDetail(run.id);
+                    }
                   }}
-                  data-testid={`run-created-${run.id}`}
-                >
-                  {formatRelativeTime(run.created_at)}
-                </div>
-
-                <StatusChip
-                  status={run.status}
-                  progressPercent={run.progress_percent}
-                />
-
-                <div
+                  role="button"
+                  tabIndex={0}
                   style={{
-                    display: "flex",
-                    gap: "6px",
-                    flexWrap: "wrap",
-                  }}
-                >
-                  {run.sources.slice(0, 3).map((src) => (
-                    <span
-                      key={src.source_key}
-                      data-testid={`src-badge-${run.id}-${src.source_key}`}
-                      style={{
-                        background: "#f1f5f9",
-                        color: "#334155",
-                        borderRadius: "6px",
-                        padding: "3px 8px",
-                        fontSize: "11px",
-                        fontWeight: 500,
-                      }}
-                    >
-                      {src.source_label} {src.records_retrieved}/
-                      {src.records_imported}
-                    </span>
-                  ))}
-                </div>
-
-                <div
-                  style={{
-                    display: "flex",
+                    display: "grid",
+                    gridTemplateColumns: "auto 1fr auto",
                     gap: "16px",
-                    fontSize: "12px",
-                    color: "#374151",
+                    alignItems: "center",
+                    padding: "14px 16px",
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "12px",
+                    cursor: "pointer",
+                    background: "#ffffff",
                   }}
-                  data-testid={`prisma-mini-${run.id}`}
                 >
-                  <span>
-                    <span style={{ color: "#6b7280" }}>识别→</span>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "4px",
+                      fontSize: "13px",
+                    }}
+                  >
+                    <span style={{ fontWeight: 600 }}>运行 #{run.id}</span>
+                    <span style={{ color: "#6b7280" }}>{run.created_at}</span>
+                  </div>
+
+                  <span
+                    style={{
+                      background: statusChip.background,
+                      color: statusChip.color,
+                      borderRadius: "999px",
+                      padding: "4px 12px",
+                      fontSize: "12px",
+                      fontWeight: 600,
+                      justifySelf: "start",
+                    }}
+                  >
+                    {statusChip.label}
+                  </span>
+
+                  <div style={{ fontSize: "12px", color: "#374151" }}>
+                    <span style={{ color: "#6b7280" }}>PRISMA 识别→</span>
                     <b style={{ color: "#2563eb" }}>
-                      {run.prisma.identification}
+                      {run.prisma?.identification ?? 0}
                     </b>
-                  </span>
-                  <span>
-                    <span style={{ color: "#6b7280" }}>筛选→</span>
-                    <b style={{ color: "#3b82f6" }}>{run.prisma.screening}</b>
-                  </span>
+                    <span style={{ margin: "0 6px", color: "#94a3b8" }}>/</span>
+                    <span style={{ color: "#6b7280" }}>纳入→</span>
+                    <b style={{ color: "#15803d" }}>{run.prisma?.screening ?? 0}</b>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </section>
     </section>
   );
 }
+
+export type { SearchRunListScreenProps };

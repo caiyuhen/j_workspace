@@ -55,6 +55,13 @@ const getStageEntry = vi.fn(async () => ({
       status: "ready",
       target: "/workspace/projects/1/stages/search/literature",
     },
+    {
+      key: "search-runs",
+      title: "检索运行记录",
+      description: "查看历史检索并运行当前检索",
+      status: "ready",
+      target: "/workspace/projects/1/stages/search/runs",
+    },
   ],
   recent_tasks: [
     {
@@ -427,6 +434,40 @@ vi.mock("@meda/shared-sdk", () => ({
     importLiterature,
     confirmLiteratureUnique,
     getMe: vi.fn(),
+    listSearchRuns: vi.fn(async () => ({
+      project: {
+        id: 1,
+        name: "糖尿病真实世界研究",
+        workspace_key: "demo-hospital/糖尿病真实世界研究",
+        current_stage: "检索",
+        updated_at_label: "刚刚更新",
+      },
+      stage_key: "search",
+      runs: [],
+    })),
+    createSearchRun: vi.fn(async () => ({
+      id: 1,
+      project_id: 1,
+      search_query_version_id: null,
+      selected_sources: ["pubmed", "cnki", "wanfang"],
+      status: "pending",
+      created_at: "2026-08-11T10:00:00Z",
+      started_at: null,
+      finished_at: null,
+      total_hits_raw: 0,
+      total_after_dedupe: 0,
+      prisma: {
+        identification: 0,
+        screening: 0,
+        eligibility: 0,
+        included: 0,
+        by_source: [],
+      },
+      eta_seconds: null,
+    })),
+    getSearchRunDetail: vi.fn(),
+    retrySearchRun: vi.fn(),
+    cancelSearchRun: vi.fn(),
   }),
 }));
 
@@ -453,6 +494,11 @@ test("web workspace opens a stage-entry hub from the stage card", async () => {
   expect(screen.getByText("最近任务")).toBeInTheDocument();
   expect(screen.getByText("最近产物")).toBeInTheDocument();
   expect(screen.getByText("补全数据库来源")).toBeInTheDocument();
+  const runRecordMatches = screen.getAllByText(/检索运行记录/);
+  expect(runRecordMatches.length).toBeGreaterThan(0);
+  expect(
+    screen.getByRole("button", { name: "运行当前检索", hidden: true }),
+  ).toBeInTheDocument();
 });
 
 test("web workspace opens query builder and creates a version", async () => {
@@ -467,7 +513,7 @@ test("web workspace opens query builder and creates a version", async () => {
   fireEvent.click(screen.getByRole("button", { name: "进入工作台" }));
 
   fireEvent.click(await screen.findByRole("button", { name: "检索" }));
-  fireEvent.click(await screen.findByRole("button", { name: "进入检索式管理" }));
+  fireEvent.click(await screen.findByRole("button", { name: "检索式编辑器" }));
 
   expect(
     await screen.findByRole("heading", { name: "检索式管理" }),
