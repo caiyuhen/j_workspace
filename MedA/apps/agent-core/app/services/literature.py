@@ -1,6 +1,92 @@
+from dataclasses import dataclass
+from datetime import datetime
+
 from sqlmodel import Session, select
 
 from app.models import LiteratureImportBatch, LiteratureRecord, ResearchProject
+
+
+_SOURCE_LABELS = {"pubmed": "PubMed", "cnki": "CNKI", "wanfang": "万方"}
+
+
+@dataclass
+class _ImportResult:
+    count: int
+    skipped_count: int
+    duplicate_count: int
+
+
+def import_unified_entries(
+    session,
+    project_id,
+    source_key,
+    entries,
+    search_run_id=None,
+    search_run_source_id=None,
+) -> _ImportResult:
+    imported = 0
+    skipped = 0
+    duplicates = 0
+    batch = LiteratureImportBatch(
+        project_id=project_id,
+        source_key=source_key,
+        parsed_count=len(entries),
+        duplicate_count=0,
+        skipped_count=0,
+        search_run_source_id=search_run_source_id,
+    )
+    session.add(batch)
+    session.flush()
+
+    for e in entries:
+        try:
+            doi, pmid, title = (e.doi or "").strip().lower(), (e.pmid or "").strip(), (e.title or "").strip()
+            if title == "":
+                skipped += 1
+                continue
+            dup_id = None
+            if doi:
+                match = session.exec(
+                    select(LiteratureRecord.id).where(
+                        LiteratureRecord.project_id == project_id,
+                        LiteratureRecord.doi == doi,
+                        LiteratureRecord.dedupe_status != "duplicate",
+                    ).limit(1)
+                ).first()
+                if match:
+                    dup_id = match
+            status = "unique" if dup_id is None else "duplicate"
+            if dup_id is not None:
+                duplicates += 1
+            rec = LiteratureRecord(
+                project_id=project_id,
+                doi=doi,
+                pmid=pmid,
+                title=title,
+                authors=e.authors or "",
+                journal=e.journal or "",
+                year=e.year,
+                abstract=e.abstract or "",
+                source_key=source_key,
+                source_label=_SOURCE_LABELS.get(source_key, source_key),
+                dedupe_status=status,
+                duplicate_of_id=dup_id,
+                import_batch_id=batch.id,
+                search_run_id=search_run_id,
+                pico_status="not_extracted",
+            )
+            session.add(rec)
+            session.flush()
+            imported += 1
+        except Exception:
+            skipped += 1
+            session.rollback()
+
+    batch.duplicate_count = duplicates
+    batch.skipped_count = skipped
+    session.add(batch)
+    session.commit()
+    return _ImportResult(count=imported, skipped_count=skipped, duplicate_count=duplicates)
 from app.schemas import (
     CreateLiteratureRecordRequest,
     ImportLiteratureRequest,
@@ -40,42 +126,82 @@ def _require_known_source(source_key: str) -> None:
         raise LiteratureError(f"unknown source key: {source_key}")
 
 
+def _format_created_at_label(created_at: datetime) -> str:
+    delta = datetime.utcnow() - created_at
+    seconds = int(delta.total_seconds())
+    if seconds < 60:
+        return "刚刚导入"
+    minutes = seconds // 60
+    if minutes < 60:
+        return f"{minutes} 分钟前导入"
+    hours = minutes // 60
+    if hours < 24:
+        return f"{hours} 小时前导入"
+    days = hours // 24
+    if days < 30:
+        return f"{days} 天前导入"
+    return created_at.strftime("%Y-%m-%d 导入")
+
+
 def _detect_duplicate(
     session: Session,
     project_id: int,
     candidate: LiteratureRecord,
 ) -> int | None:
-    """三级判定，命中即停。只在同项目内比较，且不以 duplicate 记录作为原件。"""
-    existing = list(
-        session.exec(
-            select(LiteratureRecord)
-            .where(
-                LiteratureRecord.project_id == project_id,
-                LiteratureRecord.dedupe_status != "duplicate",
-            )
-            .order_by(LiteratureRecord.id)
+    """三级判定，命中即停。只在同项目内比较，且不以 duplicate 记录作为原件。
+    DOI/PMID 用数据库 LIMIT 1 查询，标题级仅加载必要字段。"""
+    base_query = (
+        select(LiteratureRecord)
+        .where(
+            LiteratureRecord.project_id == project_id,
+            LiteratureRecord.dedupe_status != "duplicate",
         )
+        .order_by(LiteratureRecord.id)
     )
 
     if candidate.doi != "":
-        for record in existing:
-            if record.doi == candidate.doi:
-                return record.id
+        match = session.exec(
+            base_query.where(LiteratureRecord.doi == candidate.doi).limit(1)
+        ).first()
+        if match is not None:
+            return match.id
 
     if candidate.pmid != "":
-        for record in existing:
-            if record.pmid == candidate.pmid:
-                return record.id
+        match = session.exec(
+            base_query.where(LiteratureRecord.pmid == candidate.pmid).limit(1)
+        ).first()
+        if match is not None:
+            return match.id
 
     candidate_title = normalize_title(candidate.title)
-    for record in existing:
+    existing = session.exec(
+        select(LiteratureRecord.id, LiteratureRecord.title, LiteratureRecord.year)
+        .where(
+            LiteratureRecord.project_id == project_id,
+            LiteratureRecord.dedupe_status != "duplicate",
+        )
+        .order_by(LiteratureRecord.id)
+    ).all()
+    for row in existing:
+        record_id, record_title, record_year = row
         if (
-            normalize_title(record.title) == candidate_title
-            and record.year == candidate.year
+            normalize_title(record_title) == candidate_title
+            and record_year == candidate.year
         ):
-            return record.id
+            return record_id
 
     return None
+
+
+def _normalize_identifiers(
+    doi: str, pmid: str, title: str
+) -> tuple[str, str, str]:
+    """统一规范化标识符和标题：DOI 全小写+去空格、PMID 去空格、title strip。"""
+    return (
+        doi.strip().lower(),
+        pmid.strip(),
+        title.strip(),
+    )
 
 
 def _to_record_summary(record: LiteratureRecord) -> LiteratureRecordSummary:
@@ -159,7 +285,7 @@ def build_library_response(
                 parsed_count=batch.parsed_count,
                 duplicate_count=batch.duplicate_count,
                 skipped_count=batch.skipped_count,
-                created_at_label=batch.created_at_label,
+                created_at_label=_format_created_at_label(batch.created_at),
             )
             for batch in batches
         ],
@@ -195,33 +321,46 @@ def import_literature(
         skipped_count=parsed.skipped_count,
     )
     session.add(batch)
-    session.commit()
-    session.refresh(batch)
+    session.flush()
 
     duplicate_count = 0
+    failed_count = 0
     for entry in parsed.entries:
+        norm_doi, norm_pmid, norm_title = _normalize_identifiers(
+            entry.doi, entry.pmid, entry.title
+        )
+        if norm_title == "":
+            failed_count += 1
+            continue
+
         record = LiteratureRecord(
             project_id=project_id,
-            title=entry.title,
+            title=norm_title,
             authors=entry.authors,
             journal=entry.journal,
             year=entry.year,
-            doi=entry.doi,
-            pmid=entry.pmid,
+            doi=norm_doi,
+            pmid=norm_pmid,
             abstract=entry.abstract,
             source_key=payload.source_key,
             import_batch_id=batch.id,
         )
-        original_id = _detect_duplicate(session, project_id, record)
-        if original_id is not None:
-            record.dedupe_status = "duplicate"
-            record.duplicate_of_id = original_id
-            duplicate_count += 1
+        try:
+            original_id = _detect_duplicate(session, project_id, record)
+            if original_id is not None:
+                record.dedupe_status = "duplicate"
+                record.duplicate_of_id = original_id
+                duplicate_count += 1
 
-        session.add(record)
-        session.commit()
+            session.add(record)
+            session.commit()
+        except Exception:
+            session.rollback()
+            failed_count += 1
+            continue
 
     batch.duplicate_count = duplicate_count
+    batch.skipped_count = parsed.skipped_count + failed_count
     session.add(batch)
     session.commit()
 
@@ -229,9 +368,9 @@ def import_literature(
         session,
         project,
         ImportResultSummary(
-            imported_count=len(parsed.entries),
+            imported_count=len(parsed.entries) - failed_count,
             duplicate_count=duplicate_count,
-            skipped_count=parsed.skipped_count,
+            skipped_count=parsed.skipped_count + failed_count,
         ),
     )
 
@@ -243,19 +382,21 @@ def create_literature_record(
 ) -> LiteratureLibraryResponse:
     _require_known_source(payload.source_key)
 
-    title = payload.title.strip()
-    if title == "":
+    norm_doi, norm_pmid, norm_title = _normalize_identifiers(
+        payload.doi, payload.pmid, payload.title
+    )
+    if norm_title == "":
         raise LiteratureError("title 不能为空")
 
     project_id = project.id or 0
     record = LiteratureRecord(
         project_id=project_id,
-        title=title,
+        title=norm_title,
         authors=payload.authors,
         journal=payload.journal,
         year=payload.year,
-        doi=payload.doi,
-        pmid=payload.pmid,
+        doi=norm_doi,
+        pmid=norm_pmid,
         abstract=payload.abstract,
         source_key=payload.source_key,
     )

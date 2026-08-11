@@ -132,3 +132,43 @@ def create_test_project(session: Session, user: User) -> ResearchProject:
     session.add(project)
     session.flush()
     return project
+
+
+def inject_mock_datasets_into_adapters(
+    monkeypatch,
+    registry: dict[str, list[UnifiedMockEntry]],
+) -> None:
+    """Helper that pushes test mock entries into each StubAdapter's INJECTED_DATASET."""
+    from app.services.sources import cnki_adapter, pubmed_adapter, wanfang_adapter
+    from app.services.sources.protocol import UnifiedLiteratureEntry
+
+    def _coerce(entries: list[UnifiedMockEntry]) -> list[UnifiedLiteratureEntry]:
+        return [
+            UnifiedLiteratureEntry(
+                doi=e.doi, pmid=e.pmid, title=e.title, authors=e.authors,
+                journal=e.journal, year=e.year, abstract=e.abstract,
+                source_key="__unset__", source_record_id=e.source_record_id,
+            ) for e in entries
+        ]
+
+    if "pubmed" in registry:
+        mock_entries = _coerce(registry["pubmed"])
+        async def _esearch(q, ctx):
+            ids = [e.source_record_id or f"m{i}" for i, e in enumerate(mock_entries, 1)]
+            return ids, len(mock_entries)
+        async def _efetch(ids):
+            return mock_entries
+        monkeypatch.setattr(
+            "app.services.sources.pubmed_adapter._esearch_pubmed_ids", _esearch
+        )
+        monkeypatch.setattr(
+            "app.services.sources.pubmed_adapter._efetch_parse_entries", _efetch
+        )
+    if "cnki" in registry:
+        monkeypatch.setattr(
+            cnki_adapter, "INJECTED_DATASET", _coerce(registry["cnki"])
+        )
+    if "wanfang" in registry:
+        monkeypatch.setattr(
+            wanfang_adapter, "INJECTED_DATASET", _coerce(registry["wanfang"])
+        )
