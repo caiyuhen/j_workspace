@@ -1,3 +1,6 @@
+from datetime import datetime
+from typing import Literal
+
 from sqlmodel import Field, SQLModel
 
 
@@ -79,7 +82,9 @@ class LiteratureImportBatch(SQLModel, table=True):
     parsed_count: int = 0
     duplicate_count: int = 0
     skipped_count: int = 0
-    created_at_label: str = "刚刚导入"
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at_label: str = ""
+    search_run_source_id: int | None = Field(default=None, foreign_key="searchrunsource.id")
 
 
 class LiteratureRecord(SQLModel, table=True):
@@ -94,8 +99,15 @@ class LiteratureRecord(SQLModel, table=True):
     abstract: str = ""
     source_key: str
     dedupe_status: str = "unique"
-    duplicate_of_id: int | None = None
-    import_batch_id: int | None = None
+    duplicate_of_id: int | None = Field(
+        default=None, foreign_key="literaturerecord.id"
+    )
+    import_batch_id: int | None = Field(
+        default=None, foreign_key="literatureimportbatch.id"
+    )
+    search_run_id: int | None = Field(default=None, foreign_key="searchrun.id")
+    relevance_score: float | None = None
+    pico_status: str = "not_extracted"
 
 
 class AuditEvent(SQLModel, table=True):
@@ -124,6 +136,50 @@ class ArtifactRecord(SQLModel, table=True):
     artifact_type: str
     title: str
     source_file_id: int | None = None
+
+
+class SearchRun(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id", index=True)
+    search_query_version_id: int | None = Field(
+        default=None, foreign_key="searchqueryversion.id", index=True
+    )
+    query_snapshot: str
+    selected_sources: str
+    status: str = "pending"
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    total_hits_raw: int = 0
+    total_after_dedupe: int = 0
+    error_message: str | None = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class SearchRunSource(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    search_run_id: int = Field(foreign_key="searchrun.id", index=True)
+    source_key: str = Field(index=True)
+    status: str = "pending"
+    hits_on_source: int | None = None
+    records_retrieved: int = 0
+    records_imported: int = 0
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+    error_message: str | None = None
+    raw_response_excerpt: str | None = None
+
+
+class LiteraturePico(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    record_id: int = Field(foreign_key="literaturerecord.id", sa_column_kwargs={"unique": True})
+    population: str | None = None
+    intervention: str | None = None
+    comparison: str | None = None
+    outcome: str | None = None
+    study_type: str | None = None
+    extraction_method: str
+    confidence: float | None = None
+    extracted_at: datetime = Field(default_factory=datetime.utcnow)
 
 
 class AuthSession(SQLModel, table=True):

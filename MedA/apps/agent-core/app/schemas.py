@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -265,7 +267,7 @@ class LiteratureRecordSummary(BaseModel):
     pmid: str
     source_key: str
     source_label: str
-    dedupe_status: str
+    dedupe_status: Literal["unique", "duplicate", "confirmed_unique"]
     duplicate_of_id: int | None
 
 
@@ -322,3 +324,111 @@ class CreateLiteratureRecordRequest(BaseModel):
     pmid: str = ""
     abstract: str = ""
     source_key: str
+
+
+SearchRunStatus = Literal[
+    "pending","running","completed","partial_failed","failed","cancelled"
+]
+SearchRunSourceStatus = Literal["pending","running","completed","failed"]
+PicoStatus = Literal["not_extracted","extracted","failed"]
+
+
+class SearchSourceBreakdown(BaseModel):
+    source_key: str
+    source_label: str
+    records_retrieved: int
+    records_imported: int
+
+
+class PrismaReport(BaseModel):
+    identification: int
+    screening: int
+    eligibility: int
+    included: int
+    by_source: list[SearchSourceBreakdown]
+
+
+class SearchRunSummary(BaseModel):
+    id: int
+    project_id: int
+    search_query_version_id: int | None
+    selected_sources: list[str]
+    status: SearchRunStatus
+    created_at: str
+    started_at: str | None
+    finished_at: str | None
+    total_hits_raw: int
+    total_after_dedupe: int
+    prisma: PrismaReport
+    eta_seconds: float | None
+
+
+class SearchRunSourceSummary(BaseModel):
+    id: int
+    search_run_id: int
+    source_key: str
+    source_label: str
+    status: SearchRunSourceStatus
+    hits_on_source: int | None
+    records_retrieved: int
+    records_imported: int
+    started_at: str | None
+    finished_at: str | None
+    error_message: str | None
+
+
+class SearchRunDetail(BaseModel):
+    run: SearchRunSummary
+    sources: list[SearchRunSourceSummary]
+
+
+class SearchRunCreatePayload(BaseModel):
+    search_query_version_id: int | None = None
+    query_snapshot: dict | None = None
+    sources: list[str]
+
+
+class SearchRunStatusPoll(BaseModel):
+    status: SearchRunStatus
+    finished_sources: int
+    total_sources: int
+    eta_seconds: float | None
+
+
+class LiteraturePicoResponse(BaseModel):
+    record_id: int
+    population: str | None
+    intervention: str | None
+    comparison: str | None
+    outcome: str | None
+    study_type: str | None
+    extraction_method: str
+    confidence: float | None
+    extracted_at: str
+
+
+class BatchPicoPayload(BaseModel):
+    record_ids: list[int]
+    method: Literal["rule_baseline", "llm"] = "rule_baseline"
+
+
+class BatchPicoResult(BaseModel):
+    processed: int
+    already_had: int
+    failed: int
+
+
+class PicoAutofillDraft(BaseModel):
+    p: str
+    i: str
+    c: str
+    o: str
+    supporting_record_ids: list[int]
+
+
+class LiteratureLibraryRequestExt(BaseModel):
+    search_run_id: int | None = None
+    sort: Literal["default", "relevance", "year_desc", "journal"] = "default"
+    min_score: float | None = None
+    page: int = 1
+    page_size: int = 100
