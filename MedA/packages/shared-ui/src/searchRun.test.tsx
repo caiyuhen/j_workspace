@@ -119,13 +119,14 @@ describe("Status chip colors 6 states", () => {
   it("(ii-1) pending renders grey className and color literal", () => {
     render(
       <SearchRunListScreen
-        runs={[makeRun("pending")]}
-        onCreateRun={() => {}}
+        runs={null}
+        editor={null}
+        standaloneRuns={[makeRun("pending")]}
       />,
     );
     const chip = screen.getByTestId("status-chip-pending");
     expect(chip.getAttribute("class") ?? "").toContain(
-      STATUS_CHIP_STYLES.pending.className ?? "status-pending-grey",
+      STATUS_CHIP_STYLES.pending.className,
     );
     const style = chip.getAttribute("style") ?? "";
     expect(style).toContain("color");
@@ -134,13 +135,14 @@ describe("Status chip colors 6 states", () => {
   it("(ii-2) running renders blue className and color literal", () => {
     render(
       <SearchRunListScreen
-        runs={[makeRun("running")]}
-        onCreateRun={() => {}}
+        runs={null}
+        editor={null}
+        standaloneRuns={[makeRun("running")]}
       />,
     );
     const chip = screen.getByTestId("status-chip-running");
     expect(chip.getAttribute("class") ?? "").toContain(
-      STATUS_CHIP_STYLES.running.className ?? "status-running-blue",
+      STATUS_CHIP_STYLES.running.className,
     );
     const style = chip.getAttribute("style") ?? "";
     expect(style).toContain("background");
@@ -149,13 +151,14 @@ describe("Status chip colors 6 states", () => {
   it("(ii-3) completed renders green className and color literal", () => {
     render(
       <SearchRunListScreen
-        runs={[makeRun("completed")]}
-        onCreateRun={() => {}}
+        runs={null}
+        editor={null}
+        standaloneRuns={[makeRun("completed")]}
       />,
     );
     const chip = screen.getByTestId("status-chip-completed");
     expect(chip.getAttribute("class") ?? "").toContain(
-      STATUS_CHIP_STYLES.completed.className ?? "status-completed-green",
+      STATUS_CHIP_STYLES.completed.className,
     );
     const style = chip.getAttribute("style") ?? "";
     expect(style).toContain("background");
@@ -164,13 +167,14 @@ describe("Status chip colors 6 states", () => {
   it("(ii-4) partial_failed renders orange className and color literal", () => {
     render(
       <SearchRunListScreen
-        runs={[makeRun("partial_failed")]}
-        onCreateRun={() => {}}
+        runs={null}
+        editor={null}
+        standaloneRuns={[makeRun("partial_failed")]}
       />,
     );
     const chip = screen.getByTestId("status-chip-partial_failed");
     expect(chip.getAttribute("class") ?? "").toContain(
-      STATUS_CHIP_STYLES.partial_failed.className ?? "status-partial_orange",
+      STATUS_CHIP_STYLES.partial_failed.className,
     );
     const style = chip.getAttribute("style") ?? "";
     expect(style).toContain("background");
@@ -179,13 +183,14 @@ describe("Status chip colors 6 states", () => {
   it("(ii-5) failed renders red className and color literal", () => {
     render(
       <SearchRunListScreen
-        runs={[makeRun("failed")]}
-        onCreateRun={() => {}}
+        runs={null}
+        editor={null}
+        standaloneRuns={[makeRun("failed")]}
       />,
     );
     const chip = screen.getByTestId("status-chip-failed");
     expect(chip.getAttribute("class") ?? "").toContain(
-      STATUS_CHIP_STYLES.failed.className ?? "status-failed-red",
+      STATUS_CHIP_STYLES.failed.className,
     );
     const style = chip.getAttribute("style") ?? "";
     expect(style).toContain("background");
@@ -194,13 +199,14 @@ describe("Status chip colors 6 states", () => {
   it("(ii-6) cancelled renders neutral grey className and color literal", () => {
     render(
       <SearchRunListScreen
-        runs={[makeRun("cancelled")]}
-        onCreateRun={() => {}}
+        runs={null}
+        editor={null}
+        standaloneRuns={[makeRun("cancelled")]}
       />,
     );
     const chip = screen.getByTestId("status-chip-cancelled");
     expect(chip.getAttribute("class") ?? "").toContain(
-      STATUS_CHIP_STYLES.cancelled.className ?? "status-cancelled-grey",
+      STATUS_CHIP_STYLES.cancelled.className,
     );
     const style = chip.getAttribute("style") ?? "";
     expect(style).toContain("background");

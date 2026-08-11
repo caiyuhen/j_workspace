@@ -8,9 +8,11 @@ import type {
 type SearchRunListScreenProps = {
   runs: SearchRunListResponse | null;
   editor: SearchQueryEditorSummary | null;
-  onBackToStageEntry: () => void;
-  onCreateRun: () => Promise<void> | void;
-  onOpenRunDetail: (runId: number) => void;
+  onBackToStageEntry?: () => void;
+  onCreateRun?: () => Promise<void> | void;
+  onOpenRunDetail?: (runId: number) => void;
+  // lightweight standalone mode: render just the list (no project/editor UI)
+  standaloneRuns?: SearchRunListItem[];
 };
 
 const panelStyle = {
@@ -21,17 +23,97 @@ const panelStyle = {
   boxShadow: "0 8px 24px rgba(15, 23, 42, 0.06)",
 };
 
-const STATUS_CHIP_STYLES: Record<
-  string,
-  { background: string; color: string; label: string }
+export type SearchRunStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "partial_failed"
+  | "failed"
+  | "cancelled";
+
+export const STATUS_CHIP_STYLES: Record<
+  SearchRunStatus,
+  {
+    background: string;
+    color: string;
+    label: string;
+    className: string;
+  }
 > = {
-  pending: { background: "#f3f4f6", color: "#4b5563", label: "等待中" },
-  running: { background: "#dbeafe", color: "#1d4ed8", label: "运行中" },
-  completed: { background: "#dcfce7", color: "#047857", label: "已完成" },
-  partial_failed: { background: "#ffedd5", color: "#c2410c", label: "部分失败" },
-  failed: { background: "#fee2e2", color: "#b91c1c", label: "失败" },
-  cancelled: { background: "#e5e7eb", color: "#6b7280", label: "已取消" },
+  pending: {
+    background: "#f3f4f6",
+    color: "#4b5563",
+    label: "等待中",
+    className: "status-pending-grey",
+  },
+  running: {
+    background: "#dbeafe",
+    color: "#1d4ed8",
+    label: "运行中",
+    className: "status-running-blue",
+  },
+  completed: {
+    background: "#dcfce7",
+    color: "#047857",
+    label: "已完成",
+    className: "status-completed-green",
+  },
+  partial_failed: {
+    background: "#ffedd5",
+    color: "#c2410c",
+    label: "部分失败",
+    className: "status-partial-orange",
+  },
+  failed: {
+    background: "#fee2e2",
+    color: "#b91c1c",
+    label: "失败",
+    className: "status-failed-red",
+  },
+  cancelled: {
+    background: "#e5e7eb",
+    color: "#6b7280",
+    label: "已取消",
+    className: "status-cancelled-grey",
+  },
 };
+
+export type SearchRunListItem = {
+  id: number;
+  status: SearchRunStatus;
+  created_at: string;
+  sources: Array<{
+    key: string;
+    retrieved: number;
+    imported: number;
+  }>;
+  prisma: {
+    identification: number;
+    screening: number;
+  };
+  progress_percent: number | null;
+};
+
+export function formatRelativeTime(isoOrDate: string | Date): string {
+  const now = new Date();
+  const t =
+    typeof isoOrDate === "string" ? new Date(isoOrDate) : isoOrDate;
+  const ms = now.getTime() - t.getTime();
+  const sec = Math.floor(ms / 1000);
+  if (sec < 1) return "刚刚";
+  if (sec < 60) return sec === 1 ? "1 秒前" : `${sec} 秒前`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return min === 1 ? "1 分钟前" : `${min} 分钟前`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return hr === 1 ? "1 小时前" : `${hr} 小时前`;
+  const day = Math.floor(hr / 24);
+  if (day === 1) return "昨天";
+  if (day < 90) return `${day} 天前`;
+  const y = t.getFullYear();
+  const m = String(t.getMonth() + 1).padStart(2, "0");
+  const d = String(t.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 function resolveProject(
   runs: SearchRunListResponse | null,
@@ -46,9 +128,14 @@ export function SearchRunListScreen({
   onBackToStageEntry,
   onCreateRun,
   onOpenRunDetail,
+  standaloneRuns,
 }: SearchRunListScreenProps) {
   const project = resolveProject(runs, editor);
-  const runList: SearchRunListItem[] = runs?.runs ?? [];
+  const runList: SearchRunListItem[] =
+    standaloneRuns && standaloneRuns.length > 0
+      ? standaloneRuns
+      : runs?.runs ?? [];
+  const standaloneMode = standaloneRuns !== undefined;
 
   return (
     <section
@@ -56,54 +143,60 @@ export function SearchRunListScreen({
       data-testid="search-run-list-screen"
     >
       <section style={panelStyle}>
-        <button
-          style={{
-            border: "1px solid #d0d7e2",
-            background: "#ffffff",
-            borderRadius: "999px",
-            padding: "8px 14px",
-            cursor: "pointer",
-            fontSize: "13px",
-          }}
-          onClick={onBackToStageEntry}
-        >
-          ← 返回检索阶段
-        </button>
-        {project !== null && (
-          <div style={{ color: "#6b7280", fontSize: "13px", marginTop: "16px" }}>
-            {project.name}
-          </div>
+        {!standaloneMode && (
+          <>
+            <button
+              style={{
+                border: "1px solid #d0d7e2",
+                background: "#ffffff",
+                borderRadius: "999px",
+                padding: "8px 14px",
+                cursor: "pointer",
+                fontSize: "13px",
+              }}
+              onClick={onBackToStageEntry}
+            >
+              ← 返回检索阶段
+            </button>
+            {project !== null && (
+              <div style={{ color: "#6b7280", fontSize: "13px", marginTop: "16px" }}>
+                {project.name}
+              </div>
+            )}
+          </>
         )}
         <div
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginTop: "12px",
+            marginTop: standaloneMode ? "0px" : "12px",
             flexWrap: "wrap",
             gap: "12px",
           }}
         >
           <h2 style={{ margin: 0, fontSize: "30px" }}>🆕 检索运行记录</h2>
-          <button
-            data-testid="btn-create-run"
-            aria-label="运行当前检索"
-            style={{
-              border: "none",
-              background: "#111827",
-              color: "#f9fafb",
-              borderRadius: "999px",
-              padding: "10px 20px",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: "14px",
-            }}
-            onClick={() => void onCreateRun()}
-          >
-            ▶ 运行当前检索
-          </button>
+          {!standaloneMode && (
+            <button
+              data-testid="btn-create-run"
+              aria-label="运行当前检索"
+              style={{
+                border: "none",
+                background: "#111827",
+                color: "#f9fafb",
+                borderRadius: "999px",
+                padding: "10px 20px",
+                cursor: "pointer",
+                fontWeight: 600,
+                fontSize: "14px",
+              }}
+              onClick={() => void onCreateRun?.()}
+            >
+              ▶ 运行当前检索
+            </button>
+          )}
         </div>
-        {editor !== null && (
+        {!standaloneMode && editor !== null && (
           <div
             style={{
               marginTop: "16px",
@@ -172,10 +265,14 @@ export function SearchRunListScreen({
                     }}
                   >
                     <span style={{ fontWeight: 600 }}>运行 #{run.id}</span>
-                    <span style={{ color: "#6b7280" }}>{run.created_at}</span>
+                    <span style={{ color: "#6b7280" }}>
+                      {formatRelativeTime(run.created_at)}
+                    </span>
                   </div>
 
                   <span
+                    data-testid={`status-chip-${run.status}`}
+                    className={statusChip.className}
                     style={{
                       background: statusChip.background,
                       color: statusChip.color,
