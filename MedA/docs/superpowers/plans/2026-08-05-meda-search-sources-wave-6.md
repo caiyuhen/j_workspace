@@ -10,6 +10,15 @@
 
 **Spec:** `docs/superpowers/specs/2026-08-05-meda-search-sources-wave-6-design.md`
 
+> **执行后记（2026-08-05）：** 本计划已全部执行完成。随后的 code review 发现四处问题并已修复，因此**最终实现与本文档有以下差异**，以 spec 和代码为准：
+>
+> 1. **`config_dirty` 字段已移除。** 本文档多处出现该字段（模型、schema、service、测试 fixture），但它在全代码路径中从未被写入 `True`，属死代码。已从 model / schema / service 一并删除，spec 13 节也已列入"本波不包含"。
+> 2. **`project_id` 增加了 `unique=True`。** 本文档 Step 3 给出的模型定义缺少唯一约束，与 spec 5.1 的项目级单例语义不符，并发下会产生重复配置记录。
+> 3. **检索参数改为可编辑。** 本文档 Task 5/6 给出的组件代码把检索字段、年份区间、语种做成只读文本，这与 spec 7.5 的"多选 / 区间输入"要求冲突 —— 是本计划的编写疏漏。实现已补齐三组编辑控件，并调用 `getSourceCatalog` 拉取选项。
+> 4. **组件已抽取到 `packages/shared-ui`。** 本文档 Task 5/6 分别创建了两份逐字节相同的 167 行组件。现已合并为共享包，两端 import 同一实现。
+>
+> 另外修复了两处计划未覆盖的环境问题：两端 `test-setup.ts` 缺少 `afterEach(cleanup)`（导致多测试间 DOM 残留）；`packages/shared-ui` 需要自己的 `tsconfig.json` 指定 `"jsx": "react-jsx"`。
+
 ---
 
 ## File Structure

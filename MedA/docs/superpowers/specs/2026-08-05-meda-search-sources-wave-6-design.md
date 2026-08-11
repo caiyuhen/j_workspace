@@ -80,13 +80,12 @@ ResearchProject (1) ── (1) SearchSourceConfig
 | 字段 | 类型 | 说明 |
 |---|---|---|
 | `id` | `int` | 主键 |
-| `project_id` | `int` | 外键指向 `researchproject.id`，逻辑上唯一 |
+| `project_id` | `int` | 外键指向 `researchproject.id`，带唯一约束 |
 | `enabled_sources_json` | `str` | 启用的库 key 列表，如 `["pubmed", "embase"]` |
 | `search_fields_json` | `str` | 检索字段范围，如 `["title", "abstract", "keyword"]` |
 | `year_from` | `int \| None` | 起始年份，`None` 表示不限 |
 | `year_to` | `int \| None` | 结束年份，`None` 表示不限 |
 | `languages_json` | `str` | 语种限定，如 `["en", "zh"]` |
-| `config_dirty` | `bool` | 是否有未保存改动 |
 
 JSON 字段的存储方式沿用 `Wave 5` 中 `SearchQueryDraft` 的做法，保持后端内部一致。
 
@@ -99,7 +98,6 @@ JSON 字段的存储方式沿用 `Wave 5` 中 `SearchQueryDraft` 的做法，保
 - `year_from`: `None`
 - `year_to`: `None`
 - `languages_json`: `["en"]`
-- `config_dirty`: `false`
 
 默认启用 `pubmed` 和 `embase` 是为了与 `Wave 5` 的既有行为保持向后兼容，避免现有项目在升级后立刻进入 `unavailable` 状态。
 
@@ -238,7 +236,8 @@ workspace / projects / {project_id} / stages / search / sources
 
 3. `保存条`
    - `保存配置` 按钮
-   - 未保存改动提示
+
+未保存改动提示（脏标记）本波不实现。理由见 8.1：来源配置是直接保存的设置项，不引入草稿态，因此不需要脏标记来提示用户"有未提交的改动"。若后续要支持离开页面前的拦截提示，再引入前端局部脏标记，无需后端字段。
 
 ### 7.6 右侧影响提示区
 
@@ -312,7 +311,6 @@ search_fields[]
 year_from
 year_to
 languages[]
-config_dirty
 impact_summary
 validation_messages[]    # 复用 Wave 5 的 SearchValidationMessage 类型
 ```
@@ -431,6 +429,7 @@ languages[]
 - 按来源的差异化参数配置
 - 用户自定义添加数据库
 - 来源配置的版本快照与变更历史
+- 未保存改动的脏标记与离开页面拦截提示
 - 检索记录时间线页
 - 检索式库总览页
 
