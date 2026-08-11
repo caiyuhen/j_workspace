@@ -438,6 +438,35 @@ doi: 10.9/xyz
     assert body["last_import_result"]["duplicate_count"] == 1
 
 
+def test_duplicate_record_is_not_used_as_dedupe_original() -> None:
+    """已被标记 duplicate 的记录不应成为后续判重的原件，避免形成判重链。
+
+    A 与 B 靠标题加年份判重，B 被标记 duplicate；C 的 DOI 只与 B 相同。
+    若查询未过滤 duplicate，C 会指向 B 形成 A <- B <- C 的链。
+    """
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    _import(client, token, project_id, "title: Shared paper\ndoi: 10.1/aaa\nyear: 2020")
+    _import(
+        client,
+        token,
+        project_id,
+        "title: Shared paper\ndoi: 10.2/bbb\nyear: 2020",
+        "embase",
+    )
+    body = _import(
+        client, token, project_id, "title: Only doi matches B\ndoi: 10.2/bbb", "cnki"
+    )
+
+    b_record = next(r for r in body["records"] if r["doi"] == "10.2/bbb" and r["title"] == "Shared paper")
+    c_record = next(r for r in body["records"] if r["title"] == "Only doi matches B")
+
+    assert b_record["dedupe_status"] == "duplicate"
+    assert c_record["dedupe_status"] == "unique"
+    assert c_record["duplicate_of_id"] is None
+
+
 def test_three_same_doi_records_all_point_to_the_first() -> None:
     client = TestClient(app)
     token, project_id = _login_and_create_project(client)
