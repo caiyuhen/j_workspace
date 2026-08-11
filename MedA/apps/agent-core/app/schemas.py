@@ -253,3 +253,72 @@ class SaveSearchSourceConfigRequest(BaseModel):
     year_from: int | None = None
     year_to: int | None = None
     languages: list[str]
+
+
+class LiteratureRecordSummary(BaseModel):
+    id: int
+    title: str
+    authors: str
+    journal: str
+    year: int | None
+    doi: str
+    pmid: str
+    source_key: str
+    source_label: str
+    dedupe_status: str
+    duplicate_of_id: int | None
+
+
+class LiteratureSourceCount(BaseModel):
+    source_key: str
+    source_label: str
+    count: int
+
+
+class LiteratureStats(BaseModel):
+    total_count: int
+    unique_count: int
+    duplicate_count: int
+    by_source: list[LiteratureSourceCount]
+
+
+class LiteratureBatchSummary(BaseModel):
+    id: int
+    source_key: str
+    source_label: str
+    parsed_count: int
+    duplicate_count: int
+    skipped_count: int
+    created_at_label: str
+
+
+class ImportResultSummary(BaseModel):
+    imported_count: int
+    duplicate_count: int
+    skipped_count: int
+
+
+class LiteratureLibraryResponse(BaseModel):
+    project: WorkspaceProjectSummary
+    stage_key: str
+    records: list[LiteratureRecordSummary]
+    stats: LiteratureStats
+    recent_batches: list[LiteratureBatchSummary]
+    available_sources: list[SourceCatalogItemResponse]
+    last_import_result: ImportResultSummary | None = None
+
+
+class ImportLiteratureRequest(BaseModel):
+    source_key: str
+    raw_text: str
+
+
+class CreateLiteratureRecordRequest(BaseModel):
+    title: str
+    authors: str = ""
+    journal: str = ""
+    year: int | None = None
+    doi: str = ""
+    pmid: str = ""
+    abstract: str = ""
+    source_key: str

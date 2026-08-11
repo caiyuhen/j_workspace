@@ -93,6 +93,13 @@ STAGE_ENTRY_CONFIG = {
                 target="/workspace/stage/search/sources",
             ),
             StageEntryCardSummary(
+                key="literature",
+                title="文献条目库",
+                description="导入与去重项目文献集合",
+                status="ready",
+                target="/workspace/stage/search/literature",
+            ),
+            StageEntryCardSummary(
                 key="search-log",
                 title="检索记录",
                 description="查看已执行检索和时间线",
@@ -377,7 +384,7 @@ def build_stage_entry(
         primary_action = primary_action.model_copy(
             update={"target": f"/workspace/projects/{project_id}/stages/search/query-builder"}
         )
-        project_deep_page_keys = {"query-builder", "sources"}
+        project_deep_page_keys = {"query-builder", "sources", "literature"}
         entry_cards = [
             card.model_copy(
                 update={

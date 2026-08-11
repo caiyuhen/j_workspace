@@ -72,6 +72,32 @@ class SearchSourceConfig(SQLModel, table=True):
     languages_json: str
 
 
+class LiteratureImportBatch(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id")
+    source_key: str
+    parsed_count: int = 0
+    duplicate_count: int = 0
+    skipped_count: int = 0
+    created_at_label: str = "刚刚导入"
+
+
+class LiteratureRecord(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id")
+    title: str
+    authors: str = ""
+    journal: str = ""
+    year: int | None = None
+    doi: str = ""
+    pmid: str = ""
+    abstract: str = ""
+    source_key: str
+    dedupe_status: str = "unique"
+    duplicate_of_id: int | None = None
+    import_batch_id: int | None = None
+
+
 class AuditEvent(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     actor: str

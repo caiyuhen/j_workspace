@@ -5,7 +5,10 @@ from app.db import get_session
 from app.deps.auth import SessionContext, get_current_session
 from app.models import ResearchProject
 from app.schemas import (
+    CreateLiteratureRecordRequest,
     DeriveSearchQueryDraftRequest,
+    ImportLiteratureRequest,
+    LiteratureLibraryResponse,
     SaveSearchQueryDraftRequest,
     SaveSearchSourceConfigRequest,
     SearchQueryEditorResponse,
@@ -13,6 +16,12 @@ from app.schemas import (
     SearchSourceConfigResponse,
     StageEntryResponse,
     WorkspaceHomeResponse,
+)
+from app.services.literature import (
+    LiteratureError,
+    build_library_response,
+    create_literature_record,
+    import_literature,
 )
 from app.services.search_query import (
     SearchQueryNotFoundError,
@@ -198,6 +207,60 @@ def put_search_source_config(
     try:
         return save_source_config(session, project, payload)
     except SearchSourceConfigError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
+        ) from error
+
+
+@router.get(
+    "/projects/{project_id}/stages/search/literature",
+    response_model=LiteratureLibraryResponse,
+)
+def get_literature_library(
+    project_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> LiteratureLibraryResponse:
+    project = _load_project_or_404(session, project_id, context)
+
+    return build_library_response(session, project)
+
+
+@router.post(
+    "/projects/{project_id}/stages/search/literature/import",
+    response_model=LiteratureLibraryResponse,
+)
+def post_literature_import(
+    project_id: int,
+    payload: ImportLiteratureRequest,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> LiteratureLibraryResponse:
+    project = _load_project_or_404(session, project_id, context)
+
+    try:
+        return import_literature(session, project, payload)
+    except LiteratureError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
+        ) from error
+
+
+@router.post(
+    "/projects/{project_id}/stages/search/literature/records",
+    response_model=LiteratureLibraryResponse,
+)
+def post_literature_record(
+    project_id: int,
+    payload: CreateLiteratureRecordRequest,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> LiteratureLibraryResponse:
+    project = _load_project_or_404(session, project_id, context)
+
+    try:
+        return create_literature_record(session, project, payload)
+    except LiteratureError as error:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
         ) from error
