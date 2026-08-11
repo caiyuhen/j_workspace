@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Literal
 
+from fastapi import HTTPException
 from sqlmodel import Session, select
 
 from app.models import LiteratureImportBatch, LiteratureRecord, ResearchProject
@@ -24,9 +26,12 @@ def import_unified_entries(
     search_run_id=None,
     search_run_source_id=None,
 ) -> _ImportResult:
-    imported = 0
-    skipped = 0
-    duplicates = 0
+    _project = session.get(ResearchProject, project_id)
+    if _project is None:
+        raise HTTPException(status_code=404, detail="project not found")
+
+    source_label = _SOURCE_LABELS.get(source_key, source_key)
+
     batch = LiteratureImportBatch(
         project_id=project_id,
         source_key=source_key,
@@ -38,23 +43,28 @@ def import_unified_entries(
     session.add(batch)
     session.flush()
 
+    imported = 0
+    failed = 0
+    duplicates = 0
+
     for e in entries:
         try:
-            doi, pmid, title = (e.doi or "").strip().lower(), (e.pmid or "").strip(), (e.title or "").strip()
+            doi, pmid, title = _normalize_identifiers(e.doi or "", e.pmid or "", e.title or "")
             if title == "":
-                skipped += 1
+                failed += 1
                 continue
-            dup_id = None
-            if doi:
-                match = session.exec(
-                    select(LiteratureRecord.id).where(
-                        LiteratureRecord.project_id == project_id,
-                        LiteratureRecord.doi == doi,
-                        LiteratureRecord.dedupe_status != "duplicate",
-                    ).limit(1)
-                ).first()
-                if match:
-                    dup_id = match
+            candidate = LiteratureRecord(
+                project_id=project_id,
+                doi=doi,
+                pmid=pmid,
+                title=title,
+                authors=e.authors or "",
+                journal=e.journal or "",
+                year=e.year,
+                abstract=e.abstract or "",
+                source_key=source_key,
+            )
+            dup_id = _detect_duplicate(session, project_id, candidate)
             status = "unique" if dup_id is None else "duplicate"
             if dup_id is not None:
                 duplicates += 1
@@ -68,7 +78,7 @@ def import_unified_entries(
                 year=e.year,
                 abstract=e.abstract or "",
                 source_key=source_key,
-                source_label=_SOURCE_LABELS.get(source_key, source_key),
+                source_label=source_label,
                 dedupe_status=status,
                 duplicate_of_id=dup_id,
                 import_batch_id=batch.id,
@@ -79,14 +89,16 @@ def import_unified_entries(
             session.flush()
             imported += 1
         except Exception:
-            skipped += 1
+            failed += 1
             session.rollback()
 
+    session.commit()
+    session.refresh(batch)
     batch.duplicate_count = duplicates
-    batch.skipped_count = skipped
+    batch.skipped_count = failed
     session.add(batch)
     session.commit()
-    return _ImportResult(count=imported, skipped_count=skipped, duplicate_count=duplicates)
+    return _ImportResult(count=imported, skipped_count=failed, duplicate_count=duplicates)
 from app.schemas import (
     CreateLiteratureRecordRequest,
     ImportLiteratureRequest,
@@ -249,15 +261,31 @@ def build_library_response(
     session: Session,
     project: ResearchProject,
     last_import_result: ImportResultSummary | None = None,
+    *,
+    search_run_id: int | None = None,
+    sort: Literal["default", "relevance", "year_desc", "journal"] = "default",
+    min_score: float | None = None,
 ) -> LiteratureLibraryResponse:
     project_id = project.id or 0
-    records = list(
-        session.exec(
-            select(LiteratureRecord)
-            .where(LiteratureRecord.project_id == project_id)
-            .order_by(LiteratureRecord.id)
-        )
-    )
+    q = select(LiteratureRecord).where(LiteratureRecord.project_id == project_id)
+    if search_run_id is not None:
+        q = q.where(LiteratureRecord.search_run_id == search_run_id)
+    all_records = list(session.exec(q).all())
+    if min_score is not None:
+        all_records = [
+            r for r in all_records
+            if r.relevance_score is not None and r.relevance_score >= min_score
+        ]
+
+    if sort == "relevance":
+        all_records.sort(key=lambda r: (-(r.relevance_score or -1.0), -(r.year or 0)))
+    elif sort == "year_desc":
+        all_records.sort(key=lambda r: (-(r.year or 0), (r.relevance_score or 0)))
+    elif sort == "journal":
+        all_records.sort(key=lambda r: ((r.journal or "").lower(), -(r.year or 0)))
+    all_records.sort(key=lambda r: -(r.id or 0))
+
+    records = all_records
     batches = list(
         session.exec(
             select(LiteratureImportBatch)

@@ -1,9 +1,12 @@
+from datetime import datetime
+
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlmodel import Session
+from fastapi.responses import Response
+from sqlmodel import Session, select
 
 from app.db import get_session
 from app.deps.auth import SessionContext, get_current_session
-from app.models import ResearchProject
+from app.models import ResearchProject, SearchRunSource
 from app.schemas import (
     CreateLiteratureRecordRequest,
     DeriveSearchQueryDraftRequest,
@@ -12,6 +15,11 @@ from app.schemas import (
     SaveSearchQueryDraftRequest,
     SaveSearchSourceConfigRequest,
     SearchQueryEditorResponse,
+    SearchRunCreatePayload,
+    SearchRunDetail as _SDetail,
+    SearchRunSourceSummary,
+    SearchRunStatusPoll,
+    SearchRunSummary,
     SearchSourceCatalogResponse,
     SearchSourceConfigResponse,
     StageEntryResponse,
@@ -24,6 +32,15 @@ from app.services.literature import (
     confirm_record_unique,
     create_literature_record,
     import_literature,
+)
+from app.services.search_run import (
+    SearchRunError,
+    cancel_search_run,
+    create_search_run,
+    export_search_run_csv_text,
+    get_search_run_detail,
+    get_search_run_list,
+    retry_failed_sources,
 )
 from app.services.search_query import (
     SearchQueryNotFoundError,
@@ -238,9 +255,8 @@ def post_literature_import(
     context: SessionContext = Depends(get_current_session),
     session: Session = Depends(get_session),
 ) -> LiteratureLibraryResponse:
-    project = _load_project_or_404(session, project_id, context)
-
     try:
+        project = _load_project_or_404(session, project_id, context)
         return import_literature(session, project, payload)
     except LiteratureError as error:
         raise HTTPException(
@@ -258,9 +274,8 @@ def post_literature_record(
     context: SessionContext = Depends(get_current_session),
     session: Session = Depends(get_session),
 ) -> LiteratureLibraryResponse:
-    project = _load_project_or_404(session, project_id, context)
-
     try:
+        project = _load_project_or_404(session, project_id, context)
         return create_literature_record(session, project, payload)
     except LiteratureError as error:
         raise HTTPException(
@@ -278,9 +293,8 @@ def post_literature_confirm_unique(
     context: SessionContext = Depends(get_current_session),
     session: Session = Depends(get_session),
 ) -> LiteratureLibraryResponse:
-    project = _load_project_or_404(session, project_id, context)
-
     try:
+        project = _load_project_or_404(session, project_id, context)
         return confirm_record_unique(session, project, record_id)
     except LiteratureNotFoundError as error:
         raise HTTPException(
@@ -290,3 +304,262 @@ def post_literature_confirm_unique(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
         ) from error
+
+
+# ---------- Wave 8: S1~S7 search run endpoints ----------
+
+_SOURCE_LABELS_ROUTE = {"pubmed": "PubMed", "cnki": "CNKI", "wanfang": "万方"}
+
+
+def _prisma_for_run(session: Session, run):
+    raw = run.total_hits_raw
+    after = run.total_after_dedupe
+    sources = list(session.exec(
+        select(SearchRunSource).where(SearchRunSource.search_run_id == run.id)
+    ).all())
+    by_source = [
+        {
+            "source_key": s.source_key,
+            "source_label": _SOURCE_LABELS_ROUTE.get(s.source_key, s.source_key),
+            "records_retrieved": s.records_retrieved,
+            "records_imported": s.records_imported,
+        } for s in sources
+    ]
+    return {
+        "identification": raw,
+        "screening": after,
+        "eligibility": after,
+        "included": after,
+        "by_source": by_source,
+    }
+
+
+def _fmt_iso(t):
+    return t.isoformat() if t else None
+
+
+def _map_search_run_summary(session: Session, run):
+    eta = None
+    if run.status == "running" and run.started_at:
+        sources = list(session.exec(
+            select(SearchRunSource).where(SearchRunSource.search_run_id == run.id)
+        ).all())
+        done = sum(1 for s in sources if s.status in {"completed", "failed"})
+        remaining = len(sources) - done
+        eta = remaining * 2.0
+    return SearchRunSummary(
+        id=run.id,
+        project_id=run.project_id,
+        search_query_version_id=run.search_query_version_id,
+        selected_sources=[s for s in run.selected_sources.split(",") if s],
+        status=run.status,
+        created_at=_fmt_iso(run.created_at),
+        started_at=_fmt_iso(run.started_at),
+        finished_at=_fmt_iso(run.finished_at),
+        total_hits_raw=run.total_hits_raw,
+        total_after_dedupe=run.total_after_dedupe,
+        prisma=_prisma_for_run(session, run),
+        eta_seconds=eta,
+    )
+
+
+def _map_source_summary(s):
+    return SearchRunSourceSummary(
+        id=s.id,
+        search_run_id=s.search_run_id,
+        source_key=s.source_key,
+        source_label=_SOURCE_LABELS_ROUTE.get(s.source_key, s.source_key),
+        status=s.status,
+        hits_on_source=s.hits_on_source,
+        records_retrieved=s.records_retrieved,
+        records_imported=s.records_imported,
+        started_at=_fmt_iso(s.started_at),
+        finished_at=_fmt_iso(s.finished_at),
+        error_message=s.error_message,
+    )
+
+
+@router.post(
+    "/projects/{project_id}/stages/search/search-runs",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SearchRunSummary,
+)
+def search_run_create(
+    project_id: int,
+    payload: SearchRunCreatePayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+):
+    try:
+        project = _load_project_or_404(session, project_id, context)
+        run = create_search_run(
+            session,
+            project.id or project_id,
+            sources=payload.sources,
+            query_snapshot=payload.query_snapshot,
+            search_query_version_id=payload.search_query_version_id,
+        )
+        return _map_search_run_summary(session, run)
+    except SearchRunError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=exc.args[0],
+        ) from exc
+
+
+@router.get(
+    "/projects/{project_id}/stages/search/search-runs",
+    response_model=dict,
+)
+def search_run_list(
+    project_id: int,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+):
+    try:
+        project = _load_project_or_404(session, project_id, context)
+        runs, total = get_search_run_list(
+            session, project.id or project_id, page=page, page_size=page_size
+        )
+        return {
+            "items": [_map_search_run_summary(session, r) for r in runs],
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+        }
+    except SearchRunError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=exc.args[0],
+        ) from exc
+
+
+@router.get(
+    "/projects/{project_id}/stages/search/search-runs/{run_id}",
+    response_model=_SDetail,
+)
+def search_run_detail(
+    project_id: int,
+    run_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+):
+    try:
+        project = _load_project_or_404(session, project_id, context)
+        run, sources = get_search_run_detail(
+            session, project.id or project_id, run_id
+        )
+        return _SDetail(
+            run=_map_search_run_summary(session, run),
+            sources=[_map_source_summary(s) for s in sources],
+        )
+    except SearchRunError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=exc.args[0],
+        ) from exc
+
+
+@router.post(
+    "/projects/{project_id}/stages/search/search-runs/{run_id}/cancel",
+)
+def search_run_cancel(
+    project_id: int,
+    run_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+):
+    try:
+        project = _load_project_or_404(session, project_id, context)
+        cancel_search_run(session, run_id)
+        return {"status": "cancelled"}
+    except SearchRunError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=exc.args[0],
+        ) from exc
+
+
+@router.post(
+    "/projects/{project_id}/stages/search/search-runs/{run_id}/retry",
+)
+def search_run_retry(
+    project_id: int,
+    run_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+):
+    try:
+        project = _load_project_or_404(session, project_id, context)
+        restarted = retry_failed_sources(session, run_id)
+        return {"restarted_sources": restarted}
+    except SearchRunError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=exc.args[0],
+        ) from exc
+
+
+@router.get(
+    "/projects/{project_id}/stages/search/search-runs/{run_id}/export.csv",
+)
+def search_run_export_csv(
+    project_id: int,
+    run_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+):
+    try:
+        project = _load_project_or_404(session, project_id, context)
+        text = export_search_run_csv_text(session, run_id)
+    except SearchRunError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=exc.args[0],
+        ) from exc
+    import re
+    safe_id = re.sub(r"[^A-Za-z0-9_-]+", "", f"search-run-{run_id}")
+    date_str = datetime.utcnow().strftime("%Y%m%d")
+    filename = f"{safe_id}-{date_str}.csv"
+    return Response(
+        content="\ufeff" + text,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@router.get(
+    "/projects/{project_id}/stages/search/search-runs/{run_id}/status",
+    response_model=SearchRunStatusPoll,
+)
+def search_run_status_poll(
+    project_id: int,
+    run_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+):
+    try:
+        project = _load_project_or_404(session, project_id, context)
+        run, sources = get_search_run_detail(
+            session, project.id or project_id, run_id
+        )
+        total = len(sources)
+        finished = sum(1 for s in sources if s.status in {"completed", "failed"})
+        eta = None
+        if total and finished < total and run.started_at is not None:
+            elapsed = (datetime.utcnow() - run.started_at).total_seconds()
+            per_item = elapsed / finished if finished > 0 else 0
+            eta = max(0.0, per_item * (total - finished))
+        return SearchRunStatusPoll(
+            status=run.status,
+            finished_sources=finished,
+            total_sources=total,
+            eta_seconds=eta,
+        )
+    except SearchRunError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=exc.args[0],
+        ) from exc
