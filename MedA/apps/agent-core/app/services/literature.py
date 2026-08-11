@@ -278,12 +278,13 @@ def build_library_response(
         ]
 
     if sort == "relevance":
-        all_records.sort(key=lambda r: (-(r.relevance_score or -1.0), -(r.year or 0)))
+        all_records.sort(key=lambda r: (-(r.relevance_score or -1.0), -(r.year or 0), -(r.id or 0)))
     elif sort == "year_desc":
-        all_records.sort(key=lambda r: (-(r.year or 0), (r.relevance_score or 0)))
+        all_records.sort(key=lambda r: (-(r.year or 0), -(r.relevance_score or 0), -(r.id or 0)))
     elif sort == "journal":
-        all_records.sort(key=lambda r: ((r.journal or "").lower(), -(r.year or 0)))
-    all_records.sort(key=lambda r: -(r.id or 0))
+        all_records.sort(key=lambda r: ((r.journal or "").lower(), -(r.year or 0), -(r.id or 0)))
+    else:
+        all_records.sort(key=lambda r: -(r.id or 0))
 
     records = all_records
     batches = list(

@@ -6,12 +6,17 @@ from sqlmodel import Session, select
 
 from app.db import get_session
 from app.deps.auth import SessionContext, get_current_session
-from app.models import ResearchProject, SearchRunSource
+from app.models import LiteraturePico, ResearchProject, SearchRunSource
 from app.schemas import (
+    BatchPicoPayload,
+    BatchPicoResult,
     CreateLiteratureRecordRequest,
     DeriveSearchQueryDraftRequest,
     ImportLiteratureRequest,
     LiteratureLibraryResponse,
+    LiteratureLibraryRequestExt,
+    LiteraturePicoResponse,
+    PicoAutofillDraft,
     SaveSearchQueryDraftRequest,
     SaveSearchSourceConfigRequest,
     SearchQueryEditorResponse,
@@ -33,6 +38,13 @@ from app.services.literature import (
     create_literature_record,
     import_literature,
 )
+from app.services.pico import (
+    PicoExtractionError,
+    batch_extract_pico,
+    extract_pico_for_record,
+    suggest_pico_autofill,
+)
+from app.services.bm25_scoring import recompute_bm25_for_search_run
 from app.services.search_run import (
     SearchRunError,
     cancel_search_run,
@@ -237,12 +249,29 @@ def put_search_source_config(
 )
 def get_literature_library(
     project_id: int,
+    search_run_id: int | None = Query(default=None),
+    sort: str = Query(default="default"),
+    min_score: float | None = Query(default=None),
     context: SessionContext = Depends(get_current_session),
     session: Session = Depends(get_session),
 ) -> LiteratureLibraryResponse:
-    project = _load_project_or_404(session, project_id, context)
-
-    return build_library_response(session, project)
+    try:
+        project = _load_project_or_404(session, project_id, context)
+        sort_val = sort if sort in {"default", "relevance", "year_desc", "journal"} else "default"
+        return build_library_response(
+            session,
+            project,
+            search_run_id=search_run_id,
+            sort=sort_val,
+            min_score=min_score,
+        )
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(error),
+        ) from error
 
 
 @router.post(
@@ -562,4 +591,121 @@ def search_run_status_poll(
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=exc.args[0],
+        ) from exc
+
+
+@router.post(
+    "/projects/{project_id}/stages/search/search-runs/{run_id}/recompute-bm25",
+)
+def search_run_recompute_bm25(
+    project_id: int,
+    run_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+):
+    try:
+        project = _load_project_or_404(session, project_id, context)
+        recompute_bm25_for_search_run(session, run_id)
+        return {"queued": True}
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post(
+    "/projects/{project_id}/stages/search/literature/records/pico:batch-extract",
+    response_model=BatchPicoResult,
+)
+def records_batch_extract_pico(
+    project_id: int,
+    payload: BatchPicoPayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+):
+    try:
+        project = _load_project_or_404(session, project_id, context)
+        result = batch_extract_pico(
+            session,
+            payload.record_ids,
+            method=payload.method,
+        )
+        return BatchPicoResult(
+            processed=result.processed,
+            already_had=result.already_had,
+            failed=result.failed,
+        )
+    except PicoExtractionError as exc:
+        if exc.code == "no_records_provided":
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="no_records_provided",
+            ) from exc
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+
+@router.get(
+    "/projects/{project_id}/stages/search/literature/records/{record_id}/pico",
+    response_model=LiteraturePicoResponse,
+)
+def records_get_pico(
+    project_id: int,
+    record_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+):
+    try:
+        project = _load_project_or_404(session, project_id, context)
+        pico = extract_pico_for_record(session, record_id)
+        return LiteraturePicoResponse(
+            record_id=pico.record_id,
+            population=pico.population,
+            intervention=pico.intervention,
+            comparison=pico.comparison,
+            outcome=pico.outcome,
+            study_type=pico.study_type,
+            extraction_method=pico.extraction_method,
+            confidence=pico.confidence,
+            extracted_at=_fmt_iso(pico.created_at),
+        )
+    except PicoExtractionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        ) from exc
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post(
+    "/projects/{project_id}/stages/search/search-runs/{run_id}/pico:autofill-query",
+    response_model=PicoAutofillDraft,
+)
+def search_run_pico_autofill(
+    project_id: int,
+    run_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+):
+    try:
+        project = _load_project_or_404(session, project_id, context)
+        return suggest_pico_autofill(session, run_id)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
         ) from exc

@@ -98,7 +98,7 @@ def test_import_creates_records_and_batch() -> None:
     assert first["authors"] == "Chen L, Wang H"
     assert first["journal"] == "Lancet"
     assert first["year"] == 2023
-    assert first["doi"] == "10.1016/S2213-8587"
+    assert first["doi"] == "10.1016/s2213-8587"
     assert first["pmid"] == "37123456"
     assert first["source_key"] == "pubmed"
     assert first["source_label"] == "PubMed"
@@ -605,3 +605,204 @@ def test_confirm_unique_rejects_unknown_record_with_404() -> None:
     )
 
     assert response.status_code == 404
+
+
+def test_confirm_unique_rejects_confirmed_unique_record_with_422() -> None:
+    """C-21 覆盖：confirmed_unique 状态的条目再次 confirm 应返回 422。"""
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    text1 = "title: Article A\ndoi: 10.1/A\nyear: 2023"
+    text2 = "title: Article A Reprise\ndoi: 10.1/A\nyear: 2023"
+    client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature/import",
+        headers=_auth(token),
+        json={"source_key": "pubmed", "raw_text": text1},
+    )
+    import_response = client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature/import",
+        headers=_auth(token),
+        json={"source_key": "pubmed", "raw_text": text2},
+    )
+    records = import_response.json()["records"]
+    dup = next(r for r in records if r["dedupe_status"] == "duplicate")
+    confirmed_response = client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature"
+        f"/records/{dup['id']}/confirm-unique",
+        headers=_auth(token),
+    )
+    assert confirmed_response.status_code == 200
+
+    second_confirm = client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature"
+        f"/records/{dup['id']}/confirm-unique",
+        headers=_auth(token),
+    )
+    assert second_confirm.status_code == 422, "confirmed_unique 再次 confirm 应返回 422"
+
+
+def test_chinese_titles_with_same_year_are_not_falsely_duplicate() -> None:
+    """C-1 回归：两篇不同中文标题不应因 normalize_title 清空而误判重复。"""
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    text1 = "title: 二甲双胍心血管研究\nyear: 2023"
+    text2 = "title: SGLT2抑制剂心衰研究\nyear: 2023"
+    client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature/import",
+        headers=_auth(token),
+        json={"source_key": "pubmed", "raw_text": text1},
+    )
+    response = client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature/import",
+        headers=_auth(token),
+        json={"source_key": "pubmed", "raw_text": text2},
+    )
+    assert response.status_code == 200
+    records = response.json()["records"]
+    statuses = [r["dedupe_status"] for r in records]
+    assert statuses.count("unique") >= 2, f"中文标题不应被误判重复，实际 statuses={statuses}"
+
+
+def test_doi_normalization_handles_case_and_whitespace() -> None:
+    """C-7 回归：DOI 大小写和首尾空格应规范化，不绕过判重。"""
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    text1 = "title: Article A\ndoi:  10.1/XYZ-123 \nyear: 2022"
+    text2 = "title: Article A Copy\ndoi: 10.1/xyz-123\nyear: 2022"
+    client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature/import",
+        headers=_auth(token),
+        json={"source_key": "pubmed", "raw_text": text1},
+    )
+    response = client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature/import",
+        headers=_auth(token),
+        json={"source_key": "pubmed", "raw_text": text2},
+    )
+    assert response.status_code == 200
+    json_body = response.json()
+    assert json_body["last_import_result"]["duplicate_count"] == 1, "DOI 规范化后应命中重复"
+    dup_record = [r for r in json_body["records"] if r["title"] == "Article A Copy"][0]
+    assert dup_record["dedupe_status"] == "duplicate"
+    assert dup_record["doi"] == "10.1/xyz-123", "DOI 应被小写化和 trim 入库"
+
+
+def test_import_strips_title_whitespace_like_manual_create() -> None:
+    """C-6 回归：import 路径也应 strip title 前后空格，与 create_literature_record 一致。"""
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    text1 = "title:   Clean Title  \nyear: 2020"
+    response = client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature/import",
+        headers=_auth(token),
+        json={"source_key": "pubmed", "raw_text": text1},
+    )
+    assert response.status_code == 200
+    record = response.json()["records"][0]
+    assert record["title"] == "Clean Title", "import 路径应 strip title 前后空格"
+
+
+def test_import_batch_created_at_label_has_dynamic_format() -> None:
+    """C-3 回归：recent_batches 中的 created_at_label 应不再是硬编码的空串，
+    而是由 _format_created_at_label 动态生成的中文相对时间格式。"""
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    text = "title: 导入时间测试\nyear: 2024"
+    response = client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature/import",
+        headers=_auth(token),
+        json={"source_key": "pubmed", "raw_text": text},
+    )
+    assert response.status_code == 200
+    batches = response.json()["recent_batches"]
+    assert len(batches) >= 1
+    label = batches[-1]["created_at_label"]
+    assert label != "", "created_at_label 不应为空"
+    assert any(
+        kw in label for kw in ["刚刚", "分钟", "小时", "天", "导入"]
+    ), f"动态生成的 label 应含时间关键字，实际: {label}"
+
+
+def test_literature_extended_features_relevance_sort_and_filters() -> None:
+    """Wave 8 B2: 测试文献库扩展功能 - 相关性排序、search_run_id 过滤、min_score 阈值。"""
+    from sqlmodel import Session
+    from app.db import engine
+    from app.models import LiteratureRecord, SearchRun, SearchRunSource
+
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    raw = """title: Influenza vaccine efficacy in elderly
+doi: 10.1/flu1
+year: 2022
+abstract: This study examines influenza vaccine effectiveness in elderly populations with T2DM.
+---
+title: SGLT2 inhibitors reduce cardiovascular events in CKD
+doi: 10.1/sglt2
+year: 2023
+abstract: SGLT2 inhibitors significantly reduce MACE and HF hospitalization in patients with CKD and T2DM.
+---
+title: Influenza vaccination coverage trends
+doi: 10.1/flu3
+year: 2021
+abstract: A population study on influenza vaccination uptake rates.
+---
+title: Metformin improves glycemic control in T2DM
+doi: 10.1/metf
+year: 2024
+abstract: Metformin plus GLP1 RA demonstrates superior HbA1c reduction in T2DM patients with obesity.
+"""
+    _import(client, token, project_id, raw)
+
+    with Session(engine) as session:
+        run = SearchRun(
+            project_id=project_id,
+            selected_sources="pubmed",
+            status="completed",
+            query_snapshot='{"p":"T2DM","i":"SGLT2","c":"placebo","o":"MACE"}',
+        )
+        session.add(run)
+        session.flush()
+        run_id = run.id or 0
+        srs = SearchRunSource(search_run_id=run_id, source_key="pubmed", status="completed")
+        session.add(srs)
+        records = list(session.exec(
+            __import__("sqlmodel").select(LiteratureRecord).where(LiteratureRecord.project_id == project_id)
+        ).all())
+        scores = {
+            "Influenza vaccine efficacy in elderly": 0.3,
+            "SGLT2 inhibitors reduce cardiovascular events in CKD": 0.98,
+            "Influenza vaccination coverage trends": 0.15,
+            "Metformin improves glycemic control in T2DM": 0.92,
+        }
+        for rec in records:
+            rec.search_run_id = run_id
+            rec.relevance_score = scores.get(rec.title, 0.5)
+            session.add(rec)
+        session.commit()
+
+    literature_url = f"/api/workspace/projects/{project_id}/stages/search/literature"
+
+    sort_resp = client.get(literature_url, headers=_auth(token), params={"sort": "relevance"})
+    assert sort_resp.status_code == 200
+    sort_records = sort_resp.json()["records"]
+    titles_sorted = [r["title"] for r in sort_records]
+    assert titles_sorted.index("SGLT2 inhibitors reduce cardiovascular events in CKD") < \
+           titles_sorted.index("Metformin improves glycemic control in T2DM"), \
+           "sort=relevance 应返回最高分记录优先"
+
+    filter_resp = client.get(literature_url, headers=_auth(token), params={"search_run_id": run_id})
+    assert filter_resp.status_code == 200
+    assert len(filter_resp.json()["records"]) >= 4, "search_run_id 过滤应返回该 run 下的所有记录"
+
+    score_resp = client.get(literature_url, headers=_auth(token), params={"sort": "relevance", "min_score": 0.8})
+    assert score_resp.status_code == 200
+    score_titles = [r["title"] for r in score_resp.json()["records"]]
+    assert "Influenza vaccine efficacy in elderly" not in score_titles, "min_score=0.8 应过滤掉 flu Paper 1"
+    assert "Influenza vaccination coverage trends" not in score_titles, "min_score=0.8 应过滤掉 flu Paper 3"
+    assert "SGLT2 inhibitors reduce cardiovascular events in CKD" in score_titles, "高分 SGLT2 论文应保留"
+    assert "Metformin improves glycemic control in T2DM" in score_titles, "高分 Metformin 论文应保留"
