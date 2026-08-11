@@ -31,9 +31,23 @@ def compute_bm25_scores_for(
     corpus = [_doc_tokens(r) for r in records]
     if not corpus:
         return []
+    normalized_q: list[str] = []
+    for q in query_tokens:
+        normalized_q.extend(tokenize_for_bm25(q))
+    q_set = set(normalized_q)
     bm25 = BM25Okapi(corpus)
-    scores = bm25.get_scores(list(query_tokens))
-    return [float(x) for x in scores]
+    scores = bm25.get_scores(normalized_q)
+    scores_f = [float(x) for x in scores]
+    if max(scores_f) <= 0.0 and q_set:
+        fallback = []
+        for doc in corpus:
+            doc_set = set(doc)
+            overlap = len(doc_set & q_set)
+            fallback.append(float(overlap))
+        max_fb = max(fallback)
+        if max_fb > 0:
+            scores_f = [(s + 0.1 * fb) for s, fb in zip(scores_f, fallback)]
+    return scores_f
 
 
 def recompute_bm25_for_search_run(session: Session, search_run_id: int) -> None:
