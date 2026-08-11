@@ -13,7 +13,7 @@ from app.schemas import (
     SourceCatalogItemResponse,
     WorkspaceProjectSummary,
 )
-from app.services.literature_parser import parse_literature_text
+from app.services.literature_parser import normalize_title, parse_literature_text
 from app.services.source_catalog import SOURCE_CATALOG, SOURCE_KEYS
 
 UNIQUE_STATUSES = {"unique", "confirmed_unique"}
@@ -21,6 +21,10 @@ UNIQUE_STATUSES = {"unique", "confirmed_unique"}
 
 class LiteratureError(Exception):
     """请求中携带了非法的来源 key、无法解析的文本，或非法的条目状态。"""
+
+
+class LiteratureNotFoundError(Exception):
+    """指定的文献条目不存在，或不属于当前项目。"""
 
 
 def _source_label(source_key: str) -> str:
@@ -41,7 +45,36 @@ def _detect_duplicate(
     project_id: int,
     candidate: LiteratureRecord,
 ) -> int | None:
-    """Task 3 会实现三级去重判定，本任务先不判重。"""
+    """三级判定，命中即停。只在同项目内比较，且不以 duplicate 记录作为原件。"""
+    existing = list(
+        session.exec(
+            select(LiteratureRecord)
+            .where(
+                LiteratureRecord.project_id == project_id,
+                LiteratureRecord.dedupe_status != "duplicate",
+            )
+            .order_by(LiteratureRecord.id)
+        )
+    )
+
+    if candidate.doi != "":
+        for record in existing:
+            if record.doi == candidate.doi:
+                return record.id
+
+    if candidate.pmid != "":
+        for record in existing:
+            if record.pmid == candidate.pmid:
+                return record.id
+
+    candidate_title = normalize_title(candidate.title)
+    for record in existing:
+        if (
+            normalize_title(record.title) == candidate_title
+            and record.year == candidate.year
+        ):
+            return record.id
+
     return None
 
 
@@ -231,6 +264,28 @@ def create_literature_record(
         record.dedupe_status = "duplicate"
         record.duplicate_of_id = original_id
 
+    session.add(record)
+    session.commit()
+
+    return build_library_response(session, project)
+
+
+def confirm_record_unique(
+    session: Session,
+    project: ResearchProject,
+    record_id: int,
+) -> LiteratureLibraryResponse:
+    record = session.get(LiteratureRecord, record_id)
+    if record is None or record.project_id != (project.id or 0):
+        raise LiteratureNotFoundError("record not found")
+
+    if record.dedupe_status != "duplicate":
+        raise LiteratureError(
+            f"record {record_id} is not marked as duplicate"
+        )
+
+    record.dedupe_status = "confirmed_unique"
+    record.duplicate_of_id = None
     session.add(record)
     session.commit()
 

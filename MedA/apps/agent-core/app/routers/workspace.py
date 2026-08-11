@@ -19,7 +19,9 @@ from app.schemas import (
 )
 from app.services.literature import (
     LiteratureError,
+    LiteratureNotFoundError,
     build_library_response,
+    confirm_record_unique,
     create_literature_record,
     import_literature,
 )
@@ -260,6 +262,30 @@ def post_literature_record(
 
     try:
         return create_literature_record(session, project, payload)
+    except LiteratureError as error:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)
+        ) from error
+
+
+@router.post(
+    "/projects/{project_id}/stages/search/literature/records/{record_id}/confirm-unique",
+    response_model=LiteratureLibraryResponse,
+)
+def post_literature_confirm_unique(
+    project_id: int,
+    record_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> LiteratureLibraryResponse:
+    project = _load_project_or_404(session, project_id, context)
+
+    try:
+        return confirm_record_unique(session, project, record_id)
+    except LiteratureNotFoundError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=str(error)
+        ) from error
     except LiteratureError as error:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)

@@ -301,3 +301,278 @@ def test_stage_entry_points_literature_card_to_project_deep_page() -> None:
     assert card["target"] == (
         f"/workspace/projects/{project_id}/stages/search/literature"
     )
+
+
+def _import(client: TestClient, token: str, project_id: int, raw: str, source: str = "pubmed"):
+    return client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature/import",
+        headers=_auth(token),
+        json={"source_key": source, "raw_text": raw},
+    ).json()
+
+
+def test_same_doi_is_marked_duplicate() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    _import(client, token, project_id, "title: Original paper\ndoi: 10.1/abc")
+    body = _import(
+        client, token, project_id, "title: Different title\ndoi: 10.1/abc", "embase"
+    )
+
+    original = next(r for r in body["records"] if r["title"] == "Original paper")
+    dup = next(r for r in body["records"] if r["title"] == "Different title")
+
+    assert original["dedupe_status"] == "unique"
+    assert dup["dedupe_status"] == "duplicate"
+    assert dup["duplicate_of_id"] == original["id"]
+    assert body["last_import_result"]["duplicate_count"] == 1
+    assert body["stats"]["total_count"] == 2
+    assert body["stats"]["unique_count"] == 1
+    assert body["stats"]["duplicate_count"] == 1
+
+
+def test_same_pmid_is_marked_duplicate() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    _import(client, token, project_id, "title: First\npmid: 12345")
+    body = _import(client, token, project_id, "title: Second\npmid: 12345", "embase")
+
+    dup = next(r for r in body["records"] if r["title"] == "Second")
+    original = next(r for r in body["records"] if r["title"] == "First")
+
+    assert dup["dedupe_status"] == "duplicate"
+    assert dup["duplicate_of_id"] == original["id"]
+
+
+def test_normalized_title_with_same_year_is_marked_duplicate() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    _import(client, token, project_id, "title: Metformin in T2DM.\nyear: 2023")
+    body = _import(
+        client, token, project_id, "title: metformin in t2dm\nyear: 2023", "embase"
+    )
+
+    dup = next(r for r in body["records"] if r["title"] == "metformin in t2dm")
+
+    assert dup["dedupe_status"] == "duplicate"
+    assert body["stats"]["duplicate_count"] == 1
+
+
+def test_same_title_with_different_year_is_not_duplicate() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    _import(client, token, project_id, "title: Shared title\nyear: 2020")
+    body = _import(
+        client, token, project_id, "title: Shared title\nyear: 2023", "embase"
+    )
+
+    assert body["stats"]["duplicate_count"] == 0
+    assert body["stats"]["unique_count"] == 2
+
+
+def test_same_title_with_one_unknown_year_is_not_duplicate() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    _import(client, token, project_id, "title: Shared title\nyear: 2020")
+    body = _import(client, token, project_id, "title: Shared title", "embase")
+
+    assert body["stats"]["duplicate_count"] == 0
+    assert body["stats"]["unique_count"] == 2
+
+
+def test_same_title_with_both_years_unknown_is_duplicate() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    _import(client, token, project_id, "title: No year paper")
+    body = _import(client, token, project_id, "title: No year paper", "embase")
+
+    assert body["stats"]["duplicate_count"] == 1
+
+
+def test_blank_doi_does_not_trigger_duplicate() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    _import(client, token, project_id, "title: Paper A\nyear: 2020")
+    body = _import(client, token, project_id, "title: Paper B\nyear: 2021", "embase")
+
+    assert body["stats"]["duplicate_count"] == 0
+
+
+def test_blank_pmid_does_not_trigger_duplicate() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    _import(client, token, project_id, "title: Paper C\nyear: 2020\npmid:")
+    body = _import(
+        client, token, project_id, "title: Paper D\nyear: 2021\npmid:", "embase"
+    )
+
+    assert body["stats"]["duplicate_count"] == 0
+
+
+def test_duplicate_within_the_same_batch_is_detected() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    raw = """title: In batch original
+doi: 10.9/xyz
+---
+title: In batch copy
+doi: 10.9/xyz
+"""
+    body = _import(client, token, project_id, raw)
+
+    original = next(r for r in body["records"] if r["title"] == "In batch original")
+    dup = next(r for r in body["records"] if r["title"] == "In batch copy")
+
+    assert original["dedupe_status"] == "unique"
+    assert dup["dedupe_status"] == "duplicate"
+    assert dup["duplicate_of_id"] == original["id"]
+    assert body["last_import_result"]["duplicate_count"] == 1
+
+
+def test_three_same_doi_records_all_point_to_the_first() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    raw = """title: First of three
+doi: 10.7/dup
+---
+title: Second of three
+doi: 10.7/dup
+---
+title: Third of three
+doi: 10.7/dup
+"""
+    body = _import(client, token, project_id, raw)
+
+    first = next(r for r in body["records"] if r["title"] == "First of three")
+    second = next(r for r in body["records"] if r["title"] == "Second of three")
+    third = next(r for r in body["records"] if r["title"] == "Third of three")
+
+    assert first["dedupe_status"] == "unique"
+    assert second["duplicate_of_id"] == first["id"]
+    assert third["duplicate_of_id"] == first["id"]
+    assert body["stats"]["duplicate_count"] == 2
+
+
+def test_duplicates_are_not_deleted() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    _import(client, token, project_id, "title: Kept original\ndoi: 10.5/keep")
+    _import(client, token, project_id, "title: Kept copy\ndoi: 10.5/keep", "embase")
+
+    body = client.get(
+        f"/api/workspace/projects/{project_id}/stages/search/literature",
+        headers=_auth(token),
+    ).json()
+
+    assert len(body["records"]) == 2
+    assert body["stats"]["total_count"] == 2
+
+
+def test_dedupe_does_not_cross_projects() -> None:
+    client = TestClient(app)
+    token, first_project_id = _login_and_create_project(client)
+
+    second = client.post(
+        "/api/projects",
+        json={
+            "organization_slug": "demo-hospital",
+            "owner_user_id": "u-001",
+            "name": "第二个项目",
+            "description": "cross project dedupe check",
+        },
+    )
+    second_project_id = second.json()["id"]
+
+    _import(client, token, first_project_id, "title: Shared across\ndoi: 10.3/cross")
+    body = _import(client, token, second_project_id, "title: Shared across\ndoi: 10.3/cross")
+
+    assert body["stats"]["duplicate_count"] == 0
+    assert body["stats"]["unique_count"] == 1
+
+
+def test_confirm_unique_clears_duplicate_marking() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    _import(client, token, project_id, "title: Base paper\ndoi: 10.2/base")
+    imported = _import(
+        client, token, project_id, "title: Flagged paper\ndoi: 10.2/base", "embase"
+    )
+    dup_id = next(r for r in imported["records"] if r["title"] == "Flagged paper")["id"]
+
+    response = client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature"
+        f"/records/{dup_id}/confirm-unique",
+        headers=_auth(token),
+    )
+    body = response.json()
+    confirmed = next(r for r in body["records"] if r["id"] == dup_id)
+
+    assert response.status_code == 200
+    assert confirmed["dedupe_status"] == "confirmed_unique"
+    assert confirmed["duplicate_of_id"] is None
+    assert body["stats"]["unique_count"] == 2
+    assert body["stats"]["duplicate_count"] == 0
+
+
+def test_confirmed_unique_still_serves_as_dedupe_original() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    _import(client, token, project_id, "title: Anchor\ndoi: 10.4/anchor")
+    imported = _import(
+        client, token, project_id, "title: Rejected flag\ndoi: 10.4/anchor", "embase"
+    )
+    dup_id = next(r for r in imported["records"] if r["title"] == "Rejected flag")["id"]
+
+    client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature"
+        f"/records/{dup_id}/confirm-unique",
+        headers=_auth(token),
+    )
+
+    body = _import(client, token, project_id, "title: Third copy\ndoi: 10.4/anchor", "cnki")
+    third = next(r for r in body["records"] if r["title"] == "Third copy")
+
+    assert third["dedupe_status"] == "duplicate"
+    assert third["duplicate_of_id"] is not None
+
+
+def test_confirm_unique_rejects_non_duplicate_record_with_422() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    imported = _import(client, token, project_id, "title: Plain unique paper")
+    record_id = imported["records"][0]["id"]
+
+    response = client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature"
+        f"/records/{record_id}/confirm-unique",
+        headers=_auth(token),
+    )
+
+    assert response.status_code == 422
+
+
+def test_confirm_unique_rejects_unknown_record_with_404() -> None:
+    client = TestClient(app)
+    token, project_id = _login_and_create_project(client)
+
+    response = client.post(
+        f"/api/workspace/projects/{project_id}/stages/search/literature"
+        "/records/99999/confirm-unique",
+        headers=_auth(token),
+    )
+
+    assert response.status_code == 404
