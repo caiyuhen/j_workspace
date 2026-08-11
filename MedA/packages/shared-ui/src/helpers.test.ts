@@ -1,6 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, beforeAll, afterAll, vi } from "vitest";
 
 import { parseYear, toggleKey } from "./SearchSourceConfigScreen";
+import { calculatePrismaWidths } from "./PrismaChart";
+import { formatRelativeTime } from "./SearchRunListScreen";
 
 const CATALOG_ORDER = ["pubmed", "embase", "cochrane", "wos", "cnki", "wanfang"];
 
@@ -91,5 +93,60 @@ describe("parseYear", () => {
     expect(parseYear("1800")).toBe(1800);
     expect(parseYear("2100")).toBe(2100);
     expect(parseYear("1985")).toBe(1985);
+  });
+});
+
+describe("calculatePrismaWidths (helpers PRISMA proportion)", () => {
+  it("returns 600/400/400/400 for input 120/80/80/80 and maxWidth 600", () => {
+    const widths = calculatePrismaWidths([120, 80, 80, 80], 600);
+    expect(widths).toEqual([600, 400, 400, 400]);
+  });
+
+  it("scales zero safely to min width 1", () => {
+    const widths = calculatePrismaWidths([0, 0, 0], 600);
+    expect(widths).toEqual([1, 1, 1]);
+  });
+
+  it("handles empty array", () => {
+    expect(calculatePrismaWidths([], 600)).toEqual([]);
+  });
+
+  it("scales single value to maxWidth", () => {
+    expect(calculatePrismaWidths([42], 500)).toEqual([500]);
+  });
+});
+
+describe("formatRelativeTime edge cases", () => {
+  const REAL_DATE_NOW = Date.now;
+  const FAKE_NOW_ISO = "2026-08-11T12:00:00.000Z";
+
+  beforeAll(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(FAKE_NOW_ISO));
+  });
+
+  afterAll(() => {
+    vi.useRealTimers();
+  });
+
+  it("returns '刚刚' for 0 sec (now)", () => {
+    const result = formatRelativeTime(FAKE_NOW_ISO);
+    expect(result).toBe("刚刚");
+  });
+
+  it("returns YYYY-MM-DD for dates older than 90 days", () => {
+    const oldIso = new Date(Date.now() - 120 * 24 * 3600 * 1000).toISOString();
+    const result = formatRelativeTime(oldIso);
+    expect(result).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("returns '1 秒前' for 1 second ago", () => {
+    const iso = new Date(Date.now() - 1000).toISOString();
+    expect(formatRelativeTime(iso)).toBe("1 秒前");
+  });
+
+  it("returns '昨天' for 1 day ago", () => {
+    const iso = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+    expect(formatRelativeTime(iso)).toBe("昨天");
   });
 });
