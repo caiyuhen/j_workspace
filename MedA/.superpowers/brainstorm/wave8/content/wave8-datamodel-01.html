@@ -1,0 +1,86 @@
+<h2>Wave 8 数据模型设计</h2>
+<p class="subtitle">新增 3 张表 + 扩展 2 张已有表 + 1 张视图（PRISMA）。所有字段与 Wave 1~7 既有命名保持一致：SQLModel + snake_case + Field(foreign_key=...)。</p>
+
+<div class="section" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+  <!-- SearchRun -->
+  <div style="background:#ffffff;border:1px solid #d7dce5;border-radius:16px;padding:16px 18px;">
+    <div class="label" style="color:#1d4ed8;">新增 · SearchRun（检索运行主表）</div>
+    <table style="width:100%;font-size:13px;border-collapse:collapse;margin-top:10px;">
+      <thead><tr style="color:#6b7280;text-align:left;"><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>id</code></td><td>int PK</td><td>自增</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>project_id</code></td><td>int FK</td><td>→ researchproject.id</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>search_query_version_id</code></td><td>int FK</td><td>关联到 Wave 5 保存的检索式版本（可为空，手动触发无版本）</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>query_snapshot</code></td><td>str (long text)</td><td>运行时的完整检索式快照（JSON 串，防版本后续变更）</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>selected_sources</code></td><td>str</td><td>逗号分隔的 source_key（便于审计）</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>status</code></td><td>Literal</td><td><code>pending | running | completed | partial_failed | failed | cancelled</code></td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>started_at / finished_at</code></td><td>datetime</td><td>nullable</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>total_hits_raw</code></td><td>int</td><td>所有库去重前总数（PRISMA 第 1 档）</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>total_after_dedupe</code></td><td>int</td><td>跨库去重后数（PRISMA 第 2 档）</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>error_message</code></td><td>str?</td><td>顶层失败时的一句话</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SearchRunSource -->
+  <div style="background:#ffffff;border:1px solid #d7dce5;border-radius:16px;padding:16px 18px;">
+    <div class="label" style="color:#1d4ed8;">新增 · SearchRunSource（每库一次执行）</div>
+    <table style="width:100%;font-size:13px;border-collapse:collapse;margin-top:10px;">
+      <thead><tr style="color:#6b7280;text-align:left;"><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>id</code></td><td>int PK</td><td>自增</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>search_run_id</code></td><td>int FK</td><td>→ searchrun.id</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>source_key</code></td><td>str</td><td>pubmed / cnki / wanfang</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>status</code></td><td>Literal</td><td><code>pending | running | completed | failed</code></td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>hits_on_source</code></td><td>int?</td><td>库端报告的总命中（如有 API 支持）</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>records_retrieved</code></td><td>int</td><td>实际下载多少条</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>records_imported</code></td><td>int</td><td>去重后有多少条进入 LiteratureRecord</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>started_at / finished_at</code></td><td>datetime?</td><td></td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>error_message</code></td><td>str?</td><td>单库失败原因</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>raw_response_excerpt</code></td><td>str?</td><td>调试用，截断 1024 字</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PICO 表 -->
+  <div style="background:#ffffff;border:1px solid #d7dce5;border-radius:16px;padding:16px 18px;">
+    <div class="label" style="color:#1d4ed8;">新增 · LiteraturePico（每条论文的 PICO 抽取结果）</div>
+    <table style="width:100%;font-size:13px;border-collapse:collapse;margin-top:10px;">
+      <thead><tr style="color:#6b7280;text-align:left;"><th>字段</th><th>类型</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>id</code></td><td>int PK</td><td>自增</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>record_id</code></td><td>int FK</td><td>→ literaturerecord.id（Unique）</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>population / intervention / comparison / outcome</code></td><td>各 str?</td><td>抽取到的 P/I/C/O 片段</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>study_type</code></td><td>str?</td><td>RCT / 观察性 / 系统综述 …（小字典）</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>extraction_method</code></td><td>str</td><td><code>rule_baseline</code> 或 <code>llm:claude</code>（便于审计）</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>confidence</code></td><td>float?</td><td>0~1，方法给的置信度</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>extracted_at</code></td><td>datetime</td><td>default utcnow</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 已有表扩展 -->
+  <div style="background:#ffffff;border:1px solid #d7dce5;border-radius:16px;padding:16px 18px;">
+    <div class="label" style="color:#047857;">扩展 · 2 张 Wave 7 已有表</div>
+    <table style="width:100%;font-size:13px;border-collapse:collapse;margin-top:10px;">
+      <thead><tr style="color:#6b7280;text-align:left;"><th>表 / 字段</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr style="border-top:1px solid #f3f4f6;"><td colspan="2" style="font-weight:700;color:#111827;padding-top:6px;">LiteratureRecord</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>search_run_id: int? FK</code></td><td>由哪次检索命中（可空，手动 / 粘贴导入仍存在）</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>relevance_score: float?</code></td><td>BM25 对 PICO 查询的评分（用于排序；可空）</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>pico_status: str</code></td><td><code>not_extracted | extracted | failed</code>；批量 PICO 队列的状态</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td colspan="2" style="font-weight:700;color:#111827;padding-top:10px;">LiteratureImportBatch</td></tr>
+        <tr style="border-top:1px solid #f3f4f6;"><td><code>search_run_source_id: int? FK</code></td><td>和 SearchRunSource 关联，粘贴/手动导入为空</td></tr>
+      </tbody>
+    </table>
+
+    <div class="label" style="color:#7c3aed;margin-top:16px;">PRISMA 视图（不建表，运行时聚合）</div>
+    <ul style="font-size:13px;color:#4b5563;margin:8px 0 0 18px;padding:0;">
+      <li style="margin-top:2px;">① Identification: <code>SUM(SearchRunSource.records_retrieved)</code> 本 SearchRun 范围</li>
+      <li style="margin-top:2px;">② Screening: <code>SearchRun.total_after_dedupe</code>（跨库去重后）</li>
+      <li style="margin-top:2px;">③ Eligibility: <i>预留下一阶段人工筛选，当前 == after_dedupe</i></li>
+      <li style="margin-top:2px;">④ Included: <i>下一阶段；当前 == after_dedupe</i></li>
+      <li style="margin-top:2px;">另加一条 按 source_key 拆分的条形图（每库命中多少条 / 去重后剩余多少）</li>
+    </ul>
+  </div>
+</div>

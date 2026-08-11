@@ -1,0 +1,58 @@
+<h2>Wave 8 范围选择 — 下一步要做什么？</h2>
+<p class="subtitle">根据 PRD + Waves 1~7 实际交付，目前已实现 R004（文献检索）的前半段：检索式管理 / 检索源配置 / 文献条目库与三级去重。剩下的 R004 后半段（PICO、并行检索、PRISMA、相关性排序、PDF）以及 R005（论文阅读）/ R006（多论文对比）/ R007（方案设计）/ R008（样本量计算）/ R009（标书撰写）均为空白。以下三种范围方案，请按你的临床研究节奏选择最合理的一步。</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>R004 收口：PICO 自动提取 + 多库异步检索 + PRISMA + BM25 相关性排序</h3>
+      <p><b>定位</b>：把 Wave 1~7 的检索骨架「从管理工具补成真正的检索系统」。先让现有检索式可以真正跑到 PubMed/CNKI/Wanfang（以 PubMed mock + CNKI/万方 stub 形式），支持 PICO 自动从题目抽取提示，跑完以后有 PRISMA 筛选漏斗、BM25 相关性评分和一键排序。</p>
+      <p class="subtitle">交付件：<br>
+        · <b>FR-004-01</b> PICO 提取端点（LLM 可选，默认规则+词典基线）<br>
+        · <b>FR-004-02</b> 多库异步检索任务引擎（SearchRun/SearchRunSource 表，后台 worker）<br>
+        · <b>FR-004-04</b> 标题+摘要 BM25 相关性排序 + 评分展示<br>
+        · <b>FR-004-06</b> PRISMA 筛选漏斗面板 + 导出 CSV<br>
+        · 现有文献条目库「去重」接入筛选阶段重复记录
+      </p>
+      <p class="subtitle">为什么排在第一个：关键路径上的「<b>检索系统闭环</b>」。现在用户还得手动粘到 textarea 里导入，这一步补完后，用户在 MedA 里从检索式 → 跑库 → 收到文献条目 → PRISMA 计数就走通了。v1.0 Phase 1 MVP 才算真正完成。</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>R005 论文阅读起步：PDF 解析 + DOI 解析 + RAG 基础（向量库）+ 结构化摘要</h3>
+      <p><b>定位</b>：跳过「真正跑库」的工程部分，先建立后续模块都依赖的论文阅读基石。文献条目库里有 100 篇后，用户更关心「挑哪几篇来读」和「读完告诉我什么」。</p>
+      <p class="subtitle">交付件：<br>
+        · <b>FR-005-02</b> DOI → Crossref API（mock + stub）<br>
+        · <b>FR-005-01</b> 中文 PDF 解析管道（pypdfium2 + Grobid-adj，失败降级文本抽取）<br>
+        · <b>FR-005-03</b> 文献内 RAG：Milvus 接入（或本地 sqlite-vss 备选）分块索引<br>
+        · <b>FR-005-04</b> 结构化摘要生成（PICO/结论/方法学要点，LLM 可开关）<br>
+        · 条目库详情页：PDF 阅读器 + 结构化摘要 + Q&A 面板
+      </p>
+      <p class="subtitle">风险：这一步依赖 LLM/RAG，如果不开 API 则要提供明显降级的「本地规则版」。对 v1.0 关键路径是偏后的，因为文献条目还没有自动化导入流程，需要先人工粘入。</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>向前跳到 Phase 2 起点：R008 样本量计算 + R007 方案设计骨架（方法学引擎 v0）</h3>
+      <p><b>定位</b>：方法学是临床研究的「卡脖子」痛点。先把 R008 样本量计算这个纯确定性、无需 LLM 的功能上线（能立竿见影给用户价值），再带出 R007 的方案编辑骨架。</p>
+      <p class="subtitle">交付件：<br>
+        · <b>R008</b> 完整：5 类常见 RCT/观察性研究设计的样本量计算器（均值/比例/生存/卡方/配对）<br>
+        · statsmodels 引擎 + 中文解释 + 假设置信区间<br>
+        · <b>R007 骨架</b>：方案模板（封面/立项依据/研究对象/方法/统计/伦理/预算）空壳页<br>
+        · 方案保存端点 + 从文献条目库「一键引用」生成参考文献条目
+      </p>
+      <p class="subtitle">优势：无 LLM 依赖、计算确定、高口碑传播点；可迅速形成 v1.0 Phase 2 里程碑。缺点是关键路径跳级：检索闭环（A）和论文阅读（B）都还没接上。</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:32px;padding:16px 20px;background:#eff6ff;border-radius:16px;color:#1d4ed8;">
+  <h3 style="margin-top:0;">我的推荐：方案 A（R004 收口）</h3>
+  <p style="margin-bottom:0;">
+  关键路径的先后顺序是 <b>检索→阅读→对比→方案→统计→标书</b>。Wave 1~7 已经把检索式管理 + 检索源配置 + 文献条目库（去重）这三块基础打好，用户下一步的期待就是「点一下按钮 MedA 帮我把文献跑回来」，而不是跳到方法学。方案 A 完工后 Wave 8 可以说「文献检索模块完成度 ≈ 90%」，MVP 闭环。
+  </p>
+</div>

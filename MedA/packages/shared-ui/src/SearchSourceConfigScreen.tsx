@@ -40,6 +40,9 @@ const yearInputStyle = {
 };
 
 export function toggleKey(current: string[], ordered: string[], key: string): string[] {
+  if (!ordered.includes(key)) {
+    return current.filter((item) => ordered.includes(item));
+  }
   if (current.includes(key)) {
     return current.filter((item) => item !== key);
   }
@@ -47,13 +50,27 @@ export function toggleKey(current: string[], ordered: string[], key: string): st
   return ordered.filter((item) => current.includes(item) || item === key);
 }
 
+const YEAR_RE = /^\d{4}$/;
+const MIN_YEAR = 1800;
+const MAX_YEAR = 2100;
+
 export function parseYear(raw: string): number | null {
-  if (raw.trim() === "") {
+  const trimmed = raw.trim();
+  if (trimmed === "") {
+    return null;
+  }
+  if (!YEAR_RE.test(trimmed)) {
     return null;
   }
 
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isNaN(parsed) ? null : parsed;
+  const parsed = Number.parseInt(trimmed, 10);
+  if (Number.isNaN(parsed)) {
+    return null;
+  }
+  if (parsed < MIN_YEAR || parsed > MAX_YEAR) {
+    return null;
+  }
+  return parsed;
 }
 
 export function SearchSourceConfigScreen({

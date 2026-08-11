@@ -38,6 +38,12 @@ describe("toggleKey", () => {
   it("returns an empty array when removing the last key", () => {
     expect(toggleKey(["wos"], CATALOG_ORDER, "wos")).toEqual([]);
   });
+
+  it("rejects adding an unknown key and strips any stray illegal keys from current", () => {
+    expect(
+      toggleKey(["pubmed", "fake", "embase", "bogus"], CATALOG_ORDER, "unknown"),
+    ).toEqual(["pubmed", "embase"]);
+  });
 });
 
 describe("parseYear", () => {
@@ -59,5 +65,31 @@ describe("parseYear", () => {
 
   it("ignores surrounding whitespace", () => {
     expect(parseYear("  2015  ")).toBe(2015);
+  });
+
+  it("rejects trailing letters (strict 4-digit match)", () => {
+    expect(parseYear("2024a")).toBeNull();
+    expect(parseYear("2024abc")).toBeNull();
+  });
+
+  it("rejects shorter or longer than 4 digits", () => {
+    expect(parseYear("24")).toBeNull();
+    expect(parseYear("202")).toBeNull();
+    expect(parseYear("20240")).toBeNull();
+    expect(parseYear("20240")).toBeNull();
+  });
+
+  it("rejects signed numbers or punctuation", () => {
+    expect(parseYear("+2024")).toBeNull();
+    expect(parseYear("-2024")).toBeNull();
+    expect(parseYear("2,024")).toBeNull();
+  });
+
+  it("clamps to plausible 1800-2100 range", () => {
+    expect(parseYear("1799")).toBeNull();
+    expect(parseYear("2101")).toBeNull();
+    expect(parseYear("1800")).toBe(1800);
+    expect(parseYear("2100")).toBe(2100);
+    expect(parseYear("1985")).toBe(1985);
   });
 });

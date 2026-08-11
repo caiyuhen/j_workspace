@@ -1,0 +1,97 @@
+<h2>Wave 8 (R004 收口) — 架构与数据流</h2>
+<p class="subtitle">从「用户点一次检索」到「PRISMA 面板 + 文献条目库」的全链路。蓝色=新增模块，灰色=Wave 1~7 已有模块复用。</p>
+
+<div class="section" style="max-width:960px;margin:0 auto;padding:18px;">
+  <!-- 用户层 -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-bottom:28px;">
+    <div style="width:260px;background:#111827;color:#fff;padding:16px 18px;border-radius:16px;text-align:center;">
+      <div style="font-size:14px;opacity:.7;">用户在 Web / Desktop</div>
+      <div style="font-size:18px;font-weight:700;margin-top:6px;">① 触发「运行检索」</div>
+      <div style="font-size:12px;opacity:.7;margin-top:6px;">选择已保存检索版本 + 勾选的检索源</div>
+    </div>
+    <div style="color:#6b7280;font-size:22px;">→</div>
+    <div style="width:280px;background:#1d4ed8;color:#fff;padding:16px 18px;border-radius:16px;text-align:center;">
+      <div style="font-size:14px;opacity:.85;">新增 · API 层</div>
+      <div style="font-size:18px;font-weight:700;margin-top:6px;">POST /search-runs</div>
+      <div style="font-size:12px;opacity:.85;margin-top:6px;">创建 SearchRun + 每库 SearchRunSource</div>
+    </div>
+  </div>
+
+  <!-- 任务层 -->
+  <div style="display:flex;align-items:flex-start;justify-content:center;gap:20px;margin-bottom:28px;">
+    <div style="color:#6b7280;font-size:22px;align-self:center;">↓</div>
+    <div style="width:680px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:18px;">
+      <div class="label" style="color:#1d4ed8;">新增 · 任务引擎（后台 worker，轮询 DB / 简单实现：asyncio 循环）</div>
+      <div style="display:flex;gap:14px;margin-top:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:180px;background:#fff;border-radius:12px;padding:12px 14px;border:1px solid #bfdbfe;">
+          <div style="font-weight:700;color:#1d4ed8;">PubMed adapter</div>
+          <div style="font-size:12px;color:#4b5563;margin-top:4px;">真 · NCBI E-utilities esearch/efetch</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:4px;">无 key：3 req/s；可配置 rate limit</div>
+        </div>
+        <div style="flex:1;min-width:180px;background:#fff;border-radius:12px;padding:12px 14px;border:1px solid #bfdbfe;">
+          <div style="font-weight:700;color:#1d4ed8;">CNKI adapter</div>
+          <div style="font-size:12px;color:#4b5563;margin-top:4px;">stub + 可注入 mock 数据集</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:4px;">后续 Wave 接真实机构 API</div>
+        </div>
+        <div style="flex:1;min-width:180px;background:#fff;border-radius:12px;padding:12px 14px;border:1px solid #bfdbfe;">
+          <div style="font-weight:700;color:#1d4ed8;">Wanfang adapter</div>
+          <div style="font-size:12px;color:#4b5563;margin-top:4px;">stub + 可注入 mock 数据集</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:4px;">后续 Wave 接真实 key</div>
+        </div>
+      </div>
+      <div style="margin-top:14px;color:#374151;font-size:13px;">
+        每个 adapter 返回统一格式 <code>{doi, pmid, title, authors, journal, year, abstract, source_key}</code> 的条目列表。
+      </div>
+    </div>
+  </div>
+
+  <!-- 处理管道 -->
+  <div style="display:flex;align-items:center;justify-content:center;gap:20px;margin-bottom:28px;">
+    <div style="color:#6b7280;font-size:22px;">→</div>
+    <div style="width:680px;background:#f0fdf4;border:1px solid #86efac;border-radius:16px;padding:18px;">
+      <div class="label" style="color:#047857;">统一处理管道（复用 Wave 6/7 已有）</div>
+      <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:140px;background:#fff;border:1px solid #a7f3d0;border-radius:10px;padding:10px 12px;">
+          <div style="font-weight:700;">① DOI/PMID/标题 规范化</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px;">复用 _normalize_identifiers</div>
+        </div>
+        <div style="flex:1;min-width:140px;background:#fff;border:1px solid #a7f3d0;border-radius:10px;padding:10px 12px;">
+          <div style="font-weight:700;">② 三级去重</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px;">DOI → PMID → 归一化标题+年份</div>
+        </div>
+        <div style="flex:1;min-width:140px;background:#fff;border:1px solid #a7f3d0;border-radius:10px;padding:10px 12px;">
+          <div style="font-weight:700;">③ 写入 LiteratureRecord</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px;">关联到 SearchRun + ImportBatch</div>
+        </div>
+        <div style="flex:1;min-width:140px;background:#fff;border:1px solid #a7f3d0;border-radius:10px;padding:10px 12px;">
+          <div style="font-weight:700;">④ BM25 评分（新增）</div>
+          <div style="font-size:12px;color:#6b7280;margin-top:2px;">rank_bm25，对 title+abstract 打分</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 输出层 -->
+  <div style="display:flex;align-items:flex-start;justify-content:center;gap:18px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:220px;background:#fff;border:1px solid #d7dce5;border-radius:16px;padding:14px 16px;">
+      <div style="font-size:14px;color:#6b7280;">Wave 7 已有</div>
+      <div style="font-weight:700;font-size:16px;margin-top:6px;">📚 文献条目库</div>
+      <div style="font-size:12px;color:#4b5563;margin-top:6px;">新增列：search_run_id + relevance_score；支持按评分排序</div>
+    </div>
+    <div style="flex:1;min-width:220px;background:#fff;border:1px solid #d7dce5;border-radius:16px;padding:14px 16px;">
+      <div style="font-size:14px;color:#1d4ed8;">新增</div>
+      <div style="font-weight:700;font-size:16px;margin-top:6px;">🔍 检索运行面板</div>
+      <div style="font-size:12px;color:#4b5563;margin-top:6px;">实时进度、每库命中数、失败重试、运行日志</div>
+    </div>
+    <div style="flex:1;min-width:220px;background:#fff;border:1px solid #d7dce5;border-radius:16px;padding:14px 16px;">
+      <div style="font-size:14px;color:#1d4ed8;">新增</div>
+      <div style="font-weight:700;font-size:16px;margin-top:6px;">📊 PRISMA 筛选漏斗</div>
+      <div style="font-size:12px;color:#4b5563;margin-top:6px;">总命中 → 去重后 → 经筛选（预留）→ 纳入</div>
+    </div>
+    <div style="flex:1;min-width:220px;background:#fff;border:1px solid #d7dce5;border-radius:16px;padding:14px 16px;">
+      <div style="font-size:14px;color:#1d4ed8;">新增</div>
+      <div style="font-weight:700;font-size:16px;margin-top:6px;">🏷️ PICO 提取</div>
+      <div style="font-size:12px;color:#4b5563;margin-top:6px;">从研究题目/摘要抽 P/I/C/O，一键回填到检索式编辑器</div>
+    </div>
+  </div>
+</div>

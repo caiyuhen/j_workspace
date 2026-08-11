@@ -22,21 +22,26 @@ class ParseResult(BaseModel):
 
 
 def normalize_title(title: str) -> str:
-    """转小写并去除所有非字母数字字符，用于标题级去重比较。"""
-    return re.sub(r"[^a-z0-9]", "", title.lower())
+    """Unicode 感知的归一化：保留所有语言的字母数字字符（含中文汉字），
+    去除标点符号和空白，并做 Unicode 大小写折叠。用于标题级去重比较。"""
+    return "".join(c.casefold() for c in title if c.isalnum())
 
 
 def _parse_block(lines: list[str]) -> dict[str, str]:
     fields: dict[str, str] = {}
+    last_key: str | None = None
 
     for line in lines:
         if ":" not in line:
+            if last_key is not None:
+                fields[last_key] = f"{fields[last_key]} {line.strip()}".strip()
             continue
 
         raw_key, raw_value = line.split(":", 1)
         key = raw_key.strip().lower()
         if key in KNOWN_KEYS:
             fields[key] = raw_value.strip()
+            last_key = key
 
     return fields
 

@@ -125,3 +125,52 @@ def test_normalize_title_strips_case_and_punctuation() -> None:
 def test_normalize_title_handles_empty_string() -> None:
     assert normalize_title("") == ""
     assert normalize_title("   ") == ""
+
+
+def test_normalize_title_preserves_chinese_characters() -> None:
+    t1 = normalize_title("二甲双胍心血管研究")
+    t2 = normalize_title("SGLT2抑制剂心衰研究")
+    assert t1 != t2, "不同中文标题归一化后不应相等"
+    assert t1 == "二甲双胍心血管研究"
+    assert normalize_title("二甲双胍 心血管 研究!") == t1, "中文空格和标点应被剥除"
+
+
+def test_normalize_title_casefold_matches_mixed_case() -> None:
+    assert normalize_title("Metformin") == normalize_title("METFORMIN")
+    assert normalize_title("Straße") == normalize_title("strasse"), "Unicode casefold 处理 ß"
+
+
+def test_parse_multiline_abstract_appends_continuation_lines() -> None:
+    text = (
+        "title: 多中心随机对照试验\n"
+        "abstract: 这是摘要的第一行，介绍背景。\n"
+        "这是摘要的第二行，不含冒号。\n"
+        "这是第三行。\n"
+        "year: 2023\n"
+        "doi: 10.1/test\n"
+    )
+    result = parse_literature_text(text)
+    assert len(result.entries) == 1
+    abstract = result.entries[0].abstract
+    assert "第一行" in abstract
+    assert "第二行" in abstract, "不含冒号的续行应被追加到 abstract"
+    assert "第三行" in abstract
+
+
+def test_parse_continuation_lines_only_attach_to_last_known_key() -> None:
+    preamble_text = (
+        "junk line at the top, before any known key\n"
+        "another junk without colon\n"
+        "title: Valid Title\n"
+        "authors: Alice\n"
+        "continue authors line here\n"
+        "year: 2020\n"
+    )
+    result = parse_literature_text(preamble_text)
+    assert len(result.entries) == 1
+    entry = result.entries[0]
+    assert (
+        entry.title == "Valid Title"
+    ), "title 出现之前的 junk 行（last_key=None）应被丢弃，不应污染 title"
+    assert "continue authors line here" in entry.authors, "authors 后的续行应追加到 authors"
+    assert entry.year == 2020

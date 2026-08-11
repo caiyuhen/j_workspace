@@ -1,6 +1,16 @@
 import type { SessionStore } from "./session";
 export { createBrowserSessionStore, createMemorySessionStore } from "./session";
 
+export class ApiError extends Error {
+  readonly statusCode: number;
+
+  constructor(message: string, statusCode: number) {
+    super(message);
+    this.name = "ApiError";
+    this.statusCode = statusCode;
+  }
+}
+
 export type ProjectSummary = {
   id: number;
   name: string;
@@ -284,6 +294,121 @@ export type DevLoginPayload = {
   client_type: string;
 };
 
+export type SearchRunStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "partial_failed"
+  | "failed"
+  | "cancelled";
+
+export type SearchRunSourceStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed";
+
+export type PicoStatus = "not_extracted" | "extracted" | "failed";
+
+export type LibrarySortKey =
+  | "default"
+  | "relevance"
+  | "year_desc"
+  | "journal";
+
+export type SearchSourceBreakdown = {
+  sourceKey: string;
+  sourceLabel: string;
+  recordsRetrieved: number;
+  recordsImported: number;
+};
+
+export type PrismaReport = {
+  identification: number;
+  screening: number;
+  eligibility: number;
+  included: number;
+  bySource: SearchSourceBreakdown[];
+};
+
+export type SearchRunSummary = {
+  id: number;
+  projectId: number;
+  searchQueryVersionId: number | null;
+  selectedSources: string[];
+  status: SearchRunStatus;
+  createdAt: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  totalHitsRaw: number;
+  totalAfterDedupe: number;
+  prisma: PrismaReport;
+  etaSeconds: number | null;
+};
+
+export type SearchRunSourceSummary = {
+  id: number;
+  searchRunId: number;
+  sourceKey: string;
+  sourceLabel: string;
+  status: SearchRunSourceStatus;
+  hitsOnSource: number | null;
+  recordsRetrieved: number;
+  recordsImported: number;
+  startedAt: string | null;
+  finishedAt: string | null;
+  errorMessage: string | null;
+};
+
+export type SearchRunDetail = {
+  run: SearchRunSummary;
+  sources: SearchRunSourceSummary[];
+};
+
+export type SearchRunCreatePayload = {
+  searchQueryVersionId?: number;
+  querySnapshot?: object;
+  sources: string[];
+};
+
+export type SearchRunStatusPoll = {
+  status: SearchRunStatus;
+  finishedSources: number;
+  totalSources: number;
+  etaSeconds: number | null;
+};
+
+export type LiteraturePicoResponse = {
+  recordId: number;
+  population?: string | null;
+  intervention?: string | null;
+  comparison?: string | null;
+  outcome?: string | null;
+  studyType?: string | null;
+  extractionMethod: string;
+  confidence?: number | null;
+  extractedAt: string;
+};
+
+export type BatchPicoPayload = {
+  recordIds: number[];
+  method?: "rule_baseline" | "llm";
+};
+
+export type BatchPicoResult = {
+  processed: number;
+  alreadyHad: number;
+  failed: number;
+};
+
+export type PicoAutofillDraft = {
+  p: string;
+  i: string;
+  c: string;
+  o: string;
+  supportingRecordIds: number[];
+};
+
 export function createClient(
   baseUrl = "http://localhost:8000",
   sessionStore?: SessionStore,
@@ -301,6 +426,109 @@ export function createClient(
     return headers;
   };
 
+  const handleResponse = async <T>(
+    response: Response,
+    fallbackMessage: string,
+  ): Promise<T> => {
+    const headers =
+      "headers" in response && typeof response.headers?.get === "function"
+        ? response.headers
+        : null;
+    const contentType = headers ? headers.get("content-type") ?? "" : "";
+    const isJson =
+      contentType === "" ||
+      contentType.toLowerCase().includes("application/json");
+    if (!isJson) {
+      throw new ApiError(
+        `server returned non-JSON response (status ${response.status})`,
+        response.status,
+      );
+    }
+
+    const data = await response.json();
+    if (!response.ok) {
+      throw new ApiError(data.detail ?? fallbackMessage, response.status);
+    }
+
+    return data as T;
+  };
+
+  const mapSearchRunSummary = (raw: {
+    id: number;
+    project_id: number;
+    search_query_version_id: number | null;
+    selected_sources: string[];
+    status: SearchRunStatus;
+    created_at: string;
+    started_at: string | null;
+    finished_at: string | null;
+    total_hits_raw: number;
+    total_after_dedupe: number;
+    prisma: {
+      identification: number;
+      screening: number;
+      eligibility: number;
+      included: number;
+      by_source: {
+        source_key: string;
+        source_label: string;
+        records_retrieved: number;
+        records_imported: number;
+      }[];
+    };
+    eta_seconds: number | null;
+  }): SearchRunSummary => ({
+    id: raw.id,
+    projectId: raw.project_id,
+    searchQueryVersionId: raw.search_query_version_id,
+    selectedSources: raw.selected_sources,
+    status: raw.status,
+    createdAt: raw.created_at,
+    startedAt: raw.started_at,
+    finishedAt: raw.finished_at,
+    totalHitsRaw: raw.total_hits_raw,
+    totalAfterDedupe: raw.total_after_dedupe,
+    prisma: {
+      identification: raw.prisma.identification,
+      screening: raw.prisma.screening,
+      eligibility: raw.prisma.eligibility,
+      included: raw.prisma.included,
+      bySource: raw.prisma.by_source.map((bs) => ({
+        sourceKey: bs.source_key,
+        sourceLabel: bs.source_label,
+        recordsRetrieved: bs.records_retrieved,
+        recordsImported: bs.records_imported,
+      })),
+    },
+    etaSeconds: raw.eta_seconds,
+  });
+
+  const mapSearchRunSourceSummary = (raw: {
+    id: number;
+    search_run_id: number;
+    source_key: string;
+    source_label: string;
+    status: SearchRunSourceStatus;
+    hits_on_source: number | null;
+    records_retrieved: number;
+    records_imported: number;
+    started_at: string | null;
+    finished_at: string | null;
+    error_message: string | null;
+  }): SearchRunSourceSummary => ({
+    id: raw.id,
+    searchRunId: raw.search_run_id,
+    sourceKey: raw.source_key,
+    sourceLabel: raw.source_label,
+    status: raw.status,
+    hitsOnSource: raw.hits_on_source,
+    recordsRetrieved: raw.records_retrieved,
+    recordsImported: raw.records_imported,
+    startedAt: raw.started_at,
+    finishedAt: raw.finished_at,
+    errorMessage: raw.error_message,
+  });
+
   return {
     async devLogin(payload: DevLoginPayload): Promise<SessionContext> {
       const response = await fetch(`${baseUrl}/api/auth/dev-login`, {
@@ -309,37 +537,26 @@ export function createClient(
         body: JSON.stringify(payload),
       });
 
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "login failed");
-      }
-
-      sessionStore?.setToken(data.token);
-      return data;
+      const result =
+        await handleResponse<SessionContext>(response, "login failed");
+      sessionStore?.setToken(
+        (result as unknown as { token?: string }).token ?? "",
+      );
+      return result;
     },
 
     async getMe(): Promise<SessionContext> {
       const response = await fetch(`${baseUrl}/api/auth/me`, {
         headers: buildHeaders(),
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "session bootstrap failed");
-      }
-
-      return data;
+      return handleResponse<SessionContext>(response, "session bootstrap failed");
     },
 
     async listProjects(): Promise<ProjectSummary[]> {
       const response = await fetch(`${baseUrl}/api/projects`, {
         headers: buildHeaders(),
       });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "project list failed");
-      }
-
-      return data;
+      return handleResponse<ProjectSummary[]>(response, "project list failed");
     },
 
     async getWorkspaceHome(projectId: number): Promise<WorkspaceHomeSummary> {
@@ -349,12 +566,10 @@ export function createClient(
           headers: buildHeaders(),
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "workspace home failed");
-      }
-
-      return data;
+      return handleResponse<WorkspaceHomeSummary>(
+        response,
+        "workspace home failed",
+      );
     },
 
     async getStageEntry(
@@ -367,12 +582,10 @@ export function createClient(
           headers: buildHeaders(),
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "stage entry failed");
-      }
-
-      return data;
+      return handleResponse<StageEntrySummary>(
+        response,
+        "stage entry failed",
+      );
     },
 
     async getSearchQueryEditor(
@@ -394,12 +607,10 @@ export function createClient(
           headers: buildHeaders(),
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "search query editor failed");
-      }
-
-      return data;
+      return handleResponse<SearchQueryEditorSummary>(
+        response,
+        "search query editor failed",
+      );
     },
 
     async saveSearchQueryDraft(
@@ -414,12 +625,10 @@ export function createClient(
           body: JSON.stringify(payload),
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "search query save failed");
-      }
-
-      return data;
+      return handleResponse<SearchQueryEditorSummary>(
+        response,
+        "search query save failed",
+      );
     },
 
     async saveSearchQueryVersion(
@@ -434,12 +643,10 @@ export function createClient(
           body: JSON.stringify(payload),
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "search query version failed");
-      }
-
-      return data;
+      return handleResponse<SearchQueryEditorSummary>(
+        response,
+        "search query version failed",
+      );
     },
 
     async deriveSearchQueryDraft(
@@ -459,12 +666,10 @@ export function createClient(
           body: JSON.stringify(payload),
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "search query derive failed");
-      }
-
-      return data;
+      return handleResponse<SearchQueryEditorSummary>(
+        response,
+        "search query derive failed",
+      );
     },
 
     async getSourceCatalog(): Promise<SearchSourceCatalog> {
@@ -474,12 +679,10 @@ export function createClient(
           headers: buildHeaders(),
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "source catalog failed");
-      }
-
-      return data;
+      return handleResponse<SearchSourceCatalog>(
+        response,
+        "source catalog failed",
+      );
     },
 
     async getSearchSourceConfig(
@@ -491,12 +694,10 @@ export function createClient(
           headers: buildHeaders(),
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "source config failed");
-      }
-
-      return data;
+      return handleResponse<SearchSourceConfigSummary>(
+        response,
+        "source config failed",
+      );
     },
 
     async saveSearchSourceConfig(
@@ -511,12 +712,10 @@ export function createClient(
           body: JSON.stringify(payload),
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "source config save failed");
-      }
-
-      return data;
+      return handleResponse<SearchSourceConfigSummary>(
+        response,
+        "source config save failed",
+      );
     },
 
     async getLiteratureLibrary(
@@ -528,12 +727,10 @@ export function createClient(
           headers: buildHeaders(),
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "literature library failed");
-      }
-
-      return data;
+      return handleResponse<LiteratureLibrarySummary>(
+        response,
+        "literature library failed",
+      );
     },
 
     async importLiterature(
@@ -548,12 +745,10 @@ export function createClient(
           body: JSON.stringify(payload),
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "literature import failed");
-      }
-
-      return data;
+      return handleResponse<LiteratureLibrarySummary>(
+        response,
+        "literature import failed",
+      );
     },
 
     async createLiteratureRecord(
@@ -568,12 +763,10 @@ export function createClient(
           body: JSON.stringify(payload),
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "literature record create failed");
-      }
-
-      return data;
+      return handleResponse<LiteratureLibrarySummary>(
+        response,
+        "literature record create failed",
+      );
     },
 
     async confirmLiteratureUnique(
@@ -587,12 +780,374 @@ export function createClient(
           headers: buildHeaders(),
         },
       );
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.detail ?? "literature confirm unique failed");
-      }
+      return handleResponse<LiteratureLibrarySummary>(
+        response,
+        "literature confirm unique failed",
+      );
+    },
 
-      return data;
+    async createSearchRun(
+      projectId: number,
+      payload: SearchRunCreatePayload,
+    ): Promise<SearchRunSummary> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/search-runs`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify({
+            search_query_version_id: payload.searchQueryVersionId,
+            query_snapshot: payload.querySnapshot,
+            sources: payload.sources,
+          }),
+        },
+      );
+      const raw = await handleResponse<{
+        id: number;
+        project_id: number;
+        search_query_version_id: number | null;
+        selected_sources: string[];
+        status: SearchRunStatus;
+        created_at: string;
+        started_at: string | null;
+        finished_at: string | null;
+        total_hits_raw: number;
+        total_after_dedupe: number;
+        prisma: {
+          identification: number;
+          screening: number;
+          eligibility: number;
+          included: number;
+          by_source: {
+            source_key: string;
+            source_label: string;
+            records_retrieved: number;
+            records_imported: number;
+          }[];
+        };
+        eta_seconds: number | null;
+      }>(response, "search run create failed");
+      return mapSearchRunSummary(raw);
+    },
+
+    async listSearchRuns(
+      projectId: number,
+      options: { page?: number; pageSize?: number } = {},
+    ): Promise<{
+      items: SearchRunSummary[];
+      total: number;
+      page: number;
+      pageSize: number;
+    }> {
+      const page = options.page ?? 1;
+      const pageSize = options.pageSize ?? 20;
+      const queryString = new URLSearchParams({
+        page: String(page),
+        page_size: String(pageSize),
+      });
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/search-runs?${queryString.toString()}`,
+        {
+          headers: buildHeaders(),
+        },
+      );
+      const data = await handleResponse<{
+        items: {
+          id: number;
+          project_id: number;
+          search_query_version_id: number | null;
+          selected_sources: string[];
+          status: SearchRunStatus;
+          created_at: string;
+          started_at: string | null;
+          finished_at: string | null;
+          total_hits_raw: number;
+          total_after_dedupe: number;
+          prisma: {
+            identification: number;
+            screening: number;
+            eligibility: number;
+            included: number;
+            by_source: {
+              source_key: string;
+              source_label: string;
+              records_retrieved: number;
+              records_imported: number;
+            }[];
+          };
+          eta_seconds: number | null;
+        }[];
+        total: number;
+        page: number;
+        page_size: number;
+      }>(response, "search run list failed");
+      return {
+        items: data.items.map(mapSearchRunSummary),
+        total: data.total,
+        page: data.page,
+        pageSize: data.page_size,
+      };
+    },
+
+    async getSearchRun(
+      projectId: number,
+      runId: number,
+    ): Promise<SearchRunDetail> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/search-runs/${runId}`,
+        {
+          headers: buildHeaders(),
+        },
+      );
+      const raw = await handleResponse<{
+        run: {
+          id: number;
+          project_id: number;
+          search_query_version_id: number | null;
+          selected_sources: string[];
+          status: SearchRunStatus;
+          created_at: string;
+          started_at: string | null;
+          finished_at: string | null;
+          total_hits_raw: number;
+          total_after_dedupe: number;
+          prisma: {
+            identification: number;
+            screening: number;
+            eligibility: number;
+            included: number;
+            by_source: {
+              source_key: string;
+              source_label: string;
+              records_retrieved: number;
+              records_imported: number;
+            }[];
+          };
+          eta_seconds: number | null;
+        };
+        sources: {
+          id: number;
+          search_run_id: number;
+          source_key: string;
+          source_label: string;
+          status: SearchRunSourceStatus;
+          hits_on_source: number | null;
+          records_retrieved: number;
+          records_imported: number;
+          started_at: string | null;
+          finished_at: string | null;
+          error_message: string | null;
+        }[];
+      }>(response, "search run detail failed");
+      return {
+        run: mapSearchRunSummary(raw.run),
+        sources: raw.sources.map(mapSearchRunSourceSummary),
+      };
+    },
+
+    async cancelSearchRun(
+      projectId: number,
+      runId: number,
+    ): Promise<{ status: string }> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/search-runs/${runId}/cancel`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+        },
+      );
+      return handleResponse<{ status: string }>(
+        response,
+        "search run cancel failed",
+      );
+    },
+
+    async retrySearchRun(
+      projectId: number,
+      runId: number,
+    ): Promise<{ restartedSources: number }> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/search-runs/${runId}/retry`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+        },
+      );
+      const data = await handleResponse<{ restarted_sources: number }>(
+        response,
+        "search run retry failed",
+      );
+      return { restartedSources: data.restarted_sources };
+    },
+
+    getSearchRunCsvUrl(projectId: number, runId: number): string {
+      return `${baseUrl}/api/workspace/projects/${projectId}/stages/search/search-runs/${runId}/export.csv`;
+    },
+
+    async pollSearchRunStatus(
+      projectId: number,
+      runId: number,
+    ): Promise<SearchRunStatusPoll> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/search-runs/${runId}/status`,
+        {
+          headers: buildHeaders(),
+        },
+      );
+      const raw = await handleResponse<{
+        status: SearchRunStatus;
+        finished_sources: number;
+        total_sources: number;
+        eta_seconds: number | null;
+      }>(response, "search run status poll failed");
+      return {
+        status: raw.status,
+        finishedSources: raw.finished_sources,
+        totalSources: raw.total_sources,
+        etaSeconds: raw.eta_seconds,
+      };
+    },
+
+    async recomputeBm25(
+      projectId: number,
+      runId: number,
+    ): Promise<{ queued: boolean }> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/search-runs/${runId}/recompute-bm25`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+        },
+      );
+      return handleResponse<{ queued: boolean }>(
+        response,
+        "recompute bm25 failed",
+      );
+    },
+
+    async getLiteratureLibraryExt(
+      projectId: number,
+      options: {
+        searchRunId?: number;
+        sort?: LibrarySortKey;
+        minScore?: number;
+      } = {},
+    ): Promise<LiteratureLibrarySummary> {
+      const queryString = new URLSearchParams();
+      if (options.searchRunId !== undefined) {
+        queryString.set("search_run_id", String(options.searchRunId));
+      }
+      if (options.sort !== undefined) {
+        queryString.set("sort", options.sort);
+      }
+      if (options.minScore !== undefined) {
+        queryString.set("min_score", String(options.minScore));
+      }
+      const suffix = queryString.size > 0 ? `?${queryString.toString()}` : "";
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/literature${suffix}`,
+        {
+          headers: buildHeaders(),
+        },
+      );
+      return handleResponse<LiteratureLibrarySummary>(
+        response,
+        "literature library ext failed",
+      );
+    },
+
+    async batchExtractPico(
+      projectId: number,
+      payload: BatchPicoPayload,
+    ): Promise<BatchPicoResult> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/literature/records/pico:batch-extract`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify({
+            record_ids: payload.recordIds,
+            method: payload.method,
+          }),
+        },
+      );
+      const data = await handleResponse<{
+        processed: number;
+        already_had: number;
+        failed: number;
+      }>(response, "batch extract pico failed");
+      return {
+        processed: data.processed,
+        alreadyHad: data.already_had,
+        failed: data.failed,
+      };
+    },
+
+    async getRecordPico(
+      projectId: number,
+      recordId: number,
+      method?: "rule_baseline" | "llm",
+    ): Promise<LiteraturePicoResponse> {
+      const queryString = new URLSearchParams();
+      if (method !== undefined) {
+        queryString.set("method", method);
+      }
+      const suffix = queryString.size > 0 ? `?${queryString.toString()}` : "";
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/literature/records/${recordId}/pico${suffix}`,
+        {
+          headers: buildHeaders(),
+        },
+      );
+      const raw = await handleResponse<{
+        record_id: number;
+        population?: string | null;
+        intervention?: string | null;
+        comparison?: string | null;
+        outcome?: string | null;
+        study_type?: string | null;
+        extraction_method: string;
+        confidence?: number | null;
+        extracted_at: string;
+      }>(response, "get record pico failed");
+      return {
+        recordId: raw.record_id,
+        population: raw.population,
+        intervention: raw.intervention,
+        comparison: raw.comparison,
+        outcome: raw.outcome,
+        studyType: raw.study_type,
+        extractionMethod: raw.extraction_method,
+        confidence: raw.confidence,
+        extractedAt: raw.extracted_at,
+      };
+    },
+
+    async autofillPicoFromRun(
+      projectId: number,
+      runId: number,
+    ): Promise<PicoAutofillDraft> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/search-runs/${runId}/pico:autofill-query`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+        },
+      );
+      const data = await handleResponse<{
+        p: string;
+        i: string;
+        c: string;
+        o: string;
+        supporting_record_ids: number[];
+      }>(response, "autofill pico from run failed");
+      return {
+        p: data.p,
+        i: data.i,
+        c: data.c,
+        o: data.o,
+        supportingRecordIds: data.supporting_record_ids,
+      };
     },
   };
 }

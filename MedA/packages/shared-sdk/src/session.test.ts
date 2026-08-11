@@ -612,4 +612,448 @@ describe("workspace client", () => {
       expect.objectContaining({ method: "POST" }),
     );
   });
+
+  it("creates a search run via POST /search-runs with snake_case body and maps camelCase response", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        id: 42,
+        project_id: 7,
+        search_query_version_id: 3,
+        selected_sources: ["pubmed", "cnki"],
+        status: "pending",
+        created_at: "2026-08-11T09:00:00Z",
+        started_at: null,
+        finished_at: null,
+        total_hits_raw: 0,
+        total_after_dedupe: 0,
+        prisma: {
+          identification: 0,
+          screening: 0,
+          eligibility: 0,
+          included: 0,
+          by_source: [
+            {
+              source_key: "pubmed",
+              source_label: "PubMed",
+              records_retrieved: 0,
+              records_imported: 0,
+            },
+          ],
+        },
+        eta_seconds: null,
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const result = await client.createSearchRun(7, {
+      searchQueryVersionId: 3,
+      querySnapshot: { p: "T2DM" },
+      sources: ["pubmed", "cnki"],
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/7/stages/search/search-runs",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          search_query_version_id: 3,
+          query_snapshot: { p: "T2DM" },
+          sources: ["pubmed", "cnki"],
+        }),
+      },
+    );
+    expect(result.id).toBe(42);
+    expect(result.projectId).toBe(7);
+    expect(result.searchQueryVersionId).toBe(3);
+    expect(result.selectedSources).toEqual(["pubmed", "cnki"]);
+    expect(result.totalHitsRaw).toBe(0);
+    expect(result.prisma.identification).toBe(0);
+    expect(result.prisma.bySource[0].sourceKey).toBe("pubmed");
+    expect(result.prisma.bySource[0].recordsRetrieved).toBe(0);
+  });
+
+  it("lists search runs with page and pageSize query params", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        items: [
+          {
+            id: 1,
+            project_id: 7,
+            search_query_version_id: null,
+            selected_sources: ["pubmed"],
+            status: "completed",
+            created_at: "2026-08-11T08:00:00Z",
+            started_at: "2026-08-11T08:00:05Z",
+            finished_at: "2026-08-11T08:01:00Z",
+            total_hits_raw: 120,
+            total_after_dedupe: 100,
+            prisma: {
+              identification: 120,
+              screening: 100,
+              eligibility: 80,
+              included: 50,
+              by_source: [],
+            },
+            eta_seconds: null,
+          },
+        ],
+        total: 15,
+        page: 2,
+        page_size: 5,
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const result = await client.listSearchRuns(7, { page: 2, pageSize: 5 });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/7/stages/search/search-runs?page=2&page_size=5",
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0].totalAfterDedupe).toBe(100);
+    expect(result.total).toBe(15);
+    expect(result.page).toBe(2);
+    expect(result.pageSize).toBe(5);
+  });
+
+  it("gets a search run detail with run and sources mapping", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        run: {
+          id: 42,
+          project_id: 7,
+          search_query_version_id: null,
+          selected_sources: ["pubmed", "cnki"],
+          status: "running",
+          created_at: "2026-08-11T09:00:00Z",
+          started_at: "2026-08-11T09:00:05Z",
+          finished_at: null,
+          total_hits_raw: 50,
+          total_after_dedupe: 40,
+          prisma: {
+            identification: 50,
+            screening: 40,
+            eligibility: 0,
+            included: 0,
+            by_source: [],
+          },
+          eta_seconds: 12.5,
+        },
+        sources: [
+          {
+            id: 1,
+            search_run_id: 42,
+            source_key: "pubmed",
+            source_label: "PubMed",
+            status: "completed",
+            hits_on_source: 30,
+            records_retrieved: 30,
+            records_imported: 25,
+            started_at: "2026-08-11T09:00:05Z",
+            finished_at: "2026-08-11T09:00:20Z",
+            error_message: null,
+          },
+          {
+            id: 2,
+            search_run_id: 42,
+            source_key: "cnki",
+            source_label: "CNKI",
+            status: "failed",
+            hits_on_source: null,
+            records_retrieved: 0,
+            records_imported: 0,
+            started_at: "2026-08-11T09:00:05Z",
+            finished_at: "2026-08-11T09:00:07Z",
+            error_message: "timeout",
+          },
+        ],
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const result = await client.getSearchRun(7, 42);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/7/stages/search/search-runs/42",
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    expect(result.run.status).toBe("running");
+    expect(result.run.etaSeconds).toBe(12.5);
+    expect(result.sources).toHaveLength(2);
+    expect(result.sources[0].searchRunId).toBe(42);
+    expect(result.sources[0].sourceKey).toBe("pubmed");
+    expect(result.sources[0].hitsOnSource).toBe(30);
+    expect(result.sources[0].recordsImported).toBe(25);
+    expect(result.sources[1].status).toBe("failed");
+    expect(result.sources[1].errorMessage).toBe("timeout");
+  });
+
+  it("cancels a search run via POST cancel endpoint", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ status: "cancelled" }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const result = await client.cancelSearchRun(7, 42);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/7/stages/search/search-runs/42/cancel",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+    expect(result.status).toBe("cancelled");
+  });
+
+  it("retries a search run via POST retry endpoint and maps restartedSources", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ restarted_sources: 2 }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const result = await client.retrySearchRun(7, 42);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/7/stages/search/search-runs/42/retry",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+    expect(result.restartedSources).toBe(2);
+  });
+
+  it("returns a CSV URL string (without calling fetch) via getSearchRunCsvUrl", () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const url = client.getSearchRunCsvUrl(7, 42);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(url).toBe(
+      "http://localhost:8000/api/workspace/projects/7/stages/search/search-runs/42/export.csv",
+    );
+  });
+
+  it("polls a search run status and maps snake_case to camelCase", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        status: "running",
+        finished_sources: 1,
+        total_sources: 3,
+        eta_seconds: 45.2,
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const result = await client.pollSearchRunStatus(7, 42);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/7/stages/search/search-runs/42/status",
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    expect(result.status).toBe("running");
+    expect(result.finishedSources).toBe(1);
+    expect(result.totalSources).toBe(3);
+    expect(result.etaSeconds).toBe(45.2);
+  });
+
+  it("recomputes BM25 for a search run via POST recompute-bm25", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ queued: true }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const result = await client.recomputeBm25(7, 42);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/7/stages/search/search-runs/42/recompute-bm25",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+    expect(result.queued).toBe(true);
+  });
+
+  it("fetches extended literature library with searchRunId, sort, and minScore QS params", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => libraryResponse,
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    await client.getLiteratureLibraryExt(7, {
+      searchRunId: 42,
+      sort: "relevance",
+      minScore: 0.75,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/7/stages/search/literature?search_run_id=42&sort=relevance&min_score=0.75",
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+  });
+
+  it("batch extracts PICO via POST with snake_case body and maps response", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        processed: 8,
+        already_had: 2,
+        failed: 1,
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const result = await client.batchExtractPico(7, {
+      recordIds: [101, 102, 103],
+      method: "rule_baseline",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/7/stages/search/literature/records/pico:batch-extract",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          record_ids: [101, 102, 103],
+          method: "rule_baseline",
+        }),
+      },
+    );
+    expect(result.processed).toBe(8);
+    expect(result.alreadyHad).toBe(2);
+    expect(result.failed).toBe(1);
+  });
+
+  it("gets a single record PICO via GET with optional method QS and maps fields", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        record_id: 101,
+        population: "成人T2DM患者",
+        intervention: "SGLT2抑制剂",
+        comparison: "安慰剂",
+        outcome: "3P-MACE",
+        study_type: "rct",
+        extraction_method: "rule_baseline",
+        confidence: 0.82,
+        extracted_at: "2026-08-11T10:00:00Z",
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const result = await client.getRecordPico(7, 101, "llm");
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/7/stages/search/literature/records/101/pico?method=llm",
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    expect(result.recordId).toBe(101);
+    expect(result.population).toBe("成人T2DM患者");
+    expect(result.intervention).toBe("SGLT2抑制剂");
+    expect(result.comparison).toBe("安慰剂");
+    expect(result.outcome).toBe("3P-MACE");
+    expect(result.studyType).toBe("rct");
+    expect(result.extractionMethod).toBe("rule_baseline");
+    expect(result.confidence).toBe(0.82);
+    expect(result.extractedAt).toBe("2026-08-11T10:00:00Z");
+  });
+
+  it("autofills PICO query draft from a search run via POST and maps supportingRecordIds", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        p: "成人2型糖尿病合并慢性肾病",
+        i: "SGLT2抑制剂联合二甲双胍",
+        c: "二甲双胍单药",
+        o: "肾脏复合终点及心血管事件发生率",
+        supporting_record_ids: [101, 102, 105, 110],
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const result = await client.autofillPicoFromRun(7, 42);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/7/stages/search/search-runs/42/pico:autofill-query",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      },
+    );
+    expect(result.p).toBe("成人2型糖尿病合并慢性肾病");
+    expect(result.i).toBe("SGLT2抑制剂联合二甲双胍");
+    expect(result.c).toBe("二甲双胍单药");
+    expect(result.o).toBe("肾脏复合终点及心血管事件发生率");
+    expect(result.supportingRecordIds).toEqual([101, 102, 105, 110]);
+  });
+
+  it("sends the bearer token when calling createSearchRun", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      status: 201,
+      json: async () => ({
+        id: 42,
+        project_id: 7,
+        search_query_version_id: null,
+        selected_sources: ["pubmed"],
+        status: "pending",
+        created_at: "2026-08-11T09:00:00Z",
+        started_at: null,
+        finished_at: null,
+        total_hits_raw: 0,
+        total_after_dedupe: 0,
+        prisma: {
+          identification: 0,
+          screening: 0,
+          eligibility: 0,
+          included: 0,
+          by_source: [],
+        },
+        eta_seconds: null,
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient(
+      "http://localhost:8000",
+      createMemorySessionStore("meda_token"),
+    );
+    await client.createSearchRun(7, { sources: ["pubmed"] });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining("/search-runs"),
+      expect.objectContaining({
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer meda_token",
+        },
+      }),
+    );
+  });
 });
