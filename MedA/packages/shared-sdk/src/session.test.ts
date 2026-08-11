@@ -481,4 +481,135 @@ describe("workspace client", () => {
     expect(config.enabled_source_keys).toEqual(["pubmed", "cochrane"]);
     expect(config.year_from).toBe(2015);
   });
+
+  const libraryResponse = {
+    project: {
+      id: 1,
+      name: "糖尿病真实世界研究",
+      workspace_key: "demo-hospital/糖尿病真实世界研究",
+      current_stage: "检索",
+      updated_at_label: "刚刚更新",
+    },
+    stage_key: "search",
+    records: [
+      {
+        id: 11,
+        title: "Metformin and cardiovascular outcomes",
+        authors: "Chen L",
+        journal: "Lancet",
+        year: 2023,
+        doi: "10.1016/S2213-8587",
+        pmid: "37123456",
+        source_key: "pubmed",
+        source_label: "PubMed",
+        dedupe_status: "unique",
+        duplicate_of_id: null,
+      },
+    ],
+    stats: {
+      total_count: 1,
+      unique_count: 1,
+      duplicate_count: 0,
+      by_source: [{ source_key: "pubmed", source_label: "PubMed", count: 1 }],
+    },
+    recent_batches: [],
+    available_sources: [
+      {
+        key: "pubmed",
+        label: "PubMed",
+        description: "美国国立医学图书馆生物医学文献库",
+        supports_full_text: false,
+      },
+    ],
+    last_import_result: null,
+  };
+
+  it("fetches the literature library", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => libraryResponse,
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const library = await client.getLiteratureLibrary(1);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/1/stages/search/literature",
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    expect(library.records[0].title).toBe(
+      "Metformin and cardiovascular outcomes",
+    );
+    expect(library.stats.total_count).toBe(1);
+  });
+
+  it("imports literature from pasted text", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        ...libraryResponse,
+        last_import_result: {
+          imported_count: 2,
+          duplicate_count: 1,
+          skipped_count: 0,
+        },
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    const library = await client.importLiterature(1, {
+      source_key: "pubmed",
+      raw_text: "title: A paper",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/1/stages/search/literature/import",
+      expect.objectContaining({ method: "POST" }),
+    );
+    expect(library.last_import_result?.imported_count).toBe(2);
+    expect(library.last_import_result?.duplicate_count).toBe(1);
+  });
+
+  it("creates a literature record manually", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => libraryResponse,
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    await client.createLiteratureRecord(1, {
+      title: "Hand entered",
+      authors: "",
+      journal: "",
+      year: null,
+      doi: "",
+      pmid: "",
+      abstract: "",
+      source_key: "cochrane",
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/1/stages/search/literature/records",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("confirms a flagged record as unique", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => libraryResponse,
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const client = createClient("http://localhost:8000");
+    await client.confirmLiteratureUnique(1, 11);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/api/workspace/projects/1/stages/search/literature/records/11/confirm-unique",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
 });

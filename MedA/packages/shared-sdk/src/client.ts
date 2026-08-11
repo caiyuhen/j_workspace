@@ -206,6 +206,75 @@ export type SaveSearchSourceConfigPayload = {
   languages: string[];
 };
 
+export type LiteratureRecordSummary = {
+  id: number;
+  title: string;
+  authors: string;
+  journal: string;
+  year: number | null;
+  doi: string;
+  pmid: string;
+  source_key: string;
+  source_label: string;
+  dedupe_status: string;
+  duplicate_of_id: number | null;
+};
+
+export type LiteratureSourceCount = {
+  source_key: string;
+  source_label: string;
+  count: number;
+};
+
+export type LiteratureStats = {
+  total_count: number;
+  unique_count: number;
+  duplicate_count: number;
+  by_source: LiteratureSourceCount[];
+};
+
+export type LiteratureBatchSummary = {
+  id: number;
+  source_key: string;
+  source_label: string;
+  parsed_count: number;
+  duplicate_count: number;
+  skipped_count: number;
+  created_at_label: string;
+};
+
+export type ImportResultSummary = {
+  imported_count: number;
+  duplicate_count: number;
+  skipped_count: number;
+};
+
+export type LiteratureLibrarySummary = {
+  project: WorkspaceProjectSummary;
+  stage_key: string;
+  records: LiteratureRecordSummary[];
+  stats: LiteratureStats;
+  recent_batches: LiteratureBatchSummary[];
+  available_sources: SourceCatalogItem[];
+  last_import_result: ImportResultSummary | null;
+};
+
+export type ImportLiteraturePayload = {
+  source_key: string;
+  raw_text: string;
+};
+
+export type CreateLiteratureRecordPayload = {
+  title: string;
+  authors: string;
+  journal: string;
+  year: number | null;
+  doi: string;
+  pmid: string;
+  abstract: string;
+  source_key: string;
+};
+
 export type DevLoginPayload = {
   organization_slug: string;
   organization_name: string;
@@ -445,6 +514,82 @@ export function createClient(
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.detail ?? "source config save failed");
+      }
+
+      return data;
+    },
+
+    async getLiteratureLibrary(
+      projectId: number,
+    ): Promise<LiteratureLibrarySummary> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/literature`,
+        {
+          headers: buildHeaders(),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "literature library failed");
+      }
+
+      return data;
+    },
+
+    async importLiterature(
+      projectId: number,
+      payload: ImportLiteraturePayload,
+    ): Promise<LiteratureLibrarySummary> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/literature/import`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify(payload),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "literature import failed");
+      }
+
+      return data;
+    },
+
+    async createLiteratureRecord(
+      projectId: number,
+      payload: CreateLiteratureRecordPayload,
+    ): Promise<LiteratureLibrarySummary> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/literature/records`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+          body: JSON.stringify(payload),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "literature record create failed");
+      }
+
+      return data;
+    },
+
+    async confirmLiteratureUnique(
+      projectId: number,
+      recordId: number,
+    ): Promise<LiteratureLibrarySummary> {
+      const response = await fetch(
+        `${baseUrl}/api/workspace/projects/${projectId}/stages/search/literature/records/${recordId}/confirm-unique`,
+        {
+          method: "POST",
+          headers: buildHeaders(),
+        },
+      );
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.detail ?? "literature confirm unique failed");
       }
 
       return data;
