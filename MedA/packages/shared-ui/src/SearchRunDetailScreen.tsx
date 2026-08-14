@@ -1,4 +1,5 @@
 import type { SearchRunDetail } from "@meda/shared-sdk";
+import { ExportPanel } from "./export/ExportPanel";
 
 type SearchRunDetailScreenProps = {
   detail: SearchRunDetail | null;
@@ -185,6 +186,10 @@ export function SearchRunDetailScreen({
             >
               导出 CSV
             </button>
+            <ExportPanel
+              detail={detail as any}
+              onDone={(...args) => console.log('export done', args)}
+            />
           </div>
         </div>
 
@@ -255,11 +260,13 @@ export function SearchRunDetailScreen({
         <h3 style={{ marginTop: 0, marginBottom: "16px" }}>各数据源明细</h3>
         <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {sources.map((src) => {
-            const sStyle = STATUS_CHIP_STYLES[src.status] ?? STATUS_CHIP_STYLES.pending;
-            const showRetry = src.status === "failed" || src.status === "partial_failed";
+            const sStyle =
+              STATUS_CHIP_STYLES[src.status as keyof typeof STATUS_CHIP_STYLES] ??
+              STATUS_CHIP_STYLES.pending;
+            const showRetry = src.status === "failed" || (src.status as string) === "partial_failed";
             return (
               <div
-                key={src.source_key}
+                key={src.source_key ?? src.sourceKey}
                 style={{
                   border: "1px solid #e5e7eb",
                   borderRadius: "12px",
@@ -277,7 +284,7 @@ export function SearchRunDetailScreen({
                 >
                   <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
                     <span style={{ fontSize: "15px", fontWeight: 700 }}>
-                      {src.source_label}
+                      {src.source_label ?? src.sourceLabel}
                     </span>
                     <span
                       style={{
@@ -292,8 +299,8 @@ export function SearchRunDetailScreen({
                       {sStyle.label}
                     </span>
                     <span style={{ fontSize: "13px", color: "#4b5563" }}>
-                      检索 {src.records_retrieved ?? 0} / 入库{" "}
-                      {src.records_imported ?? 0}
+                      检索 {src.records_retrieved ?? src.recordsRetrieved ?? 0} / 入库{" "}
+                      {src.records_imported ?? src.recordsImported ?? 0}
                     </span>
                   </div>
                   {showRetry && (
@@ -308,14 +315,14 @@ export function SearchRunDetailScreen({
                         fontSize: "12px",
                         fontWeight: 600,
                       }}
-                      onClick={() => void onRetrySource(src.source_key)}
+                      onClick={() => void onRetrySource?.(src.source_key ?? src.sourceKey ?? "")}
                     >
                       重试该源
                     </button>
                   )}
                 </div>
 
-                {src.error_message && (
+                {src.error_message != null && src.error_message !== undefined ? (
                   <div
                     style={{
                       marginTop: "10px",
@@ -326,9 +333,9 @@ export function SearchRunDetailScreen({
                       fontSize: "13px",
                     }}
                   >
-                    错误：{src.error_message}
+                    错误：{src.error_message ?? src.errorMessage}
                   </div>
-                )}
+                ) : null}
               </div>
             );
           })}
