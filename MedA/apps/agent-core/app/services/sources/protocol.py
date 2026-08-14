@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Protocol
+from typing import Literal, Protocol
 
 
 @dataclass
@@ -17,6 +17,7 @@ class SearchRunContext:
     search_run_id: int
     rate_limit_rps: dict[str, float] = field(default_factory=dict)
     pubmed_api_key: str | None = None
+    adapter_modes: dict[str, Literal["prefer_real", "force_mock", "force_real"]] = field(default_factory=dict)
 
 
 @dataclass

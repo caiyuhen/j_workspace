@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 from datetime import datetime, timedelta
 from typing import Iterable
 
@@ -143,9 +144,16 @@ async def _execute_single_source(session: Session, srs: SearchRunSource) -> None
             filters=_extract_filters_from_snapshot(run.query_snapshot),
             source_key=srs.source_key,
         )
+        default_rates = {"pubmed": 3.0, "cnki": 0.3, "wanfang": 0.3}
+        cfg = getattr(run, "search_source_config_json", None) or {}
+        if isinstance(cfg, dict):
+            default_rates.update(cfg.get("rate_limit_rps") or {})
         ctx = SearchRunContext(
             project_id=run.project_id,
             search_run_id=run.id,
+            rate_limit_rps=default_rates,
+            pubmed_api_key=os.getenv("PUBMED_API_KEY"),
+            adapter_modes={},
         )
         result = await adapter.run_search(query, ctx)
         # 写入：去重、规范化、import_unified_entries（Task 5 定义）

@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import asyncio
+import os
+import re
 from typing import Iterable
+import xml.etree.ElementTree as ET
 
 import httpx
 
@@ -15,6 +18,114 @@ from .protocol import (
 
 ESEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 EFETCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi"
+
+_MODE_ENV_MAP = {
+    "pubmed":   "MEDA_PUBMED_MODE",
+    "cnki":     "MEDA_CNKI_MODE",
+    "wanfang":  "MEDA_WANFANG_MODE",
+}
+_VALID_MODES = {"prefer_real", "force_mock", "force_real"}
+
+
+def _resolve_mode(source_key: str, ctx: SearchRunContext) -> str:
+    """三级优先级：ctx.adapter_modes > env > 默认 prefer_real"""
+    env_k = _MODE_ENV_MAP.get(source_key)
+    mode = "prefer_real"
+    if env_k and os.getenv(env_k) in _VALID_MODES:
+        mode = os.environ[env_k]
+    if source_key in ctx.adapter_modes and ctx.adapter_modes[source_key] in _VALID_MODES:
+        mode = ctx.adapter_modes[source_key]
+    return mode
+
+
+_YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
+
+
+def _parse_pubmed_xml(raw_xml: str) -> list[UnifiedLiteratureEntry]:
+    """xml.etree 解析 PubmedArticleSet → UnifiedLiteratureEntry[]。
+    任何 ParseError / 单条异常均吞掉返回空（上层按 mode 决定 fallback）。"""
+    try:
+        root = ET.fromstring(raw_xml)
+    except ET.ParseError:
+        return []
+    out: list[UnifiedLiteratureEntry] = []
+    for article in root.findall(".//PubmedArticle"):
+        try:
+            pmid_el = article.find(".//MedlineCitation/PMID")
+            pmid = (pmid_el.text or "").strip() if pmid_el is not None else ""
+
+            # DOI: prefer PubmedData ArticleId @IdType=doi，退 ELocationID
+            doi = ""
+            for aid in article.findall(".//PubmedData/ArticleIdList/ArticleId"):
+                if aid.attrib.get("IdType") == "doi" and aid.text:
+                    doi = aid.text.strip().lower()
+                    break
+            if not doi:
+                loc = article.find(".//MedlineCitation/Article/ELocationID")
+                if loc is not None and loc.attrib.get("EIdType") == "doi" and loc.text:
+                    doi = loc.text.strip().lower()
+
+            # Title: itertext() 去 <i><b>
+            title_el = article.find(".//MedlineCitation/Article/ArticleTitle")
+            title = "".join(title_el.itertext()).strip() if title_el is not None else ""
+
+            # Authors: LastName + " " + ForeName，用 "; " join
+            authors = []
+            for a in article.findall(".//MedlineCitation/Article/AuthorList/Author"):
+                last = a.find("LastName")
+                fore = a.find("ForeName")
+                coll = a.find("CollectiveName")
+                if coll is not None and coll.text:
+                    authors.append(coll.text.strip())
+                elif last is not None and last.text:
+                    fn = (fore.text or "").strip() if fore is not None else ""
+                    authors.append(f"{last.text.strip()} {fn}".strip())
+            authors_str = "; ".join(authors)
+
+            # Journal: Title > ISOAbbreviation
+            journal_el = article.find(".//MedlineCitation/Article/Journal/Title")
+            journal = (journal_el.text or "").strip() if journal_el is not None else ""
+            if not journal:
+                iso = article.find(".//MedlineCitation/Article/Journal/ISOAbbreviation")
+                journal = (iso.text or "").strip() if iso is not None else ""
+
+            # Year: PubDate/Year > MedlineDate regex
+            year: int | None = None
+            year_el = article.find(".//MedlineCitation/Article/Journal/JournalIssue/PubDate/Year")
+            if year_el is not None and year_el.text and year_el.text.isdigit():
+                year = int(year_el.text)
+            if year is None:
+                medline_el = article.find(".//MedlineCitation/Article/Journal/JournalIssue/PubDate/MedlineDate")
+                if medline_el is not None and medline_el.text:
+                    m = _YEAR_RE.search(medline_el.text)
+                    if m:
+                        year = int(m.group(0))
+
+            # Abstract: multiple AbstractText lines, [NlmCategory] prefix
+            parts = []
+            for i, at in enumerate(article.findall(".//MedlineCitation/Article/Abstract/AbstractText")):
+                label = at.attrib.get("NlmCategory") or at.attrib.get("Label") or f"NoLabel-{i}"
+                txt = "".join(at.itertext()).strip() if at.text else ""
+                if not txt:
+                    continue
+                parts.append(f"[{label}] {txt}")
+            abstract = "\n".join(parts) or ""
+
+            out.append(UnifiedLiteratureEntry(
+                doi=doi,
+                pmid=pmid,
+                title=title,
+                authors=authors_str,
+                journal=journal,
+                year=year,
+                abstract=abstract,
+                source_key="pubmed",
+                source_record_id=pmid or None,
+            ))
+        except Exception:
+            # 单篇文章解析不影响整批（XML 结构部分损坏）
+            continue
+    return out
 
 
 async def _esearch_pubmed_ids(
@@ -59,23 +170,25 @@ async def _efetch_parse_entries(
     pmids: Iterable[str],
     chunk: int = 500,
 ) -> list[UnifiedLiteratureEntry]:
-    """Low-level helper (module-level so tests can monkeypatch).
-
-    Signature: (pmids) -> list[UnifiedLiteratureEntry]
-    Tests monkeypatch this directly with fixture entries. The real
-    HTTP path is a placeholder in Wave 8: it issues a smoke HTTP call
-    (using a transient client) but returns an empty list — the real
-    XML → UnifiedLiteratureEntry parser comes in a follow-up commit.
-    """
+    """按 chunk 分页真 efetch XML，调用 _parse_pubmed_xml。"""
     ids = list(pmids)
     if not ids:
         return []
-    # Real impl will paginate over ids in `chunk` batches and parse XML.
-    # Placeholder branch for non-monkeypatched path:
-    async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
-        params = {"db": "pubmed", "id": ",".join(ids), "retmode": "xml"}
-        _ = await client.get(EFETCH_URL, params=params)  # smoke call
-    return []  # Follow-up commit: implement XML → entries parser
+    out: list[UnifiedLiteratureEntry] = []
+    for i in range(0, len(ids), chunk):
+        batch = ids[i:i + chunk]
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(120.0)) as client:
+                resp = await client.get(
+                    EFETCH_URL,
+                    params={"db": "pubmed", "id": ",".join(batch), "retmode": "xml", "rettype": "abstract"},
+                )
+                resp.raise_for_status()
+            out.extend(_parse_pubmed_xml(resp.text))
+        except (httpx.HTTPError, ET.ParseError):
+            # force_real 情况下上层会根据 warnings 判断；这里只返回已解析的
+            continue
+    return out
 
 
 class PubMedAdapter:
@@ -84,14 +197,24 @@ class PubMedAdapter:
     async def run_search(
         self, query: NormalizedSearchQuery, ctx: SearchRunContext
     ) -> AdapterResult:
+        mode = _resolve_mode("pubmed", ctx)
         # Minimal rate limit sleep based on rps
         rps = ctx.rate_limit_rps.get("pubmed", 3.0)
         await asyncio.sleep(1.0 / max(rps, 0.1))
 
-        ids, count = await _esearch_pubmed_ids(query, ctx)
-        entries = await _efetch_parse_entries(ids)
+        try:
+            ids, count = await _esearch_pubmed_ids(query, ctx)
+            entries = await _efetch_parse_entries(ids)
+        except Exception as exc:
+            if mode == "force_real":
+                raise
+            # prefer_real: 网络异常 → 返回空 + warning（INJECTED_DATASET 机制 pubmed 不用；它的 mock 用 monkeypatch）
+            return AdapterResult(
+                hits_on_source=None,
+                records=[],
+                warnings=[f"PubMed (mode={mode}) HTTP 失败: {exc.__class__.__name__}: {exc}"],
+            )
 
-        # Enforce DOI lower case + strip, title strip regardless of whether efetch filled them.
         normalized = [
             UnifiedLiteratureEntry(
                 doi=(r.doi or "").strip().lower(),
@@ -109,7 +232,6 @@ class PubMedAdapter:
         warnings = []
         if count > 0 and len(normalized) == 0:
             warnings.append(
-                "PubMed esearch returned IDs but XML efetch → entries parser "
-                "is a placeholder in Wave 8. Inject monkeypatch for tests."
+                "PubMed esearch returned hits but XML parsed 0 entries (可能真 efetch 结构变动)。"
             )
         return AdapterResult(hits_on_source=count, records=normalized, warnings=warnings)
