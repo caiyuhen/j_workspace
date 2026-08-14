@@ -84,6 +84,16 @@ MOCK_CNKI_DATASET: list[UnifiedMockEntry] = [
         abstract="回顾性纳入 210 例 T2DM 患者...",
         source_record_id="cnki-2023-2345",
     ),
+    UnifiedMockEntry(
+        doi="",
+        pmid="",
+        title="HFrEF 合并 2 型糖尿病患者启用 SGLT2 抑制剂的预后队列研究",
+        authors="陈海波;吴丹;张琳;马骁",
+        journal="中华心血管病杂志",
+        year=2024,
+        abstract="回顾性队列 368 例 HFrEF + T2DM，分析 SGLT2i 启用 12 月 HF 住院复合终点...",
+        source_record_id="cnki-2024-hfref-99",
+    ),
 ]
 
 MOCK_WANFANG_DATASET: list[UnifiedMockEntry] = [
@@ -96,6 +106,26 @@ MOCK_WANFANG_DATASET: list[UnifiedMockEntry] = [
         year=2024,
         abstract="系统评价达格列净用于非 DM CKD 的安全性 ...",
         source_record_id="wf-2024-1122",
+    ),
+    UnifiedMockEntry(
+        doi="",
+        pmid="",
+        title="基于 PRISMA 的糖尿病肾病随机对照试验文献质量评价（2019-2023）",
+        authors="林婉如;赵一鸣;黄思琪",
+        journal="中国循证医学杂志",
+        year=2024,
+        abstract="按 PRISMA 与 AMSTAR-2 标准系统评价 DKD 相关 RCT 报告质量共 68 篇...",
+        source_record_id="wf-2024-prisma-08",
+    ),
+    UnifiedMockEntry(
+        doi="",
+        pmid="",
+        title="ARNI 联合 SGLT2i 在 HFrEF 合并 CKD 中的真实世界疗效",
+        authors="郑凯;何梦婷;冯磊",
+        journal="中华高血压杂志",
+        year=2023,
+        abstract="纳入 196 例 HFrEF + CKD(eGFR 30-60)，ARNI+SGLT2i vs 标准治疗，随访 6 月...",
+        source_record_id="wf-2023-arni-7714",
     ),
 ]
 
