@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import type {
   ImportLiteraturePayload,
   LiteratureLibrarySummary,
+  MedaClient,
   ProjectSummary,
   SaveSearchSourceConfigPayload,
   SearchQueryEditorSummary,
@@ -20,6 +21,7 @@ import {
   SearchRunDetailScreen,
   SearchRunListScreen,
   SearchSourceConfigScreen,
+  WorkspaceOneClickPubmedDemo,
 } from "@meda/shared-ui";
 
 import { SearchQueryBuilderScreen } from "./workspace/SearchQueryBuilderScreen";
@@ -27,6 +29,7 @@ import { StageEntryScreen } from "./workspace/StageEntryScreen";
 import { SummaryButton } from "./workspace/SummaryButton";
 
 type WorkspaceShellProps = {
+  client: MedaClient;
   session: SessionContext;
   projects: ProjectSummary[];
   workspaceHome: WorkspaceHomeSummary;
@@ -245,6 +248,7 @@ function SearchStageTabs({
 }
 
 export function WorkspaceShell({
+  client,
   session,
   projects,
   workspaceHome,
@@ -544,6 +548,16 @@ export function WorkspaceShell({
                 ))}
               </div>
             </section>
+            <WorkspaceOneClickPubmedDemo
+              client={client}
+              session={session}
+              workspaceHomeProjectId={workspaceHome.project.id}
+              onRunCreated={(rid, pid) => {
+                onOpenSearchRunDetail(rid);
+              }}
+              onErrorToast={alert}
+              onProjectCreatedToast={console.info}
+            />
             <section
               style={{
                 display: "grid",

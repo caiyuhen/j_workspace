@@ -244,6 +244,7 @@ export default function App() {
 
   return (
     <WorkspaceShell
+      client={client}
       session={session}
       projects={projects}
       workspaceHome={workspaceHome}
