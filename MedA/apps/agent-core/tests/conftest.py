@@ -172,3 +172,16 @@ def inject_mock_datasets_into_adapters(
         monkeypatch.setattr(
             wanfang_adapter, "INJECTED_DATASET", _coerce(registry["wanfang"])
         )
+
+
+import os as _os
+import pytest as _pytest
+
+@_pytest.fixture(autouse=True)
+def _force_all_sources_force_mock_for_pytest(monkeypatch):
+    """pytest 默认零外网：三 source 全 force_mock。
+    needs_network 标记的测试会显式 pop 这些 env。
+    """
+    monkeypatch.setenv("MEDA_PUBMED_MODE", "force_mock")
+    monkeypatch.setenv("MEDA_CNKI_MODE",   "force_mock")
+    monkeypatch.setenv("MEDA_WANFANG_MODE","force_mock")
