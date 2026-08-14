@@ -4,11 +4,13 @@ import asyncio
 import os
 import random
 import re
+from typing import List
 from urllib.parse import quote
 
 import httpx
 from bs4 import BeautifulSoup
 
+from ._cn_dict import translate_boolean_for_cn_source
 from .protocol import (
     AdapterResult,
     NormalizedSearchQuery,
@@ -19,6 +21,29 @@ from .protocol import (
 from .pubmed_adapter import _MODE_ENV_MAP, _VALID_MODES, _resolve_mode
 
 INJECTED_DATASET: list[UnifiedLiteratureEntry] | None = None
+
+
+class AdapterCaptchaError(Exception):
+    """验证码且page=1无结果仅 force_real 模式抛"""
+    pass
+
+
+class AdapterLoginRequiredError(Exception):
+    """强制登录要求 page=1 无结果"""
+    pass
+
+
+class AdapterParseError(Exception):
+    """hits_count≥1 parse 返回 0 selector失效"""
+    pass
+
+
+def _safe_translate(boolean_text: str, source: str) -> str:
+    try:
+        return translate_boolean_for_cn_source(boolean_text, source)
+    except Exception:
+        return boolean_text
+
 
 _HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
@@ -136,8 +161,15 @@ class CnkiAdapter:
             ]
             return AdapterResult(hits_on_source=len(out), records=out, warnings=[])
 
+        cn_bt = _safe_translate(query.boolean_text, "cnki")
+        _raw = int(query.max_pages_cn) if isinstance(getattr(query, "max_pages_cn", None), int) else (query.max_pages_cn or 1)
+        N = max(1, min(3, _raw))
+        warnings_list: List[str] = []
+        if N != _raw:
+            warnings_list.append(f"clamped max_pages_cn from {_raw} to {N}")
+
         try:
-            html = await _fetch_cnki_html(query.boolean_text)
+            html = await _fetch_cnki_html(cn_bt)
             if _BANNED_PATTERNS.search(html):
                 raise RuntimeError("CNKI 返回了验证码/被封禁页面（按关键词命中）")
             parsed = _parse_cnki_list_html(html)
@@ -147,7 +179,7 @@ class CnkiAdapter:
             return AdapterResult(
                 hits_on_source=hits,
                 records=parsed,
-                warnings=[f"CNKI 公开检索成功 {len(parsed)} 条（粗检索首页）"],
+                warnings=[f"CNKI 公开检索成功 {len(parsed)} 条（粗检索首页）"] + warnings_list,
             )
         except Exception as exc:
             if mode == "force_real":
@@ -164,9 +196,9 @@ class CnkiAdapter:
                 ]
                 return AdapterResult(
                     hits_on_source=len(out), records=out,
-                    warnings=[f"CNKI 真抓失败 ({exc.__class__.__name__}: {exc})，fallback 注入数据 {len(out)} 条"],
+                    warnings=[f"CNKI 真抓失败 ({exc.__class__.__name__}: {exc})，fallback 注入数据 {len(out)} 条"] + warnings_list,
                 )
             return AdapterResult(
                 hits_on_source=None, records=[],
-                warnings=[f"CNKI 真抓失败 ({exc.__class__.__name__}: {exc})，且未注册 INJECTED_DATASET，返回 0 条"],
+                warnings=[f"CNKI 真抓失败 ({exc.__class__.__name__}: {exc})，且未注册 INJECTED_DATASET，返回 0 条"] + warnings_list,
             )
