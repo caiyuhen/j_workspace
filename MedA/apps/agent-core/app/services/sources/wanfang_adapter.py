@@ -11,6 +11,10 @@ from .protocol import (
 INJECTED_DATASET: list[UnifiedLiteratureEntry] | None = None
 
 
+def _parse_wanfang_list_html(html: str) -> list[UnifiedLiteratureEntry]:
+    return []
+
+
 class WanfangAdapter:
     source_key = "wanfang"
 
