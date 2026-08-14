@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Literal, Protocol
+from typing import Literal, Optional, Protocol
 
 
 @dataclass
@@ -9,6 +9,13 @@ class NormalizedSearchQuery:
     boolean_text: str
     filters: dict[str, list[str]]
     source_key: str
+    max_pages_cn: Optional[Literal[1, 2, 3]] = None
+
+    def __post_init__(self) -> None:
+        if self.max_pages_cn is not None and self.max_pages_cn not in (1, 2, 3):
+            raise ValueError(
+                f"max_pages_cn must be 1, 2, or 3 (got {self.max_pages_cn!r})"
+            )
 
 
 @dataclass
