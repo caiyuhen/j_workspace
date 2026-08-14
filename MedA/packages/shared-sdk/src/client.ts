@@ -17,6 +17,22 @@ export type ProjectSummary = {
   workspace_key: string;
 };
 
+export type CreateProjectRequest = {
+  organization_slug: string;
+  owner_user_id: string;
+  name: string;
+  description: string;
+};
+
+export type ProjectResponse = {
+  id: number;
+  name: string;
+  description: string;
+  organization_slug: string;
+  owner_user_id: string;
+  workspace_key: string;
+};
+
 export type SessionContext = {
   token: string;
   user: { user_id: string; display_name: string };
@@ -557,6 +573,18 @@ export function createClient(
         headers: buildHeaders(),
       });
       return handleResponse<ProjectSummary[]>(response, "project list failed");
+    },
+
+    async createProject(payload: CreateProjectRequest): Promise<ProjectResponse> {
+      const response = await fetch(`${baseUrl}/api/projects`, {
+        method: "POST",
+        headers: {
+          ...buildHeaders(),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      return handleResponse<ProjectResponse>(response, "project create failed");
     },
 
     async getWorkspaceHome(projectId: number): Promise<WorkspaceHomeSummary> {
