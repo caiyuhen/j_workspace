@@ -21,6 +21,19 @@ _BANNED_PATTERNS = re.compile(r"验证码|安全验证|人机验证|请完成验
 _YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
 
 
+def _is_login_required_html(html: str) -> bool:
+    soup = BeautifulSoup(html, "html.parser")
+    if soup.select_one("div.login-modal-mask"):
+        return True
+    if soup.select_one("div.login-box") or soup.select_one(".login-modal"):
+        if "万方数据知识服务平台" in html and "请登录后查看更多结果" in html:
+            return True
+    if "请登录" in html and ("登录" in html[:3000]):
+        if soup.select_one(".login-modal-mask") or soup.select_one("#loginframe"):
+            return True
+    return False
+
+
 def _parse_wanfang_list_html(html: str) -> list[UnifiedLiteratureEntry]:
     out: list[UnifiedLiteratureEntry] = []
     soup = BeautifulSoup(html, "html.parser")

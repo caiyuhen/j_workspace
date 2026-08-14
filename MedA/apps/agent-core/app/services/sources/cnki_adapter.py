@@ -31,6 +31,18 @@ _BANNED_PATTERNS = re.compile(r"验证码|安全验证|人机验证|请完成验
 _YEAR_RE = re.compile(r"(19|20)\d{2}")
 
 
+def _is_captcha_html(html: str) -> bool:
+    soup = BeautifulSoup(html, "html.parser")
+    if soup.select_one("div.captcha-mask"):
+        return True
+    if soup.select_one(".nc_iconfont.btn_slide") or soup.select_one(".btn_slide.nc_iconfont"):
+        if "请完成滑动验证" in html:
+            return True
+    if _BANNED_PATTERNS.search(html):
+        return True
+    return False
+
+
 def _parse_cnki_list_html(html: str) -> list[UnifiedLiteratureEntry]:
     """CNKI list page -> UnifiedLiteratureEntry[]. Selector 以 stub HTML 为准，真抓 DOM 变动时改本函数 selector 即可。"""
     out: list[UnifiedLiteratureEntry] = []
