@@ -107,6 +107,7 @@ export async function ensureDemoProjectAndQuery(
       selected_sources: preset.selected_sources,
       grouped_terms: build_grouped_terms_from_pico(preset.pico),
       expression_blocks: build_expression_from_boolean_text(preset.boolean_text),
+      max_pages_cn: 1 as const,
     };
     const saved = await client.saveSearchQueryVersion(final_project_id, savePayload);
     return {

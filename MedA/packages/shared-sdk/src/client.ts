@@ -175,6 +175,12 @@ export type SaveSearchQueryDraftPayload = {
   selected_sources: string[];
   grouped_terms: SearchTermGroupSummary[];
   expression_blocks: SearchExpressionBlock[];
+  /**
+   * CNKI / 万方翻页深度。
+   * 1 = 仅第 1 页 20 条；最大 3；undefined 等价于 1（后端默认）。
+   * 预留字段，后续 Workspace Source Config UI 开关复用。
+   */
+  max_pages_cn?: 1 | 2 | 3;
 };
 
 export type DeriveSearchQueryDraftPayload = {
@@ -360,6 +366,23 @@ export type SearchRunSummary = {
   totalAfterDedupe: number;
   prisma: PrismaReport;
   etaSeconds: number | null;
+  // snake_case aliases for UI compatibility
+  project_id?: number;
+  search_query_version_id?: number | null;
+  selected_sources?: string[];
+  created_at?: string;
+  started_at?: string | null;
+  finished_at?: string | null;
+  total_hits_raw?: number;
+  total_after_dedupe?: number;
+  eta_seconds?: number | null;
+  sources?: Array<{
+    key: string;
+    label: string;
+    retrieved: number;
+    imported: number;
+  }>;
+  progress_percent?: number | null;
 };
 
 export type SearchRunSourceSummary = {
@@ -374,6 +397,16 @@ export type SearchRunSourceSummary = {
   startedAt: string | null;
   finishedAt: string | null;
   errorMessage: string | null;
+  // snake_case aliases for UI compatibility
+  search_run_id?: number;
+  source_key?: string;
+  source_label?: string;
+  hits_on_source?: number | null;
+  records_retrieved?: number;
+  records_imported?: number;
+  started_at?: string | null;
+  finished_at?: string | null;
+  error_message?: string | null;
 };
 
 export type SearchRunDetail = {
@@ -517,6 +550,23 @@ export function createClient(
       })),
     },
     etaSeconds: raw.eta_seconds,
+    // snake_case aliases for UI compatibility
+    project_id: raw.project_id,
+    search_query_version_id: raw.search_query_version_id,
+    selected_sources: raw.selected_sources,
+    created_at: raw.created_at,
+    started_at: raw.started_at,
+    finished_at: raw.finished_at,
+    total_hits_raw: raw.total_hits_raw,
+    total_after_dedupe: raw.total_after_dedupe,
+    eta_seconds: raw.eta_seconds,
+    sources: raw.prisma.by_source.map((bs) => ({
+      key: bs.source_key,
+      label: bs.source_label,
+      retrieved: bs.records_retrieved,
+      imported: bs.records_imported,
+    })),
+    progress_percent: null,
   });
 
   const mapSearchRunSourceSummary = (raw: {
@@ -543,6 +593,15 @@ export function createClient(
     startedAt: raw.started_at,
     finishedAt: raw.finished_at,
     errorMessage: raw.error_message,
+    search_run_id: raw.search_run_id,
+    source_key: raw.source_key,
+    source_label: raw.source_label,
+    hits_on_source: raw.hits_on_source,
+    records_retrieved: raw.records_retrieved,
+    records_imported: raw.records_imported,
+    started_at: raw.started_at,
+    finished_at: raw.finished_at,
+    error_message: raw.error_message,
   });
 
   return {
