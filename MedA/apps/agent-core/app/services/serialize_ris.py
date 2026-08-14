@@ -5,6 +5,22 @@ WIN_RESERVED = re.compile(r'[\\/:*?"<>|]')
 CTRL = re.compile(r'[\x00-\x1f]')
 
 
+def makeEmptyPrismaSvg(*, runId: int | str, reason: str) -> str:
+    rid = str(runId)
+    r = str(reason or "").replace("&", "&amp;").replace("<", "&lt;").replace('"', "&quot;")
+    return (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" '
+        'viewBox="0 0 800 600">\n'
+        f'  <title>Empty PRISMA runId={rid}</title>\n'
+        f'  <desc>{r}</desc>\n'
+        '  <rect x="1" y="1" width="798" height="598" fill="#ffffff" stroke="#cccccc"/>\n'
+        f'  <text x="400" y="300" font-family="sans-serif" font-size="16" '
+        'text-anchor="middle" fill="#999999">Empty PRISMA flow diagram</text>\n'
+        '</svg>\n'
+    )
+
+
 def _sanitize_filename_py(raw: str, fallback: str = "meda_export") -> str:
     s = str(raw or "").strip()
     s = CTRL.sub("", s)

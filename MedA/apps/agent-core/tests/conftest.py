@@ -11,11 +11,16 @@ from app.models import Organization, ResearchProject, User
 
 def pytest_addoption(parser):
     parser.addoption("--runneedsnetwork", action="store_true", default=False, help="Run tests marked needs_network (real-HTTP)")
+    parser.addoption("--runeedsbrowser", action="store_true", default=False, help="Run tests marked needs_browser (real-browser)")
 def pytest_collection_modifyitems(config, items):
-    if config.getoption("--runneedsnetwork"): return
-    skip_mark = pytest.mark.skip(reason="skip needs_network (pass --runneedsnetwork to run)")
-    for item in items:
-        if "needs_network" in getattr(item, "keywords", {}): item.add_marker(skip_mark)
+    if not config.getoption("--runneedsnetwork"):
+        skip_mark = pytest.mark.skip(reason="skip needs_network (pass --runneedsnetwork to run)")
+        for item in items:
+            if "needs_network" in getattr(item, "keywords", {}): item.add_marker(skip_mark)
+    if not config.getoption("--runeedsbrowser"):
+        skip_browser = pytest.mark.skip(reason="skip needs_browser (pass --runeedsbrowser to run)")
+        for item in items:
+            if "needs_browser" in getattr(item, "keywords", {}): item.add_marker(skip_browser)
 
 
 @dataclass
