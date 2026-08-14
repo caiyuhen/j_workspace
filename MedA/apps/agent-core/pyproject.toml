@@ -15,7 +15,7 @@ dependencies = [
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = "-p no:warnings --strict-markers"
+addopts = '-p no:warnings --strict-markers -m "not needs_network"'
 markers = [
     "needs_network: 标记需要真实外网的测试，默认 skip。运行：pytest -m needs_network",
 ]
