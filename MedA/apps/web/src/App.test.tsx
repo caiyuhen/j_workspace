@@ -362,114 +362,273 @@ const confirmLiteratureUnique = vi.fn(async () => ({
   stats: { ...literatureResponse.stats, unique_count: 2, duplicate_count: 0 },
 }));
 
-vi.mock("@meda/shared-sdk", () => ({
-  createBrowserSessionStore: () => sessionStore,
-  createClient: () => ({
-    devLogin,
-    listProjects: async () => [
-      { id: 1, name: "糖尿病真实世界研究", workspace_key: "demo-hospital/糖尿病真实世界研究" },
-    ],
-    getWorkspaceHome: async () => ({
-      project: {
+vi.mock("@meda/shared-sdk", () => {
+  const DEMO_PRESETS = [
+    {
+      key: "sglt2i_ckd",
+      label: "💧 糖尿病肾病 SGLT2i",
+      badge: "经典适应症",
+      expected_hits_hint: "预计 1.5k+ hits",
+      project_name: "MedA-Demo-Diabetes-CKD-2026",
+      query_name: "SGLT2i in CKD (PubMed real-data demo)",
+      boolean_text:
+        "(sodium glucose cotransporter 2 inhibitor[Title/Abstract] OR SGLT2i[Title/Abstract] OR empagliflozin[Title/Abstract] OR dapagliflozin[Title/Abstract] OR canagliflozin[Title/Abstract]) AND (chronic kidney disease[Title/Abstract] OR CKD[Title/Abstract] OR diabetic nephropathies[MeSH Major Topic]) AND randomised controlled trial[pt]",
+      selected_sources: ["pubmed"],
+      pico: {
+        p: "adult with type 2 diabetes mellitus and CKD stage 2-4 or macroalbuminuria",
+        i: "SGLT2 inhibitor add-on to RAAS blockade",
+        c: "placebo or standard of care without SGLT2i",
+        o: "composite renal endpoint (eGFR decline ≥50% / ESRD / renal death) ; change in eGFR slope ; 3P-MACE ; AE of genital mycotic infection / DKA / hypovolemia",
+      },
+      filters: { study_type: ["rct"] },
+    },
+    {
+      key: "sglt2i_hfredef",
+      label: "❤️ 达格列净 HFrEF DAPA-HF / DAPA-CKD",
+      badge: "标杆研究",
+      expected_hits_hint: "含 DAPA-HF、DAPA-CKD 原始 + follow-up",
+      project_name: "MedA-Demo-HF-2026",
+      query_name: "Dapagliflozin landmark HFrEF/CKD trials",
+      boolean_text:
+        "(DAPA-HF[Title/Abstract] OR DAPA-CKD[Title/Abstract] OR (dapagliflozin[Title/Abstract] AND (heart failure with reduced ejection fraction[Title/Abstract] OR HFrEF[Title/Abstract] OR chronic kidney disease[Title/Abstract]))) AND randomised controlled trial[pt]",
+      selected_sources: ["pubmed"],
+      pico: {
+        p: "HFrEF LVEF ≤40% with/without T2DM; CKD eGFR 25-75 + uACR >200",
+        i: "dapagliflozin 10 mg once daily",
+        c: "matching placebo",
+        o: "CV death or worsening HF composite; renal composite; change in NT-proBNP / KCCQ",
+      },
+      filters: { study_type: ["rct"] },
+    },
+    {
+      key: "met_cv_presto",
+      label: "💊 二甲双胍 CV PRESTO",
+      badge: "RCT 重分析",
+      expected_hits_hint: "RCT + pooled subgroup",
+      project_name: "MedA-Demo-Metformin-CV-2026",
+      query_name: "Metformin PRESTO CV outcomes reanalysis",
+      boolean_text:
+        "(PRESTO[Title/Abstract] OR (metformin[Title/Abstract] AND cardiovascular[Title/Abstract] AND (prediabetes[Title/Abstract] OR insulin resistance[Title/Abstract]))) AND randomized controlled trial[pt]",
+      selected_sources: ["pubmed"],
+      pico: {
+        p: "prediabetes / insulin resistance with CV risk factors but no established ASCVD",
+        i: "metformin extended-release +/- lifestyle intervention",
+        c: "placebo or lifestyle-only",
+        o: "MACE (CV death / MI / stroke) ; change in LDL-C / SBP / Hba1c",
+      },
+      filters: { study_type: ["rct"] },
+    },
+    {
+      key: "glp1_mace_rws",
+      label: "📈 GLP-1 RA MACE 真实世界",
+      badge: "RCT vs RWS 对照",
+      expected_hits_hint: "RCT + RWS 双队列",
+      project_name: "MedA-Demo-GLP1-RA-2026",
+      query_name: "GLP-1 RA MACE: RCT vs real-world comparison",
+      boolean_text:
+        "(glucagon-like peptide-1 receptor agonist[Title/Abstract] OR GLP-1 RA[Title/Abstract] OR liraglutide[Title/Abstract] OR semaglutide[Title/Abstract] OR dulaglutide[Title/Abstract] OR tirzepatide[Title/Abstract]) AND (major adverse cardiovascular events[Title/Abstract] OR MACE[Title/Abstract] OR cardiovascular outcomes[Title/Abstract]) AND ((randomized controlled trial[pt]) OR (real-world[Title/Abstract] OR retrospective[Title/Abstract] OR cohort[Title/Abstract]))",
+      selected_sources: ["pubmed"],
+      pico: {
+        p: "T2DM with established ASCVD or high CV risk",
+        i: "GLP-1 RA (injectable or oral) as add-on",
+        c: "DPP-4 inhibitor / sulfonylurea / basal insulin / placebo",
+        o: "3P-MACE (CV death, non-fatal MI, non-fatal stroke) ; all-cause mortality ; severe hypoglycaemia",
+      },
+      filters: { study_type: ["rct_and_sr"] },
+    },
+    {
+      key: "sglt2i_dka_safety",
+      label: "⚠️ SGLT2i 酮症酸中毒 Safety",
+      badge: "风险点",
+      expected_hits_hint: "RCT post-hoc + RWS + case series",
+      project_name: "MedA-Demo-SGLT2i-Safety-2026",
+      query_name: "SGLT2i DKA euglycemic safety signal",
+      boolean_text:
+        "(sodium glucose cotransporter 2 inhibitor[Title/Abstract] OR SGLT2i[Title/Abstract] OR empagliflozin[Title/Abstract] OR dapagliflozin[Title/Abstract] OR ertugliflozin[Title/Abstract]) AND (diabetic ketoacidosis[Title/Abstract] OR DKA[Title/Abstract] OR euglycemic ketoacidosis[Title/Abstract] OR ketosis[Title/Abstract])",
+      selected_sources: ["pubmed"],
+      pico: {
+        p: "T2DM or T1DM on SGLT2i around peri-operative / fasting / severe illness periods",
+        i: "SGLT2i continued or paused peri-event window",
+        c: "same population without SGLT2i exposure",
+        o: "event rate of DKA / euglycemic DKA ; median bicarbonate / gap / anion gap at diagnosis",
+      },
+    },
+    {
+      key: "met_lifestyle_predm",
+      label: "🏃 Metformin + Lifestyle Prediabetes",
+      badge: "一级预防",
+      expected_hits_hint: "DPP + follow-up + meta-analysis",
+      project_name: "MedA-Demo-Prediabetes-Prevention-2026",
+      query_name: "Metformin vs lifestyle in prediabetes: prevention of T2DM",
+      boolean_text:
+        "(diabetes prevention program[Title/Abstract] OR DPP[Title/Abstract] OR prediabetes[Title/Abstract]) AND (metformin[Title/Abstract] AND (lifestyle[Title/Abstract] OR diet AND exercise[Title/Abstract])) AND (progression to type 2 diabetes[Title/Abstract] OR incidence of type 2 diabetes[Title/Abstract])",
+      selected_sources: ["pubmed"],
+      pico: {
+        p: "adult with prediabetes (IFG / IGT / elevated HbA1c 5.7-6.4%) without prior CV event",
+        i: "metformin 850 mg BID + intensive lifestyle (≥7% weight loss, 150 min/wk exercise)",
+        c: "placebo + standard lifestyle brochure",
+        o: "time to T2DM diagnosis (primary) ; regression to normoglycaemia ; change in weight / Hba1c at 3y",
+      },
+      filters: { pubmed_mindate: "1996/01/01" },
+    },
+  ];
+  const DEMO_PRESET_BY_KEY = Object.fromEntries(DEMO_PRESETS.map(p => [p.key, p]));
+  const build_grouped_terms_from_pico = (pico: any) => {
+    const groups: Record<string, any> = { p: [], i: [], c: [], o: [] };
+    for (const key of ["p", "i", "c", "o"]) {
+      const raw = pico[key] || "";
+      const terms = raw.split(/[\s,;，；/]+/).filter((t: string) => t.length > 0);
+      groups[key] = terms.map((label: string, idx: number) => ({
+        term_id: `demo-${key}-${idx}`,
+        label,
+        source_type: "user_entry",
+        selected: true,
+      }));
+    }
+    return {
+      p: { group_key: "p", label: "Population", terms: groups.p },
+      i: { group_key: "i", label: "Intervention", terms: groups.i },
+      c: { group_key: "c", label: "Comparator", terms: groups.c },
+      o: { group_key: "o", label: "Outcome", terms: groups.o },
+    };
+  };
+  const build_expression_from_boolean_text = () => [
+    { block_id: "demo-boolean-block-0", block_type: "LiteralBoolean", operator: null, term_ref: null, children: [], position: 0 },
+  ];
+  const ensureDemoProjectAndQuery = vi.fn(({ workspaceHomeProjectId }: any) => ({
+    project_id: workspaceHomeProjectId || 42,
+    project_created_this_call: !workspaceHomeProjectId,
+    query_id: 7,
+    query_version: "v1",
+  }));
+  return {
+    createBrowserSessionStore: () => sessionStore,
+    DEMO_PRESETS,
+    DEMO_PRESET_BY_KEY,
+    build_grouped_terms_from_pico,
+    build_expression_from_boolean_text,
+    ensureDemoProjectAndQuery,
+    createClient: () => ({
+      devLogin,
+      listProjects: async () => [
+        { id: 1, name: "糖尿病真实世界研究", workspace_key: "demo-hospital/糖尿病真实世界研究" },
+      ],
+      getWorkspaceHome: async () => ({
+        project: {
+          id: 1,
+          name: "糖尿病真实世界研究",
+          workspace_key: "demo-hospital/糖尿病真实世界研究",
+          current_stage: "方案设计",
+          updated_at_label: "刚刚更新",
+        },
+        hero_cta: { label: "继续上次研究", target: "/workspace/tasks/recent" },
+        stages: [
+          {
+            key: "search",
+            label: "检索",
+            status: "done",
+            task_count: 1,
+            artifact_count: 1,
+            target: "/workspace/stages/search",
+          },
+        ],
+        recent_tasks: [
+          {
+            title: "完善纳排标准草案",
+            subtitle: "继续完善当前任务",
+            target: "/workspace/tasks/recent",
+          },
+        ],
+        recent_artifacts: [
+          {
+            title: "方案初稿 v0.3",
+            subtitle: "最近修改于 5 分钟前",
+            target: "/workspace/artifacts/recent",
+          },
+        ],
+        activity: [
+          {
+            title: "新增方案初稿版本",
+            subtitle: "产物链路已更新",
+            target: "/workspace/activity",
+          },
+        ],
+        assistant: {
+          headline: "MedA 助手建议",
+          primary_action_label: "生成下一步建议",
+          primary_action_target: "/workspace/assistant",
+        },
+        todos: [
+          {
+            title: "确认研究终点定义",
+            subtitle: "今日到期",
+            target: "/workspace/tasks/recent",
+          },
+        ],
+      }),
+      getStageEntry,
+      getSearchQueryEditor,
+      saveSearchQueryDraft,
+      saveSearchQueryVersion,
+      deriveSearchQueryDraft,
+      getSearchSourceConfig,
+      getSourceCatalog,
+      saveSearchSourceConfig,
+      getLiteratureLibrary,
+      importLiterature,
+      confirmLiteratureUnique,
+      getMe: vi.fn(),
+      getSearchRun: vi.fn(),
+      createProject: vi.fn((payload: any) => ({ id: 99, name: payload.name, workspace_key: payload.org_slug + "/" + payload.name })),
+      getSearchRunCsvUrl: (_: any, pid: number, rid: number) => `/api/projects/${pid}/search-runs/${rid}/csv`,
+      listSearchRuns: vi.fn(async () => ({
+        project: {
+          id: 1,
+          name: "糖尿病真实世界研究",
+          workspace_key: "demo-hospital/糖尿病真实世界研究",
+          current_stage: "检索",
+          updated_at_label: "刚刚更新",
+        },
+        stage_key: "search",
+        runs: [],
+        items: [],
+        page: 1,
+        page_size: 20,
+        pageSize: 20,
+        total: 0,
+      })),
+      createSearchRun: vi.fn(async () => ({
         id: 1,
-        name: "糖尿病真实世界研究",
-        workspace_key: "demo-hospital/糖尿病真实世界研究",
-        current_stage: "方案设计",
-        updated_at_label: "刚刚更新",
-      },
-      hero_cta: { label: "继续上次研究", target: "/workspace/tasks/recent" },
-      stages: [
-        {
-          key: "search",
-          label: "检索",
-          status: "done",
-          task_count: 1,
-          artifact_count: 1,
-          target: "/workspace/stages/search",
+        project_id: 1,
+        projectId: 1,
+        search_query_version_id: null,
+        selected_sources: ["pubmed", "cnki", "wanfang"],
+        status: "pending",
+        created_at: "2026-08-11T10:00:00Z",
+        createdAt: "2026-08-11T10:00:00Z",
+        started_at: null,
+        startedAt: null,
+        finished_at: null,
+        finishedAt: null,
+        total_hits_raw: 0,
+        total_after_dedupe: 0,
+        prisma: {
+          identification: 0,
+          screening: 0,
+          eligibility: 0,
+          included: 0,
+          by_source: [],
         },
-      ],
-      recent_tasks: [
-        {
-          title: "完善纳排标准草案",
-          subtitle: "继续完善当前任务",
-          target: "/workspace/tasks/recent",
-        },
-      ],
-      recent_artifacts: [
-        {
-          title: "方案初稿 v0.3",
-          subtitle: "最近修改于 5 分钟前",
-          target: "/workspace/artifacts/recent",
-        },
-      ],
-      activity: [
-        {
-          title: "新增方案初稿版本",
-          subtitle: "产物链路已更新",
-          target: "/workspace/activity",
-        },
-      ],
-      assistant: {
-        headline: "MedA 助手建议",
-        primary_action_label: "生成下一步建议",
-        primary_action_target: "/workspace/assistant",
-      },
-      todos: [
-        {
-          title: "确认研究终点定义",
-          subtitle: "今日到期",
-          target: "/workspace/tasks/recent",
-        },
-      ],
+        eta_seconds: null,
+        progress_percent: null,
+        sources: [],
+      })),
+      getSearchRunDetail: vi.fn(),
+      retrySearchRun: vi.fn(),
+      cancelSearchRun: vi.fn(),
     }),
-    getStageEntry,
-    getSearchQueryEditor,
-    saveSearchQueryDraft,
-    saveSearchQueryVersion,
-    deriveSearchQueryDraft,
-    getSearchSourceConfig,
-    getSourceCatalog,
-    saveSearchSourceConfig,
-    getLiteratureLibrary,
-    importLiterature,
-    confirmLiteratureUnique,
-    getMe: vi.fn(),
-    listSearchRuns: vi.fn(async () => ({
-      project: {
-        id: 1,
-        name: "糖尿病真实世界研究",
-        workspace_key: "demo-hospital/糖尿病真实世界研究",
-        current_stage: "检索",
-        updated_at_label: "刚刚更新",
-      },
-      stage_key: "search",
-      runs: [],
-    })),
-    createSearchRun: vi.fn(async () => ({
-      id: 1,
-      project_id: 1,
-      search_query_version_id: null,
-      selected_sources: ["pubmed", "cnki", "wanfang"],
-      status: "pending",
-      created_at: "2026-08-11T10:00:00Z",
-      started_at: null,
-      finished_at: null,
-      total_hits_raw: 0,
-      total_after_dedupe: 0,
-      prisma: {
-        identification: 0,
-        screening: 0,
-        eligibility: 0,
-        included: 0,
-        by_source: [],
-      },
-      eta_seconds: null,
-    })),
-    getSearchRunDetail: vi.fn(),
-    retrySearchRun: vi.fn(),
-    cancelSearchRun: vi.fn(),
-  }),
-}));
+  };
+});
 
 test("web workspace opens a stage-entry hub from the stage card", async () => {
   render(<App />);

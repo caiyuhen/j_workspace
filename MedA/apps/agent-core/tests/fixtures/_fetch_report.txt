@@ -1,0 +1,6 @@
+cnki_20hits: fallback_minimal_dom (SPA shell detected from real HTTP)
+cnki_0hits: fallback_minimal_dom (SPA shell detected from real HTTP)
+wanfang_20hits: fallback_minimal_dom (SPA shell detected from real HTTP)
+wanfang_0hits: fallback_minimal_dom (SPA shell detected from real HTTP)
+cnki_captcha: minimal_dom (by design)
+wanfang_login: minimal_dom (by design)

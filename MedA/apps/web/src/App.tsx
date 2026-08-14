@@ -80,10 +80,23 @@ export default function App() {
     const nextStageEntry = await client.getStageEntry(projectId, stageKey);
     setStageEntry(nextStageEntry);
     if (stageKey === "search") {
-      const [nextRuns] = await Promise.all([
+      const [nextRunsRaw] = await Promise.all([
         client.listSearchRuns(projectId).catch(() => null),
       ]);
-      setSearchRuns(nextRuns);
+      setSearchRuns(
+        nextRunsRaw
+          ? {
+              project: nextStageEntry.project,
+              stage_key: stageKey,
+              items: nextRunsRaw.items,
+              runs: nextRunsRaw.items,
+              total: nextRunsRaw.total,
+              page: nextRunsRaw.page,
+              page_size: nextRunsRaw.pageSize,
+              pageSize: nextRunsRaw.pageSize,
+            }
+          : null,
+      );
     }
   };
 
@@ -192,18 +205,37 @@ export default function App() {
         : {};
     await client.createSearchRun(projectId, {
       sources: ["pubmed", "cnki", "wanfang"],
-      query_snapshot: querySnapshot,
+      querySnapshot: querySnapshot,
     });
-    const nextRuns = await client.listSearchRuns(projectId).catch(() => null);
-    setSearchRuns(nextRuns);
+    const nextRunsRaw = await client.listSearchRuns(projectId).catch(() => null);
+    setSearchRuns(
+      nextRunsRaw
+        ? {
+            project: workspaceHome.project,
+            stage_key: "search",
+            items: nextRunsRaw.items,
+            runs: nextRunsRaw.items,
+            total: nextRunsRaw.total,
+            page: nextRunsRaw.page,
+            page_size: nextRunsRaw.pageSize,
+            pageSize: nextRunsRaw.pageSize,
+          }
+        : null,
+    );
   };
 
-  const handleOpenSearchRunDetail = async (runId: number) => {
-    if (workspaceHome === null) return;
-    const projectId = workspaceHome.project.id;
+  const handleOpenSearchRunDetail = async (
+    projectIdOrRunId: number,
+    runIdIfProjectId?: number,
+  ) => {
+    const projectId =
+      typeof runIdIfProjectId === "number" ? projectIdOrRunId : workspaceHome?.project.id ?? 0;
+    const runId = typeof runIdIfProjectId === "number" ? runIdIfProjectId : projectIdOrRunId;
+    if (workspaceHome === null && runIdIfProjectId === undefined) return;
+    if (projectId === 0) return;
     setCurrentRunId(runId);
     try {
-      const detail = await client.getSearchRunDetail(projectId, runId);
+      const detail = await client.getSearchRun(projectId, runId);
       setSearchRunDetail(detail);
     } catch {
       setSearchRunDetail(null);
@@ -213,7 +245,8 @@ export default function App() {
   const handleRetrySearchRunSource = async (sourceKey: string) => {
     if (workspaceHome === null || currentRunId === null) return;
     const projectId = workspaceHome.project.id;
-    const detail = await client.retrySearchRun(projectId, currentRunId, sourceKey);
+    const _resp = await client.retrySearchRun(projectId, currentRunId);
+    const detail = await client.getSearchRun(projectId, currentRunId);
     setSearchRunDetail(detail);
   };
 
@@ -221,10 +254,23 @@ export default function App() {
     if (workspaceHome === null || currentRunId === null) return;
     const projectId = workspaceHome.project.id;
     await client.cancelSearchRun(projectId, currentRunId);
-    const detail = await client.getSearchRunDetail(projectId, currentRunId).catch(() => null);
+    const detail = await client.getSearchRun(projectId, currentRunId).catch(() => null);
     setSearchRunDetail(detail);
-    const nextRuns = await client.listSearchRuns(projectId).catch(() => null);
-    setSearchRuns(nextRuns);
+    const nextRunsRaw = await client.listSearchRuns(projectId).catch(() => null);
+    setSearchRuns(
+      nextRunsRaw
+        ? {
+            project: workspaceHome.project,
+            stage_key: "search",
+            items: nextRunsRaw.items,
+            runs: nextRunsRaw.items,
+            total: nextRunsRaw.total,
+            page: nextRunsRaw.page,
+            page_size: nextRunsRaw.pageSize,
+            pageSize: nextRunsRaw.pageSize,
+          }
+        : null,
+    );
   };
 
   const handleExportSearchRunCsv = () => {

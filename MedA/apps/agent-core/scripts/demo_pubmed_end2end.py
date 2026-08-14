@@ -13,7 +13,14 @@ from pathlib import Path
 
 from app.services.bm25_scoring import compute_bm25_scores_for, tokenize_for_bm25
 from app.services.literature import _normalize_identifiers
-from app.services.pico import _rule_baseline_extract
+from app.services.pico import (
+    _extract_comparison,
+    _extract_intervention,
+    _extract_outcome,
+    _extract_population,
+    _detect_study_type,
+    _rule_baseline_extract as _sa_pico_extract,  # keep import for external API parity
+)
 from app.services.sources.protocol import (
     AdapterResult,
     NormalizedSearchQuery,
@@ -53,6 +60,37 @@ DEMO_PRESETS_PY: dict[str, dict] = {
         "filters": {"pubmed_mindate": "1996/01/01"},
     },
 }
+
+
+@dataclass
+class _MiniPico:
+    population: str | None
+    intervention: str | None
+    comparison: str | None
+    outcome: str | None
+    study_type: str | None
+    extraction_method: str
+    confidence: float | None
+    record_id: int | None
+    p_text: str
+    i_text: str
+    c_text: str
+    o_text: str
+
+
+def _mini_extract_pico(title: str, abstract: str):
+    text = f"{title}\n{abstract}"
+    pop, _ = _extract_population(text)
+    intr, _ = _extract_intervention(text)
+    cmp, _ = _extract_comparison(text)
+    out, _ = _extract_outcome(text)
+    study, _ = _detect_study_type(text)
+    return _MiniPico(
+        population=pop, intervention=intr, comparison=cmp, outcome=out,
+        study_type=study, extraction_method="rule_baseline_demo", confidence=None,
+        record_id=None,
+        p_text=(pop or ""), i_text=(intr or ""), c_text=(cmp or ""), o_text=(out or ""),
+    )
 
 
 @dataclass
@@ -199,7 +237,7 @@ async def run_pubmed_demo(
 
     pico_domain_words: dict[str, dict[str, int]] = {"p": {}, "i": {}, "c": {}, "o": {}}
     for m in mini_records:
-        pico_obj = _rule_baseline_extract(m)  # type: ignore[arg-type]
+        pico_obj = _mini_extract_pico(m.title or "", m.abstract or "")
         for dom in ("p", "i", "c", "o"):
             val = getattr(pico_obj, f"{dom}_text") or ""
             toks = re.findall(r"[A-Za-z0-9]+|[\u4e00-\u9fff]", val.lower())

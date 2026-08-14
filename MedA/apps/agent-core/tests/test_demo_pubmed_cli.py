@@ -18,34 +18,6 @@ if str(SCRIPT_DIR) not in sys.path:
 from scripts.demo_pubmed_end2end import DEMO_PRESETS_PY, run_pubmed_demo
 
 
-def _wrap_pico_obj(orig_obj):
-    wrapped = types.SimpleNamespace()
-    for attr in ("population", "intervention", "comparison", "outcome",
-                 "study_type", "extraction_method", "confidence", "record_id"):
-        setattr(wrapped, attr, getattr(orig_obj, attr, None))
-    setattr(wrapped, "p_text", getattr(orig_obj, "population", None) or "")
-    setattr(wrapped, "i_text", getattr(orig_obj, "intervention", None) or "")
-    setattr(wrapped, "c_text", getattr(orig_obj, "comparison", None) or "")
-    setattr(wrapped, "o_text", getattr(orig_obj, "outcome", None) or "")
-    return wrapped
-
-
-def _patch_pico_for_demo():
-    from app.services import pico as pico_mod
-    import scripts.demo_pubmed_end2end as demo_mod
-
-    orig_pico = pico_mod._rule_baseline_extract
-
-    def patched(rec):
-        if not hasattr(rec, "id"):
-            rec.id = None
-        orig = orig_pico(rec)
-        return _wrap_pico_obj(orig)
-
-    pico_mod._rule_baseline_extract = patched
-    demo_mod._rule_baseline_extract = patched
-
-
 def test_unknown_preset_exits_code_2():
     proc = subprocess.run(
         [sys.executable, str(SCRIPT_PATH), "nonexistent_xyz_999"],
@@ -58,7 +30,6 @@ def test_unknown_preset_exits_code_2():
 
 def test_run_pubmed_demo_live_success_with_mock_pubmed_http(monkeypatch):
     from tests.test_real_pubmed_xml_parse import FIXED_PUBMED_XML
-    _patch_pico_for_demo()
 
     async def fake_get(self, url, **kwargs):
         url_s = str(url)
@@ -83,7 +54,6 @@ def test_run_pubmed_demo_live_success_with_mock_pubmed_http(monkeypatch):
 def test_connect_error_fallback_to_injected_3_hits(monkeypatch):
     from tests.conftest import MOCK_PUBMED_DATASET
     from app.services.sources.protocol import UnifiedLiteratureEntry, AdapterResult
-    _patch_pico_for_demo()
 
     async def fake_get(self, *args, **kwargs):
         raise httpx.ConnectError("no route to NCBI")

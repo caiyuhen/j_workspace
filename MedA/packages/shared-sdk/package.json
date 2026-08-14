@@ -2,9 +2,9 @@
   "name": "@meda/shared-sdk",
   "version": "0.1.0",
   "type": "module",
-  "main": "src/client.ts",
+  "main": "src/index.ts",
   "exports": {
-    ".": "./src/client.ts",
+    ".": "./src/index.ts",
     "./session": "./src/session.ts"
   },
   "devDependencies": {

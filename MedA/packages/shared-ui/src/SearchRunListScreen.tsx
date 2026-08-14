@@ -1,8 +1,10 @@
 import type {
   ProjectSummary,
   SearchQueryEditorSummary,
-  SearchRunListItem,
+  SearchRunListItem as SharedSearchRunListItem,
   SearchRunListResponse,
+  SearchRunSummary as _SRS,
+  SearchRunStatus as SharedSearchRunStatus,
 } from "@meda/shared-sdk";
 
 type SearchRunListScreenProps = {
@@ -131,10 +133,42 @@ export function SearchRunListScreen({
   standaloneRuns,
 }: SearchRunListScreenProps) {
   const project = resolveProject(runs, editor);
-  const runList: SearchRunListItem[] =
+  const rawRunList: Array<SearchRunListItem | _SRS | SharedSearchRunListItem> =
     standaloneRuns && standaloneRuns.length > 0
       ? standaloneRuns
-      : runs?.runs ?? [];
+      : (runs?.runs ?? runs?.items ?? []);
+  const runList: SearchRunListItem[] = rawRunList.map((r) => ({
+    id: r.id,
+    status: (r.status as SearchRunStatus) ?? "pending",
+    created_at:
+      (r as SearchRunListItem).created_at ??
+      (r as SharedSearchRunListItem).created_at ??
+      (r as _SRS).created_at ??
+      (r as _SRS).createdAt ??
+      new Date().toISOString(),
+    sources:
+      (r as SearchRunListItem).sources ??
+      (r as SharedSearchRunListItem).sources ??
+      (r as _SRS).sources ??
+      [],
+    prisma: {
+      identification:
+        (r as SearchRunListItem).prisma?.identification ??
+        (r as SharedSearchRunListItem).prisma?.identification ??
+        (r as _SRS).prisma?.identification ??
+        0,
+      screening:
+        (r as SearchRunListItem).prisma?.screening ??
+        (r as SharedSearchRunListItem).prisma?.screening ??
+        (r as _SRS).prisma?.screening ??
+        0,
+    },
+    progress_percent:
+      (r as SearchRunListItem).progress_percent ??
+      (r as SharedSearchRunListItem).progress_percent ??
+      (r as _SRS).progress_percent ??
+      null,
+  }));
   const standaloneMode = standaloneRuns !== undefined;
 
   return (
@@ -229,17 +263,18 @@ export function SearchRunListScreen({
         ) : (
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "12px" }}>
             {runList.map((run) => {
-              const statusChip = STATUS_CHIP_STYLES[run.status] ??
+              const statusChip =
+                STATUS_CHIP_STYLES[run.status as keyof typeof STATUS_CHIP_STYLES] ??
                 STATUS_CHIP_STYLES.pending;
               return (
                 <div
                   key={run.id}
                   data-testid={`run-row-${run.id}`}
-                  onClick={() => onOpenRunDetail(run.id)}
+                  onClick={() => onOpenRunDetail?.(run.id)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      onOpenRunDetail(run.id);
+                      onOpenRunDetail?.(run.id);
                     }
                   }}
                   role="button"
