@@ -50,3 +50,86 @@ def _truncate_field_py(value: Any, max_bytes: int, suffix: str = "...[truncated]
         else:
             s = s[:-1]
     return s + suffix
+
+
+def _escape_ris_value(value: Any) -> str:
+    if value is None:
+        return ""
+    s = str(value)
+    s = s.replace("\\", "\\\\")
+    s = s.replace("`", "\\`")
+    return s
+
+
+def _split_pages(pages: str) -> tuple[str, str]:
+    if not pages:
+        return "", ""
+    p = str(pages).strip()
+    if not p:
+        return "", ""
+    if "-" in p:
+        parts = p.split("-", 1)
+        return parts[0].strip(), parts[1].strip()
+    return p, ""
+
+
+def serialize_ris_py(records: list[dict], ris_utf8_bom: bool = True) -> str:
+    ris_lines: list[str] = []
+    for rec in records:
+        ris_lines.append("TY  - JOUR")
+        title = _truncate_field_py(rec.get("title"), 6144)
+        ris_lines.append(f"TI  - {_escape_ris_value(title)}")
+        authors = rec.get("authors") or []
+        if len(authors) > 25:
+            authors = authors[:25]
+            authors[-1] = authors[-1] + " et al."
+        for au in authors:
+            ris_lines.append(f"AU  - {_escape_ris_value(au)}")
+        journal = rec.get("journal")
+        if journal:
+            ris_lines.append(f"JO  - {_escape_ris_value(journal)}")
+        year = rec.get("year")
+        if year:
+            ris_lines.append(f"PY  - {year}")
+        volume = rec.get("volume")
+        if volume:
+            ris_lines.append(f"VL  - {_escape_ris_value(volume)}")
+        issue = rec.get("issue")
+        if issue:
+            ris_lines.append(f"IS  - {_escape_ris_value(issue)}")
+        pages = rec.get("pages") or ""
+        sp, ep = _split_pages(pages)
+        if sp:
+            ris_lines.append(f"SP  - {sp}")
+        if ep:
+            ris_lines.append(f"EP  - {ep}")
+        abstract = _truncate_field_py(rec.get("abstract"), 6144)
+        if abstract:
+            ris_lines.append(f"AB  - {_escape_ris_value(abstract)}")
+        doi = rec.get("doi")
+        if doi:
+            ris_lines.append(f"DO  - {_escape_ris_value(doi)}")
+        pmid = rec.get("pmid")
+        if pmid:
+            ris_lines.append(f"PM  - {_escape_ris_value(pmid)}")
+        url = rec.get("url")
+        if url:
+            ris_lines.append(f"UR  - {_escape_ris_value(url)}")
+        keywords = rec.get("keywords") or []
+        for kw in keywords:
+            ris_lines.append(f"KW  - {_escape_ris_value(kw)}")
+        source = rec.get("source") or ""
+        rec_id = rec.get("id") or ""
+        n1_parts = []
+        if source:
+            n1_parts.append(f"source:{source}")
+        if rec_id:
+            n1_parts.append(f"id:{rec_id}")
+        if n1_parts:
+            ris_lines.append(f"N1  - {';'.join(n1_parts)}")
+        ris_lines.append("ER  - ")
+        ris_lines.append("")
+    result = "\r\n".join(ris_lines) + "\r\n"
+    if ris_utf8_bom:
+        result = "\ufeff" + result
+    return result
