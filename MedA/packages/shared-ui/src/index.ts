@@ -38,3 +38,7 @@ export {
   type PicoPanelProps,
   type PicoFieldValues,
 } from "./PicoPanel";
+export {
+  WorkspaceOneClickPubmedDemo,
+  type WorkspaceOneClickPubmedDemoProps,
+} from "./WorkspaceOneClickPubmedDemo";
