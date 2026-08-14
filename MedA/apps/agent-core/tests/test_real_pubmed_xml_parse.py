@@ -112,3 +112,29 @@ def test_parse_pubmed_xml_broken_xml_returns_empty_with_catch():
     broken = "<PubmedArticleSet><PubmedArticle></Malformed"
     result = _parse_pubmed_xml(broken)
     assert result == []
+
+
+def test_parse_pubmed_xml_missing_optional_fields_sets_defaults():
+    """缺 Journal/Author/Abstract/Year 不崩 → Journal="" Authors="" Abstract=None year=None"""
+    xml_no_optional = """<?xml version="1.0"?>
+    <PubmedArticleSet>
+      <PubmedArticle>
+        <MedlineCitation>
+          <PMID>99999999</PMID>
+          <Article>
+            <ArticleTitle>Title with <i>italic</i> nested tag</ArticleTitle>
+          </Article>
+        </MedlineCitation>
+        <PubmedData><ArticleIdList/></PubmedData>
+      </PubmedArticle>
+    </PubmedArticleSet>"""
+    entries = _parse_pubmed_xml(xml_no_optional)
+    assert len(entries) == 1
+    r = entries[0]
+    assert r.pmid == "99999999"
+    assert "italic nested tag" in r.title
+    assert r.doi == ""
+    assert r.authors == ""
+    assert r.journal == ""
+    assert r.year is None
+    assert r.abstract == ""
