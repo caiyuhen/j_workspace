@@ -9,6 +9,15 @@ from app.db import engine, init_db, reset_db
 from app.models import Organization, ResearchProject, User
 
 
+def pytest_addoption(parser):
+    parser.addoption("--runneedsnetwork", action="store_true", default=False, help="Run tests marked needs_network (real-HTTP)")
+def pytest_collection_modifyitems(config, items):
+    if config.getoption("--runneedsnetwork"): return
+    skip_mark = pytest.mark.skip(reason="skip needs_network (pass --runneedsnetwork to run)")
+    for item in items:
+        if "needs_network" in getattr(item, "keywords", {}): item.add_marker(skip_mark)
+
+
 @dataclass
 class UnifiedMockEntry:
     doi: str
