@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
 import type {
   ImportLiteraturePayload,
@@ -22,6 +22,13 @@ import {
   SearchRunListScreen,
   SearchSourceConfigScreen,
   WorkspaceOneClickPubmedDemo,
+  serializeRIS,
+  serializeBibTeX,
+  exportPRISMA,
+  downloadBlob,
+  downloadDataUrl,
+  sanitizeFilename,
+  downloadDiagnosticText,
 } from "@meda/shared-ui";
 
 import { SearchQueryBuilderScreen } from "./workspace/SearchQueryBuilderScreen";
@@ -67,7 +74,7 @@ type WorkspaceShellProps = {
   searchRuns: SearchRunListResponse | null;
   searchRunDetail: SearchRunDetailType | null;
   onCreateSearchRun: () => Promise<void>;
-  onOpenSearchRunDetail: (runId: number) => void;
+  onOpenSearchRunDetail: (projectIdOrRunId: number, runIdIfProjectId?: number) => void;
   onRetrySearchRunSource: (sourceKey: string) => Promise<void>;
   onCancelSearchRun: () => Promise<void>;
   onExportSearchRunCsv: () => void;
@@ -284,6 +291,75 @@ export function WorkspaceShell({
     [workspaceHome.project.workspace_key],
   );
 
+  const YYYYMMDD = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}${m}${day}`;
+  };
+
+  const handleExportRis = useCallback(() => {
+    if (!searchRunDetail) return;
+    try {
+      const rows = (searchRunDetail as any).records ?? [];
+      const ris = serializeRIS(rows);
+      downloadBlob(
+        sanitizeFilename(
+          `meda_run${searchRunDetail.run.id}_${YYYYMMDD(new Date())}_n${rows.length}.ris`,
+        ),
+        new Blob([ris], { type: "application/x-ris" }),
+      );
+    } catch (e) {
+      downloadDiagnosticText("web_ris", e, searchRunDetail?.run.id ?? null, {
+        count: (searchRunDetail as any).records?.length,
+      });
+    }
+  }, [searchRunDetail]);
+
+  const handleExportBibTeX = useCallback(() => {
+    if (!searchRunDetail) return;
+    try {
+      const rows = (searchRunDetail as any).records ?? [];
+      const bib = serializeBibTeX(rows);
+      downloadBlob(
+        sanitizeFilename(
+          `meda_run${searchRunDetail.run.id}_${YYYYMMDD(new Date())}_n${rows.length}.bib`,
+        ),
+        new Blob([bib], { type: "application/x-bibtex" }),
+      );
+    } catch (e) {
+      downloadDiagnosticText("web_bibtex", e, searchRunDetail?.run.id ?? null, {
+        count: (searchRunDetail as any).records?.length,
+      });
+    }
+  }, [searchRunDetail]);
+
+  const handleExportPRISMA = useCallback(async () => {
+    if (!searchRunDetail) return;
+    try {
+      const { svgBlob, pngDataUrl } = await exportPRISMA();
+      const countN = ((searchRunDetail as any).records ?? []).length;
+      downloadBlob(
+        sanitizeFilename(
+          `meda_run${searchRunDetail.run.id}_${YYYYMMDD(new Date())}_n${countN}_prisma.svg`,
+        ),
+        svgBlob,
+      );
+      if (pngDataUrl) {
+        downloadDataUrl(
+          sanitizeFilename(
+            `meda_run${searchRunDetail.run.id}_${YYYYMMDD(new Date())}_n${countN}_prisma.png`,
+          ),
+          pngDataUrl,
+        );
+      }
+    } catch (e) {
+      downloadDiagnosticText("web_prisma", e, searchRunDetail?.run.id ?? null, {
+        count: (searchRunDetail as any).records?.length,
+      });
+    }
+  }, [searchRunDetail]);
+
   if (screen === "recent-tasks") {
     return <main style={{ padding: "24px" }}>最近任务承接页</main>;
   }
@@ -310,6 +386,9 @@ export function WorkspaceShell({
           onRetrySource={onRetrySearchRunSource}
           onCancelRun={onCancelSearchRun}
           onCsvExport={onExportSearchRunCsv}
+          onRisExport={handleExportRis}
+          onBibTeXExport={handleExportBibTeX}
+          onPRISMAExport={handleExportPRISMA}
         />
       </main>
     );
@@ -553,7 +632,7 @@ export function WorkspaceShell({
               session={session}
               workspaceHomeProjectId={workspaceHome.project.id}
               onRunCreated={(rid, pid) => {
-                onOpenSearchRunDetail(rid);
+                onOpenSearchRunDetail(pid, rid);
               }}
               onErrorToast={alert}
               onProjectCreatedToast={console.info}

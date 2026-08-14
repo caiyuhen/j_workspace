@@ -11,6 +11,9 @@ type ExportPanelProps = {
   serializeRIS?: (rows: any[]) => string;
   serializeBibTeX?: (rows: any[]) => string;
   exportPRISMA?: () => Promise<{ svgBlob: Blob; pngDataUrl: string }>;
+  onRisExport?: () => void;
+  onBibTeXExport?: () => void;
+  onPRISMAExport?: () => void;
 };
 
 const EXPORTABLE_STATUSES = new Set(['completed', 'partial_failed']);
@@ -29,6 +32,9 @@ export function ExportPanel({
   serializeRIS: serializeRISProp,
   serializeBibTeX: serializeBibTeXProp,
   exportPRISMA: exportPRISMAProp,
+  onRisExport,
+  onBibTeXExport,
+  onPRISMAExport,
 }: ExportPanelProps) {
   const run = detail?.run ?? {};
   const records: any[] = (detail as any).records ?? [];
@@ -52,6 +58,10 @@ export function ExportPanel({
   ].filter(Boolean).join(' ').trim();
 
   const handleRis = () => {
+    if (onRisExport) {
+      onRisExport();
+      return;
+    }
     try {
       const content = risSerializer(records);
       const fn = baseFilename('ris');
@@ -65,6 +75,10 @@ export function ExportPanel({
   };
 
   const handleBib = () => {
+    if (onBibTeXExport) {
+      onBibTeXExport();
+      return;
+    }
     try {
       const content = bibSerializer(records);
       const fn = baseFilename('bib');
@@ -78,6 +92,10 @@ export function ExportPanel({
   };
 
   const handlePrisma = () => {
+    if (onPRISMAExport) {
+      onPRISMAExport();
+      return;
+    }
     (async () => {
       try {
         const { svgBlob, pngDataUrl } = await prismaExporter();

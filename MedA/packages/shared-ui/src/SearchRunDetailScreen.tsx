@@ -7,6 +7,9 @@ type SearchRunDetailScreenProps = {
   onRetrySource: (sourceKey: string) => Promise<void> | void;
   onCancelRun: () => Promise<void> | void;
   onCsvExport: () => void;
+  onRisExport?: () => void;
+  onBibTeXExport?: () => void;
+  onPRISMAExport?: () => void;
 };
 
 const panelStyle = {
@@ -35,6 +38,9 @@ export function SearchRunDetailScreen({
   onRetrySource,
   onCancelRun,
   onCsvExport,
+  onRisExport,
+  onBibTeXExport,
+  onPRISMAExport,
 }: SearchRunDetailScreenProps) {
   if (detail === null) {
     return (
@@ -189,6 +195,9 @@ export function SearchRunDetailScreen({
             <ExportPanel
               detail={detail as any}
               onDone={(...args) => console.log('export done', args)}
+              onRisExport={onRisExport}
+              onBibTeXExport={onBibTeXExport}
+              onPRISMAExport={onPRISMAExport}
             />
           </div>
         </div>

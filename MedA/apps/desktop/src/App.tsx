@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
   createClient,
@@ -13,6 +13,7 @@ import {
   type SearchSourceCatalog,
   type SearchSourceConfigSummary,
   type SessionContext,
+  type StageEntryCardSummary,
   type StageEntrySummary,
   type WorkspaceHomeSummary,
   type WorkspaceItemSummary,
@@ -25,6 +26,13 @@ import {
   SearchRunListScreen,
   SearchSourceConfigScreen,
   WorkspaceOneClickPubmedDemo,
+  serializeRIS,
+  serializeBibTeX,
+  exportPRISMA,
+  downloadBlob,
+  downloadDataUrl,
+  sanitizeFilename,
+  downloadDiagnosticText,
 } from "@meda/shared-ui";
 
 import { SearchQueryBuilderScreen } from "./components/SearchQueryBuilderScreen";
@@ -99,22 +107,24 @@ function SummaryButton({
   item,
   onClick,
 }: {
-  item: WorkspaceItemSummary | WorkspaceStageSummary;
+  item: WorkspaceItemSummary | WorkspaceStageSummary | StageEntryCardSummary;
   onClick: () => void;
 }) {
   return (
     <button
-      aria-label={"title" in item ? item.title : item.label}
+      aria-label={"title" in item ? item.title : "label" in item ? item.label : (item as any).title ?? ""}
       style={buttonStyle}
       onClick={onClick}
     >
       <div style={{ fontWeight: 600 }}>
-        {"title" in item ? item.title : item.label}
+        {"title" in item ? item.title : "label" in item ? item.label : (item as any).title ?? ""}
       </div>
       <div style={{ marginTop: "4px", color: "#4b5563", fontSize: "14px" }}>
         {"subtitle" in item
           ? item.subtitle
-          : `${item.task_count} 个任务 · ${item.artifact_count} 个产物`}
+          : "task_count" in item
+            ? `${item.task_count} 个任务 · ${item.artifact_count} 个产物`
+            : (item as any).subtitle ?? ""}
       </div>
     </button>
   );
@@ -218,17 +228,37 @@ export default function App() {
         : {};
     await client.createSearchRun(projectId, {
       sources: ["pubmed", "cnki", "wanfang"],
-      query_snapshot: querySnapshot,
+      querySnapshot: querySnapshot,
     });
-    const nextRuns = await client.listSearchRuns(projectId).catch(() => null);
-    setSearchRuns(nextRuns);
+    const nextRunsRaw = await client.listSearchRuns(projectId).catch(() => null);
+    setSearchRuns(
+      nextRunsRaw
+        ? {
+            project: workspaceHome.project,
+            stage_key: "search",
+            items: nextRunsRaw.items,
+            runs: nextRunsRaw.items,
+            total: nextRunsRaw.total,
+            page: nextRunsRaw.page,
+            page_size: nextRunsRaw.pageSize,
+            pageSize: nextRunsRaw.pageSize,
+          }
+        : null,
+    );
   };
 
-  const handleOpenSearchRunDetail = async (projectId: number, runId: number) => {
-    if (workspaceHome === null) return;
+  const handleOpenSearchRunDetail = async (
+    projectIdOrRunId: number,
+    runIdIfProjectId?: number,
+  ) => {
+    const projectId =
+      typeof runIdIfProjectId === "number" ? projectIdOrRunId : workspaceHome?.project.id ?? 0;
+    const runId = typeof runIdIfProjectId === "number" ? runIdIfProjectId : projectIdOrRunId;
+    if (workspaceHome === null && runIdIfProjectId === undefined) return;
+    if (projectId === 0) return;
     setCurrentRunId(runId);
     try {
-      const detail = await client.getSearchRunDetail(projectId, runId);
+      const detail = await client.getSearchRun(projectId, runId);
       setSearchRunDetail(detail);
     } catch {
       setSearchRunDetail(null);
@@ -239,7 +269,8 @@ export default function App() {
   const handleRetrySearchRunSource = async (sourceKey: string) => {
     if (workspaceHome === null || currentRunId === null) return;
     const projectId = workspaceHome.project.id;
-    const detail = await client.retrySearchRun(projectId, currentRunId, sourceKey);
+    const _resp = await client.retrySearchRun(projectId, currentRunId);
+    const detail = await client.getSearchRun(projectId, currentRunId);
     setSearchRunDetail(detail);
   };
 
@@ -247,10 +278,23 @@ export default function App() {
     if (workspaceHome === null || currentRunId === null) return;
     const projectId = workspaceHome.project.id;
     await client.cancelSearchRun(projectId, currentRunId);
-    const detail = await client.getSearchRunDetail(projectId, currentRunId).catch(() => null);
+    const detail = await client.getSearchRun(projectId, currentRunId).catch(() => null);
     setSearchRunDetail(detail);
-    const nextRuns = await client.listSearchRuns(projectId).catch(() => null);
-    setSearchRuns(nextRuns);
+    const nextRunsRaw = await client.listSearchRuns(projectId).catch(() => null);
+    setSearchRuns(
+      nextRunsRaw
+        ? {
+            project: workspaceHome.project,
+            stage_key: "search",
+            items: nextRunsRaw.items,
+            runs: nextRunsRaw.items,
+            total: nextRunsRaw.total,
+            page: nextRunsRaw.page,
+            page_size: nextRunsRaw.pageSize,
+            pageSize: nextRunsRaw.pageSize,
+          }
+        : null,
+    );
   };
 
   const handleExportSearchRunCsv = () => {
@@ -259,6 +303,75 @@ export default function App() {
     const url = getSearchRunCsvUrl(API_BASE_URL, projectId, currentRunId);
     window.open(url, "_blank", "noopener,noreferrer");
   };
+
+  const YYYYMMDD = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}${m}${day}`;
+  };
+
+  const handleExportRis = useCallback(() => {
+    if (!searchRunDetail) return;
+    try {
+      const rows = (searchRunDetail as any).records ?? [];
+      const ris = serializeRIS(rows);
+      downloadBlob(
+        sanitizeFilename(
+          `meda_run${searchRunDetail.run.id}_${YYYYMMDD(new Date())}_n${rows.length}.ris`,
+        ),
+        new Blob([ris], { type: "application/x-ris" }),
+      );
+    } catch (e) {
+      downloadDiagnosticText("desktop_ris", e, searchRunDetail?.run.id ?? null, {
+        count: (searchRunDetail as any).records?.length,
+      });
+    }
+  }, [searchRunDetail]);
+
+  const handleExportBibTeX = useCallback(() => {
+    if (!searchRunDetail) return;
+    try {
+      const rows = (searchRunDetail as any).records ?? [];
+      const bib = serializeBibTeX(rows);
+      downloadBlob(
+        sanitizeFilename(
+          `meda_run${searchRunDetail.run.id}_${YYYYMMDD(new Date())}_n${rows.length}.bib`,
+        ),
+        new Blob([bib], { type: "application/x-bibtex" }),
+      );
+    } catch (e) {
+      downloadDiagnosticText("desktop_bibtex", e, searchRunDetail?.run.id ?? null, {
+        count: (searchRunDetail as any).records?.length,
+      });
+    }
+  }, [searchRunDetail]);
+
+  const handleExportPRISMA = useCallback(async () => {
+    if (!searchRunDetail) return;
+    try {
+      const { svgBlob, pngDataUrl } = await exportPRISMA();
+      const countN = ((searchRunDetail as any).records ?? []).length;
+      downloadBlob(
+        sanitizeFilename(
+          `meda_run${searchRunDetail.run.id}_${YYYYMMDD(new Date())}_n${countN}_prisma.svg`,
+        ),
+        svgBlob,
+      );
+      if (pngDataUrl) {
+        downloadDataUrl(
+          sanitizeFilename(
+            `meda_run${searchRunDetail.run.id}_${YYYYMMDD(new Date())}_n${countN}_prisma.png`,
+          ),
+          pngDataUrl,
+        );
+      }
+    } catch (e) {
+      downloadDiagnosticText("desktop_prisma", e, searchRunDetail?.run.id ?? null, {
+        count: (searchRunDetail as any).records?.length,
+      });
+    }
+  }, [searchRunDetail]);
 
   if (session === null || workspaceHome === null) {
     return <main>Desktop session unavailable.</main>;
@@ -359,6 +472,9 @@ export default function App() {
           onRetrySource={handleRetrySearchRunSource}
           onCancelRun={handleCancelSearchRun}
           onCsvExport={handleExportSearchRunCsv}
+          onRisExport={handleExportRis}
+          onBibTeXExport={handleExportBibTeX}
+          onPRISMAExport={handleExportPRISMA}
         />
       </main>
     );
@@ -1369,7 +1485,7 @@ export default function App() {
                   );
                   setStageEntry(nextStageEntry);
                   if (stage.key === "search") {
-                    const [nextEditor, nextConfig, nextCatalog, nextRuns] =
+                    const [nextEditor, nextConfig, nextCatalog, nextRunsRaw] =
                       await Promise.all([
                         client.getSearchQueryEditor(workspaceHome.project.id),
                         client.getSearchSourceConfig(workspaceHome.project.id),
@@ -1379,7 +1495,20 @@ export default function App() {
                     setSearchQueryEditor(nextEditor);
                     setSourceConfig(nextConfig);
                     setSourceCatalog(nextCatalog);
-                    setSearchRuns(nextRuns);
+                    setSearchRuns(
+                      nextRunsRaw
+                        ? {
+                            project: nextStageEntry.project,
+                            stage_key: stage.key,
+                            items: nextRunsRaw.items,
+                            runs: nextRunsRaw.items,
+                            total: nextRunsRaw.total,
+                            page: nextRunsRaw.page,
+                            page_size: nextRunsRaw.pageSize,
+                            pageSize: nextRunsRaw.pageSize,
+                          }
+                        : null,
+                    );
                   }
                   setScreen("stage-entry");
                 }}
