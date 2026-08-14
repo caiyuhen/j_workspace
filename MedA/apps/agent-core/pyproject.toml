@@ -16,6 +16,12 @@ dependencies = [
 pythonpath = ["."]
 testpaths = ["tests"]
 addopts = '-p no:warnings --strict-markers -m "not needs_network"'
+asyncio_mode = "auto"
 markers = [
     "needs_network: 标记需要真实外网的测试，默认 skip。运行：pytest -m needs_network",
+]
+
+[dependency-groups]
+dev = [
+    "pytest-asyncio>=1.4.0",
 ]
