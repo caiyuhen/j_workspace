@@ -24,6 +24,7 @@ import {
   SearchRunDetailScreen,
   SearchRunListScreen,
   SearchSourceConfigScreen,
+  WorkspaceOneClickPubmedDemo,
 } from "@meda/shared-ui";
 
 import { SearchQueryBuilderScreen } from "./components/SearchQueryBuilderScreen";
@@ -223,9 +224,8 @@ export default function App() {
     setSearchRuns(nextRuns);
   };
 
-  const handleOpenSearchRunDetail = async (runId: number) => {
+  const handleOpenSearchRunDetail = async (projectId: number, runId: number) => {
     if (workspaceHome === null) return;
-    const projectId = workspaceHome.project.id;
     setCurrentRunId(runId);
     try {
       const detail = await client.getSearchRunDetail(projectId, runId);
@@ -442,7 +442,9 @@ export default function App() {
           editor={searchQueryEditor}
           onBackToStageEntry={() => setScreen("stage-entry")}
           onCreateRun={handleCreateSearchRun}
-          onOpenRunDetail={handleOpenSearchRunDetail}
+          onOpenRunDetail={(runId) =>
+            handleOpenSearchRunDetail(workspaceHome.project.id, runId)
+          }
         />
       </main>
     );
@@ -638,7 +640,9 @@ export default function App() {
                   editor={searchQueryEditor}
                   onBackToStageEntry={() => {}}
                   onCreateRun={handleCreateSearchRun}
-                  onOpenRunDetail={handleOpenSearchRunDetail}
+                  onOpenRunDetail={(runId) =>
+                    handleOpenSearchRunDetail(workspaceHome.project.id, runId)
+                  }
                 />
               </div>
             </section>
@@ -691,6 +695,18 @@ export default function App() {
                   />
                 ))}
               </div>
+            </section>
+            <section style={{ ...panelStyle, marginTop: "20px" }}>
+              <WorkspaceOneClickPubmedDemo
+                client={client}
+                session={session}
+                workspaceHomeProjectId={workspaceHome?.project?.id}
+                onRunCreated={(rid, pid) => handleOpenSearchRunDetail(pid, rid)}
+                onErrorToast={alert}
+                onProjectCreatedToast={(n) =>
+                  console.info(`[demo] auto-created project: ${n}`)
+                }
+              />
             </section>
             <section
               style={{
