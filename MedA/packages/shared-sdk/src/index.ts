@@ -53,6 +53,11 @@ export type {
   BatchPicoPayload,
   BatchPicoResult,
   PicoAutofillDraft,
+  ScreeningStage,
+  ScreeningDecision,
+  ExcludeReasonJson,
+  PrismaOverride,
+  LiteratureStatsW82B,
 } from "./client";
 
 export function getSearchRunCsvUrl(baseUrl: string, projectId: number, runId: number): string {

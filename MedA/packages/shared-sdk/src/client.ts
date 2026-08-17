@@ -353,6 +353,38 @@ export type PrismaReport = {
   bySource: SearchSourceBreakdown[];
 };
 
+// WAVE82B_INSERT_SCREENING_TYPES
+export type ScreeningStage = 'ta' | 'fulltext';
+
+export type ScreeningDecision = 'include' | 'exclude';
+
+export type ExcludeReasonJson = {
+  preset_class: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
+  note: string | null;
+  stage?: ScreeningStage | null;
+  auto_by?: string | null;
+};
+
+export type PrismaOverride = {
+  identification: number | null;
+  screening: number | null;
+  eligibility: number | null;
+  included: number | null;
+  applied_at: string;
+};
+
+export type LiteratureStatsW82B = Partial<LiteratureStats> & {
+  prisma_identification: number;
+  prisma_screening: number;
+  prisma_screening_exclude_ta: number;
+  prisma_screening_exclude_duplicate: number;
+  prisma_eligibility: number;
+  prisma_eligibility_exclude_fulltext: number;
+  prisma_included: number;
+  prisma_override_applied: boolean;
+  prisma_diff_percent: number | null;
+};
+
 export type SearchRunSummary = {
   id: number;
   projectId: number;
