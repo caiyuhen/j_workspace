@@ -110,3 +110,162 @@ export {
   type EnsureDemoOptions,
   type MedaClient,
 } from "./utils/demoSeedings";
+
+// ============================================================
+// WAVE 8.3 T7 BLOCK: extraction + analysis 类型导出
+// 15 symbols (12 核心 + 3 辅助)
+// ============================================================
+
+export type PicoBindingW83 =
+  | "P"
+  | "I"
+  | "C"
+  | "O"
+  | "S"
+  | "StudyType"
+  | "OutcomeMeasure"
+  | "Other";
+
+export type ExtractionFieldType =
+  | "text"
+  | "textarea"
+  | "select"
+  | "multiselect"
+  | "number"
+  | "boolean"
+  | "date";
+
+export interface ExtractionTemplateField {
+  key: string;
+  label: string;
+  pico_binding: PicoBindingW83;
+  required: boolean;
+  field_type?: ExtractionFieldType;
+  options?: string[];
+  description?: string;
+}
+
+export interface ExtractionTemplate {
+  template_id: number;
+  name: string;
+  description?: string;
+  fields_json: ExtractionTemplateField[];
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface ExtractionCell {
+  cell_id: number;
+  record_id: number;
+  field_key: string;
+  value_raw: string | null;
+  value_number: number | null;
+  value_boolean: boolean | null;
+  extracted_by: "human" | "ai" | "import";
+  extracted_at: string | null;
+  confidence: number | null;
+}
+
+export type OutcomeDefinitionMeasure = "RR" | "OR" | "RD" | "MD" | "SMD";
+
+export interface OutcomeDefinition {
+  outcome_id: number;
+  name: string;
+  description?: string;
+  measure: OutcomeDefinitionMeasure;
+  time_point?: string;
+  direction_higher_is_better?: boolean;
+}
+
+export interface BinaryArmInputs {
+  arm_label: string;
+  events: number | null;
+  total: number | null;
+}
+
+export interface ContinuousArmInputs {
+  arm_label: string;
+  mean: number | null;
+  sd: number | null;
+  n: number | null;
+}
+
+export type OutcomeArmAnyInputs = BinaryArmInputs | ContinuousArmInputs;
+
+export interface OutcomeArmData {
+  outcome_id: number;
+  record_id: number;
+  arms: OutcomeArmAnyInputs[];
+  measure: OutcomeDefinitionMeasure;
+  study_weight?: number | null;
+}
+
+export interface PooledHeterogeneity {
+  i_squared: number | null;
+  tau_squared: number | null;
+  q_statistic: number | null;
+  q_p_value: number | null;
+  df: number | null;
+}
+
+export interface AnalysisRun {
+  analysis_id: number;
+  outcome_id: number;
+  model: "fixed_effect" | "random_effect";
+  method: "Mantel-Haenszel" | "Paule-Mandel" | "DerSimonian-Laird" | "Inverse-Variance";
+  measure: OutcomeDefinitionMeasure;
+  n_studies: number;
+  pooled_estimate: number | null;
+  ci_lower: number | null;
+  ci_upper: number | null;
+  p_value: number | null;
+  heterogeneity: PooledHeterogeneity;
+  status: "pending" | "running" | "completed" | "failed";
+  started_at: string | null;
+  finished_at: string | null;
+  error_message: string | null;
+}
+
+export interface MetaRunRequest {
+  outcome_id: number;
+  measure: OutcomeDefinitionMeasure;
+  model: "fixed_effect" | "random_effect";
+  method?:
+    | "Mantel-Haenszel"
+    | "Paule-Mandel"
+    | "DerSimonian-Laird"
+    | "Inverse-Variance";
+  include_record_ids?: number[];
+  exclude_record_ids?: number[];
+  subgroup_key?: string;
+}
+
+export interface EvidenceTableWideRow {
+  record_id: number;
+  study_name: string;
+  year: number | null;
+  authors: string | null;
+  population: string | null;
+  intervention: string | null;
+  comparison: string | null;
+  outcome: string | null;
+  study_type: string | null;
+  outcome_measure: string | null;
+  effect_estimate: number | null;
+  ci_lower: number | null;
+  ci_upper: number | null;
+  n_total: number | null;
+  risk_of_bias: string | null;
+  kappa_status: "ok" | "low_agreement" | "unassessed";
+}
+
+export type KappaWarningLevel = "low_agreement" | "ok";
+
+export interface KappaFieldSummary {
+  field_key: string;
+  kappa: number | null;
+  n_pairs: number;
+  pct_agree?: number | null;
+  warning_level: KappaWarningLevel;
+  flagged_cells?: number[];
+}
