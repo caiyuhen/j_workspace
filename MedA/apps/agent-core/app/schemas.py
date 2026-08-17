@@ -138,6 +138,9 @@ class StageEntryResponse(BaseModel):
     recent_artifacts: list[WorkspaceItemSummary]
     assistant_suggestions: list[WorkspaceItemSummary]
     guidance_notes: list[StageEntryGuidanceNote]
+    prisma_counts: dict | None = None
+    extraction_stage_cards: list[dict] | None = None
+    analysis_stage_cards: list[dict] | None = None
 
 
 class SearchTermSummary(BaseModel):
@@ -269,6 +272,12 @@ class LiteratureRecordSummary(BaseModel):
     source_label: str
     dedupe_status: Literal["unique", "duplicate", "confirmed_unique"]
     duplicate_of_id: int | None
+    # --- WAVE82B_INSERT_SCREENING_SUMMARY_FIELDS 开始 ---
+    screening_stage: Literal["ta", "fulltext"] | None = None
+    screening_decision: Literal["include", "exclude"] | None = None
+    exclude_reason_json: str | None = None
+    screening_notes: str | None = None
+    # --- WAVE82B_INSERT_SCREENING_SUMMARY_FIELDS 结束 ---
 
 
 class LiteratureSourceCount(BaseModel):
@@ -282,6 +291,18 @@ class LiteratureStats(BaseModel):
     unique_count: int
     duplicate_count: int
     by_source: list[LiteratureSourceCount]
+    # --- WAVE82B_INSERT_PRISMA_STATS_FIELDS 开始：PRISMA 2020 4 格 × 2 组 = 8 字段 ---
+    # 4 格主计数
+    prisma_identification: int | None = None
+    prisma_screening: int | None = None
+    prisma_eligibility: int | None = None
+    prisma_included: int | None = None
+    # 4 项 excluded 拆分（用于画 PRISMA 2 条横向排除线）
+    prisma_ta_excluded: int | None = None
+    prisma_duplicate_excluded: int | None = None
+    prisma_fulltext_excluded: int | None = None
+    prisma_eligibility_unknown: int | None = None
+    # --- WAVE82B_INSERT_PRISMA_STATS_FIELDS 结束 ---
 
 
 class LiteratureBatchSummary(BaseModel):
