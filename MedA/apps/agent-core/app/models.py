@@ -28,6 +28,9 @@ class ResearchProject(SQLModel, table=True):
     name: str
     description: str
     workspace_key: str
+    # --- WAVE82B_INSERT_PRISMA_OVERRIDE_FIELD 开始（用户手动改 n 数时存储 override，冻结 Prisma 计算显示）---
+    prisma_override_json: str | None = Field(default=None)
+    # --- WAVE82B_INSERT_PRISMA_OVERRIDE_FIELD 结束 ---
 
 
 class ResearchTaskRecord(SQLModel, table=True):
@@ -98,6 +101,7 @@ class LiteratureRecord(SQLModel, table=True):
     pmid: str = ""
     abstract: str = ""
     source_key: str
+    source_label: str = ""
     dedupe_status: str = "unique"
     duplicate_of_id: int | None = Field(
         default=None, foreign_key="literaturerecord.id"
@@ -108,6 +112,12 @@ class LiteratureRecord(SQLModel, table=True):
     search_run_id: int | None = Field(default=None, foreign_key="searchrun.id")
     relevance_score: float | None = None
     pico_status: str = "not_extracted"
+    # --- WAVE82B_INSERT_SCREENING_FIELDS 开始（4 nullable，第 5 个 prisma_override 在 ResearchProject 下）---
+    screening_stage: str | None = Field(default=None)  # "ta" | "fulltext" | None
+    screening_decision: str | None = Field(default=None)  # "include" | "exclude" | None
+    exclude_reason_json: str | None = Field(default=None)  # JSON: preset_class 1-9 + note + stage + auto_by
+    screening_notes: str | None = Field(default=None)
+    # --- WAVE82B_INSERT_SCREENING_FIELDS 结束 ---
 
 
 class AuditEvent(SQLModel, table=True):
@@ -188,3 +198,61 @@ class AuthSession(SQLModel, table=True):
     organization_slug: str = Field(foreign_key="organization.slug")
     role: str
     client_type: str
+
+
+import sqlalchemy as sa
+from typing import Any
+
+
+class ExtractionTemplate(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id", unique=True)
+    name: str
+    description: str | None = Field(default=None)
+    created_by: str | None = Field(default=None, foreign_key="user.user_id")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    locked: bool = Field(default=False)
+    locked_at: datetime | None = Field(default=None)
+    fields_json: list[dict[str, Any]] = Field(default_factory=list, sa_column=sa.Column(sa.JSON, nullable=False, default=list))
+
+
+class ExtractionCell(SQLModel, table=True):
+    record_id: int = Field(foreign_key="literaturerecord.id", primary_key=True)
+    field_key: str = Field(primary_key=True)
+    reviewer_id: str = Field(primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id", index=True)
+    value_json: Any = Field(default=None, sa_column=sa.Column(sa.JSON, nullable=True))
+    confidence: float | None = Field(default=None)
+    extracted_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class OutcomeDefinition(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id", index=True)
+    outcome_key: str
+    label: str
+    description: str | None = None
+    measure_type: str
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+
+
+class OutcomeArmData(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id", index=True)
+    record_id: int = Field(foreign_key="literaturerecord.id", index=True)
+    outcome_id: int = Field(foreign_key="outcomedefinition.id", index=True)
+    arm_label: str
+    data_json: dict[str, Any] = Field(default_factory=dict, sa_column=sa.Column(sa.JSON, nullable=False, default=dict))
+    reviewer_id: str
+
+
+class AnalysisRun(SQLModel, table=True):
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id", index=True)
+    outcome_id: int | None = Field(default=None, foreign_key="outcomedefinition.id")
+    method: str
+    config_json: dict[str, Any] = Field(default_factory=dict, sa_column=sa.Column(sa.JSON, nullable=False, default=dict))
+    result_json: dict[str, Any] | None = Field(default=None, sa_column=sa.Column(sa.JSON, nullable=True))
+    status: str = "pending"
+    created_by: str | None = Field(default=None, foreign_key="user.user_id")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
