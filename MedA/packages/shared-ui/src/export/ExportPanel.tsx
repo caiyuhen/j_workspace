@@ -11,12 +11,40 @@ type ExportPanelProps = {
   serializeRIS?: (rows: any[]) => string;
   serializeBibTeX?: (rows: any[]) => string;
   exportPRISMA?: () => Promise<{ svgBlob: Blob; pngDataUrl: string }>;
+  serializeCSV?: (rows: any[]) => string;
+  serializeJSONL?: (rows: any[]) => string;
   onRisExport?: () => void;
   onBibTeXExport?: () => void;
   onPRISMAExport?: () => void;
+  onCsvExport?: () => void;
+  onJsonlExport?: () => void;
+  children?: React.ReactNode;
+  onExportEvidenceCsv?: () => void;
+  onExportForestSvg?: () => void;
 };
 
 const EXPORTABLE_STATUSES = new Set(['completed', 'partial_failed']);
+
+function defaultSerializeCSV(rows: any[]): string {
+  if (!rows.length) return '';
+  const headers = Object.keys(rows[0]);
+  const headerLine = headers.join(',');
+  const bodyLines = rows.map((r) =>
+    headers.map((h) => {
+      const v = (r as any)[h];
+      const s = v === null || v === undefined ? '' : String(v);
+      if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+        return '"' + s.replace(/"/g, '""') + '"';
+      }
+      return s;
+    }).join(','),
+  );
+  return [headerLine, ...bodyLines].join('\r\n');
+}
+
+function defaultSerializeJSONL(rows: any[]): string {
+  return rows.map((r) => JSON.stringify(r)).join('\n');
+}
 
 function makeDateStamp(): string {
   const d = new Date();
@@ -32,9 +60,16 @@ export function ExportPanel({
   serializeRIS: serializeRISProp,
   serializeBibTeX: serializeBibTeXProp,
   exportPRISMA: exportPRISMAProp,
+  serializeCSV: serializeCSVProp,
+  serializeJSONL: serializeJSONLProp,
   onRisExport,
   onBibTeXExport,
   onPRISMAExport,
+  onCsvExport,
+  onJsonlExport,
+  children,
+  onExportEvidenceCsv,
+  onExportForestSvg,
 }: ExportPanelProps) {
   const run = detail?.run ?? {};
   const records: any[] = (detail as any).records ?? [];
@@ -51,6 +86,8 @@ export function ExportPanel({
   const risSerializer = serializeRISProp ?? defaultSerializeRIS;
   const bibSerializer = serializeBibTeXProp ?? defaultSerializeBibTeX;
   const prismaExporter = exportPRISMAProp ?? defaultExportPRISMA;
+  const csvSerializer = serializeCSVProp ?? defaultSerializeCSV;
+  const jsonlSerializer = serializeJSONLProp ?? defaultSerializeJSONL;
 
   const panelClass = [
     'export-panel',
@@ -91,6 +128,40 @@ export function ExportPanel({
     }
   };
 
+  const handleCsv = () => {
+    if (onCsvExport) {
+      onCsvExport();
+      return;
+    }
+    try {
+      const content = csvSerializer(records);
+      const fn = baseFilename('csv');
+      downloadBlob(fn, new Blob(['\ufeff' + content], { type: 'text/csv;charset=utf-8' }));
+      onDone?.('csv', { filename: fn, count: countN });
+    } catch (err) {
+      downloadDiagnosticText('CSV', err, runId, { countN, status });
+      console.log('[ExportPanel] CSV export error:', err instanceof Error ? err.message : String(err));
+      onDone?.('csv_error', { error: err instanceof Error ? err.message : String(err) });
+    }
+  };
+
+  const handleJsonl = () => {
+    if (onJsonlExport) {
+      onJsonlExport();
+      return;
+    }
+    try {
+      const content = jsonlSerializer(records);
+      const fn = baseFilename('jsonl');
+      downloadBlob(fn, new Blob([content], { type: 'application/x-ndjson;charset=utf-8' }));
+      onDone?.('jsonl', { filename: fn, count: countN });
+    } catch (err) {
+      downloadDiagnosticText('JSONL', err, runId, { countN, status });
+      console.log('[ExportPanel] JSONL export error:', err instanceof Error ? err.message : String(err));
+      onDone?.('jsonl_error', { error: err instanceof Error ? err.message : String(err) });
+    }
+  };
+
   const handlePrisma = () => {
     if (onPRISMAExport) {
       onPRISMAExport();
@@ -112,6 +183,16 @@ export function ExportPanel({
         onDone?.('prisma_error', { error: err instanceof Error ? err.message : String(err) });
       }
     })();
+  };
+
+  const handleEvidenceCsv = () => {
+    if (!isExportable || !onExportEvidenceCsv) return;
+    onExportEvidenceCsv();
+  };
+
+  const handleForestSvg = () => {
+    if (!isExportable || !onExportForestSvg) return;
+    onExportForestSvg();
   };
 
   const emptyStyle: React.CSSProperties = isEmpty
@@ -136,6 +217,7 @@ export function ExportPanel({
       className={panelClass}
       style={{ display: 'flex', gap: '6px', alignItems: 'center', ...emptyStyle }}
     >
+      {children}
       <button
         data-testid="export-ris-btn"
         style={btnBase}
@@ -153,12 +235,36 @@ export function ExportPanel({
         BibTeX
       </button>
       <button
+        data-testid="export-csv-btn"
+        style={btnBase}
+        disabled={!isExportable}
+        onClick={handleCsv}
+      >
+        CSV
+      </button>
+      <button
+        data-testid="btn-export-evidence-csv"
+        style={btnBase}
+        disabled={!isExportable || !onExportEvidenceCsv}
+        onClick={handleEvidenceCsv}
+      >
+        Evidence CSV
+      </button>
+      <button
         data-testid="export-prisma-btn"
         style={btnBase}
         disabled={!isExportable}
         onClick={handlePrisma}
       >
         PRISMA
+      </button>
+      <button
+        data-testid="btn-export-forest-svg"
+        style={btnBase}
+        disabled={!isExportable || !onExportForestSvg}
+        onClick={handleForestSvg}
+      >
+        Forest SVG
       </button>
     </div>
   );

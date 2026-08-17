@@ -68,6 +68,17 @@ def import_unified_entries(
             status = "unique" if dup_id is None else "duplicate"
             if dup_id is not None:
                 duplicates += 1
+            # Wave82B auto screening exclude (preset_class=1 重复文献, ta stage, auto_by=dedupe_layer4)
+            # WAVE82B_INSERT_DEDUPE_AUTO_EXCLUDE 开始
+            auto_screening_decision = None
+            auto_exclude_reason_json = None
+            if status == "duplicate":
+                auto_screening_decision = "exclude"
+                auto_exclude_reason_json = __import__("json").dumps(
+                    {"preset_class": 1, "note": None, "stage": "ta", "auto_by": "dedupe_layer4"},
+                    ensure_ascii=False,
+                )
+            # WAVE82B_INSERT_DEDUPE_AUTO_EXCLUDE 结束
             rec = LiteratureRecord(
                 project_id=project_id,
                 doi=doi,
@@ -84,6 +95,9 @@ def import_unified_entries(
                 import_batch_id=batch.id,
                 search_run_id=search_run_id,
                 pico_status="not_extracted",
+                # Wave82B 追加：dedupe 命中时自动填 screening 字段（值=上面 auto_* 变量，unique 时=None 写空）
+                screening_decision=auto_screening_decision,
+                exclude_reason_json=auto_exclude_reason_json,
             )
             session.add(rec)
             session.flush()
@@ -201,6 +215,37 @@ def _detect_duplicate(
             and record_year == candidate.year
         ):
             return record_id
+
+    # WAVE82B_INSERT_SIMHASH_LEVEL4 开始（四级判定：同年份分桶 + 中文 Jaccard ≥ 0.92 OR SimHash Hamming ≤ 5）
+    #  前 3 级 exact 都没命中，才走末层 fuzzy（英文走 SimHash，中文短标题走字符 Jaccard，两者任一命中即停）
+    from app.services.simhash import (
+        simhash64, hamming_distance, SIMHASH_HAMMING_THRESHOLD,
+        cjk_char_jaccard, CJK_JACCARD_THRESHOLD,
+    )
+    candidate_fp = simhash64(candidate.title or "")
+    if candidate.year is not None:
+        # 同年份分桶：dedup_status 不是 duplicate（以 confirmed_unique / unique 作为原件）
+        same_year_rows = session.exec(
+            select(LiteratureRecord.id, LiteratureRecord.title, LiteratureRecord.year)
+            .where(
+                LiteratureRecord.project_id == project_id,
+                LiteratureRecord.dedupe_status != "duplicate",
+                LiteratureRecord.year == candidate.year,
+            )
+            .order_by(LiteratureRecord.id)
+        ).all()
+        for row in same_year_rows:
+            record_id, record_title, _ = row
+            # 中文短标题：Jaccard ≥ 0.92 优先判定（SimHash 对 ≤20 字中文不敏感）
+            j = cjk_char_jaccard(candidate.title or "", record_title or "")
+            if j >= CJK_JACCARD_THRESHOLD:
+                return record_id
+            # 英文 / 长中文：SimHash Hamming ≤ 阈值（短标题候选 simhash=0 直接跳过）
+            if candidate_fp != 0:
+                rec_fp = simhash64(record_title or "")
+                if rec_fp != 0 and hamming_distance(candidate_fp, rec_fp) <= SIMHASH_HAMMING_THRESHOLD:
+                    return record_id
+    # WAVE82B_INSERT_SIMHASH_LEVEL4 结束
 
     return None
 
@@ -456,6 +501,12 @@ def confirm_record_unique(
 
     record.dedupe_status = "confirmed_unique"
     record.duplicate_of_id = None
+    # WAVE82B_INSERT_CONFIRM_UNIQUE_CLEAR_SCREENING 开始
+    # 用户点击「不是重复 → 保留为独立」时，必须清空之前系统自动填的 screening=exclude（否则会一直卡在「重复文献排除」）
+    record.screening_decision = None
+    record.exclude_reason_json = None
+    record.screening_stage = None
+    # WAVE82B_INSERT_CONFIRM_UNIQUE_CLEAR_SCREENING 结束
     session.add(record)
     session.commit()
 

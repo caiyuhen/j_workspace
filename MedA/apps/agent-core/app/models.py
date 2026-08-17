@@ -256,3 +256,79 @@ class AnalysisRun(SQLModel, table=True):
     status: str = "pending"
     created_by: str | None = Field(default=None, foreign_key="user.user_id")
     created_at: datetime = Field(default_factory=datetime.utcnow)
+
+# ─────────────────────────────────────────────────────────────────────
+# WAVE 8.4 OUTPUT STAGE 4 NEW TABLES
+# (APPEND ONLY; WAVE 8.3 14 tables above MUST NOT change byte content)
+# ─────────────────────────────────────────────────────────────────────
+try:
+    from sqlalchemy import UniqueConstraint as _w84_UniqueConstraint
+    from sqlalchemy import Column as _w84_Column
+    from sqlalchemy import JSON as _w84_JSON
+    from sqlalchemy import Text as _w84_Text
+except Exception:  # pragma: no cover - fallback if already imported elsewhere
+    _w84_UniqueConstraint = sa.UniqueConstraint
+    _w84_Column = sa.Column
+    _w84_JSON = sa.JSON
+    _w84_Text = sa.Text
+
+def datetime_utcnow():
+    return datetime.utcnow()
+
+UniqueConstraint = _w84_UniqueConstraint
+Column = _w84_Column
+JSON = _w84_JSON
+Text = _w84_Text
+
+class GradeAssessment(SQLModel, table=True):
+    __tablename__ = "gradeassessment"
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id", index=True)
+    outcome_id: int = Field(foreign_key="outcomedefinition.id", index=True)
+    reviewer_id: int = Field(index=True)
+    domains_5: dict = Field(sa_column=Column(JSON, nullable=False))
+    upgrades_3: dict = Field(sa_column=Column(JSON, nullable=False))
+    certainty_final: str = Field(max_length=16, nullable=False)
+    note: str | None = Field(default=None, max_length=2000)
+    locked: bool = Field(default=False, nullable=False)
+    created_at: datetime = Field(default_factory=datetime_utcnow, nullable=False)
+    __table_args__ = (UniqueConstraint("outcome_id", "reviewer_id", name="uq_grade_outcome_reviewer"),)
+
+class SofTableRow(SQLModel, table=True):
+    __tablename__ = "softablenode"
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id", index=True)
+    outcome_id: int = Field(foreign_key="outcomedefinition.id", index=True)
+    assessment_id: int | None = Field(default=None, foreign_key="gradeassessment.id")
+    so_cols: dict = Field(sa_column=Column(JSON, nullable=False))
+    created_at: datetime = Field(default_factory=datetime_utcnow, nullable=False)
+    __table_args__ = (UniqueConstraint("project_id", "outcome_id", name="uq_sof_project_outcome"),)
+
+class ReportSnapshot(SQLModel, table=True):
+    __tablename__ = "reportsnapshot"
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id", index=True)
+    sha256_grade: str = Field(max_length=64, nullable=False)
+    sha256_analysis: str = Field(max_length=64, nullable=False)
+    version_label: str = Field(max_length=64, nullable=False, default="v0.1-draft")
+    md_content: str = Field(sa_column=Column(Text, nullable=False))
+    html_content: str = Field(sa_column=Column(Text, nullable=False))
+    txt_content: str = Field(sa_column=Column(Text, nullable=False))
+    created_at: datetime = Field(default_factory=datetime_utcnow, nullable=False)
+
+class Prisma2020Checklist(SQLModel, table=True):
+    __tablename__ = "prisma2020checklist"
+    id: int | None = Field(default=None, primary_key=True)
+    project_id: int = Field(foreign_key="researchproject.id", index=True)
+    reviewer_id: int = Field(index=True)
+    item_1: bool = False;  item_2: bool = False;  item_3: bool = False;  item_4: bool = False
+    item_5: bool = False;  item_6: bool = False;  item_7: bool = False;  item_8: bool = False
+    item_9: bool = False;  item_10: bool = False; item_11: bool = False; item_12: bool = False
+    item_13: bool = False; item_14: bool = False; item_15: bool = False; item_16: bool = False
+    item_17: bool = False; item_18: bool = False; item_19: bool = False; item_20: bool = False
+    item_21: bool = False; item_22: bool = False; item_23: bool = False; item_24: bool = False
+    item_25: bool = False; item_26: bool = False; item_27: bool = False
+    note: str | None = Field(default=None, max_length=2000)
+    locked: bool = Field(default=False, nullable=False)
+    created_at: datetime = Field(default_factory=datetime_utcnow, nullable=False)
+    __table_args__ = (UniqueConstraint("project_id", "reviewer_id", name="uq_prisma_project_reviewer"),)

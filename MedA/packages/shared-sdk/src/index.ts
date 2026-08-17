@@ -269,3 +269,110 @@ export interface KappaFieldSummary {
   warning_level: KappaWarningLevel;
   flagged_cells?: number[];
 }
+
+// ─────────────────────────────────────────────────────────────────────
+// WAVE 8.4 OUTPUT STAGE (GRADE + PRISMA2020 REPORT) 12 TYPE EXPORTS
+// (append only; W82B + W83 blocks MUST NOT be modified)
+// ─────────────────────────────────────────────────────────────────────
+export type GradeDomainLevel =
+  | "no_concerns"
+  | "some_concerns"
+  | "major_concerns";
+
+export type GradeCertaintyFinal =
+  | "High"
+  | "Moderate"
+  | "Low"
+  | "VeryLow";
+
+export type ReportFormat =
+  | "md"
+  | "html"
+  | "txt";
+
+export type Prisma2020ItemIndex = 1|2|3|4|5|6|7|8|9|10
+  |11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27;
+
+export type Grade5Domains = {
+  risk_of_bias: GradeDomainLevel;
+  indirectness: GradeDomainLevel;
+  inconsistency: GradeDomainLevel;
+  imprecision: GradeDomainLevel;
+  publication_bias: GradeDomainLevel;
+};
+
+export type Grade3Upgrades = {
+  large_effect: boolean;
+  dose_response: boolean;
+  confounders_reduce: boolean;
+};
+
+export type GradeAssessment<IdT = number> = {
+  id: IdT;
+  project_id: IdT;
+  outcome_id: IdT;
+  reviewer_id: IdT;
+  domains_5: Grade5Domains;
+  upgrades_3: Grade3Upgrades;
+  certainty_final: GradeCertaintyFinal;
+  note?: string;
+  locked: boolean;
+  created_at: string;
+};
+
+export type SofRow<IdT = number> = {
+  id?: IdT;
+  project_id: IdT;
+  outcome_id: IdT;
+  outcome_label: string;
+  participants_n: number;
+  studies_k: number;
+  effect_measure_label: string;
+  risk_of_bias: GradeDomainLevel;
+  indirectness: GradeDomainLevel;
+  inconsistency: GradeDomainLevel;
+  imprecision: GradeDomainLevel;
+  publication_bias: GradeDomainLevel;
+  certainty: GradeCertaintyFinal;
+  absolute_risk_intervention?: string;
+  absolute_risk_control?: string;
+  comments?: string;
+};
+
+export type ReportSnapshot<IdT = number> = {
+  id: IdT;
+  project_id: IdT;
+  sha256_grade: string;
+  sha256_analysis: string;
+  version_label: string;
+  md_content: string;
+  html_content: string;
+  txt_content: string;
+  created_at: string;
+};
+
+export type Prisma2020Checklist<IdT = number> = {
+  id: IdT;
+  project_id: IdT;
+  reviewer_id: IdT;
+  items_checked: boolean[];
+  note?: string;
+  locked: boolean;
+  created_at: string;
+};
+
+export type OutputStageCardKey =
+  | "protocol_report_draft"
+  | "sof_attachments_ready"
+  | "export_version_snapshots_ready";
+
+export type OutputStageCard = {
+  card_key: OutputStageCardKey;
+  status: "ready" | "locked";
+  title: string;
+  detail?: string;
+  reason_locked_literal?:
+    | "protocol_requires_grade_and_prisma_5_items"
+    | "attachments_requires_sof_row_and_forest_3_studies"
+    | "exports_requires_at_least_one_report_snapshot";
+};

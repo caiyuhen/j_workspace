@@ -141,6 +141,7 @@ class StageEntryResponse(BaseModel):
     prisma_counts: dict | None = None
     extraction_stage_cards: list[dict] | None = None
     analysis_stage_cards: list[dict] | None = None
+    output_stage_cards: list[dict] | None = None
 
 
 class SearchTermSummary(BaseModel):

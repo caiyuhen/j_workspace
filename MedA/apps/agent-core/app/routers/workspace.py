@@ -2,6 +2,7 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import Response
+from pydantic import BaseModel, Field
 from sqlmodel import Session, select
 
 from app.db import get_session
@@ -709,3 +710,463 @@ def search_run_pico_autofill(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=str(exc),
         ) from exc
+
+
+# ---------------------------------------------------------------------------
+# Wave82B T5: 6 Screening REST thin-wrappers (AC10 HARD-GATE: never import serializeRIS/BibTeX)
+# ---------------------------------------------------------------------------
+
+
+class _BatchDecisionPayload(BaseModel):
+    operation: str = Field(..., pattern=r"^(include|exclude|revoke_fulltext)$")
+    stage: str | None = Field(default=None, pattern=r"^(ta|fulltext)$")
+    record_ids: list[int] = Field(..., min_length=1)
+    exclude_reason: dict | None = None
+    client_batch_id: str | None = None
+
+
+class _OverridePayload(BaseModel):
+    identification: int | None = None
+    screening: int | None = None
+    eligibility: int | None = None
+    included: int | None = None
+
+
+@router.get("/projects/{project_id}/screening/prisma-stats")
+def screening_prisma_stats(
+    project_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.screening_engine import compute_prisma_counts, PrismaCounts
+    pc: PrismaCounts = compute_prisma_counts(session, project.id)
+    import dataclasses as _dc
+    return _dc.asdict(pc)
+
+
+@router.post("/projects/{project_id}/screening/batch-decision")
+def screening_batch_decision(
+    project_id: int,
+    payload: _BatchDecisionPayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    import dataclasses as _dc
+    from app.services.screening_engine import (
+        apply_batch_decision, ScreeningEngineError, BatchResult,
+    )
+    project = _load_project_or_404(session, project_id, context)
+    try:
+        res: BatchResult = apply_batch_decision(
+            session, project, payload.operation, payload.record_ids,
+            stage=payload.stage, exclude_reason=payload.exclude_reason,
+            client_batch_id=payload.client_batch_id,
+        )
+    except ScreeningEngineError as err:
+        raise HTTPException(status_code=getattr(err, "status", 422), detail=str(err)) from err
+    return _dc.asdict(res)
+
+
+@router.post("/projects/{project_id}/screening/apply-override")
+def screening_apply_override(
+    project_id: int,
+    payload: _OverridePayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    from app.services.screening_engine import apply_prisma_override
+    project = _load_project_or_404(session, project_id, context)
+    apply_prisma_override(session, project, payload.model_dump())
+    return {"override_applied": True, "project_id": project.id}
+
+
+@router.post("/projects/{project_id}/screening/clear-override")
+def screening_clear_override(
+    project_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    from app.services.screening_engine import apply_prisma_override
+    project = _load_project_or_404(session, project_id, context)
+    apply_prisma_override(session, project, None, clear=True)
+    return {"cleared": True, "project_id": project.id}
+
+
+@router.post("/projects/{project_id}/screening/run-dedupe")
+def screening_run_dedupe(
+    project_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    import dataclasses as _dc
+    from app.services.screening_engine import run_full_project_dedupe, DedupeRunResult
+    project = _load_project_or_404(session, project_id, context)
+    r: DedupeRunResult = run_full_project_dedupe(session, project)
+    return _dc.asdict(r)
+
+
+@router.post(
+    "/projects/{project_id}/screening/records/{record_id}/confirm-unique",
+    response_model=LiteratureLibraryResponse,
+)
+def screening_confirm_unique(
+    project_id: int,
+    record_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> LiteratureLibraryResponse:
+    project = _load_project_or_404(session, project_id, context)
+    try:
+        return confirm_record_unique(session, project, record_id)
+    except LiteratureNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e)) from e
+    except LiteratureError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e)) from e
+
+
+# ---------------------------------------------------------------------------
+# Wave83 T4: 9 Extraction + Analysis REST thin-wrappers (lazy import only)
+# ---------------------------------------------------------------------------
+
+
+class _TemplateSavePayload(BaseModel):
+    name: str = Field(..., min_length=1)
+    fields: list[dict]
+
+
+class _TemplateLockPayload(BaseModel):
+    template_id: int
+
+
+class _CellUpsertPayload(BaseModel):
+    field_key: str
+    reviewer_id: str
+    value: object
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+
+
+class _OutcomeDefinePayload(BaseModel):
+    name: str = Field(..., min_length=1)
+    outcome_type: str
+    measure: str
+    time_point: str | None = None
+
+
+class _MetaRunPayload(BaseModel):
+    outcome_id: int
+    analysis_model: str = Field(..., pattern=r"^(fixed_iv|fixed_mh|random_dl)$")
+
+
+class _OutcomeRenamePayload(BaseModel):
+    name: str = Field(..., min_length=1)
+
+
+class _ArmUpsertPayload(BaseModel):
+    outcome_id: int
+    record_id: int
+    arm_label: str
+    reviewer_id: str
+    binary_data: dict | None = None
+    continuous_data: dict | None = None
+
+
+_DEFAULT_FIELDS = [
+    {"key": "study_design", "type": "categorical", "label": "Study Design", "options": ["RCT", "Cohort", "Case-Control"]},
+    {"key": "sample_size", "type": "numeric", "label": "Sample Size"},
+    {"key": "intervention", "type": "text", "label": "Intervention"},
+    {"key": "comparator", "type": "text", "label": "Comparator"},
+    {"key": "primary_outcome", "type": "text", "label": "Primary Outcome"},
+]
+
+
+@router.get("/projects/{project_id}/stages/extraction/template")
+def extraction_get_template(
+    project_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.extraction_template import get_project_template
+    tpl = get_project_template(session, project.id or project_id)
+    if tpl is None:
+        return {
+            "template": None,
+            "fields": list(_DEFAULT_FIELDS),
+            "locked": False,
+        }
+    return {
+        "template": {
+            "id": tpl.id,
+            "name": tpl.name,
+            "locked": tpl.locked,
+            "locked_at": tpl.locked_at.isoformat() if tpl.locked_at else None,
+            "created_by": tpl.created_by,
+        },
+        "fields": list(tpl.fields_json),
+        "locked": tpl.locked,
+    }
+
+
+@router.post("/projects/{project_id}/stages/extraction/template/save")
+def extraction_save_template(
+    project_id: int,
+    payload: _TemplateSavePayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.extraction_template import save_template
+    try:
+        tpl = save_template(
+            session,
+            project.id or project_id,
+            payload.name,
+            payload.fields,
+            created_by=context.user_id,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return {"saved": True, "id": tpl.id, "name": tpl.name, "locked": tpl.locked}
+
+
+@router.post("/projects/{project_id}/stages/extraction/template/lock")
+def extraction_lock_template(
+    project_id: int,
+    payload: _TemplateLockPayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.extraction_template import lock_template
+    try:
+        tpl = lock_template(session, payload.template_id)
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return {"locked": True, "id": tpl.id, "locked_at": tpl.locked_at.isoformat() if tpl.locked_at else None}
+
+
+@router.post(
+    "/projects/{project_id}/stages/records/{record_id}/extraction/cell",
+    status_code=status.HTTP_201_CREATED,
+)
+def extraction_upsert_cell(
+    project_id: int,
+    record_id: int,
+    payload: _CellUpsertPayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.extraction_engine import upsert_cell
+    try:
+        cell = upsert_cell(
+            session,
+            project.id or project_id,
+            record_id,
+            payload.field_key,
+            payload.reviewer_id,
+            payload.value,
+            confidence=payload.confidence,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return {
+        "record_id": cell.record_id,
+        "field_key": cell.field_key,
+        "reviewer_id": cell.reviewer_id,
+        "value": cell.value_json,
+        "confidence": cell.confidence,
+    }
+
+
+@router.get("/projects/{project_id}/stages/extraction/evidence-table")
+def extraction_evidence_table(
+    project_id: int,
+    reviewer_ids: str | None = Query(default=None),
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.extraction_engine import pivot_wide_evidence
+    rids_list: list[str] | None = None
+    if reviewer_ids is not None and reviewer_ids.strip():
+        rids_list = [s.strip() for s in reviewer_ids.split(",") if s.strip()]
+    rows = pivot_wide_evidence(session, project.id or project_id, reviewer_ids=rids_list)
+    import dataclasses as _dc
+    return {
+        "rows": [_dc.asdict(r) for r in rows],
+        "row_count": len(rows),
+    }
+
+
+@router.get("/projects/{project_id}/stages/extraction/kappa")
+def extraction_kappa(
+    project_id: int,
+    reviewer_a_id: str = Query(...),
+    reviewer_b_id: str = Query(...),
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.extraction_engine import kappa_summary
+    import dataclasses as _dc
+    items = kappa_summary(
+        session,
+        project.id or project_id,
+        reviewer_a_id,
+        reviewer_b_id,
+    )
+    return {
+        "items": [_dc.asdict(it) for it in items],
+        "reviewer_a_id": reviewer_a_id,
+        "reviewer_b_id": reviewer_b_id,
+    }
+
+
+@router.post(
+    "/projects/{project_id}/stages/analysis/outcomes/define",
+    status_code=status.HTTP_201_CREATED,
+)
+def analysis_outcome_define(
+    project_id: int,
+    payload: _OutcomeDefinePayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.meta_analysis import define_outcome
+    od = define_outcome(
+        session,
+        project.id or project_id,
+        payload.name,
+        payload.outcome_type,
+        payload.measure,
+        time_point=payload.time_point,
+    )
+    return {
+        "id": od.id,
+        "name": od.label,
+        "outcome_type": payload.outcome_type,
+        "measure": payload.measure,
+        "time_point": payload.time_point,
+    }
+
+
+@router.get("/projects/{project_id}/stages/analysis/outcomes")
+def analysis_outcomes_list(
+    project_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.meta_analysis import list_outcomes
+    items = list_outcomes(session, project.id or project_id)
+    return {"items": items, "count": len(items)}
+
+
+@router.patch("/projects/{project_id}/stages/analysis/outcomes/{outcome_id}")
+def analysis_outcome_rename(
+    project_id: int,
+    outcome_id: int,
+    payload: _OutcomeRenamePayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.meta_analysis import rename_outcome
+    od = rename_outcome(session, project.id or project_id, outcome_id, payload.name)
+    return {"id": od.id, "name": od.label}
+
+
+@router.delete("/projects/{project_id}/stages/analysis/outcomes/{outcome_id}")
+def analysis_outcome_delete(
+    project_id: int,
+    outcome_id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.meta_analysis import delete_outcome
+    delete_outcome(session, project.id or project_id, outcome_id)
+    return {"deleted": True, "outcome_id": outcome_id}
+
+
+@router.post(
+    "/projects/{project_id}/stages/analysis/outcomes/{outcome_id}/arm-data",
+    status_code=status.HTTP_201_CREATED,
+)
+def analysis_outcome_arm_upsert(
+    project_id: int,
+    outcome_id: int,
+    payload: _ArmUpsertPayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.meta_analysis import upsert_outcome_arm_data
+    try:
+        ad = upsert_outcome_arm_data(
+            session,
+            project.id or project_id,
+            payload.outcome_id,
+            payload.record_id,
+            payload.arm_label,
+            payload.reviewer_id,
+            binary_data=payload.binary_data,
+            continuous_data=payload.continuous_data,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return {
+        "id": ad.id,
+        "outcome_id": ad.outcome_id,
+        "record_id": ad.record_id,
+        "arm_label": ad.arm_label,
+        "data_json": ad.data_json,
+    }
+
+
+@router.post("/projects/{project_id}/stages/analysis/run-meta")
+def analysis_run_meta(
+    project_id: int,
+    payload: _MetaRunPayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.meta_analysis import run_meta_analysis
+    try:
+        result = run_meta_analysis(
+            session,
+            project.id or project_id,
+            payload.outcome_id,
+            payload.analysis_model,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
+    return result
+
+
+@router.get("/projects/{project_id}/stages/analysis/forest/{outcome_id}.svg")
+def analysis_forest_svg(
+    project_id: int,
+    outcome_id: int,
+    model: str = Query(default="random_dl", pattern=r"^(fixed_iv|fixed_mh|random_dl)$"),
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> Response:
+    project = _load_project_or_404(session, project_id, context)
+    from app.services.meta_analysis import generate_forest_svg
+    svg_bytes = generate_forest_svg(
+        session,
+        project.id or project_id,
+        outcome_id,
+        model=model,
+    )
+    return Response(
+        content=svg_bytes,
+        media_type="image/svg+xml",
+        headers={"Content-Disposition": f'inline; filename="forest-{outcome_id}.svg"'},
+    )
+

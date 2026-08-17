@@ -1,8 +1,10 @@
 from collections.abc import Generator
 
+from fastapi import Depends
 from sqlmodel import SQLModel, Session, create_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session as SessionClass
+
 
 engine = create_engine(
     "sqlite://",
