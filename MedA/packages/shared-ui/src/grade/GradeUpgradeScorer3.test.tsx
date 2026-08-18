@@ -12,87 +12,86 @@ describe("GradeUpgradeScorer3", () => {
     expect(screen.getAllByRole("checkbox").length).toEqual(3);
   });
 
-  it("U02 默认 INIT_UP 全 false → 0 checked", () => {
+  it("U02 默认全 false → 0 checked，3 unchecked", () => {
     render(<GradeUpgradeScorer3 value={INIT_UP} onChange={vi.fn()} certainty="High" />);
     expect(screen.getAllByRole("checkbox", { checked: false }).length).toEqual(3);
   });
 
-  it("U03 点击 large_effect → onChange 返回 large_effect=true 其他 false", () => {
+  it("U03 点击 large_effect (box0) → onChange 它 true，其他 false", () => {
     const changes: Grade3Upgrades[] = [];
     const onChange = (next: Grade3Upgrades) => { changes.push(next); };
     render(<GradeUpgradeScorer3 value={INIT_UP} onChange={onChange} certainty="High" />);
     const boxes = screen.getAllByRole("checkbox") as HTMLInputElement[];
     fireEvent.click(boxes[0]);
-    expect(changes.length).toBeGreaterThanOrEqual(1);
-    expect(changes[changes.length - 1].large_effect).toEqual(true);
-    expect(changes[changes.length - 1].dose_response).toEqual(false);
-    expect(changes[changes.length - 1].confounders_reduce).toEqual(false);
+    const last = changes[changes.length - 1];
+    expect(last.large_effect).toEqual(true);
+    expect(last.dose_response).toEqual(false);
+    expect(last.confounders_reduce).toEqual(false);
   });
 
-  it("U04 点击 dose_response → onChange 返回 dose_response=true", () => {
+  it("U04 点击 dose_response (box1) → true", () => {
     const changes: Grade3Upgrades[] = [];
     const onChange = (next: Grade3Upgrades) => { changes.push(next); };
     render(<GradeUpgradeScorer3 value={INIT_UP} onChange={onChange} certainty="Moderate" />);
     const boxes = screen.getAllByRole("checkbox") as HTMLInputElement[];
     fireEvent.click(boxes[1]);
-    expect(changes.length).toBeGreaterThanOrEqual(1);
-    expect(changes[changes.length - 1].dose_response).toEqual(true);
+    const last = changes[changes.length - 1];
+    expect(last.dose_response).toEqual(true);
   });
 
-  it("U05 点击 confounders_reduce → onChange 返回 confounders_reduce=true", () => {
+  it("U05 点击 confounders_reduce (box2) → true", () => {
     const changes: Grade3Upgrades[] = [];
     const onChange = (next: Grade3Upgrades) => { changes.push(next); };
     render(<GradeUpgradeScorer3 value={INIT_UP} onChange={onChange} certainty="Low" />);
     const boxes = screen.getAllByRole("checkbox") as HTMLInputElement[];
     fireEvent.click(boxes[2]);
-    expect(changes.length).toBeGreaterThanOrEqual(1);
-    expect(changes[changes.length - 1].confounders_reduce).toEqual(true);
+    const last = changes[changes.length - 1];
+    expect(last.confounders_reduce).toEqual(true);
   });
 
-  it("U06 全选 3 → 全 true", () => {
+  it("U06 初始 2 true + box2 click → 全 3 true", () => {
     const changes: Grade3Upgrades[] = [];
     const onChange = (next: Grade3Upgrades) => { changes.push(next); };
     const v: Grade3Upgrades = { large_effect: true, dose_response: true, confounders_reduce: false };
     render(<GradeUpgradeScorer3 value={v} onChange={onChange} certainty="VeryLow" />);
     const boxes = screen.getAllByRole("checkbox") as HTMLInputElement[];
     fireEvent.click(boxes[2]);
-    expect(changes.length).toBeGreaterThanOrEqual(1);
     expect(changes[changes.length - 1]).toEqual({ large_effect: true, dose_response: true, confounders_reduce: true });
   });
 
-  it("U07 certainty badge High green class/color present", () => {
+  it("U07 certainty=High → 文本 High 存在 innerHTML", () => {
     const { container } = render(<GradeUpgradeScorer3 value={INIT_UP} onChange={vi.fn()} certainty="High" />);
     expect(container.innerHTML.includes("High")).toEqual(true);
   });
 
-  it("U08 certainty badge Moderate blue present", () => {
+  it("U08 certainty=Moderate → 文本 Moderate 存在", () => {
     const { container } = render(<GradeUpgradeScorer3 value={INIT_UP} onChange={vi.fn()} certainty="Moderate" />);
     expect(container.innerHTML.includes("Moderate")).toEqual(true);
   });
 
-  it("U09 certainty badge Low orange present", () => {
+  it("U09 certainty=Low → 文本 Low 存在", () => {
     const { container } = render(<GradeUpgradeScorer3 value={INIT_UP} onChange={vi.fn()} certainty="Low" />);
     expect(container.innerHTML.includes("Low")).toEqual(true);
   });
 
-  it("U10 certainty badge VeryLow red camelCase NO underscore present", () => {
+  it("U10 certainty=VeryLow (NO underscore camelCase) → 文本 VeryLow 存在", () => {
     const { container } = render(<GradeUpgradeScorer3 value={INIT_UP} onChange={vi.fn()} certainty="VeryLow" />);
     expect(container.innerHTML.includes("VeryLow")).toEqual(true);
   });
 
-  it("U11 locked=true 所有 checkbox disabled", () => {
+  it("U11 locked=true 所有 3 checkbox disabled", () => {
     render(<GradeUpgradeScorer3 value={INIT_UP} onChange={vi.fn()} certainty="High" locked />);
     const boxes = screen.getAllByRole("checkbox") as HTMLInputElement[];
     expect(boxes.every(b => b.disabled)).toEqual(true);
   });
 
-  it("U12 unlocked=false checkbox not disabled", () => {
+  it("U12 unlocked → 至少 1 个 checkbox 未 disabled", () => {
     render(<GradeUpgradeScorer3 value={INIT_UP} onChange={vi.fn()} certainty="High" />);
     const boxes = screen.getAllByRole("checkbox") as HTMLInputElement[];
     expect(boxes.some(b => !b.disabled)).toEqual(true);
   });
 
-  it("U13 GradeCertaintyFinal 4 值 exact union（非驼峰外没有 Very_Low）", () => {
+  it("U13 GradeCertaintyFinal 4 值 排序后 exact [High,Low,Moderate,VeryLow]", () => {
     const _a: GradeCertaintyFinal = "High";
     const _b: GradeCertaintyFinal = "Moderate";
     const _c: GradeCertaintyFinal = "Low";
@@ -100,7 +99,7 @@ describe("GradeUpgradeScorer3", () => {
     expect([_a,_b,_c,_d].sort()).toEqual(["High","Low","Moderate","VeryLow"]);
   });
 
-  it("U14 Grade3Upgrades 3 keys sorted equal 规范集合", () => {
+  it("U14 Grade3Upgrades 3 keys sorted = [confounders_reduce, dose_response, large_effect]", () => {
     const keys: (keyof Grade3Upgrades)[] = ["large_effect","dose_response","confounders_reduce"];
     expect(keys.sort()).toEqual(["confounders_reduce","dose_response","large_effect"]);
   });

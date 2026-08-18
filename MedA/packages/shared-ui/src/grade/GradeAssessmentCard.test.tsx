@@ -14,13 +14,11 @@ const DOM5: Grade5Domains = {
 const UPG3: Grade3Upgrades = { large_effect: false, dose_response: false, confounders_reduce: false };
 
 describe("GradeAssessmentCard", () => {
-  it("A01 card 包含 Moderate certainty badge（1 downgrade score=1 Moderate）", () => {
+  it("A01 card 包含 Moderate 文本", () => {
     render(
       <GradeAssessmentCard
-        outcomeLabel="MACE 12mo"
-        reviewerLabel="Alice"
-        domains={DOM5} upgrades={UPG3}
-        certaintyFinal="Moderate"
+        outcomeLabel="MACE 12mo" reviewerLabel="Alice"
+        domains={DOM5} upgrades={UPG3} certaintyFinal="Moderate"
         onDomainsChange={vi.fn()} onUpgradesChange={vi.fn()}
         onSave={vi.fn()} onLock={vi.fn()}
       />
@@ -28,11 +26,10 @@ describe("GradeAssessmentCard", () => {
     expect(screen.queryAllByText(/Moderate/).length).toBeGreaterThan(0);
   });
 
-  it("A02 card 显示 outcome label MACE", () => {
+  it("A02 显示 outcome label 'MACE 12mo'", () => {
     render(
       <GradeAssessmentCard
-        outcomeLabel="MACE 12mo"
-        reviewerLabel="Alice"
+        outcomeLabel="MACE 12mo" reviewerLabel="Alice"
         domains={DOM5} upgrades={UPG3} certaintyFinal="Moderate"
         onDomainsChange={vi.fn()} onUpgradesChange={vi.fn()}
         onSave={vi.fn()} onLock={vi.fn()}
@@ -41,11 +38,10 @@ describe("GradeAssessmentCard", () => {
     expect(screen.queryByText("MACE 12mo")).toBeTruthy();
   });
 
-  it("A03 card 包含 Save 按钮", () => {
+  it("A03 Save 按钮存在（按名称 /Save/i）", () => {
     render(
       <GradeAssessmentCard
-        outcomeLabel="MACE 12mo"
-        reviewerLabel="Alice"
+        outcomeLabel="MACE 12mo" reviewerLabel="Alice"
         domains={DOM5} upgrades={UPG3} certaintyFinal="Moderate"
         onDomainsChange={vi.fn()} onUpgradesChange={vi.fn()}
         onSave={vi.fn()} onLock={vi.fn()}
@@ -54,11 +50,10 @@ describe("GradeAssessmentCard", () => {
     expect(screen.getByRole("button", { name: /Save/i })).toBeTruthy();
   });
 
-  it("A04 card 包含 Lock 按钮", () => {
+  it("A04 Lock 按钮存在（按名称 /Lock/i）", () => {
     render(
       <GradeAssessmentCard
-        outcomeLabel="MACE 12mo"
-        reviewerLabel="Alice"
+        outcomeLabel="MACE 12mo" reviewerLabel="Alice"
         domains={DOM5} upgrades={UPG3} certaintyFinal="Moderate"
         onDomainsChange={vi.fn()} onUpgradesChange={vi.fn()}
         onSave={vi.fn()} onLock={vi.fn()}
@@ -67,12 +62,11 @@ describe("GradeAssessmentCard", () => {
     expect(screen.getByRole("button", { name: /Lock/i })).toBeTruthy();
   });
 
-  it("A05 Save 点击 onSave 被调用", () => {
+  it("A05 Save 点击 → onSave 调用 1 次", () => {
     const onSave = vi.fn();
     render(
       <GradeAssessmentCard
-        outcomeLabel="MACE 12mo"
-        reviewerLabel="Alice"
+        outcomeLabel="MACE 12mo" reviewerLabel="Alice"
         domains={DOM5} upgrades={UPG3} certaintyFinal="Moderate"
         onDomainsChange={vi.fn()} onUpgradesChange={vi.fn()}
         onSave={onSave} onLock={vi.fn()}
@@ -82,12 +76,11 @@ describe("GradeAssessmentCard", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
-  it("A06 Lock 点击 onLock 被调用", () => {
+  it("A06 Lock 点击 → onLock 调用 1 次", () => {
     const onLock = vi.fn();
     render(
       <GradeAssessmentCard
-        outcomeLabel="MACE 12mo"
-        reviewerLabel="Alice"
+        outcomeLabel="MACE 12mo" reviewerLabel="Alice"
         domains={DOM5} upgrades={UPG3} certaintyFinal="Moderate"
         onDomainsChange={vi.fn()} onUpgradesChange={vi.fn()}
         onSave={vi.fn()} onLock={onLock}
@@ -97,7 +90,7 @@ describe("GradeAssessmentCard", () => {
     expect(onLock).toHaveBeenCalledTimes(1);
   });
 
-  it("A07 locked=true Save 按钮 disabled", () => {
+  it("A07 locked=true → Save 按钮 disabled", () => {
     render(
       <GradeAssessmentCard
         outcomeLabel="MACE 12mo" reviewerLabel="Alice"
@@ -110,7 +103,7 @@ describe("GradeAssessmentCard", () => {
     expect(btn.disabled).toEqual(true);
   });
 
-  it("A08 locked=true Lock 按钮变成 disabled Unlock 字样或禁用", () => {
+  it("A08 locked=true → Lock 按钮 disabled (名称含 Lock 或 Unlock)", () => {
     render(
       <GradeAssessmentCard
         outcomeLabel="MACE 12mo" reviewerLabel="Alice"
@@ -123,7 +116,7 @@ describe("GradeAssessmentCard", () => {
     expect(btn.disabled).toEqual(true);
   });
 
-  it("A09 reviewerLabel 渲染 Alice", () => {
+  it("A09 渲染 reviewerLabel 'Alice'", () => {
     render(
       <GradeAssessmentCard
         outcomeLabel="MACE 12mo" reviewerLabel="Alice"
@@ -135,7 +128,7 @@ describe("GradeAssessmentCard", () => {
     expect(screen.queryByText(/Alice/)).toBeTruthy();
   });
 
-  it("A10 certainty High 绿色 badge 渲染显示 High", () => {
+  it("A10 certainty=High → High 文本显示", () => {
     render(
       <GradeAssessmentCard
         outcomeLabel="HF Hospitalization" reviewerLabel="Bob"
@@ -149,7 +142,7 @@ describe("GradeAssessmentCard", () => {
     expect(screen.queryAllByText("High").length).toBeGreaterThan(0);
   });
 
-  it("A11 certainty Low 橙色显示", () => {
+  it("A11 certainty=Low → Low 文本", () => {
     const { container } = render(
       <GradeAssessmentCard
         outcomeLabel="X" reviewerLabel="R"
@@ -161,7 +154,7 @@ describe("GradeAssessmentCard", () => {
     expect(container.innerHTML.includes("Low")).toEqual(true);
   });
 
-  it("A12 certainty VeryLow 红色显示", () => {
+  it("A12 certainty=VeryLow → VeryLow 文本", () => {
     const { container } = render(
       <GradeAssessmentCard
         outcomeLabel="X" reviewerLabel="R"
@@ -173,11 +166,11 @@ describe("GradeAssessmentCard", () => {
     expect(container.innerHTML.includes("VeryLow")).toEqual(true);
   });
 
-  it("A13 组件 props-only: domains/upgrades 传入 → 不在内部发起 REST（无 fetch inside）", () => {
+  it("A13 props-only assertion (sanity)", () => {
     expect(true).toEqual(true);
   });
 
-  it("A14 card 渲染时不会自动调用 onSave / onLock（初始不触发）", () => {
+  it("A14 初始渲染不触发 onSave/onLock（zero calls）", () => {
     const onSave = vi.fn(); const onLock = vi.fn();
     render(
       <GradeAssessmentCard
@@ -191,7 +184,7 @@ describe("GradeAssessmentCard", () => {
     expect(onLock).toHaveBeenCalledTimes(0);
   });
 
-  it("A15 4 档 certainty badge 显示后对应颜色类名 grade-color-High/Moderate/Low/VeryLow", () => {
+  it("A15 certainty Moderate → innerHTML 匹配 /Moderate/", () => {
     const { container } = render(
       <GradeAssessmentCard
         outcomeLabel="X" reviewerLabel="R"
@@ -200,6 +193,6 @@ describe("GradeAssessmentCard", () => {
         onSave={vi.fn()} onLock={vi.fn()}
       />
     );
-    expect(container.textContent || container.innerHTML).toMatch(/Moderate/);
+    expect(/Moderate/.test(container.innerHTML)).toEqual(true);
   });
 });
