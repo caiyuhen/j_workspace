@@ -1,0 +1,104 @@
+.............................ssss....................................... [ 16%]
+........................................................................ [ 32%]
+........................................................................ [ 48%]
+........................................................................ [ 65%]
+......................................................F..F.............. [ 81%]
+........................................................................ [ 97%]
+..........                                                               [100%]
+================================== FAILURES ===================================
+_______________ test_one_source_failed_marks_run_partial_failed _______________
+
+db_session = <sqlmodel.orm.session.Session object at 0x0000018FCC497800>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000018FCD527320>
+
+    def test_one_source_failed_marks_run_partial_failed(db_session: Session, monkeypatch) -> None:
+        user = create_test_user(db_session)
+        project = create_test_project(db_session, user)
+        # 只 inject pubmed，其余两条空 stub 会报错（被我们用 monkeypatch 改成抛异常）
+        inject_mock_datasets_into_adapters(monkeypatch, {"pubmed": SOURCE_DATASET_REGISTRY["pubmed"]})
+    
+        async def bad_run(*_a, **_k):
+            raise RuntimeError("simulated CNKI failure")
+        monkeypatch.setattr(
+            "app.services.sources.cnki_adapter.CnkiAdapter.run_search", bad_run
+        )
+    
+        run = SearchRun(
+            project_id=project.id,
+            query_snapshot="{}",
+            selected_sources="pubmed,cnki,wanfang",
+            status="pending",
+        )
+        db_session.add(run)
+        db_session.flush()
+        for s in ["pubmed", "cnki", "wanfang"]:
+            db_session.add(SearchRunSource(
+                search_run_id=run.id, source_key=s, status="pending",
+            ))
+        db_session.commit()
+    
+        # 3 ticks 保证 bad_run 的 failure 被写入 error_message
+        for _ in range(3):
+            asyncio.run(_worker_tick_once(db_session))
+    
+        db_session.refresh(run)
+        # partial_failed：至少 1 completed，至少 1 failed
+>       assert run.status == "partial_failed"
+E       AssertionError: assert 'completed' == 'partial_failed'
+E         
+E         - partial_failed
+E         + completed
+
+tests\test_search_worker.py:93: AssertionError
+________ test_two_sources_failed_marks_partial_failed_with_two_errors _________
+
+db_session = <sqlmodel.orm.session.Session object at 0x0000018FCD50AB70>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x0000018FCD50ACF0>
+
+    def test_two_sources_failed_marks_partial_failed_with_two_errors(db_session: Session, monkeypatch) -> None:
+        user = create_test_user(db_session)
+        project = create_test_project(db_session, user)
+        # only inject pubmed to succeed
+        inject_mock_datasets_into_adapters(monkeypatch, {"pubmed": SOURCE_DATASET_REGISTRY["pubmed"]})
+    
+        async def bad_run_cnki(*_a, **_k):
+            raise RuntimeError("simulated CNKI failure")
+        monkeypatch.setattr(
+            "app.services.sources.cnki_adapter.CnkiAdapter.run_search", bad_run_cnki
+        )
+    
+        async def bad_run_wanfang(*_a, **_k):
+            raise RuntimeError("simulated Wanfang failure")
+        monkeypatch.setattr(
+            "app.services.sources.wanfang_adapter.WanfangAdapter.run_search", bad_run_wanfang
+        )
+    
+        run = SearchRun(
+            project_id=project.id,
+            query_snapshot="{}",
+            selected_sources="pubmed,cnki,wanfang",
+            status="pending",
+        )
+        db_session.add(run)
+        db_session.flush()
+        for s in ["pubmed", "cnki", "wanfang"]:
+            db_session.add(SearchRunSource(
+                search_run_id=run.id, source_key=s, status="pending",
+            ))
+        db_session.commit()
+    
+        # 3 ticks to ensure failures are written
+        for _ in range(3):
+            asyncio.run(_worker_tick_once(db_session))
+    
+        db_session.refresh(run)
+        # two sources failed, one succeeded -> status should be partial_failed (not completed, not fully failed)
+>       assert run.status != "completed"
+E       AssertionError: assert 'completed' != 'completed'
+E        +  where 'completed' = SearchRun(id=1, project_id=1, query_snapshot='{}', status='completed', finished_at=datetime.datetime(2026, 8, 18, 9, 1...ted_sources='pubmed,cnki,wanfang', search_query_version_id=None, started_at=None, total_hits_raw=3, error_message=None).status
+
+tests\test_search_worker.py:210: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_search_worker.py::test_one_source_failed_marks_run_partial_failed
+FAILED tests/test_search_worker.py::test_two_sources_failed_marks_partial_failed_with_two_errors
+2 failed, 436 passed, 4 skipped, 9 deselected in 345.53s (0:05:45)

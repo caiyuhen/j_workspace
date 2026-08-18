@@ -87,3 +87,66 @@ def test_ac7f_html_forest_svg_directly_embedded_without_base64_starts_svg_tag():
     # Forest SVG embedded direct as <svg element
     assert "<svg " in html or '&lt;svg' not in html, "SVG must be direct <svg not escaped"
     assert "forest-test" in html, "forest id missing (not embedded correctly)"
+
+# ── T3 additive overrides dict tests (NOTOUCH-5, only)
+def _t3_small_project_report_input():
+    from app.services.report_engine import ProjectReportInput, GradeAssRow
+    return ProjectReportInput(
+        project_name="T3-Proj", project_id=99999, owner_display="Tester",
+        abstract_summary="tiny baseline",
+        prisma_checklist_masked_count=3, prisma_checklist_total_items=27,
+        grade_rows=[
+            GradeAssRow(outcome_label="Mortal", certainty="High", participants_n=100, studies_k=2,
+                        effect_label="RR 0.80", ar_control="10%", ar_intervention="8%", comments="c"),
+        ],
+        forest_svg_content="<!-- forest svg -->",
+    )
+
+def test_empty_string_overrides_do_nothing_T3():
+    from app.services.report_engine import generate_report_three_formats
+    pi = _t3_small_project_report_input()
+    md0, html0, txt0 = generate_report_three_formats(pi)
+    ov_map_keys = ["background", "methods", "pico", "results", "grade_assessment",
+                   "summary_of_findings", "discussion", "appendices"]
+    overrides_empty: dict = {f"override_ch{i}_{ov_map_keys[i-1]}": "" for i in range(1, 9)}
+    md1, html1, txt1 = generate_report_three_formats(pi, overrides=overrides_empty)
+    assert md1 == md0
+    assert html1 == html0
+    assert txt1 == txt0
+
+def test_override_ch1_only_T3():
+    from app.services.report_engine import generate_report_three_formats
+    pi = _t3_small_project_report_input()
+    md0, _, _ = generate_report_three_formats(pi)
+    custom = "=== T3 CUSTOM CH1 BG \n\n**Bold** text and newlines\n\n## 子标题"
+    md1, html1, txt1 = generate_report_three_formats(pi, overrides={"override_ch1_background": custom})
+    assert custom in md1
+    i = md0.find("## 2. Methods")
+    tail = md0[i:i+300]
+    assert tail in md1
+
+def test_override_all_8_T3():
+    from app.services.report_engine import generate_report_three_formats
+    pi = _t3_small_project_report_input()
+    ov_map = ["background", "methods", "pico", "results", "grade_assessment",
+              "summary_of_findings", "discussion", "appendices"]
+    ov: dict = {f"override_ch{i}_{ov_map[i-1]}": f"@@@CUSTOM_CH{i}_{ov_map[i-1]}" for i in range(1, 9)}
+    md, html, txt = generate_report_three_formats(pi, overrides=ov)
+    for i in range(1, 9):
+        assert ov[f"override_ch{i}_{ov_map[i-1]}"] in md
+        assert ov[f"override_ch{i}_{ov_map[i-1]}"] in txt
+
+def test_override_ch5_ch6_only_T3():
+    from app.services.report_engine import generate_report_three_formats
+    pi = _t3_small_project_report_input()
+    md0, _h, _t = generate_report_three_formats(pi)
+    custom5 = "===CH5 CUSTOM"
+    custom6 = "===CH6 CUSTOM"
+    md1, _, _ = generate_report_three_formats(pi, overrides={
+        "override_ch5_grade_assessment": custom5,
+        "override_ch6_summary_of_findings": custom6,
+    })
+    assert custom5 in md1
+    assert custom6 in md1
+    i = md0.find("## 1. Background")
+    assert md0[i:i+200] in md1

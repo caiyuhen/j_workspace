@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>ReportContentEditor8 · Section 2 Mockup</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; padding:24px; font-family: -apple-system, system-ui, sans-serif; background:#f8fafc; color:#0f172a; }
+  h1 { font-size: 19px; margin: 0 0 4px; }
+  .sub { color:#475569; margin:0 0 18px; font-size: 13px; }
+  .toolbar {
+    background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:12px; margin-bottom:14px;
+    display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+  }
+  .toolbar h3 { margin:0; font-size:13px; color:#0f172a; flex:0 0 auto; }
+  .toolbar .spacer { flex:1; }
+  button {
+    border-radius:7px; border:1px solid #cbd5e1; background:#fff; padding:6px 12px; font-size:12px; cursor:pointer;
+    font-weight:600; color:#0f172a;
+  }
+  button.primary { background:#2563eb; border-color:#2563eb; color:#fff; }
+  button.warn { background:#fef3c7; border-color:#f59e0b; color:#92400e; }
+  button[disabled] { opacity:.45; cursor:not-allowed; }
+  .chapters { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .ch {
+    background:#fff; border:1px solid #e2e8f0; border-radius:10px; padding:12px; display:flex; flex-direction:column; min-height:220px;
+  }
+  .ch.full { grid-column: 1 / -1; }
+  .ch header { display:flex; align-items:center; gap:6px; margin-bottom:8px;}
+  .ch header .no {
+    width:22px; height:22px; flex:0 0 auto; display:inline-flex; align-items:center; justify-content:center;
+    border-radius:6px; background:#eff6ff; color:#1d4ed8; font-weight:700; font-size:11.5px;
+  }
+  .ch header h4 { margin:0; font-size:13px; color:#0f172a;}
+  .ch header .count { margin-left:auto; font-size:11px; color:#64748b; font-family:ui-monospace, Menlo, monospace; }
+  .ch textarea {
+    width:100%; flex:1; min-height:160px; resize:vertical;
+    border:1px solid #e2e8f0; border-radius:7px; padding:8px 10px;
+    font-family: ui-monospace, Menlo, Consolas, monospace; font-size:11.5px; line-height:1.6; color:#1e293b;
+    background:#fcfcfd;
+  }
+  .ch textarea:focus { outline: none; border-color:#2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.15); background:#fff; }
+  .ch.half { }
+  .badge-hint {
+    display:inline-block; padding:1px 6px; font-size:10.5px; border-radius:4px; font-weight:600; margin-left:6px;
+  }
+  .imp-auto { background:#dcfce7; color:#15803d; }
+  .imp-man { background:#e0f2fe; color:#0369a1; }
+  .legend { margin-top:14px; display:flex; gap:14px; flex-wrap:wrap; font-size:11.5px; color:#475569;}
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:4px; vertical-align: middle;}
+</style>
+</head>
+<body>
+  <h1>ReportContentEditor8 · 8 章节 Markdown 编辑器 Mockup</h1>
+  <p class="sub">受控组件：状态保存在 useReportEditorController。支持两类 Import：①「从上游生成草稿」（基于 PICO/GRADE/SoF 数据自动生成 Markdown 骨架） ②「恢复最近版」（从最近一次 ReportSnapshot.md_content 反向解析回填）。</p>
+
+  <div class="toolbar">
+    <h3>📝 编辑工具</h3>
+    <button class="primary" title="基于当前项目已有的 PICO 抽取模板、GRADE 评估行、SoF 行，自动拼接 8 章骨架 Markdown，填入 textarea">⬇ 从上游数据生成草稿</button>
+    <button class="warn" title="从最近一次 ReportSnapshot（GET /projects/pid/reports 返回数组第 0 项）的 md_content 解析 8 章节标题下的正文，回填到 textarea">↺ 恢复最近版 (id=#42)</button>
+    <span class="spacer"></span>
+    <span style="font-size:12px;color:#64748b;">草稿状态：<b style="color:#15803d;">未保存（纯前端中间态）</b>，生成快照后才持久化</span>
+  </div>
+
+  <div class="chapters">
+    <!-- Ch 1 Background -->
+    <div class="ch half">
+      <header>
+        <span class="no">1</span>
+        <h4>Background<span class="badge-hint imp-man">人工精修</span></h4>
+        <span class="count">327 字</span>
+      </header>
+      <textarea placeholder="# 不要在正文里重复写章节标题，引擎自动在生成时加上...&#10;&#10;本系统评价聚焦于 X 干预相对于 Y 对照在 Z 人群中的有效性与安全性。&#10;&#10;## 临床背景&#10;条件 Z 在全球影响约 N 万人，标准治疗 Y 仍有未满足需求...">本系统评价聚焦于 SGLT2 抑制剂相对于常规心衰治疗在 2 型糖尿病合并冠心病患者中的心血管有效性与安全性。
+
+## 临床背景
+2 型糖尿病 (T2DM) 合并冠心病 (CAD) 患者约占糖尿病总人群 32%，标准治疗下仍有 18% 3 年主要不良心血管事件风险。</textarea>
+    </div>
+
+    <!-- Ch 2 Methods -->
+    <div class="ch half">
+      <header>
+        <span class="no">2</span>
+        <h4>Methods<span class="badge-hint imp-auto">可自动</span></h4>
+        <span class="count">512 字</span>
+      </header>
+      <textarea>## 纳入排除
+- RCT / quasi-RCT 均可
+- 人群：T2DM + CAD 确诊
+- 干预：SGLT2i vs 安慰剂/标准治疗
+- 结局：全因死亡、因心衰再住院、SAE
+
+## 检索策略
+2026-08-10 检索 PubMed、Embase、CENTRAL、CNKI、万方，共 5 库。
+
+## 统计方法
+二分类结局 RR/OR，连续性结局 MD/MD。
+I² ≥ 50% 采用 DL 随机效应模型，否则 IV 固定效应模型。</textarea>
+    </div>
+
+    <!-- Ch 3 PICO -->
+    <div class="ch half">
+      <header>
+        <span class="no">3</span>
+        <h4>PICO<span class="badge-hint imp-auto">自动</span></h4>
+        <span class="count">128 字</span>
+      </header>
+      <textarea>- **Population**：年龄 ≥ 18 岁，确诊 2 型糖尿病 (HbA1c ≥ 6.5%) 合并冠心病（冠脉造影 ≥ 50% 狭窄）
+- **Intervention**：SGLT2 抑制剂（达格列净 10mg QD / 恩格列净 25mg QD / 索格列净等）
+- **Comparator**：匹配安慰剂或标准心衰治疗（ACEI/ARB/ARNI + β 受体阻滞剂 + MRA）
+- **Outcome (Primary)**：①全因死亡率 ②因心衰首次再住院率
+- **Outcome (Secondary)**：③严重不良事件 (SAE) ④ HbA1c 变化 ⑤ eGFR 变化</textarea>
+    </div>
+
+    <!-- Ch 4 Results -->
+    <div class="ch half">
+      <header>
+        <span class="no">4</span>
+        <h4>Results<span class="badge-hint imp-auto">自动</span></h4>
+        <span class="count">640 字</span>
+      </header>
+      <textarea>## 文献检索结果
+共检索 23,418 条，去重 5,321 条，初筛纳入 284 篇，终筛纳入 12 项 RCT（n = 38,542）。
+
+## 纳入研究特征
+[表：纳入研究基线特征 → 从 extraction_engine 自动生成]
+
+## Meta 分析结果
+### 4.1 全因死亡率（12 项研究，n=38,542）
+- RR = 0.82 (95% CI 0.75 to 0.90), p &lt; 0.001
+- I² = 12%, τ² = 0.003 (DL 随机)
+- [Forest 图占位 → 由 report_engine 自动插入 SVG]
+
+### 4.2 因心衰再住院（9 项研究，n=31,200）
+- RR = 0.71 (95% CI 0.64 to 0.79), p &lt; 0.001
+- I² = 38% (IV 固定)
+</textarea>
+    </div>
+
+    <!-- Ch 5 GRADE -->
+    <div class="ch half">
+      <header>
+        <span class="no">5</span>
+        <h4>GRADE Assessment<span class="badge-hint imp-auto">自动</span></h4>
+        <span class="count">290 字</span>
+      </header>
+      <textarea>## 结局 1：全因死亡率
+- **Overall Certainty**：⬜⬜⬛⬛ Moderate（从 High 降级 1 档）
+  - 降级原因：RoB 「Some concerns」（3/12 为开放标签）
+  - 未升级：剂量反应不明显、混杂未显著降低效应、效应量中等
+
+## 结局 2：因心衰再住院
+- **Overall Certainty**：⬜⬜⬜⬜ High
+  - 5 域全 No Concerns，效应量 0.71 较大（Large Effect = 1 档升级被 RoB 等均衡）
+
+## 结局 3：严重不良事件
+- **Overall Certainty**：⬛⬛⬛⬛ Very Low
+  - 降级 3 档：Imprecision（CI 跨 1.0）+ Inconsistency（I²=68%）+ Indirectness（随访期 6mo~3yr 差异大）</textarea>
+    </div>
+
+    <!-- Ch 6 SoF -->
+    <div class="ch half">
+      <header>
+        <span class="no">6</span>
+        <h4>Summary of Findings<span class="badge-hint imp-auto">自动</span></h4>
+        <span class="count">210 字</span>
+      </header>
+      <textarea>| 结局 | 研究数 k | 样本量 N | 效应量 (95% CI) | 绝对风险对照 | 绝对风险干预 | 证据质量 GRADE |
+|---|---|---|---|---|---|---|
+| 全因死亡率 | 12 | 38,542 | RR 0.82 (0.75, 0.90) | 12.0% | 9.8% | ⬜⬜⬛⬛ Moderate |
+| 因心衰再住院 | 9 | 31,200 | RR 0.71 (0.64, 0.79) | 22.5% | 17.0% | ⬜⬜⬜⬜ High |
+| 严重不良事件 | 7 | 25,410 | RR 1.03 (0.94, 1.13) | 5.1% | 5.3% | ⬛⬛⬛⬛ Very Low |
+| HbA1c 变化 (MD, %) | 6 | 19,880 | MD -0.52 (-0.68, -0.36) | — | — | ⬜⬛⬛⬛ Low |
+
+*SoF 表严格遵循 Cochrane GRADEpro 12 列格式，生成后人工核对绝对风险值。*</textarea>
+    </div>
+
+    <!-- Ch 7 Discussion -->
+    <div class="ch half">
+      <header>
+        <span class="no">7</span>
+        <h4>Discussion<span class="badge-hint imp-man">人工精修</span></h4>
+        <span class="count">180 字</span>
+      </header>
+      <textarea>## 总体发现
+SGLT2 抑制剂在 T2DM+CAD 人群中显著降低全因死亡 18% (RR=0.82) 与心衰再住院 29% (RR=0.71)，严重不良事件未见统计学显著增加。
+
+## 证据强度
+全因死亡为 Moderate（RoB 局限）、心衰再住院为 High，临床决策可较高依赖。
+
+## 局限性
+① 纳入研究随访长度差异大（6mo~3yr）；② 部分亚组（老年 ≥ 75 岁、eGFR &lt; 30）数据不足。
+
+## 与现有研究的一致性
+与 EMPA-REG OUTCOME (2015)、DECLARE-TIMI 58 (2018) 方向一致。</textarea>
+    </div>
+
+    <!-- Ch 8 Appendices -->
+    <div class="ch full">
+      <header>
+        <span class="no">8</span>
+        <h4>Appendices<span class="badge-hint imp-auto">可自动</span></h4>
+        <span class="count">420 字</span>
+      </header>
+      <textarea>## Appendix 1 · 5 数据库完整检索策略（从 search_query 自动生成）
+- PubMed 2026-08-10：`("SGLT2 Inhibitors"[MeSH Terms]) AND (("Diabetes Mellitus, Type 2"[MeSH]) AND ("Coronary Artery Disease"[MeSH])` → Hits = 8,432
+- Embase 2026-08-10：`'sglt2 inhibitor'/exp AND 'type 2 diabetes'/exp AND 'coronary artery disease'/exp` → Hits = 10,241
+- CENTRAL 2026 Issue 8 → Hits = 2,877
+- CNKI → Hits = 1,522
+- Wanfang → Hits = 346
+
+## Appendix 2 · PRISMA 2020 Checklist 覆盖声明
+见 [Prisma2020Checklist27] 组件，共 17/27 项明确满足，详见 Output Stage PRISMA 清单。
+
+## Appendix 3 · 纳入研究信息
+[从 extraction_engine 自动生成：每研究的 Author·Year·Country·Intervention·N·Followup]
+
+## Appendix 4 · 证据质量 GRADE 每域评估详情
+[从 GradeAssessment 表 5 域自动展开：每结局 × 每域 × 描述性说明]
+</textarea>
+    </div>
+  </div>
+
+  <div class="legend">
+    <div><i style="background:#dcfce7;"></i> <b>自动</b>：Import 时完全由上游数据生成，零人工可直接进入报告</div>
+    <div><i style="background:#e0f2fe;"></i> <b>可自动</b>：Import 有骨架，通常需要人工补充精修</div>
+    <div><i style="background:#fef3c7;"></i> <b>人工精修</b>：Import 只提供占位，主要靠人工撰写</div>
+    <div><i style="background:#fecaca;"></i> 草稿不持久化 → 生成快照才写入 ReportSnapshot 表</div>
+  </div>
+</body>
+</html>

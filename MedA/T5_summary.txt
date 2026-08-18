@@ -1,0 +1,106 @@
+====================================================================
+Wave 8.4 T5 SUPERAGENT REVIEW · ReportContentEditor8.tsx
+====================================================================
+Date: 2026-08-18
+Work Dir: d:\workspace\MedA
+
+====================================================================
+1) 组件总行数 + 核心函数名
+====================================================================
+File: packages/shared-ui/src/components/ReportContentEditor8.tsx
+Total Lines: 512 (目标 ~450；+62 因包含 parseSnapshot 逐行算法 + 完整 UpstreamData 融合逻辑)
+
+Exported API (5 exports):
+  A. React Component
+     1. ReportContentEditor8: React.FC<Editor8Props>
+        - useState<Report8ChaptersDraft> draft
+        - useState<Set<keyof Report8ChaptersDraft>> dirtyFields
+        - handleChange(key, value) → setDirty + onValueChange
+        - handleImportClick() → onImportUpstream + generateDraftFromUpstream 合并
+        - handleRestoreClick() → onRestoreSnapshot + parseSnapshotInto8Chapters 重置
+
+  B. Pure Functions (无网络，无副作用)
+     2. parseSnapshotInto8Chapters(snapshot_md: string) -> Report8ChaptersDraft
+        - 算法：逐行扫描 + _matchChapter(line) 映射 8 key
+        - _CH_RE_MAP：8 章 × (英文正则 + 中文正则) 双锚识别
+        - 缺失章节 → 空字符串；source_snapshot_id = null
+     3. generateDraftFromUpstream({background,methods,pico,results,grade,sof,discussion,appendices}) -> Report8ChaptersDraft
+        - 优先级：
+          ch1=background; ch2=methods; ch3=pico; ch4=results
+          ch5=grade + "\n\n" + sof (grade优先+sof拼接)
+          ch6=sof
+          ch7=discussion (无则 grade要点标题 + sof要点标题 合成)
+          ch8=appendices
+     4. CHAPTER_META: ChapterMetaItem[8] 顺序 ch1..ch8
+     5. TAG_COLOR: Record<ChapterTag, {className, label}>
+        auto        → bg-green-100 text-green-800 / 自动生成 / Auto
+        auto_editable → bg-blue-100 text-blue-800 / 自动可编辑 / Auto-Editable
+        manual      → bg-amber-100 text-amber-900 / 人工撰写 / Manual
+
+====================================================================
+2) Step 3 20/20 GREEN 证明
+====================================================================
+Command: npx vitest run ReportContentEditor8 --reporter=default
+Result:  Test Files 1 passed (1)
+         Tests 22 passed (22) [E1-E20 20 个 + C1/C2 常量检查 2 个]
+Exit Code: 0
+
+- 第一次失败 2 个 (E16/E20): 原因 parseSnapshot 正则只盯下一个固定章节号（如 ## 3.），
+  当 md 缺失 3-7 章直接到 8 章时，ch2 会吞掉 8 章。修复：改为逐行扫描 _matchChapter，
+  任何 8 章标题出现即切换 current。
+- 第二次失败 2 个 (E8/E10): 原因中文标题正则用 \b（单词边界）对中文字符不生效。
+  修复：去掉 \b，改为 ##[^#\n]*... 宽松包含匹配。
+
+最终 22/22 全部 PASS。完整 GREEN 矩阵见：d:\workspace\MedA\T5_GREEN.txt
+
+====================================================================
+3) Hard-Gate Compliance Checklist
+====================================================================
+[YES] 0 新增第三方依赖：未修改 package.json；未 import 新包
+[YES] 8 textarea data-testid：ch{1..8}_textarea，均与硬编码常量匹配对照
+[YES] 8 count data-testid：rce8-count-ch{1..8}
+[YES] 按钮 id 精确：btn-import-upstream / btn-restore-snapshot
+[YES] 未修改 packages/shared-ui/src/index.ts（留到 T9 统一 append）
+[YES] CHAPTER_META 顺序 ch1→ch8：[0..7] 严格对应
+[YES] 不发任何网络请求：纯 UI Hook（useState/useCallback/useMemo）
+[YES] sourceSnapshotId 未传时 header 不显示；传时在 rce8-snapshot-id 显示
+[YES] dirtyFields：Set<keyof>；仅手动变更（textarea onChange / 点击导入/恢复）才增删
+[YES] 类型来自 @meda/shared-sdk：import type { Report8ChaptersDraft }
+
+====================================================================
+4) 20 个 Test Case Specs 摘要
+====================================================================
+GROUP A 组件渲染 & 交互
+  E1  8 章卡片 + 8 textarea 存在
+  E2  badge 三色文本匹配（auto=green / auto_editable=blue含自动可编辑 / manual=amber）
+  E3  实时字符数：initialValue=Hello World(11) → fireEvent.change→10 chars
+  E4  改 ch1 → onValueChange(val,dirty) val.ch1_background 正确 dirty 含 ch1_background
+  E5  initialValue {ch1, ch7} → textarea 显示
+  E6  sourceSnapshotId=42 → rce8-snapshot-id 显示 "#42"
+  E7  readOnly=true → 所有 8 textarea disabled/readOnly=true
+GROUP B parseSnapshotInto8Chapters
+  E8  中文 H2（## 1. 研究背景 ... ## 8. 附录）全章解析
+  E9  英文 H2 (## 1. Background ... ## 8. Appendices) 全章解析
+  E10 只含 1 章 → 其余 7 章空串；不 throw
+GROUP C generateDraftFromUpstream
+  E11 全字段输入 → 8 章内容按优先级融合
+  E12 仅传 grade+sof（缺 discussion）→ ch7 含  grade/sof 要点段落
+GROUP D 按钮 & upstream
+  E13 点击 btn-import-upstream → onImportUpstream 调用 1 次
+  E14 enableImportButton=false → queryByTestId 为 null
+  E15 enableRestoreButton=false → queryByTestId 为 null
+  E16 upstreamSnapshotMd 作默认值（initialValue 缺失时）；不触发 onValueChange 初始化
+GROUP E dirtyFields & Restore
+  E17 改 ch1 → dirty.size=1
+  E18 改 ch1 + ch7 → dirty.size=2；has(ch1_background) + has(ch7_discussion)
+  E19 parse 返回 source_snapshot_id = null
+  E20 改 ch1 后点 restore → onRestoreSnapshot；restoredVal 回到 parse 初值；dirty.size=0
+
+====================================================================
+5) 文件清单
+====================================================================
+  NEW: packages/shared-ui/src/components/ReportContentEditor8.tsx
+  NEW: packages/shared-ui/src/__tests__/ReportContentEditor8.test.tsx
+  NEW: d:\workspace\MedA\T5_GREEN.txt
+  NEW: d:\workspace\MedA\T5_summary.txt
+====================================================================

@@ -127,3 +127,93 @@ def test_reset_timed_out_running_sources_marks_as_failed(db_session: Session) ->
     ).one()
     assert src.status == "failed"
     assert "timeout" in (src.error_message or "").lower()
+
+
+def test_all_sources_success_keep_completed_not_partial_failed(db_session: Session, monkeypatch) -> None:
+    user = create_test_user(db_session)
+    project = create_test_project(db_session, user)
+    # inject pubmed and cnki, both will succeed
+    inject_mock_datasets_into_adapters(monkeypatch, {
+        "pubmed": SOURCE_DATASET_REGISTRY["pubmed"],
+        "cnki": SOURCE_DATASET_REGISTRY["cnki"],
+        "wanfang": SOURCE_DATASET_REGISTRY["wanfang"],
+    })
+
+    run = SearchRun(
+        project_id=project.id,
+        query_snapshot="{}",
+        selected_sources="pubmed,cnki,wanfang",
+        status="pending",
+    )
+    db_session.add(run)
+    db_session.flush()
+    for s in ["pubmed", "cnki", "wanfang"]:
+        db_session.add(SearchRunSource(
+            search_run_id=run.id, source_key=s, status="pending",
+        ))
+    db_session.commit()
+
+    # 3 ticks to ensure all sources complete
+    for _ in range(3):
+        asyncio.run(_worker_tick_once(db_session))
+
+    db_session.refresh(run)
+    # all sources success -> run.status should be "completed", NOT "partial_failed"
+    assert run.status == "completed"
+    sources = db_session.exec(
+        select(SearchRunSource).where(SearchRunSource.search_run_id == run.id)
+    ).all()
+    statuses = {s.source_key: s.status for s in sources}
+    assert statuses.get("pubmed") == "completed"
+    assert statuses.get("cnki") == "completed"
+    assert statuses.get("wanfang") == "completed"
+
+
+def test_two_sources_failed_marks_partial_failed_with_two_errors(db_session: Session, monkeypatch) -> None:
+    user = create_test_user(db_session)
+    project = create_test_project(db_session, user)
+    # only inject pubmed to succeed
+    inject_mock_datasets_into_adapters(monkeypatch, {"pubmed": SOURCE_DATASET_REGISTRY["pubmed"]})
+
+    async def bad_run_cnki(*_a, **_k):
+        raise RuntimeError("simulated CNKI failure")
+    monkeypatch.setattr(
+        "app.services.sources.cnki_adapter.CnkiAdapter.run_search", bad_run_cnki
+    )
+
+    async def bad_run_wanfang(*_a, **_k):
+        raise RuntimeError("simulated Wanfang failure")
+    monkeypatch.setattr(
+        "app.services.sources.wanfang_adapter.WanfangAdapter.run_search", bad_run_wanfang
+    )
+
+    run = SearchRun(
+        project_id=project.id,
+        query_snapshot="{}",
+        selected_sources="pubmed,cnki,wanfang",
+        status="pending",
+    )
+    db_session.add(run)
+    db_session.flush()
+    for s in ["pubmed", "cnki", "wanfang"]:
+        db_session.add(SearchRunSource(
+            search_run_id=run.id, source_key=s, status="pending",
+        ))
+    db_session.commit()
+
+    # 3 ticks to ensure failures are written
+    for _ in range(3):
+        asyncio.run(_worker_tick_once(db_session))
+
+    db_session.refresh(run)
+    # two sources failed, one succeeded -> status should be partial_failed (not completed, not fully failed)
+    assert run.status != "completed"
+    sources = db_session.exec(
+        select(SearchRunSource).where(SearchRunSource.search_run_id == run.id)
+    ).all()
+    statuses = {s.source_key: s.status for s in sources}
+    assert statuses.get("pubmed") in {"completed", "running"}
+    assert statuses.get("cnki") == "failed"
+    assert statuses.get("wanfang") == "failed"
+    failed_with_errors = [s for s in sources if s.error_message and s.status == "failed"]
+    assert len(failed_with_errors) >= 2

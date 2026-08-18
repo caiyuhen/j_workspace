@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Wave 8.4 收尾 · 架构与组件图 · 方案 2</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px; font-family: -apple-system, system-ui, sans-serif; background:#f1f5f9; color:#0f172a; }
+  h1 { font-size: 20px; margin: 0 0 4px;}
+  .sub { color:#475569; margin: 0 0 20px; font-size: 13px;}
+  .grid-2 { display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 18px; }
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:16px; }
+  .card h2 { font-size: 15px; margin: 0 0 12px; padding-bottom:8px; border-bottom:1px solid #f1f5f9; color:#0f172a;}
+  .flow { display:grid; grid-template-columns: repeat(5, 1fr); gap:8px; align-items:stretch; min-height: 170px;}
+  .node {
+    border:1.5px solid #cbd5e1; border-radius:10px; padding:10px; font-size:12px;
+    background:#f8fafc; position: relative; display:flex; flex-direction:column; gap:6px;
+  }
+  .node h4 { margin:0; font-size:12px; color:#1e293b;}
+  .node small { color:#64748b;}
+  .node .file { font-family: ui-monospace, Menlo, monospace; font-size:10.5px; color:#2563eb; background:#eff6ff; padding:2px 5px; border-radius:4px; display:inline-block;}
+  .node.s1 { border-color:#2563eb; background:#eff6ff; }
+  .node.s2 { border-color:#0ea5e9; background:#e0f2fe; }
+  .node.s3 { border-color:#10b981; background:#ecfdf5; }
+  .node.s4 { border-color:#f59e0b; background:#fffbeb; }
+  .node.s5 { border-color:#8b5cf6; background:#f5f3ff; }
+  .arrow { position: relative; }
+  .arrow::after { content: "→"; position:absolute; right:-14px; top:50%; transform: translateY(-50%); color:#94a3b8; font-size:18px; font-weight:700; z-index:5;}
+  .legend-ok { background:#dcfce7; color:#15803d; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:600; display:inline-block;}
+  .legend-nt { background:#fee2e2; color:#b91c1c; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:600; display:inline-block;}
+  .legend-add { background:#dbeafe; color:#1d4ed8; padding:3px 8px; border-radius:999px; font-size:11px; font-weight:600; display:inline-block;}
+  ul.compact { margin:0; padding-left:18px; font-size:12px; color:#334155; line-height:1.65;}
+  table.typetab { width:100%; border-collapse:collapse; font-size:11.5px;}
+  table.typetab th, table.typetab td { border:1px solid #e2e8f0; padding:5px 8px; text-align:left;}
+  table.typetab th { background:#f8fafc; color:#0f172a;}
+  .tag { display:inline-block; padding:1px 6px; border-radius:4px; font-size:10.5px; font-family:ui-monospace,Menlo,monospace;}
+  .tag-str { background:#fef3c7; color:#a16207;}
+  .tag-num { background:#dcfce7; color:#15803d;}
+  .tag-opt { background:#e0f2fe; color:#0369a1; text-decoration: underline dotted;}
+  .sec-note { background:#fef2f2; border:1px solid #fecaca; color:#991b1b; border-radius:8px; padding:8px 10px; font-size:12px; margin-top:10px;}
+  .sec-note code { background:#fee2e2; padding:1px 4px; border-radius:3px; font-size:11px;}
+</style>
+</head>
+<body>
+  <h1>Wave 8.4 收尾 · 方案 2：架构与组件图</h1>
+  <p class="sub">纯前端中间态 + 后端 payload 仅 additive 扩展 8 个 override_chN 字段。维持 NOTOUCH-5 基线。</p>
+
+  <div class="grid-2">
+    <!-- Left: Data Flow -->
+    <div class="card">
+      <h2>① 数据流 · 五节点链路</h2>
+      <div class="flow">
+        <div class="node s1 arrow">
+          <h4>1. ReportContentEditor8</h4>
+          <small>用户编辑 8 章节 Markdown 文本</small>
+          <span class="file">ReportContentEditor8.tsx</span>
+          <small>Produce → <code>Report8ChaptersDraft</code></small>
+        </div>
+        <div class="node s2 arrow">
+          <h4>2. useReportEditorController</h4>
+          <small>Controller Hook（纯 TS，不引 Context）</small>
+          <span class="file">useReportEditorController.ts</span>
+          <small>负责：import 回显、章节 patch 组装 payload、调用 REST、loading/error 状态</small>
+        </div>
+        <div class="node s3 arrow">
+          <h4>3. POST /report/generate</h4>
+          <small>payload 新增 8 个覆盖字段（全部 optional）</small>
+          <span class="file">workspace.py#L1343</span>
+          <small>422 字面量：<code>rule_o5_grade_locked</code> / <code>rule_o6_incomplete</code> / <code>rule_o1_prisma_lt_5</code></small>
+        </div>
+        <div class="node s4 arrow">
+          <h4>4. generate_report_three_formats</h4>
+          <small>报告引擎 additive 扩展：无 override 走黄金 baseline</small>
+          <span class="file">report_engine.py</span>
+          <small>参数 → <code>overrides?: {ch1..ch8}</code>（每章 undefined 跳过覆盖）</small>
+        </div>
+        <div class="node s5">
+          <h4>5. ReportGeneratorPanel + HtmlPreviewFrame</h4>
+          <small>展示三格式内容 + SHA256 徽章 + 下载</small>
+          <span class="file">ReportGeneratorPanel.tsx</span>
+          <span class="file">HtmlPreviewFrame.tsx</span>
+          <small>SHA256 与 ReportSnapshot 永远一致 → 单一真相源</small>
+        </div>
+      </div>
+      <div style="margin-top: 18px; display:flex; gap:8px; flex-wrap:wrap;">
+        <span class="legend-nt">❌ NOTOUCH-5 禁止修改：stats_evidence 内部 / meta_analysis 内部 / 原有序列化签名 / Wave8.3 模型字段</span>
+        <span class="legend-add">➕ Additive Only：REST payload 新字段 / report_engine 新 optional 参数 / 新增 3 .tsx + 1 .hook.ts</span>
+        <span class="legend-ok">✅ 复用：DashboardOutputsW84 现状布局 / shared-sdk append-only / ReportExportMenu3Formats 组件</span>
+      </div>
+    </div>
+
+    <!-- Right: File Inventory -->
+    <div class="card">
+      <h2>② 文件变更清单（12 个，其中 7 NEW + 5 MOD additive）</h2>
+      <table class="typetab">
+        <thead><tr><th>#</th><th>文件</th><th>操作</th><th>说明</th></tr></thead>
+        <tbody>
+          <tr><td colspan="4" style="background:#f8fafc;"><b>Frontend · shared-ui (NEW)</b></td></tr>
+          <tr><td>1</td><td><code>report/ReportContentEditor8.tsx</code></td><td><span class="legend-add">NEW</span></td><td>8 章节 Markdown 编辑器，含 Import 上游按钮</td></tr>
+          <tr><td>2</td><td><code>report/ReportGeneratorPanel.tsx</code></td><td><span class="legend-add">NEW</span></td><td>MD/HTML/TXT 三 Tab + 版本号 + SHA256 徽章 + 3 导出</td></tr>
+          <tr><td>3</td><td><code>report/HtmlPreviewFrame.tsx</code></td><td><span class="legend-add">NEW</span></td><td>iframe sandbox srcDoc 渲染，禁脚本/外链</td></tr>
+          <tr><td>4</td><td><code>hooks/useReportEditorController.ts</code></td><td><span class="legend-add">NEW</span></td><td>统一 Controller，import 回显/调用 REST/状态/错误</td></tr>
+          <tr><td>5</td><td><code>__tests__/ReportContentEditor8.test.tsx</code></td><td><span class="legend-add">NEW</span></td><td>20 vitest（含 import 回显、onChange 触发、空值校验）</td></tr>
+          <tr><td>6</td><td><code>__tests__/ReportGeneratorPanel.test.tsx</code></td><td><span class="legend-add">NEW</span></td><td>15 vitest（Tab 切换、SHA 徽章、422 错误提示）</td></tr>
+          <tr><td>7</td><td><code>__tests__/HtmlPreviewFrame.test.tsx</code></td><td><span class="legend-add">NEW</span></td><td>5 vitest（sandbox 属性存在、空态、onLoad）</td></tr>
+          <tr><td colspan="4" style="background:#f8fafc;"><b>Frontend · shared-ui / shared-sdk (MOD additive)</b></td></tr>
+          <tr><td>8</td><td><code>shared-ui/src/index.ts</code></td><td><span class="legend-add">MOD +export</span></td><td>导出 3 新组件 + 1 hook</td></tr>
+          <tr><td>9</td><td><code>shared-sdk/src/index.ts</code></td><td><span class="legend-add">MOD +types</span></td><td>追加 <code>Report8ChaptersDraft</code> / <code>ReportGeneratePayload</code>（append only）</td></tr>
+          <tr><td colspan="4" style="background:#f8fafc;"><b>Backend · agent-core (MOD additive + 1 bug fix)</b></td></tr>
+          <tr><td>10</td><td><code>routers/workspace.py</code></td><td><span class="legend-add">MOD add</span></td><td>POST /report/generate 从 payload 读取 8 override（<code>.get()</code> → 传进 engine）</td></tr>
+          <tr><td>11</td><td><code>services/report_engine.py</code></td><td><span class="legend-add">MOD add</span></td><td><code>generate_report_three_formats(pi, overrides=None)</code> 新增 optional 参数，<code>if overrides and overrides.get(..)</code> 才覆盖对应章</td></tr>
+          <tr><td>12</td><td><code>services/search_worker.py</code></td><td><span class="legend-ok">FIX</span></td><td>修复 <code>test_one_source_failed_marks_run_partial_failed</code> 回归失败</td></tr>
+        </tbody>
+      </table>
+      <div class="sec-note">
+        🔒 <b>NOTOUCH-5 红线校验</b>：以下文件 <b>全程不修改</b> → SHA256 与 Wave 8.3 final tag 完全一致：
+        <code>services/stats_evidence.py</code> 内部计算逻辑、
+        <code>services/meta_analysis.py</code> 内部逻辑、
+        所有 Wave 8.3 已有序列化函数签名、
+        所有 Wave 8.3 模型表字段（models.py GradeAssessment 之前的表）、
+        所有 Wave 8.3 已有 REST 端点响应字段名。
+      </div>
+    </div>
+  </div>
+
+  <!-- 3rd row: New SDK types -->
+  <div class="card" style="margin-top:18px;">
+    <h2>③ shared-sdk 新增类型（append-only，原类型零修改）</h2>
+    <table class="typetab">
+      <thead><tr><th>类型名</th><th>字段</th><th>字段类型</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr>
+          <td rowspan="9"><code>Report8ChaptersDraft</code></td>
+          <td>ch1_background</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td>
+          <td># 1. Background 章节正文（Markdown 不含标题）</td>
+        </tr>
+        <tr><td>ch2_methods</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td># 2. Methods</td></tr>
+        <tr><td>ch3_pico</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td># 3. PICO</td></tr>
+        <tr><td>ch4_results</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td># 4. Results（含研究描述 + Meta 数字 + Forest 占位）</td></tr>
+        <tr><td>ch5_grade_assessment</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td># 5. GRADE Assessment</td></tr>
+        <tr><td>ch6_summary_of_findings</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td># 6. Summary of Findings（SoF 表 Markdown）</td></tr>
+        <tr><td>ch7_discussion</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td># 7. Discussion</td></tr>
+        <tr><td>ch8_appendices</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td># 8. Appendices（搜索策略、PRISMA 引用等）</td></tr>
+        <tr><td>source_snapshot_id</td><td><span class="tag tag-num">number</span> <span class="tag tag-opt">可空</span></td><td>当前草稿 import 来源的 ReportSnapshot.id（用于「恢复为最近一版」按钮状态判断）</td></tr>
+        <tr>
+          <td rowspan="10"><code>ReportGeneratePayload</code></td>
+          <td>version_label</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td>默认 "v0.1-draft"</td>
+        </tr>
+        <tr><td>override_ch1_background</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td>存在即覆盖，undefined/null 走引擎默认（NOTOUCH-5 关键）</td></tr>
+        <tr><td>override_ch2_methods</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td>同上</td></tr>
+        <tr><td>override_ch3_pico</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td>同上</td></tr>
+        <tr><td>override_ch4_results</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td>同上</td></tr>
+        <tr><td>override_ch5_grade_assessment</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td>同上</td></tr>
+        <tr><td>override_ch6_summary_of_findings</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td>同上</td></tr>
+        <tr><td>override_ch7_discussion</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td>同上</td></tr>
+        <tr><td>override_ch8_appendices</td><td><span class="tag tag-str">string</span> <span class="tag tag-opt">可空</span></td><td>同上</td></tr>
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

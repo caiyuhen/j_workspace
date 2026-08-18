@@ -235,12 +235,14 @@ def _update_runs_status_and_counts(session: Session) -> None:
             session.add(run)
             continue
 
-        if "failed" in statuses and "completed" not in statuses:
-            run.status = "failed"
-        elif "failed" in statuses:
-            run.status = "partial_failed"
-        else:
+        success_count = sum(1 for s in sources if s.status == "completed")
+        total_sources = len(sources)
+        if success_count == total_sources:
             run.status = "completed"
+        elif success_count == 0:
+            run.status = "failed"
+        else:
+            run.status = "partial_failed"
         run.finished_at = datetime.utcnow()
         session.add(run)
 

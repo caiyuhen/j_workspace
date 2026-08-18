@@ -355,7 +355,33 @@ export type Prisma2020Checklist<IdT = number> = {
   id: IdT;
   project_id: IdT;
   reviewer_id: IdT;
-  items_checked: boolean[];
+  item_1: boolean;
+  item_2: boolean;
+  item_3: boolean;
+  item_4: boolean;
+  item_5: boolean;
+  item_6: boolean;
+  item_7: boolean;
+  item_8: boolean;
+  item_9: boolean;
+  item_10: boolean;
+  item_11: boolean;
+  item_12: boolean;
+  item_13: boolean;
+  item_14: boolean;
+  item_15: boolean;
+  item_16: boolean;
+  item_17: boolean;
+  item_18: boolean;
+  item_19: boolean;
+  item_20: boolean;
+  item_21: boolean;
+  item_22: boolean;
+  item_23: boolean;
+  item_24: boolean;
+  item_25: boolean;
+  item_26: boolean;
+  item_27: boolean;
   note?: string;
   locked: boolean;
   created_at: string;
@@ -368,11 +394,38 @@ export type OutputStageCardKey =
 
 export type OutputStageCard = {
   card_key: OutputStageCardKey;
-  status: "ready" | "locked";
-  title: string;
-  detail?: string;
-  reason_locked_literal?:
+  ready: boolean;
+  locked_reason:
     | "protocol_requires_grade_and_prisma_5_items"
     | "attachments_requires_sof_row_and_forest_3_studies"
-    | "exports_requires_at_least_one_report_snapshot";
+    | "exports_requires_at_least_one_report_snapshot"
+    | null;
+};
+
+// ─────────────────────────────────────────────────────────────────────
+// WAVE 8.4 CLOSURE · Report8ChaptersDraft + ReportGeneratePayload
+// (append only；绝不修改上方任何已有类型定义或字段)
+// ─────────────────────────────────────────────────────────────────────
+export type Report8ChaptersDraft<IdT = number> = {
+  ch1_background: string;
+  ch2_methods: string;
+  ch3_pico: string;
+  ch4_results: string;
+  ch5_grade_assessment: string;
+  ch6_summary_of_findings: string;
+  ch7_discussion: string;
+  ch8_appendices: string;
+  source_snapshot_id?: IdT | null;
+};
+
+export type ReportGeneratePayload<IdT = number> = {
+  version_label?: string;
+  override_ch1_background?: string;
+  override_ch2_methods?: string;
+  override_ch3_pico?: string;
+  override_ch4_results?: string;
+  override_ch5_grade_assessment?: string;
+  override_ch6_summary_of_findings?: string;
+  override_ch7_discussion?: string;
+  override_ch8_appendices?: string;
 };

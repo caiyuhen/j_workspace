@@ -80,19 +80,21 @@ export const PrismaOverrideEditor: React.FC<PrismaOverrideEditorProps> = ({
           ) : null}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          {[
-            ["Identification N1", "ov-identification", identification, setIdentification],
-            ["Screening N2", "ov-screening", screening, setScreening],
-            ["Eligibility N3", "ov-eligibility", eligibility, setEligibility],
-            ["Included N4", "ov-included", included, setIncluded],
-          ].map(([label, tid, val, setter]) => (
-            <label key={tid as string} style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+          {(
+            [
+              ["Identification N1", "ov-identification", identification, setIdentification],
+              ["Screening N2", "ov-screening", screening, setScreening],
+              ["Eligibility N3", "ov-eligibility", eligibility, setEligibility],
+              ["Included N4", "ov-included", included, setIncluded],
+            ] as Array<[string, string, string, React.Dispatch<React.SetStateAction<string>>]>
+          ).map(([label, tid, val, setter]) => (
+            <label key={tid} style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
               <span>{label}</span>
               <input
-                data-testid={tid as string}
+                data-testid={tid}
                 type="number"
-                value={val as string}
-                onChange={(e) => (setter as (x: string) => void)(e.target.value)}
+                value={val}
+                onChange={(e) => setter(e.target.value)}
                 style={{ padding: "6px 8px", border: "1px solid #d1d5db", borderRadius: 4 }}
               />
             </label>

@@ -1,0 +1,124 @@
+============================================================================
+  Wave 8.4 T8 · useReportEditorController Hook (useReducer 10 Action)
+  TDD SUMMARY · 10/10 GREEN
+============================================================================
+
+【1) Hook 核心 Action 数 + 方法数】
+
+Action 总数：10 (exact match 字面量)
+  1. draft_field_update      — field: keyof Report8ChaptersDraft; value: string
+  2. draft_replace_all       — next: Report8ChaptersDraft
+  3. source_snapshot_set     — id: number | null
+  4. upstream_data_set       — data: Partial<Report8ChaptersDraft>
+  5. tab_change              — next: "editor" | "md" | "html"
+  6. error_set               — detail: string | null
+  7. sha_set                 — sha, versionLabel, generatedAt (all string|null)
+  8. generate_pending        — no payload → generating=true, error=null
+  9. export_pending          — no payload → exporting=true, error=null
+ 10. reset                   — 所有字段回 initialState
+
+方法总数：5 (+2 便利 accessor)
+  1. generateFromUpstream(upstreamSnapshotMd) : void
+     — parseSnapshotInto8Chapters(md) → draft_replace_all action
+     — parse 异常 → error_set(message)
+  2. restoreLatestSnapshot() : void
+     — 从 state.snapshot.mdContent 读取 → parse → draft_replace_all
+     — sourceSnapshotId → null
+  3. generateReport() : Promise<{ok, sha?, detail?}>
+     — dispatch(generate_pending)
+     — version_label = "manual-" + Date.now().slice(-6)
+     — 遍历 dirtyFields: 非空 string 才写入 payload.override_chX_xxx
+     — 空字符串 dirty 字段 **完全不传 key** (NOTOUCH-5 invariant)
+     — fetchClient.post(`/api/v1/workspaces/projects/${projectId}/report/generate`, payload)
+     — 成功：sha_set + error_set(null) → generating=false
+     — 失败(422 等)：error_set(e.detail|e.response.detail) → generating=false
+  4. exportReport(format:"md"|"html"|"txt") : Promise<{ok, content?, detail?}>
+     — dispatch(export_pending)
+     — fetchClient.post(`/api/v1/workspaces/projects/${projectId}/report/export/${format}`, {format})
+     — 成功：error_set(null) → exporting=false; 返回 {ok:true, content}
+     — 失败：error_set(detail) → exporting=false; 返回 {ok:false, detail}
+  5. reset() : void → dispatch(reset)
++ Convenience: onFieldChange(field, value), dirtyFields Set
+
+Injectable Contract:
+  fetchClient: { post<Resp>(url, body): Promise<Resp>; get?<Resp>(url): Promise<Resp> }
+  — 所有网络请求均通过 opts.fetchClient 注入，vitest mock 无需动全局 fetch
+
+【2) 10/10 GREEN 证据 (10 it 名称 PASS)】
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Duration  18.57s
+
+ ✓ C1  initial state 正确：dirty.size=0, activeTab=editor, generating=false
+ ✓ C2  onFieldChange("ch1_background","Hello") → dirty 含 ch1_background; draft.ch1="Hello"
+ ✓ C3  tab_change("md") → activeTab === "md"
+ ✓ C4  generateFromUpstream(上游 md ch1/ch2 内容) → draft.ch1/draft.ch2 正确 parse 填充
+ ✓ C5  restoreLatestSnapshot() 之前 snapshot.mdContent 存在
+       → draft = snapshot 内容 parse; sourceSnapshotId 重置为 null
+ ✓ C6  generateReport → fetchClient.post 调用且 payload:
+       dirty 字段 non-empty 才作为 override_ch1_background 存在
+       ✓ C6b NOTOUCH-5: 空字符串 dirty 字段不进 payload（override_ch2_methods key 完全不存在）
+ ✓ C7  generateReport 422 响应 detail="prisma_less_than_five"
+       → state.errorDetail === "prisma_less_than_five"; generating=false
+ ✓ C8  generateReport success sha="sha256_abcdef1234567890"
+       → state.snapshot.sha === "sha256_abcdef1234567890"; generating=false
+       → state.snapshot.versionLabel === "manual-654321"
+ ✓ C9  exportReport("html") → ok=true; content="<html>..."; exporting 先 true 再 false
+       (通过手动控制 Post Promise 的 resolve 时序，验证 exporting=true 在 dispatch 后立即生效，
+        resolve+await 后 exporting=false)
+ ✓ C10 reset → dirty=empty; errorDetail=null; activeTab="editor"
+
+【3) C6b NOTOUCH-5 断言精确描述】
+
+Spec §4 C6 / NOTOUCH-5 invariant:
+  "若 user 清空章节等于没覆盖 → baseline；空字符串 dirty 字段不得进入 payload"
+
+实现侧（Hook generateReport 内）：
+  for (const field of state.dirty) {
+    if (field === "source_snapshot_id") continue;
+    const val = state.draft[field];
+    if (typeof val !== "string") continue;
+    if (val === "") continue;  // ← NOTOUCH-5: 空字符串跳过，完全不写 key
+    const overrideKey = CHAPTER_OVERRIDE_PREFIX[field];
+    if (overrideKey) (payload as Record<string,string>)[overrideKey] = val;
+  }
+
+测试侧（C6 it block 内）：
+  // Arrange: 3 个字段被 dirty，但 ch2_methods 值是空串
+  act(() => {
+    result.current.onFieldChange("ch1_background", "bg non-empty");
+    result.current.onFieldChange("ch2_methods", "");     // ← dirty 但空
+    result.current.onFieldChange("ch7_discussion", "discussion value");
+  });
+
+  // Act: generateReport → fetchClient.post 调用 payload 断言：
+  expect(payload.override_ch1_background).toBe("bg non-empty");    // ✓ 传了
+  expect(payload.override_ch7_discussion).toBe("discussion value"); // ✓ 传了
+  expect(
+    Object.prototype.hasOwnProperty.call(payload, "override_ch2_methods")
+  ).toBe(false);  // ✓ NOTOUCH-5: 空串 dirty 字段，**完全不传该 key**
+                  //   (不是传空字符串 ""，是 payload 对象上根本没有这个属性)
+
+【4) 文件位置】
+
+ Hook:   packages/shared-ui/src/hooks/useReportEditorController.ts  (307 行)
+ Test:   packages/shared-ui/src/__tests__/useReportEditorController.test.tsx (264 行)
+ GREEN:  T8_GREEN.txt  (根目录)
+ Import 风格对齐现有 shared-ui：
+   import type { Report8ChaptersDraft, ReportGeneratePayload } from "@meda/shared-sdk";
+   import { parseSnapshotInto8Chapters } from "../components/ReportContentEditor8";
+
+【5) Hard-Gate 核查】
+
+ ✅ useReducer 10 actions.type 字面量 exact match (一字未改)
+ ✅ 所有网络请求均通过 opts.fetchClient 注入（C6/C7/C8 对 mock post 的 URL+body 作了精确断言）
+ ✅ 0 新增依赖（package.json 未改动）
+ ✅ 未修改 shared-ui/index.ts
+ ✅ C6b NOTOUCH-5: 空 string dirty 字段不传 key（hasOwnProperty 断言）
+ ✅ generateReport 版本标签前缀: "manual-" + Date.now().slice(-6)
+ ✅ dirty Fields 追踪: Set<keyof Report8ChaptersDraft>，source_snapshot_id 不进 dirty
+
+============================================================================
+  Result: ALL GREEN · 10/10 PASSED ✅
+============================================================================

@@ -1,0 +1,95 @@
+================================================================================
+Wave 8.4 T1 - search_worker 修复 - TDD 执行摘要
+================================================================================
+
+=== 1. Step1 traceback 摘录 ===
+断言行: tests\test_search_worker.py:93
+  assert run.status == "partial_failed"
+错误:
+  AssertionError: assert 'completed' == 'partial_failed'
+    - partial_failed
+    + completed
+
+对应 search_worker.py 定位:
+  第 231-240 行 (_update_runs_status_and_counts 函数状态聚合处)
+
+=== 2. H1/H2 判定结论 ===
+判定: H1 (success_count 误判为 completed)
+根因: 状态判断逻辑仅检查 "所有源是否已完成"，未区分 completed/failed，
+      导致只要 len(results)==len(sources) 即统一标记 "completed"，
+      忽略了存在失败源的情况。
+
+=== 3. Step3 RED 输出摘要 ===
+collecting ... collected 5 items / 2 deselected / 3 selected
+
+tests/test_search_worker.py::test_one_source_failed_marks_run_partial_failed FAILED [ 33%]
+tests/test_search_worker.py::test_all_sources_success_keep_completed_not_partial_failed PASSED [ 66%]
+tests/test_search_worker.py::test_two_sources_failed_marks_partial_failed_with_two_errors FAILED [100%]
+
+结果: 2 FAILED + 1 PASSED (反证用例 GREEN 阻止过修)
+  - FAIL 1: test_one_source_failed_marks_run_partial_failed
+    (1源失败时被错误标记为 completed)
+  - FAIL 2: test_two_sources_failed_marks_partial_failed_with_two_errors
+    (2源失败时被错误标记为 completed)
+  - PASS: test_all_sources_success_keep_completed_not_partial_failed
+    (全成功场景保持 completed，反证通过)
+
+=== 4. Step4 修改的 search_worker.py 精确代码片段 (行 231-245) ===
+-- 修改前 (BUGGY) --
+231        statuses = {s.status for s in sources}
+232        all_done = statuses <= {"completed", "failed"}
+233        if not all_done:
+234            run.status = "running" if "running" in statuses or run.status == "running" else run.status
+235            session.add(run)
+236            continue
+237
+238        # H1 BUG: 只要所有源都结束了就标记 completed，误判失败情况
+239        if len(statuses) > 0:
+240            run.status = "completed"
+
+-- 修改后 (FIXED) --
+231        statuses = {s.status for s in sources}
+232        all_done = statuses <= {"completed", "failed"}
+233        if not all_done:
+234            run.status = "running" if "running" in statuses or run.status == "running" else run.status
+235            session.add(run)
+236            continue
+237
+238        success_count = sum(1 for s in sources if s.status == "completed")
+239        total_sources = len(sources)
+240        if success_count == total_sources:
+241            run.status = "completed"
+242        elif success_count == 0:
+243            run.status = "failed"
+244        else:
+245            run.status = "partial_failed"
+
+=== 5. Step5 GREEN 输出 (3 PASSED) ===
+collecting ... collected 5 items / 2 deselected / 3 selected
+
+tests/test_search_worker.py::test_one_source_failed_marks_run_partial_failed PASSED [ 33%]
+tests/test_search_worker.py::test_all_sources_success_keep_completed_not_partial_failed PASSED [ 66%]
+tests/test_search_worker.py::test_two_sources_failed_marks_partial_failed_with_two_errors PASSED [100%]
+
+3 passed, 2 deselected in 16.39s
+
+=== 6. Step6 全文件 GREEN 输出 ===
+collecting ... collected 5 items
+
+tests/test_search_worker.py::test_worker_completes_3_sources_sets_search_run_completed PASSED [ 20%]
+tests/test_search_worker.py::test_one_source_failed_marks_run_partial_failed PASSED [ 40%]
+tests/test_search_worker.py::test_reset_timed_out_running_sources_marks_as_failed PASSED [ 60%]
+tests/test_search_worker.py::test_all_sources_success_keep_completed_not_partial_failed PASSED [ 80%]
+tests/test_search_worker.py::test_two_sources_failed_marks_partial_failed_with_two_errors PASSED [100%]
+
+5 passed in 25.35s (100% GREEN)
+
+=== 7. git diff --stat ===
+ MedA/apps/agent-core/app/services/search_worker.py | 10 ++-
+ MedA/apps/agent-core/tests/test_search_worker.py   | 90 ++++++++++++++++++++++
+ 2 files changed, 96 insertions(+), 4 deletions(-)
+
+[NOTOUCH-5 合规检查]
+- stats_evidence/meta_analysis: 0 改动 ✓
+- 序列化/模型字段: 0 改动 ✓
+- 新依赖引入: 0 ✓

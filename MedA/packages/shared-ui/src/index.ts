@@ -117,3 +117,13 @@ export {
   DashboardOutputCards,
 } from "./report";
 export { DashboardOutputsW84 } from "./dashboard/DashboardOutputsW84";
+
+// ─────────────────────────────────────────────────────────────────────
+// WAVE 8.4 CLOSURE · Report Editor8 Suite (9 named exports, append-only)
+// ─────────────────────────────────────────────────────────────────────
+export { ReportContentEditor8, parseSnapshotInto8Chapters, generateDraftFromUpstream,
+  CHAPTER_META, TAG_COLOR } from "./components/ReportContentEditor8";
+export { ReportGeneratorPanel, HTTP_422_DETAIL_MAP } from "./components/ReportGeneratorPanel";
+export { default as HtmlPreviewFrame, SANDBOX_BLACKLIST } from "./components/HtmlPreviewFrame";
+export { useReportEditorController } from "./hooks/useReportEditorController";
+export type { ReportEditorState, ReportEditorAction, FetchClient } from "./hooks/useReportEditorController";

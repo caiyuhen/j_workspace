@@ -120,5 +120,156 @@ def _render_txt(pi: ProjectReportInput) -> str:
         lines.append("[Forest Plot SVG embedded — preview HTML or MD for render]")
     return "\n".join(lines)
 
-def generate_report_three_formats(pi: ProjectReportInput) -> tuple[str, str, str]:
+def _original_w83_generate_report_three_formats(pi: ProjectReportInput) -> tuple[str, str, str]:
     return _render_md(pi), _render_html(pi), _render_txt(pi)
+
+
+CH_OVERRIDE_MAP: dict[str, tuple[int, str, str]] = {
+    "override_ch1_background": (1, "## 1. Background", "## 1. 研究背景"),
+    "override_ch2_methods": (2, "## 2. Methods", "## 2. 研究方法"),
+    "override_ch3_pico": (3, "## 3. PICO", "## 3. PICO问题"),
+    "override_ch4_results": (4, "## 4. Results", "## 4. 研究结果"),
+    "override_ch5_grade_assessment": (5, "## 5. GRADE Assessment", "## 5. 证据质量评价"),
+    "override_ch6_summary_of_findings": (6, "## 6. Summary of Findings", "## 6. 主要发现总结"),
+    "override_ch7_discussion": (7, "## 7. Discussion", "## 7. 讨论"),
+    "override_ch8_appendices": (8, "## 8. Appendices", "## 8. 附录"),
+}
+
+
+def _md_strip_section_body(md: str, heading_en: str, heading_zh: str) -> tuple[int, int] | None:
+    lines = md.splitlines(keepends=True)
+    anchor_idx = -1
+    for i, line in enumerate(lines):
+        stripped = line.rstrip("\n")
+        if stripped == heading_en or stripped == heading_zh:
+            anchor_idx = i
+            break
+    if anchor_idx == -1:
+        return None
+    start_pos = 0
+    for i in range(anchor_idx + 1):
+        start_pos += len(lines[i])
+    end_pos = start_pos
+    for i in range(anchor_idx + 1, len(lines)):
+        line = lines[i]
+        stripped = line.lstrip()
+        if stripped.startswith("## ") and not stripped.startswith("### "):
+            break
+        end_pos += len(line)
+    return start_pos, end_pos
+
+
+def _replace_section_body(md: str, heading_en: str, heading_zh: str, new_body: str) -> str:
+    span = _md_strip_section_body(md, heading_en, heading_zh)
+    if span is None:
+        appendix = "\n" + heading_en + "\n" + new_body
+        if not md.endswith("\n"):
+            appendix = "\n" + appendix
+        return md + appendix
+    s, e = span
+    return md[:s] + new_body + ("\n" if not new_body.endswith("\n") else "") + md[e:]
+
+
+def _replace_section_body_html(html: str, ch_num: int, heading_en: str, new_body_html: str) -> str:
+    section_id = f"ch{ch_num}"
+    open_tag = f'<section id="{section_id}">'
+    close_tag = "</section>"
+    if open_tag in html:
+        s = html.find(open_tag) + len(open_tag)
+        e = html.find(close_tag, s)
+        if e != -1:
+            h2_text = heading_en.replace("## ", "")
+            new_inner = f"<h2>{h2_text}</h2>\n{new_body_html}"
+            return html[:s] + new_inner + html[e:]
+    append_anchor = "</body>"
+    if append_anchor in html:
+        idx = html.find(append_anchor)
+        h2_text = heading_en.replace("## ", "")
+        new_section = f'<section id="{section_id}"><h2>{h2_text}</h2>\n{new_body_html}</section>\n'
+        return html[:idx] + new_section + html[idx:]
+    return html
+
+
+def _md_to_minimal_html(md: str) -> str:
+    out_lines: list[str] = []
+    in_paragraph = False
+    para_buf: list[str] = []
+
+    def flush_para():
+        nonlocal in_paragraph, para_buf
+        if in_paragraph:
+            text = " ".join(s.rstrip() for s in para_buf)
+            text = text.replace("**", "<strong>", 1).replace("**", "</strong>", 1)
+            while "**" in text:
+                text = text.replace("**", "<strong>", 1).replace("**", "</strong>", 1)
+            text = text.replace("*", "<em>", 1).replace("*", "</em>", 1)
+            while "*" in text:
+                text = text.replace("*", "<em>", 1).replace("*", "</em>", 1)
+            out_lines.append(f"<p>{text}</p>")
+            in_paragraph = False
+            para_buf = []
+
+    for raw_line in md.splitlines():
+        line = raw_line.rstrip()
+        if line.startswith("### "):
+            flush_para()
+            out_lines.append(f"<h3>{line[4:]}</h3>")
+        elif line.startswith("## "):
+            flush_para()
+            out_lines.append(f"<h2>{line[3:]}</h2>")
+        elif line.startswith("# "):
+            flush_para()
+            out_lines.append(f"<h1>{line[2:]}</h1>")
+        elif line.startswith("|"):
+            flush_para()
+            cells = [c.strip() for c in line.strip("|").split("|")]
+            if all(set(c) <= set("-: ") for c in cells):
+                continue
+            out_lines.append("<tr>" + "".join(f"<td>{c}</td>" for c in cells) + "</tr>")
+        elif line == "":
+            flush_para()
+        else:
+            if not in_paragraph:
+                in_paragraph = True
+            para_buf.append(line)
+    flush_para()
+    return "\n".join(out_lines)
+
+
+def generate_report_three_formats(pi: ProjectReportInput, overrides: dict | None = None) -> tuple[str, str, str]:
+    md, html, txt = _original_w83_generate_report_three_formats(pi)
+    if not overrides:
+        return md, html, txt
+    non_empty_items = [(k, v) for k, v in overrides.items() if isinstance(v, str) and v.strip()]
+    if not non_empty_items:
+        return md, html, txt
+    sorted_items = sorted(
+        non_empty_items,
+        key=lambda kv: CH_OVERRIDE_MAP.get(kv[0], (999, "", ""))[0],
+    )
+    for key, new_body in sorted_items:
+        cfg = CH_OVERRIDE_MAP.get(key)
+        if cfg is None:
+            continue
+        ch_num, heading_en, heading_zh = cfg
+        md = _replace_section_body(md, heading_en, heading_zh, new_body)
+        body_html = _md_to_minimal_html(new_body)
+        html = _replace_section_body_html(html, ch_num, heading_en, body_html)
+        txt_heading = heading_en.replace("## ", "")
+        txt_heading_zh = heading_zh.replace("## ", "")
+        txt_anchor = txt_heading + "\n" + "-" * len(txt_heading)
+        txt_anchor_zh = txt_heading_zh + "\n" + "-" * len(txt_heading_zh)
+        if txt_anchor in txt:
+            start = txt.find(txt_anchor) + len(txt_anchor)
+            next_idx = txt.find("\n\n", start)
+            end = next_idx if next_idx != -1 else len(txt)
+            txt = txt[:start] + "\n" + new_body + ("\n" if end < len(txt) else "") + txt[end:]
+        elif txt_anchor_zh in txt:
+            start = txt.find(txt_anchor_zh) + len(txt_anchor_zh)
+            next_idx = txt.find("\n\n", start)
+            end = next_idx if next_idx != -1 else len(txt)
+            txt = txt[:start] + "\n" + new_body + ("\n" if end < len(txt) else "") + txt[end:]
+        else:
+            appendix = "\n\n" + txt_anchor + "\n" + new_body
+            txt += appendix
+    return md, html, txt

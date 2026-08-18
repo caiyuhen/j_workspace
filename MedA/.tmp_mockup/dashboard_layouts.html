@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Wave 8.4 Dashboard Layouts Mockup</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 24px;
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: #f3f4f6;
+    color: #0f172a;
+  }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .hint { color: #475569; margin: 0 0 24px; font-size: 13px; }
+  .options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+  .opt {
+    background: #fff;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 14px;
+    min-height: 520px;
+  }
+  .opt.active { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+  .opt h2 { margin: 0 0 8px; font-size: 15px; display: flex; align-items: center; gap: 8px; }
+  .badge {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    background: #dbeafe; color: #1d4ed8; font-weight: 600;
+  }
+  .badge.alt { background: #fee2e2; color: #b91c1c; }
+  .badge.ok { background: #dcfce7; color: #15803d; }
+  .opt .legend { font-size: 12px; color: #64748b; margin: 0 0 10px; }
+
+  /* Option A: 纵向堆叠 */
+  .layout-a { display: flex; flex-direction: column; gap: 10px; }
+  .card {
+    border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px;
+    background: #fafafa; font-size: 12px;
+  }
+  .card h3 { margin: 0 0 6px; font-size: 13px; color: #0f172a; }
+  .pill { display: inline-block; padding: 2px 6px; font-size: 11px; border-radius: 6px; margin-right: 4px; margin-bottom: 4px; }
+  .pill.g { background:#dcfce7; color:#15803d;}
+  .pill.y { background:#fef3c7; color:#a16207;}
+  .pill.r { background:#fee2e2; color:#b91c1c;}
+  .pill.b { background:#dbeafe; color:#1d4ed8;}
+  table.mini { width: 100%; border-collapse: collapse; font-size: 11px;}
+  table.mini th, table.mini td { border: 1px solid #e5e7eb; padding: 4px 6px; text-align: left;}
+
+  /* Option B: 三栏 */
+  .layout-b { display: grid; grid-template-columns: 1fr 1.3fr 0.9fr; gap: 10px; }
+  .col { display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+
+  /* Option C: 上下两栏 + 标签切换报告预览 */
+  .layout-c { display: grid; grid-template-rows: auto 1fr; gap: 10px; }
+  .top-c { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 6px;}
+  .tabs button {
+    border: 1px solid #cbd5e1; background:#fff; border-radius: 6px; padding: 4px 10px; font-size: 11px; cursor: pointer;
+  }
+  .tabs button.active { background:#2563eb; color:#fff; border-color:#2563eb;}
+  .preview-box { border: 1px dashed #94a3b8; border-radius: 8px; padding: 14px; height: 150px; overflow: auto; background:#fffbeb; font-size: 11px; font-family: ui-monospace, Menlo, monospace; color:#78350f;}
+</style>
+</head>
+<body>
+  <h1>Wave 8.4 Dashboard 布局 Mockup（三选一）</h1>
+  <p class="hint">现有实现是 Option A（纵向堆叠）。请确认「Wave 8.4 收尾」需要保持 A 还是切换到 B/C？。</p>
+
+  <div class="options">
+    <!-- ========= Option A ========= -->
+    <div class="opt">
+      <h2>Option A · 纵向堆叠（现状）<span class="badge ok">现状</span></h2>
+      <p class="legend">DashboardOutputsW84 已实现：从上到下依次 OutputStageCards → SoF → PRISMA2020 → Snapshots。优点是移动端友好、测试基线已过；缺点是 SoF 与 PRISMA/GRADE 跨区参考需要滚动。</p>
+      <div class="layout-a">
+        <div class="card">
+          <h3>🔒 Stage 6 · Output Stage (Dynamic Locks)</h3>
+          <div>
+            <span class="pill g">Protocol Report Draft</span>
+            <span class="pill y">SoF Attachments</span>
+            <span class="pill r">Export Versions (LOCKED)</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>📊 Summary of Findings (SoF 12 列)</h3>
+          <table class="mini">
+            <thead><tr><th>Outcome</th><th>k</th><th>N</th><th>Certainty</th></tr></thead>
+            <tbody>
+              <tr><td>Mortality</td><td>5</td><td>1280</td><td><span class="pill y">Moderate</span></td></tr>
+              <tr><td>Re-hospitalization</td><td>3</td><td>940</td><td><span class="pill g">High</span></td></tr>
+              <tr><td>Quality of Life</td><td>4</td><td>1102</td><td><span class="pill r">Low</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <h3>✅ PRISMA 2020 Checklist (27)</h3>
+          <div>
+            <span class="pill g">1</span><span class="pill g">2</span><span class="pill g">3</span>
+            <span class="pill y">4</span><span class="pill g">5</span><span class="pill g">6</span>
+            <span class="pill b">7</span><span class="pill g">8</span><span class="pill g">9</span>
+            <span style="color:#94a3b8;">…(共 17/27 完成)</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>📦 Version Exports (Snapshots)</h3>
+          <div>v0.1-draft · id=5 · SHA256 <code style="font-size:10px;">a3f2…8bc1</code> · 2026-08-18</div>
+          <div style="margin-top:6px;">
+            <button disabled style="opacity:.5;">Export MD</button>
+            <button>Export HTML</button>
+            <button>Export TXT</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========= Option B ========= -->
+    <div class="opt active">
+      <h2>Option B · 左中右三栏（Wave 8.4 Plan 推荐）<span class="badge">Plan</span></h2>
+      <p class="legend">Wave 8.4 计划要求：Output Stage 主 Dashboard 左栏 GRADE + 锁、中栏 SoF 宽表、右栏 PRISMA2020 清单，下方一条横条放版本导出 & 预览。优点：专家工作流无需滚动，并排对照；缺点：窄屏需滚动/响应式降级。</p>
+      <div class="layout-b">
+        <div class="col">
+          <div class="card" style="flex:0 0 auto;">
+            <h3>🔒 Output Locks</h3>
+            <span class="pill g">Protocol Ready</span><br>
+            <span class="pill y" style="margin-top:4px;">Attachments …</span><br>
+            <span class="pill r" style="margin-top:4px;">Exports LOCKED</span>
+          </div>
+          <div class="card" style="flex:1;">
+            <h3>🎚 GRADE 5×3 评估（示例）</h3>
+            <table class="mini">
+              <tr><th>Outcome</th><th>RoB</th><th>Final</th></tr>
+              <tr><td>Mortality</td><td><span class="pill y">some</span></td><td><span class="pill y">Mod</span></td></tr>
+              <tr><td>Rehosp</td><td><span class="pill g">no</span></td><td><span class="pill g">High</span></td></tr>
+              <tr><td>QoL</td><td><span class="pill r">major</span></td><td><span class="pill r">Low</span></td></tr>
+            </table>
+          </div>
+        </div>
+        <div class="col">
+          <div class="card" style="height:100%;">
+            <h3>📊 Summary of Findings (SoF 12 列 宽表)</h3>
+            <table class="mini">
+              <thead><tr><th>Outcome</th><th>k</th><th>N</th><th>Effect</th><th>Certainty</th><th>AR Control</th><th>AR Interv</th></tr></thead>
+              <tbody>
+                <tr><td>All-cause Mortality</td><td>5</td><td>1280</td><td>RR 0.82</td><td><span class="pill y">Moderate</span></td><td>12.0%</td><td>9.8%</td></tr>
+                <tr><td>Re-hospitalization</td><td>3</td><td>940</td><td>OR 0.71</td><td><span class="pill g">High</span></td><td>22.5%</td><td>17.0%</td></tr>
+                <tr><td>Quality of Life (SF-36)</td><td>4</td><td>1102</td><td>MD +3.4</td><td><span class="pill r">Low</span></td><td>—</td><td>—</td></tr>
+                <tr><td>Serious Adverse Events</td><td>2</td><td>620</td><td>RR 1.03</td><td><span class="pill r">VeryLow</span></td><td>5.1%</td><td>5.3%</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="col">
+          <div class="card" style="height:100%;">
+            <h3>✅ PRISMA 2020 (27)</h3>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;">
+              <span class="pill g">1</span><span class="pill g">2</span><span class="pill g">3</span>
+              <span class="pill y">4</span><span class="pill g">5</span><span class="pill g">6</span>
+              <span class="pill b">7</span><span class="pill g">8</span><span class="pill g">9</span>
+              <span class="pill g">10</span><span class="pill y">11</span><span class="pill g">12</span>
+              <span class="pill g">13</span><span class="pill y">14</span><span class="pill r">15</span>
+              <span class="pill g">16</span><span class="pill g">17</span><span class="pill b">18</span>
+              <span class="pill g">19</span><span class="pill g">20</span><span class="pill y">21</span>
+              <span class="pill y">22</span><span class="pill g">23</span><span class="pill r">24</span>
+              <span class="pill g">25</span><span class="pill y">26</span><span class="pill g">27</span>
+            </div>
+            <div style="margin-top:10px; color:#64748b; font-size:11px;">17/27 ✅ · 4 ⚪ · 3 ⚠ · 3 ❌</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:10px;">
+        <h3>📦 Version Exports + Preview</h3>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <div style="flex:1;">v0.1-draft · id=5 · SHA256 <code style="font-size:10px;">a3f2…8bc1</code></div>
+          <button>MD</button><button>HTML</button><button>TXT</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========= Option C ========= -->
+    <div class="opt">
+      <h2>Option C · 上下两栏 + 报告预览 Tab <span class="badge alt">扩展</span></h2>
+      <p class="legend">上方左中右三栏放 GRADE/SoF/PRISMA，下方整块用 Tab 切换 ReportContentEditor8（编辑 8 章） / ReportGeneratorPanel（MD/HTML/TXT） / HtmlPreviewFrame（iframe 预览）。优点：报告预览占大块面积；缺点：上下滚屏在大屏 OK，小屏仍挤。</p>
+      <div class="layout-c">
+        <div class="top-c">
+          <div class="card"><h3>🎚 GRADE</h3><small>Mortality → Moderate<br>Rehosp → High<br>QoL → Low</small></div>
+          <div class="card"><h3>📊 SoF</h3><small>4 结局 · 12 列 · 含 AR</small></div>
+          <div class="card"><h3>✅ PRISMA 27</h3><small>17/27 done</small></div>
+        </div>
+        <div class="card">
+          <div class="tabs">
+            <button>Editor (8 ch.)</button>
+            <button class="active">Generate (MD/HTML/TXT)</button>
+            <button>Preview (iframe)</button>
+          </div>
+          <div class="preview-box">
+## 1. Background
+Systematic review of X intervention vs Y for...
+
+## 2. Methods
+Searched PubMed, Embase, CENTRAL on 2026-08-10...
+
+## 3. PICO
+- **P**: Adults with condition C
+- **I**: Intervention X
+- **C**: Comparator Y
+- **O**: Mortality, Rehospitalization
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

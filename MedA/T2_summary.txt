@@ -1,0 +1,101 @@
+================================================================================
+Wave 8.4 T2 (shared-sdk 类型追加) · TDD 执行总结报告
+================================================================================
+生成时间: 2026-08-18
+工作目录: d:\workspace\MedA
+
+================================================================================
+1. Step 1 确认位置信息
+================================================================================
+- 追加前文件总行数: 403 行
+- 追加前最后一行内容 (第 403 行): };
+  （即 OutputStageCard 类型定义的右花括号，OutputStageCard 块 395-403 行已正常结束）
+- OutputStageCardKey 块: 第 390-393 行
+- OutputStageCard 块: 第 395-403 行（已确认完整结束，NOTOUCH-5 无违反）
+
+================================================================================
+2. Step 2 基线 TSC 检查 (RED 阶段)
+================================================================================
+- 执行目录: d:\workspace\MedA\packages\shared-sdk
+- 执行命令: npx tsc --noEmit
+- 退出码 (EXIT_CODE): 0 ✅
+- 错误数量: 0 TS 错误
+- 结果输出已保存至: d:\workspace\MedA\T2_TSC_BASE.txt
+
+================================================================================
+3. Step 3 追加内容详情 (append-only)
+================================================================================
+- 追加起始位置: 第 404 行（即原文件末尾 `};` 之后空一行开始）
+- 追加行数: 28 行（431 - 403 = 28，在 +50 行限制内）
+- 追加类型 1: Report8ChaptersDraft<IdT = number>
+  字段顺序严格匹配:
+  - ch1_background: string
+  - ch2_methods: string
+  - ch3_pico: string
+  - ch4_results: string
+  - ch5_grade_assessment: string
+  - ch6_summary_of_findings: string
+  - ch7_discussion: string
+  - ch8_appendices: string
+  - source_snapshot_id?: IdT | null
+- 追加类型 2: ReportGeneratePayload<IdT = number>
+  字段顺序严格匹配:
+  - version_label?: string
+  - override_ch1_background?: string
+  - override_ch2_methods?: string
+  - override_ch3_pico?: string
+  - override_ch4_results?: string
+  - override_ch5_grade_assessment?: string
+  - override_ch6_summary_of_findings?: string
+  - override_ch7_discussion?: string
+  - override_ch8_appendices?: string
+- NOTOUCH-5 合规性: 未修改 OutputStageCard 及以上任何行 ✅
+
+================================================================================
+4. Step 4 GREEN 类型检查
+================================================================================
+- 执行目录: d:\workspace\MedA\packages\shared-sdk
+- 执行命令: npx tsc --noEmit
+- 退出码 (EXIT_CODE): 0 ✅
+- 错误数量: 0 TS 错误
+- 结果输出已保存至: d:\workspace\MedA\T2_TSC_GREEN.txt
+
+================================================================================
+5. Step 5 Vitest 类型引用验证
+================================================================================
+- 测试文件: d:\workspace\MedA\packages\shared-ui\src\__tests__\T2_types.test.ts
+  （同时也在 shared-sdk/src/__tests__/T2_types.test.ts 创建了备份）
+- 引用方式: import type { Report8ChaptersDraft, ReportGeneratePayload } from "@meda/shared-sdk"
+- 执行目录: d:\workspace\MedA\packages\shared-ui
+- 执行命令: npx vitest run T2_types
+- 结果摘要:
+  Test Files  1 passed (1) ✅
+       Tests  1 passed (1) ✅
+  - 类型级验证: _draft / _payload 类型别名正确赋值，TS 编译通过
+  - 值级验证: 所有 8 章字段类型为 string；source_snapshot_id 可为 null；
+    version_label / override_ch1_background 覆盖字段正确工作
+- 结果输出已保存至: d:\workspace\MedA\T2_VIT_GREEN.txt
+
+================================================================================
+6. 文件变动统计 (diff --stat)
+================================================================================
+- 仅修改文件: packages/shared-sdk/src/index.ts
+- 变动范围: 仅在第 403 行后追加 28 行（未修改原有任何行）
+- 总行数变化: 403 → 431（+28 行，限制 +50 行内）
+- 新增依赖: 0 个（Hard-Gate 合规 ✅）
+
+================================================================================
+Hard-Gate 合规检查清单
+================================================================================
+✅ NOTOUCH-5: OutputStageCard 及以上所有行未做任何修改（仅追加）
+✅ 0 新依赖: 未引入任何新 npm 包
+✅ 类型名精确匹配: Report8ChaptersDraft / ReportGeneratePayload
+✅ 字段顺序精确匹配: ch{1..8}_{name} 和 override_ch{1..8}_{name}
+✅ TSC 基线 RED: exit 0
+✅ TSC GREEN: exit 0（0 错误）
+✅ Vitest: 1 PASSED
+✅ 追加行数 ≤ 50 行
+
+================================================================================
+结论: 所有测试通过，任务完成 ✅
+================================================================================

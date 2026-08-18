@@ -1375,7 +1375,14 @@ def w84_post_report_generate(project_id: int, payload: dict | None = None):
         prisma_checklist_masked_count=0, prisma_checklist_total_items=27,
         grade_rows=grade_rows, forest_svg_content="",
     )
-    md, html, txt = generate_report_three_formats(pi)
+    _overrides_tmp: dict[str, str] = {}
+    for _k in ["override_ch1_background","override_ch2_methods","override_ch3_pico","override_ch4_results",
+               "override_ch5_grade_assessment","override_ch6_summary_of_findings","override_ch7_discussion","override_ch8_appendices"]:
+        _v = payload.get(_k)
+        if isinstance(_v,str) and _v.strip():
+            _overrides_tmp[_k] = _v
+    _overrides_arg: dict | None = _overrides_tmp if _overrides_tmp else None
+    md, html, txt = generate_report_three_formats(pi, overrides=_overrides_arg)
     try:
         _simulate_rule_O6_incomplete(md=md, html=html, txt=txt)
     except _OSErr as e:

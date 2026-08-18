@@ -1,0 +1,13 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.12.12, pytest-9.1.1, pluggy-1.6.0 -- D:\workspace\MedA\apps\agent-core\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\workspace\MedA\apps\agent-core
+configfile: pyproject.toml
+plugins: anyio-4.14.2, asyncio-1.4.0, forked-1.7.5
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 2 items
+
+tests/test_rest_output_w84_t4.py::test_no_overrides_passthrough_T4 PASSED [ 50%]
+tests/test_rest_output_w84_t4.py::test_override_ch1_ch6_T4 PASSED        [100%]
+
+============================== 2 passed in 7.46s ==============================

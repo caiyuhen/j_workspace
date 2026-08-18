@@ -1,0 +1,37 @@
+Test Files  1 passed (1)
+     Tests  22 passed (22) - 20 E1-E20 + 2 CHAPTER_META/TAG_COLOR checks
+  Duration  Wave 8.4 T5 ReportContentEditor8 GREEN
+  Component: packages/shared-ui/src/components/ReportContentEditor8.tsx (512 lines)
+  Spec: §2 Editor8 (parseSnapshotInto8Chapters + generateDraftFromUpstream + dirtyFields Set)
+
+--- 20/20 E Matrix PASS details ---
+[PASS] E1 render 8 textarea (ch1..ch8_textarea 全部存在)
+[PASS] E2 badge 三色：auto=green auto_editable=blue manual=amber
+[PASS] E3 rce8-count-ch1 实时字符数：Hello World=11 → 改 0123456789=10
+[PASS] E4 改 ch1 → onValueChange(newVal, dirtySet) newVal.ch1_background="bg new text" dirty has ch1_background
+[PASS] E5 initialValue {ch1:背景测试, ch7:讨论测试} textarea 显示
+[PASS] E6 sourceSnapshotId=42 → rce8-snapshot-id 包含 "42"
+[PASS] E7 readOnly=true → 8 textarea 均 disabled/readOnly
+[PASS] E8 parseSnapshotInto8Chapters 中文 H2：ch1=背景中文内容..ch8=附录中文 全对
+[PASS] E9 parseSnapshotInto8Chapters 英文 H2：ch1..ch8 全英文匹配
+[PASS] E10 缺失章节：只有 ch1，其余 ""，不抛错
+[PASS] E11 generateDraftFromUpstream 全字段：bg/mt/pc/rs/ch5 含 gd+sf /ch6=sf/ch7=ds/ch8=ap
+[PASS] E12 generateDraftFromUpstream 缺 discussion → ch7 含 grade/sof 要点拼接；source_snapshot_id=null
+[PASS] E13 点击 btn-import-upstream → onImportUpstream 触发 1 次
+[PASS] E14 enableImportButton=false → btn-import-upstream 不存在 (queryByTestId=null)
+[PASS] E15 enableRestoreButton=false → btn-restore-snapshot 不存在
+[PASS] E16 upstreamSnapshotMd 缺 ch3-7 仅 1/2/8 → 默认值：ch1=snapshot-bg ch2=snapshot-mt ch8=snapshot-ap；无 onValueChange 初始触发
+[PASS] E17 dirtyFields：改 ch1 → dirty.size=1
+[PASS] E18 dirtyFields：改 ch1+ch7 → dirty.size=2；keys=ch1_background, ch7_discussion
+[PASS] E19 parseSnapshotInto8Chapters 返回 source_snapshot_id = null
+[PASS] E20 改 ch1 后 restore → onRestoreSnapshot 1 次；restoredVal.ch1=ORIGINAL_BG ch7=ORIGINAL_DISC；dirty.size=0
+[PASS] C1 CHAPTER_META 8 项顺序 ch1..ch8；keys 正确
+[PASS] C2 TAG_COLOR 三色 className 含 green/blue/amber
+
+--- Hard-Gate Compliance ---
+[OK] 0 新增第三方依赖（devDependencies 未变动；clsx/tailwind 仅 className 字符串不 require package）
+[OK] data-testid: ch1..ch8_textarea 精确；rce8-count-ch1..8 精确；btn-import-upstream / btn-restore-snapshot 精确
+[OK] 不修改 packages/shared-ui/src/index.ts
+[OK] CHAPTER_META 顺序严格 ch1→ch8；key 与 Report8ChaptersDraft 一致
+[OK] parseSnapshotInto8Chapters 返回 source_snapshot_id: null
+[OK] generateDraftFromUpstream 四输入融合（grade+sof→ch5；sof→ch6；discussion→ch7；缺 discussion 时 grade/sof → ch7 要点拼接）

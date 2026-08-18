@@ -65,28 +65,55 @@ describe("Wave82B T11 ExportPanel (14 vitest)", () => {
     expect(screen.getByTestId("export-panel")).toBeTruthy();
   });
 
-  it("T11-EP02 5 导出按钮 present（新增 CSV/JSONL 两个）", () => {
+  it("T11-EP02 6 导出按钮 present（新增 Evidence CSV/Forest SVG 两个）", () => {
     render(<ExportPanel detail={makeDetail()} />);
     expect(screen.getByTestId("export-ris-btn")).toBeTruthy();
     expect(screen.getByTestId("export-bibtex-btn")).toBeTruthy();
     expect(screen.getByTestId("export-csv-btn")).toBeTruthy();
-    expect(screen.getByTestId("export-jsonl-btn")).toBeTruthy();
+    expect(screen.getByTestId("btn-export-evidence-csv")).toBeTruthy();
     expect(screen.getByTestId("export-prisma-btn")).toBeTruthy();
+    expect(screen.getByTestId("btn-export-forest-svg")).toBeTruthy();
   });
 
-  it("T11-EP03 status=pending → 5 buttons 全 disabled", () => {
+  it("T11-EP03 status=pending → 6 buttons 全 disabled", () => {
     const detail = makeDetail({ run: { status: "pending" } });
-    render(<ExportPanel detail={detail} />);
-    const ids = ["export-ris-btn", "export-bibtex-btn", "export-csv-btn", "export-jsonl-btn", "export-prisma-btn"];
+    render(
+      <ExportPanel
+        detail={detail}
+        onExportEvidenceCsv={() => {}}
+        onExportForestSvg={() => {}}
+      />
+    );
+    const ids = [
+      "export-ris-btn",
+      "export-bibtex-btn",
+      "export-csv-btn",
+      "btn-export-evidence-csv",
+      "export-prisma-btn",
+      "btn-export-forest-svg",
+    ];
     ids.forEach((id) => {
       expect((screen.getByTestId(id) as HTMLButtonElement).disabled).toBe(true);
     });
   });
 
-  it("T11-EP04 status=completed + records[]=empty → 仍 disabled（空态）", () => {
+  it("T11-EP04 status=completed + records[]=empty → 仍 enabled（空态非 disabled）", () => {
     const detail = makeDetail({ records: [] });
-    render(<ExportPanel detail={detail} />);
-    const ids = ["export-ris-btn", "export-bibtex-btn", "export-csv-btn", "export-jsonl-btn", "export-prisma-btn"];
+    render(
+      <ExportPanel
+        detail={detail}
+        onExportEvidenceCsv={() => {}}
+        onExportForestSvg={() => {}}
+      />
+    );
+    const ids = [
+      "export-ris-btn",
+      "export-bibtex-btn",
+      "export-csv-btn",
+      "btn-export-evidence-csv",
+      "export-prisma-btn",
+      "btn-export-forest-svg",
+    ];
     ids.forEach((id) => {
       expect((screen.getByTestId(id) as HTMLButtonElement).disabled).toBe(false);
     });
@@ -116,12 +143,17 @@ describe("Wave82B T11 ExportPanel (14 vitest)", () => {
     expect(onDone).toHaveBeenCalledWith("csv", expect.objectContaining({ count: 3 }));
   });
 
-  it("T11-EP08 JSONL click → onDone('jsonl',{filename,count})", () => {
-    const onDone = vi.fn();
+  it("T11-EP08 Evidence CSV click → onExportEvidenceCsv callback 1 次", () => {
+    const onExportEvidenceCsv = vi.fn();
     const detail = makeDetail();
-    render(<ExportPanel detail={detail} onDone={onDone} />);
-    fireEvent.click(screen.getByTestId("export-jsonl-btn"));
-    expect(onDone).toHaveBeenCalledWith("jsonl", expect.objectContaining({ count: 3 }));
+    render(
+      <ExportPanel
+        detail={detail}
+        onExportEvidenceCsv={onExportEvidenceCsv}
+      />
+    );
+    fireEvent.click(screen.getByTestId("btn-export-evidence-csv"));
+    expect(onExportEvidenceCsv).toHaveBeenCalledTimes(1);
   });
 
   it("T11-EP09 CSV file extension .csv in filename", () => {
@@ -133,13 +165,17 @@ describe("Wave82B T11 ExportPanel (14 vitest)", () => {
     expect(args[1].filename).toMatch(/\.csv$/);
   });
 
-  it("T11-EP10 JSONL file extension .jsonl in filename", () => {
-    const onDone = vi.fn();
+  it("T11-EP10 Forest SVG click → onExportForestSvg callback 1 次", () => {
+    const onExportForestSvg = vi.fn();
     const detail = makeDetail();
-    render(<ExportPanel detail={detail} onDone={onDone} />);
-    fireEvent.click(screen.getByTestId("export-jsonl-btn"));
-    const args = onDone.mock.calls[0];
-    expect(args[1].filename).toMatch(/\.jsonl$/);
+    render(
+      <ExportPanel
+        detail={detail}
+        onExportForestSvg={onExportForestSvg}
+      />
+    );
+    fireEvent.click(screen.getByTestId("btn-export-forest-svg"));
+    expect(onExportForestSvg).toHaveBeenCalledTimes(1);
   });
 
   it("T11-EP11 RIS error path → onDone('ris_error',{error})", () => {
