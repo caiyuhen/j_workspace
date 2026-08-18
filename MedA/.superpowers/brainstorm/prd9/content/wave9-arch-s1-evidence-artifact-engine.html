@@ -1,0 +1,180 @@
+<h2>PRD 9 · §1 架构 · Evidence Artifact 共享引擎（方案 2）</h2>
+<p class="subtitle">五个核心节点（S / Q / A 三个 UI 页 → 统一 Controller Hook → 共享 Engine），12 张文件清单，Wave 9a → 9b → 9c 三段顺序实施</p>
+
+<!-- ─── Five-Node Arch ────────────────────────────────────────── -->
+<div class="section">
+  <h3>5 节点数据流（单向不可逆）</h3>
+
+  <div class="mockup" style="background: linear-gradient(135deg,#f8fafc 0%,#eef2ff 100%);">
+    <div class="mockup-header" style="background: #6366f1; color: white; font-weight: 700;">
+      Evidence Artifact Engine · 数据流方向 →
+    </div>
+    <div class="mockup-body" style="padding: 28px 20px;">
+
+      <div style="display:grid; grid-template-columns: repeat(5, 1fr); gap: 14px; align-items: stretch;">
+
+        <!-- Node 1: Screening Dual-Phase -->
+        <div class="option" style="border:2px solid #3b82f6; background:#eff6ff; flex-direction:column; align-items:stretch; padding: 14px 12px; height:100%">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="background:#3b82f6;color:white;min-width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;">1</div>
+            <div>
+              <div style="font-weight:800; color:#1e40af; font-size:14px;">Wave 9a</div>
+              <div style="font-size:12px;color:#374151">Screening Dual-Phase</div>
+            </div>
+          </div>
+          <div style="font-size:12px; line-height:1.6; color:#1f2937;">
+            🏷️ <b>Stage 2</b><br>
+            • 10 步筛选漏斗（N1-N4/eligibility）<br>
+            • TA + Fulltext 两阶段<br>
+            • 9 项 Cochrane 排除原因<br>
+            • 新表：<code>screening_decision</code>
+          </div>
+        </div>
+
+        <!-- Arrow -->
+        <div style="display:flex;align-items:center;justify-content:center; color:#6366f1; font-size: 28px; font-weight: 900;">→</div>
+
+        <!-- Node 2: Abstractor Auto-Triager -->
+        <div class="option" style="border:2px solid #10b981; background:#ecfdf5; flex-direction:column; align-items:stretch; padding: 14px 12px; height:100%">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="background:#10b981;color:white;min-width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;">2</div>
+            <div>
+              <div style="font-weight:800; color:#065f46; font-size:14px;">Wave 9c</div>
+              <div style="font-size:12px;color:#374151">Abstractor Auto-Triager</div>
+            </div>
+          </div>
+          <div style="font-size:12px; line-height:1.6; color:#1f2937;">
+            🏷️ <b>Stage 2 预处理器</b><br>
+            • SimHash + Jaccard 去重<br>
+            • LLM 结构化摘要（PICO 自动提取）<br>
+            • 3 档 triage：Include / Exclude / Review<br>
+            • 置信度分 + 解释
+          </div>
+        </div>
+
+        <!-- Arrow -->
+        <div style="display:flex;align-items:center;justify-content:center; color:#6366f1; font-size: 28px; font-weight: 900;">→</div>
+
+        <!-- Node 3: Quality Assessment ROB-2 -->
+        <div class="option" style="border:2px solid #f59e0b; background:#fffbeb; flex-direction:column; align-items:stretch; padding: 14px 12px; height:100%">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="background:#f59e0b;color:white;min-width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;">3</div>
+            <div>
+              <div style="font-weight:800; color:#92400e; font-size:14px;">Wave 9b</div>
+              <div style="font-size:12px;color:#374151">Quality Assessment (ROB-2)</div>
+            </div>
+          </div>
+          <div style="font-size:12px; line-height:1.6; color:#1f2937;">
+            🏷️ <b>Stage 3</b><br>
+            • ROB-2 5 域 + Overall 6 档<br>
+            • ROBINS-I for NRSI（非随机）<br>
+            • 信号灯矩阵：🟢🟡🔴<br>
+            • 新表：<code>quality_assessment_ro</code>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom Layer: Unified Engine (full width) -->
+      <div style="margin-top: 24px; padding:18px; border: 3px dashed #6366f1; border-radius:14px; background: white;">
+        <div style="display: grid; grid-template-columns: 140px 1fr 1fr; gap: 18px; align-items:center;">
+          <div style="text-align:center;">
+            <div style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:white;padding:12px 8px;border-radius:10px;font-weight:800;">
+              🧩 UNIFIED ENGINE
+            </div>
+            <div style="font-size:11px;margin-top:6px;color:#6b7280;">方案2 核心 · 1 表 3 stage</div>
+          </div>
+          <div style="font-size:12px;line-height:1.7;">
+            <b style="color:#4338ca">evidence_artifact（共享表，3 stage）</b>
+            <ul style="margin:6px 0 0 18px; padding:0;">
+              <li><code>id / literature_record_id</code>（FK → LiteratureRecord）</li>
+              <li><code>stage: 'screening_ta' | 'screening_fulltext' | 'quality_ro' | 'quality_nrsi' | 'data_abstractor'</code></li>
+              <li><code>decision: 'include' | 'exclude' | 'review'</code>（三值统一）</li>
+              <li><code>confidence: 0~1.0</code>（Abstractor 用）</li>
+            </ul>
+          </div>
+          <div style="font-size:12px;line-height:1.7;">
+            <b style="color:#4338ca">Controller Hook（注入式）</b>
+            <ul style="margin:6px 0 0 18px; padding:0;">
+              <li><code>useEvidenceArtifact(record_id, stage)</code> 统一</li>
+              <li>S/Q/A 三页只传自己 stage 参数</li>
+              <li>Stage 2 done 才解锁 Stage 3（硬锁）</li>
+              <li>可独立 mock fetchClient</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 12 Files per Wave -->
+<div class="section">
+  <h3>文件清单（每 Wave 约 4 个新增，合计 12 文件）</h3>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+    <div class="mockup"><div class="mockup-header" style="background:#3b82f6;color:white;font-weight:700;">Wave 9a · Screening Dual-Phase</div>
+      <div class="mockup-body" style="font-size:12px;line-height:1.9;">
+        <code style="color:#1e40af;">app/models.py</code> + screening_decision 表<br>
+        <code style="color:#1e40af;">app/services/screening_engine.py</code>（漏斗 10 步）<br>
+        <code style="color:#1e40af;">shared-ui/useEvidenceArtifact.ts</code><br>
+        <code style="color:#1e40af;">shared-ui/FunnelProgressBar.tsx</code><br>
+        <b>+ ~5 pytest + ~22 vitest</b>
+      </div>
+    </div>
+    <div class="mockup"><div class="mockup-header" style="background:#f59e0b;color:white;font-weight:700;">Wave 9b · Quality Assessment ROB-2</div>
+      <div class="mockup-body" style="font-size:12px;line-height:1.9;">
+        <code style="color:#92400e;">app/models.py</code> + quality_assessment_ro 表<br>
+        <code style="color:#92400e;">app/services/rob2_engine.py</code>（5 域规则）<br>
+        <code style="color:#92400e;">shared-ui/RoB2Matrix.tsx</code>（5×N 信号灯）<br>
+        <code style="color:#92400e;">shared-ui/TrafficLightCell.tsx</code><br>
+        <b>+ ~7 pytest + ~35 vitest</b>
+      </div>
+    </div>
+    <div class="mockup"><div class="mockup-header" style="background:#10b981;color:white;font-weight:700;">Wave 9c · Abstractor Auto-Triager</div>
+      <div class="mockup-body" style="font-size:12px;line-height:1.9;">
+        <code style="color:#065f46;">app/services/simhash.py</code>（SimHash + Jaccard）<br>
+        <code style="color:#065f46;">app/services/abstractor.py</code>（LLM 摘要）<br>
+        <code style="color:#065f46;">shared-ui/AbstractorCard.tsx</code>（3 档 triage）<br>
+        <code style="color:#065f46;">shared-ui/ConfidenceBar.tsx</code><br>
+        <b>+ ~6 pytest + ~18 vitest</b>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Trade-off table -->
+<div class="section">
+  <h3>本架构 vs 方案 1 / 3 对比</h3>
+  <table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr style="background:#f1f5f9;">
+      <th style="padding:8px 10px;border:1px solid #cbd5e1;text-align:left;">维度</th>
+      <th style="padding:8px 10px;border:1px solid #cbd5e1;text-align:left;">方案1 独立</th>
+      <th style="padding:8px 10px;border:1px solid #cbd5e1;text-align:left;background:#eef2ff;color:#3730a3;font-weight:700;">方案2 Shared Engine（推荐）</th>
+      <th style="padding:8px 10px;border:1px solid #cbd5e1;text-align:left;">方案3 LLM 全流水线</th>
+    </tr></thead>
+    <tbody>
+      <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:700;">重复代码量</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">高（×3）</td><td style="padding:6px 10px;border:1px solid #cbd5e1;background:#eef2ff;">极低（共用 useEvidenceArtifact）</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">中</td></tr>
+      <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:700;">GRADE → ROB 引用</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">无（数据断裂）</td><td style="padding:6px 10px;border:1px solid #cbd5e1;background:#eef2ff;">✅ 直接 evidence_artifact 级关联</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">可但需 map</td></tr>
+      <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:700;">新增依赖</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">0</td><td style="padding:6px 10px;border:1px solid #cbd5e1;background:#eef2ff;">0（纯手写 SimHash）</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">LLM API Key + tokens</td></tr>
+      <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:700;">并行开发</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">✅ 三波完全独立</td><td style="padding:6px 10px;border:1px solid #cbd5e1;background:#eef2ff;">✅ 先做 Engine 再三波独立 9a/9b/9c</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">❌ 必须统一 LLM 上下文</td></tr>
+      <tr><td style="padding:6px 10px;border:1px solid #cbd5e1;font-weight:700;">预计代码量</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">+6,000</td><td style="padding:6px 10px;border:1px solid #cbd5e1;background:#eef2ff;">+3,800 行（约 Wave 8.4×1.7）</td><td style="padding:6px 10px;border:1px solid #cbd5e1;">+5,000（含 prompt 管理）</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="options" style="margin-top:20px">
+  <div class="option" data-choice="approve_arch" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>A. 架构 OK，确认 §1 通过</h3>
+      <p>继续 §2：Screening Dual-Phase（Wave 9a）详细分镜 + 10 步漏斗 mockup</p>
+    </div>
+  </div>
+  <div class="option" data-choice="revise_arch" onclick="toggleSelect(this)">
+    <div class="letter">↺</div>
+    <div class="content">
+      <h3>B. 架构要改</h3>
+      <p>告诉我你觉得哪里不对：共用表/拆分/顺序 9a→9c→9b 等</p>
+    </div>
+  </div>
+</div>
