@@ -111,7 +111,38 @@ def get_stage_entry(
     if stage_entry is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="stage not found")
 
-    return stage_entry
+    ret = stage_entry
+    # ── W8.4 LAZY-APPEND output_stage_cards 3 dynamic cards (BEGIN) ──
+    try:
+        from app.services.output_stage import build_output_stage_cards_3
+        from sqlmodel import select, func
+        from app.db import SessionLocal
+        from app.models import GradeAssessment, SofTableRow, ReportSnapshot, Prisma2020Checklist
+
+        sl = SessionLocal()
+        with sl as s:
+            cnt_grade = s.exec(select(func.count()).select_from(GradeAssessment).where(GradeAssessment.project_id == project_id)).one()
+            prisma = s.exec(select(Prisma2020Checklist).where(Prisma2020Checklist.project_id == project_id).limit(1)).first()
+            prisma_cnt = 0
+            if prisma is not None:
+                prisma_cnt = sum(1 for i in range(1,28) if bool(getattr(prisma, f"item_{i}", False)))
+            cnt_sof = s.exec(select(func.count()).select_from(SofTableRow).where(SofTableRow.project_id == project_id)).one()
+            cnt_snap = s.exec(select(func.count()).select_from(ReportSnapshot).where(ReportSnapshot.project_id == project_id)).one()
+            studies_k = 3
+        cards = build_output_stage_cards_3(
+            grade_count=int(cnt_grade or 0),
+            prisma_items_checked=int(prisma_cnt or 0),
+            sof_rows=int(cnt_sof or 0),
+            studies_k_any_outcome=int(studies_k or 0),
+            snap_count=int(cnt_snap or 0),
+        )
+        ret.output_stage_cards = [
+            {"card_key": c.card_key, "ready": c.ready, "locked_reason": c.locked_reason} for c in cards
+        ]
+    except Exception:
+        pass
+    # ── W8.4 LAZY-APPEND output_stage_cards 3 dynamic cards (END) ──
+    return ret
 
 
 @router.get(
@@ -1169,4 +1200,241 @@ def analysis_forest_svg(
         media_type="image/svg+xml",
         headers={"Content-Disposition": f'inline; filename="forest-{outcome_id}.svg"'},
     )
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WAVE 8.4 OUTPUT STAGE REST THIN-WRAPPERS (APPEND EOF; W8.3 endpoints above untouched)
+# AC8 NT-5 全部 lazy inside endpoints. workspace 顶部 import 0 grade/report/output/sof
+# ═══════════════════════════════════════════════════════════════════════════════
+@router.post("/projects/{project_id}/grade", status_code=201)
+def w84_post_grade_assessment(project_id: int, payload: dict):
+    from sqlmodel import select
+    from app.db import SessionLocal
+    from app.models import GradeAssessment
+    from app.services.output_stage import (
+        _simulate_rule_O8, _simulate_rule_O1, OutputStageError as _OSErr,
+    )
+    try:
+        keys = list((payload.get("domains_5") or {}).keys())
+        _simulate_rule_O8(keys_count=len(keys))
+        _simulate_rule_O1(locked=bool(payload.get("locked", False)), touch="domains_5")
+    except _OSErr as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail=str(e))
+    sl = SessionLocal()
+    with sl as s:
+        g = GradeAssessment(
+            project_id=project_id,
+            outcome_id=int(payload.get("outcome_id", 0)),
+            reviewer_id=int(payload.get("reviewer_id", 0)),
+            domains_5=payload.get("domains_5") or {},
+            upgrades_3=payload.get("upgrades_3") or {},
+            certainty_final=str(payload.get("certainty_final", "")),
+            note=payload.get("note"),
+            locked=bool(payload.get("locked", False)),
+        )
+        s.add(g); s.commit(); s.refresh(g)
+        return {"id": g.id, "project_id": g.project_id, "outcome_id": g.outcome_id,
+                "domains_5": g.domains_5, "upgrades_3": g.upgrades_3,
+                "certainty_final": g.certainty_final, "locked": g.locked}
+
+@router.get("/projects/{project_id}/grade")
+def w84_get_grade_list(project_id: int):
+    from sqlmodel import select
+    from app.db import SessionLocal
+    from app.models import GradeAssessment
+    sl = SessionLocal()
+    with sl as s:
+        rows = s.exec(select(GradeAssessment).where(GradeAssessment.project_id == project_id)).all()
+        return [dict(
+            id=r.id, outcome_id=r.outcome_id, reviewer_id=r.reviewer_id,
+            domains_5=r.domains_5, upgrades_3=r.upgrades_3,
+            certainty_final=r.certainty_final, locked=r.locked, note=r.note,
+        ) for r in rows]
+
+@router.post("/projects/{project_id}/grade/{assessment_id}/lock")
+def w84_lock_grade(project_id: int, assessment_id: int):
+    from sqlmodel import select
+    from app.db import SessionLocal
+    from app.models import GradeAssessment
+    from app.services.output_stage import _simulate_rule_O1, OutputStageError as _OSErr
+    sl = SessionLocal()
+    with sl as s:
+        g = s.get(GradeAssessment, assessment_id)
+        if g is None:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Grade assessment not found")
+        try:
+            _simulate_rule_O1(locked=g.locked, touch="certainty_final")
+        except _OSErr as e:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=422, detail=str(e))
+        g.locked = True
+        s.add(g); s.commit()
+        return {"id": g.id, "locked": True}
+
+@router.post("/projects/{project_id}/sof", status_code=201)
+def w84_post_sof_row(project_id: int, payload: dict):
+    from sqlmodel import select
+    from app.db import SessionLocal
+    from app.models import SofTableRow
+    sl = SessionLocal()
+    with sl as s:
+        sr = SofTableRow(
+            project_id=project_id,
+            outcome_id=int(payload.get("outcome_id", 0)),
+            assessment_id=(payload.get("assessment_id") or None),
+            so_cols=payload.get("so_cols") or {},
+        )
+        s.add(sr); s.commit(); s.refresh(sr)
+        return {"id": sr.id, "project_id": sr.project_id, "outcome_id": sr.outcome_id,
+                "assessment_id": sr.assessment_id, "so_cols": sr.so_cols}
+
+@router.get("/projects/{project_id}/sof")
+def w84_get_sof_list(project_id: int):
+    from sqlmodel import select
+    from app.db import SessionLocal
+    from app.models import SofTableRow
+    sl = SessionLocal()
+    with sl as s:
+        rows = s.exec(select(SofTableRow).where(SofTableRow.project_id == project_id)).all()
+        return [dict(id=r.id, outcome_id=r.outcome_id, assessment_id=r.assessment_id, so_cols=r.so_cols) for r in rows]
+
+@router.post("/projects/{project_id}/prisma2020", status_code=201)
+def w84_post_prisma2020_checklist(project_id: int, payload: dict):
+    from sqlmodel import select
+    from app.db import SessionLocal
+    from app.models import Prisma2020Checklist as PCL
+    from app.services.output_stage import _simulate_rule_O7, OutputStageError as _OSErr
+    try:
+        _simulate_rule_O7(locked=bool(payload.get("locked", False)))
+    except _OSErr as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail=str(e))
+    sl = SessionLocal()
+    with sl as s:
+        fields = {f"item_{i}": bool(payload.get(f"item_{i}", False)) for i in range(1, 28)}
+        p = PCL(
+            project_id=project_id,
+            reviewer_id=int(payload.get("reviewer_id", 0)),
+            **fields,
+            note=payload.get("note"),
+            locked=bool(payload.get("locked", False)),
+        )
+        s.add(p); s.commit(); s.refresh(p)
+        d = {"id": p.id, "project_id": p.project_id, "reviewer_id": p.reviewer_id, "locked": p.locked, "note": p.note}
+        for i in range(1, 28): d[f"item_{i}"] = getattr(p, f"item_{i}")
+        return d
+
+@router.get("/projects/{project_id}/prisma2020")
+def w84_get_prisma2020_checklist(project_id: int):
+    from sqlmodel import select
+    from app.db import SessionLocal
+    from app.models import Prisma2020Checklist as PCL
+    sl = SessionLocal()
+    with sl as s:
+        rows = s.exec(select(PCL).where(PCL.project_id == project_id)).all()
+        out = []
+        for p in rows:
+            d = {"id": p.id, "project_id": p.project_id, "reviewer_id": p.reviewer_id, "locked": p.locked, "note": p.note}
+            for i in range(1, 28): d[f"item_{i}"] = getattr(p, f"item_{i}")
+            out.append(d)
+        return out
+
+@router.post("/projects/{project_id}/report/generate")
+def w84_post_report_generate(project_id: int, payload: dict | None = None):
+    payload = payload or {}
+    from sqlmodel import select
+    from app.db import SessionLocal
+    from app.models import GradeAssessment
+    from app.services.output_stage import _simulate_rule_O5, _simulate_rule_O6_incomplete, OutputStageError as _OSErr
+    from app.services.report_engine import (
+        generate_report_three_formats, ProjectReportInput, GradeAssRow as _GR,
+    )
+    import hashlib
+    import json as _json
+    sl = SessionLocal()
+    with sl as s:
+        grades = s.exec(select(GradeAssessment).where(GradeAssessment.project_id == project_id)).all()
+    try:
+        _simulate_rule_O5(grade_count=len(grades))
+    except _OSErr as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail=str(e))
+    grade_rows = [
+        _GR(
+            outcome_label=f"Outcome {g.outcome_id}",
+            certainty=str(g.certainty_final),
+            participants_n=0, studies_k=0,
+            effect_label="NR", ar_control="NR", ar_intervention="NR",
+            comments=g.note or "",
+        ) for g in grades
+    ]
+    pi = ProjectReportInput(
+        project_name=f"Project {project_id}", project_id=project_id,
+        owner_display="Owner", abstract_summary="",
+        prisma_checklist_masked_count=0, prisma_checklist_total_items=27,
+        grade_rows=grade_rows, forest_svg_content="",
+    )
+    md, html, txt = generate_report_three_formats(pi)
+    try:
+        _simulate_rule_O6_incomplete(md=md, html=html, txt=txt)
+    except _OSErr as e:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail=str(e))
+    sha_grade = hashlib.sha256(_json.dumps([dict(domains_5=g.domains_5, upgrades_3=g.upgrades_3, certainty=g.certainty_final) for g in grades], sort_keys=True).encode("utf-8")).hexdigest()
+    sha_analysis = hashlib.sha256(b"empty-w84-t4-analysis-stub").hexdigest()
+    # === W84 T5 APPEND (idempotent get_or_create into ReportSnapshot table) ===
+    from app.models import ReportSnapshot as _RS
+    sl2 = SessionLocal()
+    with sl2 as s2:
+        existing = s2.query(_RS).filter(
+            _RS.project_id == project_id,
+            _RS.sha256_grade == sha_grade,
+            _RS.sha256_analysis == sha_analysis,
+        ).order_by(_RS.id.asc()).first()
+        if existing is None:
+            row = _RS(
+                project_id=project_id,
+                sha256_grade=sha_grade,
+                sha256_analysis=sha_analysis,
+                version_label=payload.get("version_label") or "v0.1-draft",
+                md_content=md,
+                html_content=html,
+                txt_content=txt,
+            )
+            s2.add(row); s2.commit(); s2.refresh(row)
+        else:
+            row = existing
+    snap_id = row.id
+    # === W84 T5 END idempotent ===
+    return {
+        "id": snap_id,
+        "sha256_grade": sha_grade,
+        "sha256_analysis": sha_analysis,
+        "version_label": payload.get("version_label") or "v0.1-draft",
+        "md_content": md,
+        "html_content": html,
+        "txt_content": txt,
+    }
+
+@router.get("/projects/{project_id}/reports")
+def w84_get_reports_list(project_id: int):
+    from app.db import SessionLocal
+    from app.models import ReportSnapshot as _RS
+    sl = SessionLocal()
+    with sl as s:
+        rows = s.query(_RS).filter(_RS.project_id == project_id).order_by(_RS.id.desc()).all()
+        out = []
+        for r in rows:
+            out.append({
+                "id": r.id,
+                "version_label": r.version_label,
+                "sha256_grade": r.sha256_grade,
+                "sha256_analysis": r.sha256_analysis,
+                "md_content": r.md_content,
+                "html_content": r.html_content,
+                "txt_content": r.txt_content,
+                "created_at": r.created_at.isoformat() if hasattr(r.created_at, "isoformat") else str(r.created_at),
+            })
+        return out
 

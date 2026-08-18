@@ -99,3 +99,21 @@ export { OutcomeArmInputs } from "./analysis/OutcomeArmInputs";
 export type { OutcomeArmInputsProps } from "./analysis/OutcomeArmInputs";
 export { ForestPlotW83 } from "./charts/ForestPlotW83";
 export type { ForestPlotW83Props } from "./charts/ForestPlotW83";
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WAVE 8.4 OUTPUT STAGE BARREL EXPORTS (GRADE 4 + REPORT 4)
+// EOF APPEND ONLY; ABOVE W8.2B/W8.3 EXPORTS 0 bytes modified
+// ══════════════════════════════════════════════════════════════════════════════
+export {
+  GradeDomainScorer5,
+  GradeUpgradeScorer3,
+  GradeAssessmentCard,
+  GradeSoFTable,
+} from "./grade";
+export {
+  ReportExportMenu3Formats,
+  Prisma2020Checklist27,
+  ReportSnapshotList,
+  DashboardOutputCards,
+} from "./report";
+export { DashboardOutputsW84 } from "./dashboard/DashboardOutputsW84";
