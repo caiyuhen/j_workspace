@@ -127,3 +127,16 @@ export { ReportGeneratorPanel, HTTP_422_DETAIL_MAP } from "./components/ReportGe
 export { default as HtmlPreviewFrame, SANDBOX_BLACKLIST } from "./components/HtmlPreviewFrame";
 export { useReportEditorController } from "./hooks/useReportEditorController";
 export type { ReportEditorState, ReportEditorAction, FetchClient } from "./hooks/useReportEditorController";
+
+// ══════════════════════════════════════════════════════════════════════════════
+// WAVE 9 BARREL EXPORTS (5 component + 4 type = 9 export lines, append-only)
+// ══════════════════════════════════════════════════════════════════════════════
+export { FunnelProgressBar } from './components/FunnelProgressBar';
+export type { FunnelProgressBarProps } from './components/FunnelProgressBar';
+export { RoB2Matrix, TrafficLightCell } from './grade/RoB2Matrix';
+export type { RoB2MatrixProps } from './grade/RoB2Matrix';
+export { AbstractorCard, ConfidenceBar } from './components/AbstractorCard';
+export type { AbstractorCardProps, ConfidenceBarProps } from './components/AbstractorCard';
+export { useEvidenceArtifact } from './hooks/useEvidenceArtifact';
+export type { UseEvidenceArtifactOptions } from './hooks/useEvidenceArtifact';
+export type { InjectFetchClient, UseEvidenceArtifactState, UseEvidenceArtifactReturn } from './hooks/useEvidenceArtifact';

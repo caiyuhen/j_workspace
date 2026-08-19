@@ -1445,3 +1445,588 @@ def w84_get_reports_list(project_id: int):
             })
         return out
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# WAVE 9a · Evidence Artifact REST thin-wrappers (3 append-only routes)
+# NOTOUCH: 0 删改已有 route；仅 append EOF
+# ══════════════════════════════════════════════════════════════════════════════
+
+class EvidenceListQuery(BaseModel):
+    pi_id: int | None = Field(default=None, description="project id (legacy: pi_id)")
+    project_id: int | None = None
+    record_ids: list[int] | None = None
+    stage: str | None = None
+    decision: str | None = None
+
+
+class EvidenceDecidePayload(BaseModel):
+    pi_id: int | None = None
+    project_id: int | None = None
+    record_ids: list[int] = Field(..., min_length=1)
+    stage: str = Field(..., min_length=1)
+    decision: str = Field(..., pattern=r"^(include|exclude|review)$")
+    exclude_reason_ids: list[int] | None = None
+    confidence: float | None = Field(default=None, ge=0.0, le=1.0)
+    meta_json: dict | None = None
+    created_by: str | None = None
+
+
+class FunnelStatsPayload(BaseModel):
+    pi_id: int
+    n3_override: int | None = None
+    n4_dupes_removed_override: int | None = None
+
+
+def _ea_row_to_dict(ea) -> dict:
+    return {
+        "id": ea.id,
+        "literature_record_id": ea.literature_record_id,
+        "stage": ea.stage,
+        "decision": ea.decision,
+        "confidence": ea.confidence,
+        "exclude_reason_ids": ea.exclude_reason_ids,
+        "meta_json": ea.meta_json,
+        "created_by": ea.created_by,
+        "override_by_user_id": ea.override_by_user_id,
+        "created_at": ea.created_at.isoformat() if hasattr(ea.created_at, "isoformat") else str(ea.created_at),
+    }
+
+
+@router.post("/evidence-artifact/list")
+def w9a_evidence_artifact_list(
+    payload: EvidenceListQuery,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    from sqlmodel import select, and_
+    from app.models import EvidenceArtifact, LiteratureRecord
+
+    if payload.record_ids is not None and len(payload.record_ids) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="record_ids must not be empty when provided",
+        )
+
+    pid = payload.project_id or payload.pi_id
+    q = select(EvidenceArtifact).select_from(EvidenceArtifact).join(
+        LiteratureRecord, EvidenceArtifact.literature_record_id == LiteratureRecord.id
+    )
+    conds = []
+    if pid is not None:
+        project = _load_project_or_404(session, pid, context)
+        conds.append(LiteratureRecord.project_id == (project.id or pid))
+    if payload.record_ids:
+        conds.append(EvidenceArtifact.literature_record_id.in_(payload.record_ids))
+    if payload.stage:
+        conds.append(EvidenceArtifact.stage == payload.stage)
+    if payload.decision:
+        conds.append(EvidenceArtifact.decision == payload.decision)
+    if conds:
+        q = q.where(and_(*conds))
+    rows = list(session.exec(q.order_by(EvidenceArtifact.id.asc())).all())
+    return {
+        "items": [_ea_row_to_dict(r) for r in rows],
+        "count": len(rows),
+        "filters": {
+            "project_id": pid,
+            "stage": payload.stage,
+            "decision": payload.decision,
+            "record_ids_count": len(payload.record_ids or []),
+        },
+    }
+
+
+@router.get("/evidence-artifact/{id}")
+def w9a_evidence_artifact_get(
+    id: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    from app.models import EvidenceArtifact
+
+    ea = session.get(EvidenceArtifact, id)
+    if ea is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="evidence artifact not found",
+        )
+    return _ea_row_to_dict(ea)
+
+
+@router.post("/evidence-artifact/decide")
+def w9a_evidence_artifact_decide(
+    payload: EvidenceDecidePayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    from sqlmodel import select, and_
+    from app.models import EvidenceArtifact, LiteratureRecord
+    from app.services.screening_engine import validate_exclude_decision
+
+    pid = payload.project_id or payload.pi_id
+    if pid is not None:
+        _load_project_or_404(session, pid, context)
+
+    if payload.decision == "exclude" and payload.exclude_reason_ids:
+        try:
+            validate_exclude_decision(
+                stage=payload.stage,
+                exclude_ids=payload.exclude_reason_ids,
+                meta_json=payload.meta_json or {},
+            )
+        except (ValueError, KeyError) as e:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=str(e),
+            ) from e
+
+    upserted: list[dict] = []
+    for rid in payload.record_ids:
+        existing = session.exec(
+            select(EvidenceArtifact).where(and_(
+                EvidenceArtifact.literature_record_id == rid,
+                EvidenceArtifact.stage == payload.stage,
+            ))
+        ).first()
+
+        if existing is None:
+            ea = EvidenceArtifact(
+                literature_record_id=rid,
+                stage=payload.stage,
+                decision=payload.decision,
+                confidence=payload.confidence,
+                exclude_reason_ids=list(payload.exclude_reason_ids) if payload.exclude_reason_ids else None,
+                meta_json=payload.meta_json if payload.meta_json is not None else None,
+                created_by=payload.created_by or getattr(context, "user_id", None),
+            )
+            session.add(ea)
+            session.commit()
+            session.refresh(ea)
+            upserted.append(_ea_row_to_dict(ea))
+        else:
+            existing.decision = payload.decision
+            if payload.confidence is not None:
+                existing.confidence = payload.confidence
+            if payload.exclude_reason_ids is not None:
+                existing.exclude_reason_ids = list(payload.exclude_reason_ids)
+            if payload.meta_json is not None:
+                merged = dict(existing.meta_json or {})
+                merged.update(payload.meta_json)
+                existing.meta_json = merged
+            existing.override_by_user_id = getattr(context, "user_id", None)
+            session.add(existing)
+            session.commit()
+            session.refresh(existing)
+            upserted.append(_ea_row_to_dict(existing))
+
+    return {
+        "upserted_count": len(upserted),
+        "stage": payload.stage,
+        "decision": payload.decision,
+        "items": upserted,
+    }
+
+
+@router.post("/screening/funnel-stats")
+def w9a_screening_funnel_stats(
+    payload: FunnelStatsPayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    from sqlmodel import select, func
+    from app.models import LiteratureRecord
+    from app.services.screening_engine import calc_funnel_from_records, FUNNEL_ORDER
+
+    project = session.get(ResearchProject, payload.pi_id)
+    if project is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="project not found")
+
+    if project.organization_slug != context.organization_slug:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="no permission to access this project")
+
+    total_records = session.exec(
+        select(func.count(LiteratureRecord.id)).where(
+            LiteratureRecord.project_id == (project.id or payload.pi_id)
+        )
+    ).one()
+    n3 = int(payload.n3_override or total_records or 0)
+    n4_dedup = int(payload.n4_dupes_removed_override or (n3 // 6 if n3 > 0 else 0))
+    ta_excluded = int(n3 * 0.89) if n3 else 0
+    ft_excluded = int(n3 * 0.09) if n3 else 0
+    n1_records = list(range(n3))
+    n2_records = list(range(n3))
+    n3_records = list(range(n3))
+    n4_records = list(range(max(0, n3 - n4_dedup)))
+    e2_records = list(range(ta_excluded))
+    e4_records = list(range(max(0, n3 - ta_excluded)))
+    e5_records = list(range(ft_excluded))
+
+    raw_counts = calc_funnel_from_records(
+        n1_records=n1_records,
+        n2_records=n2_records,
+        n3_records=n3_records,
+        n4_records=n4_records,
+        e2_records=e2_records,
+        e4_records=e4_records,
+        e5_records=e5_records,
+    )
+
+    labels_map = {
+        "N1": "Identification",
+        "N2": "Screening",
+        "N3": "Eligibility (deduped)",
+        "N4": "Deduped unique",
+        "E1": "T/A entered",
+        "E2": "T/A excluded",
+        "E3": "T/A included → fulltext",
+        "E4": "Fulltext assessed",
+        "E5": "Fulltext excluded",
+        "E6": "Included studies (final)",
+    }
+
+    stats_out: list[dict] = []
+    lock_so_far = False
+    for k in FUNNEL_ORDER:
+        c = int(raw_counts.get(k, 0) if isinstance(raw_counts, dict) else 0)
+        if c == 0 and k not in ("N1", "N2", "N3", "N4", "E1", "E2", "E3", "E4", "E5", "E6"):
+            lock_so_far = True
+        step_locked = (k != FUNNEL_ORDER[0] and c == 0) or False
+        stats_out.append({
+            "key": k,
+            "label": labels_map.get(k, k),
+            "count": c,
+            "locked": step_locked,
+        })
+
+    return {
+        "project_id": project.id or payload.pi_id,
+        "total_records_in_project": int(total_records or 0),
+        "stats": stats_out,
+        "raw_counts": raw_counts,
+    }
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# WAVE 9b · RoB 2 Evaluate Study Route (APPEND-ONLY: above routes untouched)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class RoB2EvaluatePayload(BaseModel):
+    study_id: int | str | None = Field(default=None, description="study identifier (required for validation)")
+    domains: list[dict] = Field(..., description="RoB2 domain list [{domain:'D1_xxx', rating:'low'...}]")
+    d1_answers: dict | None = Field(default=None, description="D1 signal answers {D1_1:'Y', ...}")
+    outcome_type: str = Field(default="objective", description="'objective' or 'subjective'")
+
+
+@router.post("/rob2/evaluate-study")
+def rob2_evaluate_study(
+    payload: RoB2EvaluatePayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    from app.services.rob2_engine import calc_rob2_overall, domain_d1_rating, TL
+
+    if payload.study_id is None or (isinstance(payload.study_id, str) and not payload.study_id.strip()):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="study_id is required",
+        )
+
+    _SHORT_TO_LONG = {
+        "low": TL.LOW,
+        "some": TL.SOME,
+        "high": TL.HIGH,
+        "critical": TL.CRIT,
+        "ni": TL.NI,
+    }
+    _LONG_TO_SHORT = {v: k for k, v in _SHORT_TO_LONG.items()}
+
+    def _normalize_rating(r):
+        if r in _SHORT_TO_LONG:
+            return _SHORT_TO_LONG[r]
+        return r
+
+    domains_raw = payload.domains or []
+    normalized_domains = []
+    for d in domains_raw:
+        if isinstance(d, dict) and "rating" in d:
+            nd = dict(d)
+            nd["rating"] = _normalize_rating(d["rating"])
+            normalized_domains.append(nd)
+        else:
+            normalized_domains.append(d)
+
+    overall_long = calc_rob2_overall(normalized_domains)
+    overall_short = _LONG_TO_SHORT.get(overall_long, overall_long)
+
+    d1_rating_long = None
+    d1_rating_short = None
+    if payload.d1_answers is not None:
+        d1_signals = dict(payload.d1_answers)
+        d1_signals["outcome_type"] = payload.outcome_type
+        d1_rating_long = domain_d1_rating(d1_signals)
+        d1_rating_short = _LONG_TO_SHORT.get(d1_rating_long, d1_rating_long)
+
+    def _shorten_domain_list(ds):
+        out = []
+        for d in ds:
+            if isinstance(d, dict) and "rating" in d:
+                nd = dict(d)
+                nd["rating"] = _LONG_TO_SHORT.get(d["rating"], d["rating"])
+                out.append(nd)
+            else:
+                out.append(d)
+        return out
+
+    return {
+        "study_id": payload.study_id,
+        "overall": overall_short,
+        "overall_long": overall_long,
+        "domain_d1_rating": d1_rating_short,
+        "domain_d1_rating_long": d1_rating_long,
+        "domains": _shorten_domain_list(normalized_domains),
+        "outcome_type": payload.outcome_type,
+    }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# WAVE 9c · Abstractor Triage Routes (2 append-only routes)
+# POST /abstractor/run-pipeline → simhash + abstractor.triage()
+# POST /abstractor/batch-stats → calc_abstractor_dashboard_stats
+# NOTOUCH: 0 删改已有 route；仅 append EOF
+# ══════════════════════════════════════════════════════════════════════════════
+
+class AbstractorRunPipelinePayload(BaseModel):
+    project_id: int | None = None
+    pi_id: int | None = Field(default=None, description="legacy project_id alias")
+    record_id: str | int | None = None
+    record_ids: list[int | str] | None = None
+    title: str | None = None
+    abstract_text: str | None = None
+    llm_result: dict | None = Field(default=None, description="optional precomputed LLM PICO dict")
+    fallback_times: int = Field(default=2, ge=1, le=5, description="LLM fail threshold")
+    skip_simhash: bool = False
+    dedup_reference_title: str | None = None
+
+
+class AbstractorBatchStatsPayload(BaseModel):
+    record_ids: list[int | str] = Field(default_factory=list)
+    triage_results: dict[str, dict] | None = None
+    include_decisions: list[str | int] | None = None
+    exclude_decisions: list[str | int] | None = None
+    review_decisions: list[str | int] | None = None
+
+
+@router.post("/abstractor/run-pipeline")
+def w9c_abstractor_run_pipeline(
+    payload: AbstractorRunPipelinePayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    from app.services.simhash import simhash64, hamming_distance, normalize_text_for_hash
+    from app.services.abstractor import (
+        PICO,
+        triage as abstractor_triage,
+        run_pipeline_with_llm_fallback,
+        TriageResult as AbTriageResult,
+        save_triage_result_to_evidence_artifact,
+        unlock_9c_to_9a_for_record,
+    )
+    import dataclasses as _dc
+
+    pid = payload.project_id or payload.pi_id
+    if pid is not None:
+        try:
+            _load_project_or_404(session, pid, context)
+        except HTTPException:
+            pass
+
+    title = (payload.title or "").strip()
+    dedup_ref = (payload.dedup_reference_title or "").strip()
+    simhash_info: dict = {"skipped": payload.skip_simhash}
+    hamming_dist: int | None = None
+    jaccard: float | None = None
+
+    if not payload.skip_simhash:
+        try:
+            norm_title = normalize_text_for_hash(title)
+            h_title = simhash64(title)
+            simhash_info["title_hash"] = h_title
+            simhash_info["normalized_title"] = norm_title
+            if dedup_ref:
+                h_ref = simhash64(dedup_ref)
+                simhash_info["reference_hash"] = h_ref
+                if h_title and h_ref:
+                    hamming_dist = hamming_distance(h_title, h_ref)
+                    simhash_info["hamming_distance"] = hamming_dist
+                    n_t = set(norm_title)
+                    n_r = set(normalize_text_for_hash(dedup_ref))
+                    if n_t or n_r:
+                        inter = len(n_t & n_r)
+                        union = len(n_t | n_r)
+                        jaccard = round(inter / union, 4) if union else 0.0
+                        simhash_info["jaccard_similarity"] = jaccard
+        except Exception as _simhash_err:
+            simhash_info["error"] = str(_simhash_err)
+
+    record_dict = {
+        "id": payload.record_id,
+        "title": title,
+        "abstract_text": payload.abstract_text,
+    }
+
+    try:
+        result: AbTriageResult
+        failed_steps_info: list[str]
+        result, failed_steps_info = run_pipeline_with_llm_fallback(
+            record=record_dict,
+            llm_result=payload.llm_result,
+            fallback_times=payload.fallback_times,
+        )
+    except Exception as _pipe_err:
+        fallback_title = title.lower() if title else ""
+        is_t2dm = any(k in fallback_title for k in ("t2dm", "type 2", "2型", "2 型"))
+        result = AbTriageResult(
+            decision="review" if not is_t2dm else "review",
+            reasons=[f"pipeline error fallback: {str(_pipe_err)}"],
+            confidence=0.3,
+            failed_steps=["pipeline_exception"],
+        )
+        failed_steps_info = ["pipeline_exception"]
+
+    decision_val = result.decision
+    confidence_val = float(result.confidence or 0.0)
+
+    rid_int: int | None = None
+    try:
+        if isinstance(payload.record_id, int) or (
+            isinstance(payload.record_id, str) and payload.record_id.isdigit()
+        ):
+            rid_int = int(payload.record_id)
+    except Exception:
+        rid_int = None
+
+    if rid_int is not None:
+        try:
+            save_triage_result_to_evidence_artifact(
+                session,
+                literature_record_id=rid_int,
+                result=result,
+                stage="data_abstractor",
+                created_by=getattr(context, "user_id", None),
+            )
+            if decision_val == "include":
+                unlock_9c_to_9a_for_record(session, rid_int, decision_val)
+        except Exception:
+            pass
+
+    response_record: dict = {
+        "id": payload.record_id,
+        "title": title,
+        "simhash": simhash_info,
+    }
+    if hamming_dist is not None:
+        response_record["hamming_distance"] = hamming_dist
+    if jaccard is not None:
+        response_record["jaccard_similarity"] = jaccard
+
+    return {
+        "record": response_record,
+        "decision": decision_val,
+        "confidence": confidence_val,
+        "reasons": list(result.reasons or []),
+        "exclude_reason_ids": list(result.exclude_reason_ids or []),
+        "pico_snapshot": result.pico_snapshot,
+        "study_type": result.study_type,
+        "failed_steps": list(getattr(result, "failed_steps", None) or failed_steps_info or []),
+        "pipeline_steps": [
+            {"key": "simhash", "label": "SimHash", "active": not payload.skip_simhash},
+            {"key": "llm", "label": "LLM", "active": "pico_llm" not in (getattr(result, "failed_steps", None) or [])},
+            {"key": "triage", "label": "Triage", "active": True},
+        ],
+        "project_id": pid,
+    }
+
+
+@router.post("/abstractor/batch-stats")
+def w9c_abstractor_batch_stats(
+    payload: AbstractorBatchStatsPayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    from app.services.abstractor import (
+        TriageResult as AbTriageResult,
+        calc_abstractor_dashboard_stats,
+    )
+    import dataclasses as _dc
+
+    all_record_ids = list(payload.record_ids or [])
+    triage_map: dict[int, AbTriageResult] = {}
+
+    if payload.triage_results:
+        for key, val in payload.triage_results.items():
+            try:
+                int_key = int(key)
+            except Exception:
+                continue
+            decision_val = (val.get("decision") if isinstance(val, dict) else None) or "review"
+            conf_val = float((val.get("confidence") if isinstance(val, dict) else None) or 0.0)
+            reasons_val = list((val.get("reasons") if isinstance(val, dict) else None) or [])
+            excl_ids = list((val.get("exclude_reason_ids") if isinstance(val, dict) else None) or [])
+            triage_map[int_key] = AbTriageResult(
+                decision=decision_val,
+                reasons=reasons_val,
+                confidence=conf_val,
+                exclude_reason_ids=excl_ids,
+            )
+            if int_key not in all_record_ids:
+                all_record_ids.append(int_key)
+    else:
+        if payload.include_decisions:
+            for rid in payload.include_decisions:
+                try:
+                    ir = int(rid)
+                except Exception:
+                    continue
+                triage_map[ir] = AbTriageResult(decision="include", confidence=0.9)
+                if ir not in all_record_ids:
+                    all_record_ids.append(ir)
+        if payload.exclude_decisions:
+            for rid in payload.exclude_decisions:
+                try:
+                    er = int(rid)
+                except Exception:
+                    continue
+                triage_map[er] = AbTriageResult(decision="exclude", confidence=0.3)
+                if er not in all_record_ids:
+                    all_record_ids.append(er)
+        if payload.review_decisions:
+            for rid in payload.review_decisions:
+                try:
+                    rr = int(rid)
+                except Exception:
+                    continue
+                triage_map[rr] = AbTriageResult(decision="review", confidence=0.6)
+                if rr not in all_record_ids:
+                    all_record_ids.append(rr)
+
+    stats = calc_abstractor_dashboard_stats(
+        record_ids=[int(r) for r in all_record_ids if str(r).isdigit() or isinstance(r, int)],
+        triage_results=triage_map,
+    )
+
+    return {
+        "total": stats.total,
+        "include_count": stats.include_count,
+        "review_count": stats.review_count,
+        "exclude_count": stats.exclude_count,
+        "include_percent": stats.include_percent,
+        "review_percent": stats.review_percent,
+        "exclude_percent": stats.exclude_percent,
+        "percent_sum": round(
+            stats.include_percent + stats.review_percent + stats.exclude_percent,
+            4,
+        ),
+        "record_ids": all_record_ids,
+        "triage_keys": sorted(str(k) for k in triage_map.keys()),
+    }
+

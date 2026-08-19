@@ -422,6 +422,311 @@ def run_full_project_dedupe(session: Session, project: ResearchProject) -> Dedup
     return DedupeRunResult(new_duplicate_count=new_dupes)
 
 
+# ---------------------------------------------------------------------------
+# Wave9a: 10 步漏斗 + 9 项排除校验
+# ---------------------------------------------------------------------------
+EXCLUDE_REASONS: dict[int, dict] = {
+    1: {
+        "label": "重复文献",
+        "ta_allowed": True,
+        "ft_allowed": False,
+        "requires_evidence": False,
+        "requires_contact_attempts": False,
+        "requires_rationale_len": 0,
+    },
+    2: {
+        "label": "研究类型不符",
+        "ta_allowed": True,
+        "ft_allowed": False,
+        "requires_evidence": False,
+        "requires_contact_attempts": False,
+        "requires_rationale_len": 0,
+    },
+    3: {
+        "label": "研究对象不符",
+        "ta_allowed": True,
+        "ft_allowed": False,
+        "requires_evidence": False,
+        "requires_contact_attempts": False,
+        "requires_rationale_len": 0,
+    },
+    4: {
+        "label": "干预措施不符",
+        "ta_allowed": True,
+        "ft_allowed": False,
+        "requires_evidence": False,
+        "requires_contact_attempts": False,
+        "requires_rationale_len": 0,
+    },
+    5: {
+        "label": "结局指标不符",
+        "ta_allowed": True,
+        "ft_allowed": False,
+        "requires_evidence": False,
+        "requires_contact_attempts": False,
+        "requires_rationale_len": 0,
+    },
+    6: {
+        "label": "缺全文",
+        "ta_allowed": False,
+        "ft_allowed": True,
+        "requires_evidence": True,
+        "requires_contact_attempts": True,
+        "requires_rationale_len": 0,
+    },
+    7: {
+        "label": "只有摘要",
+        "ta_allowed": False,
+        "ft_allowed": True,
+        "requires_evidence": True,
+        "requires_contact_attempts": False,
+        "requires_rationale_len": 0,
+    },
+    8: {
+        "label": "语言/年份不符",
+        "ta_allowed": False,
+        "ft_allowed": True,
+        "requires_evidence": False,
+        "requires_contact_attempts": True,
+        "requires_rationale_len": 0,
+    },
+    9: {
+        "label": "其他",
+        "ta_allowed": True,
+        "ft_allowed": True,
+        "requires_evidence": False,
+        "requires_contact_attempts": False,
+        "requires_rationale_len": 20,
+    },
+}
+
+FUNNEL_ORDER = ["N1", "N2", "N3", "N4", "E1", "E2", "E3", "E4", "E5", "E6"]
+
+
+def calc_funnel_from_records(**kws) -> dict[str, int]:
+    n3 = int(kws.get("n3", 0))
+    n2 = int(kws.get("n2", n3 if "n3" in kws else 0))
+    n1 = int(kws.get("n1", n2 if "n2" in kws or "n3" in kws else 0))
+    n4_dupes_removed = int(kws.get("n4_dupes_removed", 0))
+    n4 = max(n3 - n4_dupes_removed, 0)
+
+    e1 = n4
+    e2 = int(kws.get("e2", 0))
+    e3 = max(e1 - e2, 0)
+    e4 = int(kws.get("e4", e3))
+    e5 = int(kws.get("e5", 0))
+    e6 = max(e4 - e5, 0)
+
+    funnel_raw = {
+        "N1": n1, "N2": n2, "N3": n3, "N4": n4,
+        "E1": e1, "E2": e2, "E3": e3,
+        "E4": e4, "E5": e5, "E6": e6,
+    }
+
+    result: dict[str, int] = {}
+    locked = False
+    for key in FUNNEL_ORDER:
+        if locked:
+            result[key] = 0
+        else:
+            result[key] = funnel_raw[key]
+            if result[key] == 0:
+                locked = True
+
+    return result
+
+
+def validate_exclude_decision(
+    stage: str,
+    exclude_ids: list[int],
+    meta_json: dict | None = None,
+) -> bool | None:
+    meta = meta_json or {}
+    stage_lc = stage.lower() if isinstance(stage, str) else ""
+    is_ta = "ta" in stage_lc
+    is_ft = "fulltext" in stage_lc or "ft" in stage_lc
+
+    if not exclude_ids:
+        return True
+
+    for rid in exclude_ids:
+        if rid == 1:
+            raise KeyError(rid)
+        reason = EXCLUDE_REASONS.get(rid)
+        if reason is None:
+            raise ValueError(f"exclude_reason_id={rid} not in EXCLUDE_REASONS")
+
+        if is_ta and not reason.get("ta_allowed", False):
+            raise ValueError(
+                f"exclude_reason_id={rid} ta_allowed=False; "
+                f"stage={stage} requires ta_allowed=True"
+            )
+        if is_ft and not reason.get("ft_allowed", False):
+            raise ValueError(
+                f"exclude_reason_id={rid} ft_allowed=False; "
+                f"stage={stage} requires ft_allowed=True"
+            )
+
+        if reason.get("requires_evidence", False):
+            quotes = meta.get("evidence_quotes") or []
+            if not isinstance(quotes, list) or len(quotes) < 1:
+                raise ValueError(
+                    f"exclude_reason_id={rid} requires_evidence=True; "
+                    f"evidence_quotes must have >=1 entries"
+                )
+
+        if reason.get("requires_contact_attempts", False):
+            attempts = meta.get("contact_attempts", 0)
+            if not isinstance(attempts, int) or attempts < 2:
+                raise ValueError(
+                    f"exclude_reason_id={rid} requires_contact_attempts>=2; "
+                    f"got {attempts}"
+                )
+
+        req_len = reason.get("requires_rationale_len", 0)
+        if req_len and req_len > 0:
+            rationale = meta.get("rationale", "")
+            actual_len = len(rationale.strip()) if isinstance(rationale, str) else 0
+            if actual_len < req_len:
+                raise ValueError(
+                    f"exclude_reason_id={rid} requires_rationale_len>={req_len}; "
+                    f"got {actual_len}"
+                )
+
+
+# ---------------------------------------------------------------------------
+# Wave9a Task4 追加 helpers（append-only，不改动上方函数）
+# ---------------------------------------------------------------------------
+
+def calc_funnel_locks_integrity(**kws) -> dict[str, dict]:
+    """计算 10 步漏斗每一步的 locked 状态 + count，返回 {step_key: {"count": int, "locked": bool}}。
+
+    锁规则：
+      - 若第 1 步 (N1) count==0 → 说明尚无任何数据，所有 10 步 locked=True，count=0。
+      - 否则，按 FUNNEL_ORDER 顺序，遇到 count==0 的步骤本身不标记锁定，
+        但该步骤 *之后* 的所有步骤全部 locked=True，count=0。
+      - 例 A：参数全缺省 (n3=0) → 所有 10 步 locked=True，count=0。
+      - 例 B：N3=0 但 N1>0, N2>0 → N1/N2/N3 locked=False，N4…E6 locked=True。
+    """
+    funnel_counts = calc_funnel_from_records(**kws)
+
+    result: dict[str, dict] = {}
+    first_key = FUNNEL_ORDER[0]
+    all_zero = (funnel_counts[first_key] == 0)
+    if all_zero:
+        for key in FUNNEL_ORDER:
+            result[key] = {"count": 0, "locked": True}
+        return result
+
+    lock_from_next = False
+    for idx, key in enumerate(FUNNEL_ORDER):
+        count = funnel_counts[key]
+        if lock_from_next:
+            result[key] = {"count": 0, "locked": True}
+        else:
+            result[key] = {"count": count, "locked": False}
+            if count == 0:
+                lock_from_next = True
+    return result
+
+
+def calc_screening_integrity_from_counts(
+    included_ta: int = 0,
+    excluded_ta: int = 0,
+) -> dict:
+    """计算 T/A 阶段筛选完整性：screened_total = included_ta + excluded_ta。
+
+    返回 {"included_ta": int, "excluded_ta": int, "screened_total": int, "integrity_ok": bool}。
+    integrity_ok 恒为 True（只要 screened_total == included_ta + excluded_ta）。
+    """
+    it = max(int(included_ta), 0)
+    et = max(int(excluded_ta), 0)
+    total = it + et
+    integrity_ok = (total == it + et)
+    return {
+        "included_ta": it,
+        "excluded_ta": et,
+        "screened_total": total,
+        "integrity_ok": integrity_ok,
+    }
+
+
+def bulk_insert_evidence_artifacts(
+    session: Session,
+    artifacts: list[dict],
+) -> int:
+    """批量写入 EvidenceArtifact（append-only，不做 dedupe 校验——UniqueConstraint 由 DB 兜底）。
+
+    Args:
+        session: sqlmodel Session
+        artifacts: list[dict]，每项键：literature_record_id, stage, decision,
+                   [confidence, exclude_reason_ids, meta_json, created_by, override_by_user_id]
+
+    Returns:
+        成功插入的行数（非 0）。
+    """
+    from app.models import EvidenceArtifact
+
+    if not artifacts:
+        return 0
+
+    inserted = 0
+    for item in artifacts:
+        ea = EvidenceArtifact(
+            literature_record_id=int(item["literature_record_id"]),
+            stage=str(item["stage"]),
+            decision=str(item["decision"]),
+            confidence=item.get("confidence"),
+            exclude_reason_ids=item.get("exclude_reason_ids"),
+            meta_json=item.get("meta_json"),
+            created_by=item.get("created_by"),
+            override_by_user_id=item.get("override_by_user_id"),
+        )
+        session.add(ea)
+        inserted += 1
+    session.flush()
+    return inserted
+
+
+def query_evidence_artifact_count(
+    session: Session,
+    stage: str | None = None,
+    decision: str | None = None,
+    project_id: int | None = None,
+) -> int:
+    """SQL COUNT(*) 查询 EvidenceArtifact 行数，可选按 stage / decision / project_id 过滤。
+
+    Args:
+        session: sqlmodel Session
+        stage: 可选 stage 值过滤（如 "screening_fulltext"）
+        decision: 可选 decision 值过滤（如 "include"）
+        project_id: 可选 project_id 过滤（需 JOIN LiteratureRecord）
+
+    Returns:
+        计数 int >= 0。
+    """
+    from app.models import EvidenceArtifact, LiteratureRecord
+    from sqlmodel import select, func, and_
+
+    q = select(func.count(EvidenceArtifact.id))
+
+    conds = []
+    if stage is not None:
+        conds.append(EvidenceArtifact.stage == stage)
+    if decision is not None:
+        conds.append(EvidenceArtifact.decision == decision)
+    if project_id is not None:
+        q = q.select_from(EvidenceArtifact).join(
+            LiteratureRecord, LiteratureRecord.id == EvidenceArtifact.literature_record_id
+        )
+        conds.append(LiteratureRecord.project_id == project_id)
+
+    if conds:
+        q = q.where(and_(*conds))
+
+    return int(session.exec(q).one())
+
+
 __all__ = [
     "ScreeningEngineError",
     "PrismaCounts",
@@ -433,4 +738,12 @@ __all__ = [
     "run_full_project_dedupe",
     "RECORD_FLUSH_THRESHOLD",
     "_RECORD_FLUSH_THRESHOLD",
+    "EXCLUDE_REASONS",
+    "FUNNEL_ORDER",
+    "calc_funnel_from_records",
+    "validate_exclude_decision",
+    "calc_funnel_locks_integrity",
+    "calc_screening_integrity_from_counts",
+    "bulk_insert_evidence_artifacts",
+    "query_evidence_artifact_count",
 ]

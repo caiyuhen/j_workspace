@@ -407,3 +407,5 @@ export default {
   ScreeningToolbar,
   ExcludeReasonDialog,
 };
+
+export type StatsWithPrismaT9 = StatsWithPrisma;

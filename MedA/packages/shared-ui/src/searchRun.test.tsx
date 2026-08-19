@@ -273,7 +273,7 @@ describe("Sort dropdown 4 items rendered", () => {
 
 describe("Sort onChange callback fires on relevance selection", () => {
   it("(iv) selecting 'relevance' option fires onSortChange callback with 'relevance'", () => {
-    const onChange = vi.fn<[LiteratureLibrarySortKey], void>();
+    const onChange = vi.fn<(sort: LiteratureLibrarySortKey) => void>();
     render(
       <LiteratureLibraryScreen
         library={mockLibraryBase()}

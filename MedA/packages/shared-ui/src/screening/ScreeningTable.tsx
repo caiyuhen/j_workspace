@@ -53,6 +53,7 @@ export interface ScreeningTableProps {
   rows: ScreeningTableRow[];
   selection?: Set<number>;
   onSelectionChange?: (next: Set<number>) => void;
+  onJumpDuplicate?: () => void;
 }
 
 function gridTemplate(): string {

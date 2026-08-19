@@ -1,0 +1,270 @@
+<h2>PRD 9 · §4 Wave 9c · Abstractor Auto-Triager</h2>
+<p class="subtitle">SimHash + Jaccard 去重 → LLM 结构化摘要（PICO 提取）→ 3 档 triage（Include/Exclude/Review）+ 置信度分 + 可解释理由 → 推荐动作（evidence_artifact stage=data_abstractor）</p>
+
+<!-- Pipeline 3 steps -->
+<div class="section">
+  <h3>Abstractor 三步流水线（顺序不可逆，耗时 ~ 6s/篇）</h3>
+  <div class="mockup" style="background:linear-gradient(180deg,#eff6ff 0%,#f0fdfa 100%);">
+    <div class="mockup-header" style="background:linear-gradient(90deg,#0284c7,#10b981);color:white;font-weight:700;">
+      3-Stage Abstractor Pipeline · 可开关纯规则 / LLM
+    </div>
+    <div class="mockup-body" style="padding:20px 18px;">
+      <div style="display:grid;grid-template-columns:1fr 40px 1fr 40px 1fr;gap:8px;align-items:stretch;">
+
+        <!-- Step 1 SimHash -->
+        <div style="background:white;border:2px solid #0ea5e9;border-radius:12px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="background:#0ea5e9;color:white;min-width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;">1</div>
+            <div>
+              <div style="font-weight:800;color:#075985;font-size:13px;">SimHash + Jaccard 跨库去重</div>
+              <div style="font-size:11px;color:#6b7280;">纯算法 · ~ 20ms/篇 · 0 成本</div>
+            </div>
+          </div>
+          <div style="font-size:11px;line-height:1.8;">
+            <b>算法细节（0 第三方依赖）：</b>
+            <ul style="margin:4px 0 0 16px;padding:0;">
+              <li>64-bit SimHash：标题+摘要关键词 2-shingle</li>
+              <li>阈值 ≤ 7 bits Hamming + DOI/PMID 完全匹配</li>
+              <li>Jaccard 相似度 ≥ 0.92 标题或摘要重合</li>
+              <li>输出 <code>duplicate_cluster_id</code> + 保留 <b>最长随访期</b> 主记录</li>
+            </ul>
+            <div style="margin-top:10px;padding:8px;background:#f0f9ff;border-left:3px solid #0ea5e9;font-size:10.5px;">
+              <b>示例输出：</b> PubMed ID 38924711 和 Embase ID 24-88712 → Hamming 4 bits + 共 89% Jaccard → 合并为 Cluster C-8842，主记录 Embase（随访 52w vs PubMed 摘要 24w）
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:center;color:#0284c7;font-size:30px;font-weight:900;">→</div>
+
+        <!-- Step 2 LLM PICO Structured Abstract -->
+        <div style="background:white;border:2px solid #6366f1;border-radius:12px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="background:#6366f1;color:white;min-width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;">2</div>
+            <div>
+              <div style="font-weight:800;color:#3730a3;font-size:13px;">LLM 结构化 PICO 摘要</div>
+              <div style="font-size:11px;color:#6b7280;">~ 5s/篇 · ~ 0.01$/篇（GPT-4o-mini）</div>
+            </div>
+          </div>
+          <div style="font-size:11px;line-height:1.8;">
+            <b>Prompt 固定模板（Cochrane PICO 标准）</b>
+            <div style="margin-top:6px;padding:6px;background:#eef2ff;border-radius:6px;font-size:10.5px;font-family:monospace;color:#3730a3;line-height:1.5;">
+输出 JSON：{<br>
+&nbsp;"p": {text, n, condition, age_min, age_max},<br>
+&nbsp;"i": {drug, dose, duration, n},<br>
+&nbsp;"c": {comparator, type},<br>
+&nbsp;"o": [{name, mean_diff, rr, ci_low, ci_high, p_value}]<br>
+}
+            </div>
+            <div style="margin-top:10px;padding:8px;background:#faf5ff;border-left:3px solid #8b5cf6;font-size:10.5px;">
+              <b>失败保护：</b>LLM JSON 解析失败 2 次 → 自动降级为"只做标题 PICO 关键词匹配"，triage=Review（不冒错排风险）
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:center;color:#10b981;font-size:30px;font-weight:900;">→</div>
+
+        <!-- Step 3 Rule-Based Triage -->
+        <div style="background:white;border:2px solid #10b981;border-radius:12px;padding:14px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+            <div style="background:#10b981;color:white;min-width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;">3</div>
+            <div>
+              <div style="font-weight:800;color:#065f46;font-size:13px;">Rule-Based Triage 3 档</div>
+              <div style="font-size:11px;color:#6b7280;">纯规则 · 可审计 · 可解释</div>
+            </div>
+          </div>
+          <div style="font-size:11px;line-height:1.8;">
+            <b>IF-THEN 规则表（可编辑）：</b>
+            <div style="margin-top:6px;">
+              <div style="padding:4px 6px;background:#ecfdf5;border-radius:4px;margin-bottom:3px;">✅ Include: P∩I∩C∩O 全匹配 & RR 点估计落在 benefit 区间</div>
+              <div style="padding:4px 6px;background:#fff7ed;border-radius:4px;margin-bottom:3px;">⚠️ Review: 任意一项缺失 或 PICO 模糊（如"糖尿病"未分 T1/T2）</div>
+              <div style="padding:4px 6px;background:#fef2f2;border-radius:4px;">❌ Exclude: ① 研究类型错 ② 人群错 ③ 干预完全无关 ④ 结局完全不相关</div>
+            </div>
+            <div style="margin-top:10px;padding:8px;background:#ecfdf5;border-left:3px solid #10b981;font-size:10.5px;">
+              <b>置信度公式：</b><br>confidence = 0.7·PICO_match + 0.2·study_type + 0.1·outcome_quality<br>≥ 0.85 Include | 0.45-0.85 Review | &lt; 0.45 Exclude
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3档 Triage Cards 并排 -->
+<div class="section">
+  <h3>3 档 Triage 结果卡（AbstractorCard.tsx + ConfidenceBar.tsx）</h3>
+  <div class="cards">
+    <!-- Card 1: Include -->
+    <div class="card" data-choice="include" style="border-top:5px solid #10b981;">
+      <div class="card-image" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);padding:16px 14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="background:#10b981;color:white;padding:4px 12px;border-radius:20px;font-weight:800;">✅ INCLUDE</span>
+            <span style="font-size:12px;color:#064e3b;font-weight:700;">PMID 38924711 · 2024</span>
+          </div>
+          <span style="background:#34d399;color:#064e3b;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:800;">confidence 0.92</span>
+        </div>
+        <!-- Confidence Bar -->
+        <div style="height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin-bottom:12px;">
+          <div style="width:92%;height:100%;background:linear-gradient(90deg,#10b981,#059669);"></div>
+        </div>
+        <div style="background:white;border-radius:8px;padding:10px;font-size:11px;line-height:1.65;">
+          <b style="color:#0369a1">P 人群：</b> T2DM，age 58±9，n=420，duration ≥ 6m，HbA1c baseline 7.8-10.0%<br>
+          <b style="color:#be185d">I 干预：</b> Semaglutide 1.0mg sc weekly × 52 周<br>
+          <b style="color:#92400e">C 对照：</b> Insulin glargine qd titration<br>
+          <b style="color:#166534">O 结局：</b>
+          <ul style="margin:2px 0 0 18px;padding:0;">
+            <li>HbA1c: -0.82% <span style="color:#10b981;font-weight:700;">(p&lt;0.001)</span></li>
+            <li>CV death/MI/stroke: RR 0.76 [0.60-0.95]</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card-body" style="font-size:11px;">
+        <h3>Smith 2024 · GLP-1 vs Insulin T2DM (n=420)</h3>
+        <p><b>可解释理由：</b>PICO 4/4 匹配 · 随机双盲 · 3 个关键结局显著 · 符合 PICO；<b style="color:#065f46;">推荐动作：一键 Include（写入 evidence_artifact）</b></p>
+        <div style="margin-top:8px;display:flex;gap:6px;">
+          <button class="mock-button" style="flex:1;padding:5px;background:#10b981;color:white;border:none;border-radius:6px;font-weight:700;">✓ 接受推荐 Include</button>
+          <button class="mock-button" style="padding:5px 10px;border-radius:6px;">修改→Review</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Review -->
+    <div class="card" data-choice="review" style="border-top:5px solid #f59e0b;">
+      <div class="card-image" style="background:linear-gradient(135deg,#fffbeb,#fef3c7);padding:16px 14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="background:#f59e0b;color:white;padding:4px 12px;border-radius:20px;font-weight:800;">⚠️ REVIEW</span>
+            <span style="font-size:12px;color:#92400e;font-weight:700;">PMID 36900222 · 2022</span>
+          </div>
+          <span style="background:#fcd34d;color:#78350f;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:800;">confidence 0.62</span>
+        </div>
+        <div style="height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin-bottom:12px;">
+          <div style="width:62%;height:100%;background:linear-gradient(90deg,#f59e0b,#d97706);"></div>
+        </div>
+        <div style="background:white;border-radius:8px;padding:10px;font-size:11px;line-height:1.65;">
+          <b style="color:#0369a1">P 人群：</b> <span style="background:#fef3c7;padding:0 4px;border-radius:3px;">⚠️ 糖尿病（未明确 T1/T2）</span>，n=68<br>
+          <b style="color:#be185d">I 干预：</b> Protocol 描述 GLP-1 类，具体药名未披露<br>
+          <b style="color:#92400e">C 对照：</b> 未描述对照组<br>
+          <b style="color:#166534">O 结局：</b> <span style="background:#fef3c7;padding:0 4px;border-radius:3px;">仅 1 个终点"代谢改善"</span>
+        </div>
+      </div>
+      <div class="card-body" style="font-size:11px;">
+        <h3>Chen 2022 · GLP-1 Protocol （未描述 T1/T2）</h3>
+        <p><b>可解释理由：</b>① P 人群类型缺失 ② 干预具体药物未披露 ③ 结局仅 1 个笼统词；<b style="color:#92400e;">推荐：人工审核，查看 Fulltext</b></p>
+        <div style="margin-top:8px;display:flex;gap:6px;">
+          <button class="mock-button" style="flex:1;padding:5px;background:#f59e0b;color:white;border:none;border-radius:6px;font-weight:700;">📖 打开全文审核</button>
+          <button class="mock-button" style="padding:5px 10px;border-radius:6px;">强行 Include</button>
+          <button class="mock-button" style="padding:5px 10px;border-radius:6px;">排除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 3: Exclude -->
+    <div class="card" data-choice="exclude" style="border-top:5px solid #ef4444;">
+      <div class="card-image" style="background:linear-gradient(135deg,#fef2f2,#fee2e2);padding:16px 14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="background:#ef4444;color:white;padding:4px 12px;border-radius:20px;font-weight:800;">❌ EXCLUDE</span>
+            <span style="font-size:12px;color:#881337;font-weight:700;">PMID 37881123 · 2023</span>
+          </div>
+          <span style="background:#fca5a5;color:#7f1d1d;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:800;">confidence 0.12</span>
+        </div>
+        <div style="height:8px;background:#e5e7eb;border-radius:4px;overflow:hidden;margin-bottom:12px;">
+          <div style="width:12%;height:100%;background:linear-gradient(90deg,#ef4444,#dc2626);"></div>
+        </div>
+        <div style="background:white;border-radius:8px;padding:10px;font-size:11px;line-height:1.65;">
+          <b style="color:#0369a1">P 人群：</b> Type 1 Diabetes（T1DM），Adolescent n=12<br>
+          <b style="color:#be185d">I 干预：</b> Closed-loop insulin pump therapy<br>
+          <b style="color:#92400e">C 对照：</b> Sensor-augmented pump<br>
+          <b style="color:#166534">O 结局：</b> Time in Range 70-180mg/dL
+        </div>
+      </div>
+      <div class="card-body" style="font-size:11px;">
+        <h3>Jones 2023 · T1DM Adolescent Case Series</h3>
+        <p><b>可解释理由：</b>① <span style="color:#b91c1c;font-weight:700;">研究类型=Case Series</span>（排除原因 #2）② 人群=T1DM 青少年（偏离 PICO T2DM 成人）③ 干预完全不相关 GLP-1 vs 胰岛素泵；<b style="color:#881337;">推荐动作：一键 Exclude #2 + #3</b></p>
+        <div style="margin-top:8px;display:flex;gap:6px;">
+          <button class="mock-button" style="flex:1;padding:5px;background:#ef4444;color:white;border:none;border-radius:6px;font-weight:700;">✗ 接受推荐 Exclude (原因 #2+#3)</button>
+          <button class="mock-button" style="padding:5px 10px;border-radius:6px;">改 Review</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Audit & Batch -->
+<div class="section">
+  <h3>批处理审计 & 统计看板（1000 篇示例）</h3>
+  <div class="split">
+    <div class="mockup"><div class="mockup-header" style="background:#1d4ed8;color:white;font-weight:700;">Abstractor Dashboard · 批处理进度</div>
+      <div class="mockup-body" style="font-size:12px;padding:14px;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;">
+          <div style="background:#ecfdf5;border:1px solid #10b98144;border-radius:8px;padding:10px;text-align:center;">
+            <div class="label">Auto Include</div>
+            <div style="font-size:22px;font-weight:900;color:#065f46;">3,281</div>
+            <div style="font-size:10.5px;color:#047857;">45.5% of 7,204</div>
+          </div>
+          <div style="background:#fffbeb;border:1px solid #f59e0b44;border-radius:8px;padding:10px;text-align:center;">
+            <div class="label">⚠️ Review (人工)</div>
+            <div style="font-size:22px;font-weight:900;color:#92400e;">1,983</div>
+            <div style="font-size:10.5px;color:#b45309;">27.5% · 需人工 ~ 3.5h</div>
+          </div>
+          <div style="background:#fef2f2;border:1px solid #ef444444;border-radius:8px;padding:10px;text-align:center;">
+            <div class="label">Auto Exclude</div>
+            <div style="font-size:22px;font-weight:900;color:#881337;">1,940</div>
+            <div style="font-size:10.5px;color:#b91c1c;">26.9%</div>
+          </div>
+          <div style="background:#f1f5f9;border:1px solid #64748b44;border-radius:8px;padding:10px;text-align:center;">
+            <div class="label">处理中</div>
+            <div style="font-size:22px;font-weight:900;color:#334155;">0</div>
+            <div style="font-size:10.5px;color:#64748b;">已完成 100%</div>
+          </div>
+        </div>
+        <div style="height:40px;border-radius:6px;overflow:hidden;display:grid;grid-template-columns:45.5fr 27.5fr 27fr;">
+          <div style="background:#10b981;"></div>
+          <div style="background:#f59e0b;"></div>
+          <div style="background:#ef4444;"></div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;line-height:1.7;">
+          ✅ 节省：<b style="color:#065f46;">减少 5,221 篇人工筛选（72.4%）</b> 剩余只需人工审核 1,983 篇<br>
+          📉 假阴性风险：LLM 漏检 < 0.3%（480 例 Gold Test 测试），3σ 控制
+        </div>
+      </div>
+    </div>
+
+    <div class="mockup"><div class="mockup-header" style="background:#4c1d95;color:white;font-weight:700;">证据引擎写入：evidence_artifact (stage=data_abstractor)</div>
+      <div class="mockup-body" style="font-size:11px;padding:12px;">
+        <div style="background:white;border:2px dashed #8b5cf6;border-radius:8px;padding:10px;">
+          <div style="font-weight:800;color:#4c1d95;margin-bottom:6px;">写入字段：</div>
+          <table style="width:100%;border-collapse:collapse;font-size:10.5px;">
+            <thead><tr style="background:#ede9fe;">
+              <th style="border:1px solid #c4b5fd;padding:3px;">列</th><th style="border:1px solid #c4b5fd;padding:3px;">值示例</th><th style="border:1px solid #c4b5fd;padding:3px;">来源</th>
+            </tr></thead>
+            <tbody>
+              <tr><td style="border:1px solid #c4b5fd;padding:3px;">literature_record_id</td><td style="border:1px solid #c4b5fd;padding:3px;">38924711</td><td style="border:1px solid #c4b5fd;padding:3px;">FK</td></tr>
+              <tr><td style="border:1px solid #c4b5fd;padding:3px;">stage</td><td style="border:1px solid #c4b5fd;padding:3px;">data_abstractor</td><td style="border:1px solid #c4b5fd;padding:3px;">本模块</td></tr>
+              <tr><td style="border:1px solid #c4b5fd;padding:3px;">decision</td><td style="border:1px solid #c4b5fd;padding:3px;">include / exclude / review</td><td style="border:1px solid #c4b5fd;padding:3px;">Step 3</td></tr>
+              <tr><td style="border:1px solid #c4b5fd;padding:3px;">confidence</td><td style="border:1px solid #c4b5fd;padding:3px;">0.92</td><td style="border:1px solid #c4b5fd;padding:3px;">公式</td></tr>
+              <tr><td style="border:1px solid #c4b5fd;padding:3px;">meta_json</td><td style="border:1px solid #c4b5fd;padding:3px;">{PICO, triage_reasons, reasons_ids: [2,3]}</td><td style="border:1px solid #c4b5fd;padding:3px;">结构化 JSON</td></tr>
+              <tr><td style="border:1px solid #c4b5fd;padding:3px;">override_by_user_id</td><td style="border:1px solid #c4b5fd;padding:3px;">123 (改推荐时记录)</td><td style="border:1px solid #c4b5fd;padding:3px;">人工修改</td></tr>
+            </tbody>
+          </table>
+          <div style="margin-top:10px;padding:6px;background:#faf5ff;border-radius:4px;font-size:10.5px;">
+            💡 后续 Meta Analysis 引擎 SELECT FROM evidence_artifact WHERE decision='include' AND stage IN ('screening_fulltext','data_abstractor') → 自动构建 Meta 分析数据集（无需再人工 Excel 搬运）
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:20px">
+  <div class="option" data-choice="s4_ok" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>A. §4 Abstractor 分镜 + 四设计全部 OK</h3><p>写完整 Spec：2026-08-19-wave-9-evidence-artifact-design.md → 自查 → 你 review → writing-plans</p></div>
+  </div>
+  <div class="option" data-choice="s4_revise" onclick="toggleSelect(this)">
+    <div class="letter">↺</div>
+    <div class="content"><h3>B. §4 要改</h3><p>告诉我调整点：想改成 2 档（Include/Exclude 去掉 Review）？置信度公式想换成 LLM 打分？SimHash 64→128-bit？或想加 Confusion Matrix 错误分析？</p></div>
+  </div>
+</div>

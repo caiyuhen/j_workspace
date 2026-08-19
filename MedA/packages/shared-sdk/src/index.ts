@@ -429,3 +429,76 @@ export type ReportGeneratePayload<IdT = number> = {
   override_ch7_discussion?: string;
   override_ch8_appendices?: string;
 };
+
+// ─────────────────────────────────────────────────────────────────────
+// WAVE 9 · Evidence Artifact 共享引擎 + 三模块 (9a/9b/9c) 12 TYPE EXPORTS
+// (append only；绝不修改上方任何已有类型定义或字段)
+// ─────────────────────────────────────────────────────────────────────
+
+export type EvidenceStage =
+  | 'screening_ta' | 'screening_fulltext'
+  | 'quality_ro'   | 'quality_nrsi'
+  | 'data_abstractor';
+
+export type EvidenceDecision = 'include' | 'exclude' | 'review';
+
+export interface EvidenceArtifact {
+  id: string;
+  literature_record_id: string;
+  stage: EvidenceStage;
+  decision: EvidenceDecision;
+  confidence?: number;
+  exclude_reason_ids?: number[];
+  meta_json?: Record<string, unknown>;
+  created_by?: string;
+  override_by_user_id?: string;
+  created_at: string;
+}
+
+export type ExcludeReasonId = 2|3|4|5|6|7|8|9;
+
+export interface FunnelStepStat {
+  key: 'N1'|'N2'|'N3'|'N4'|'E1'|'E2'|'E3'|'E4'|'E5'|'E6';
+  label: string;
+  count: number;
+  locked: boolean;
+}
+
+export type TrafficLightRating = 'low' | 'some_concerns' | 'high' | 'critical' | 'ni';
+
+export interface RoB2DomainRating {
+  domain: 'D1_randomization'|'D2_deviations'|'D3_missing'|'D4_measurement'|'D5_reporting';
+  rating: TrafficLightRating;
+  signal_answers: Record<string, 'Y'|'N'|'NA'>;
+  rationale: string;
+}
+
+export interface RoB2Overall {
+  study_id: string;
+  study_type: 'RCT' | 'NRSI';
+  domains: RoB2DomainRating[];
+  overall: TrafficLightRating;
+}
+
+export type RobinsIDomain =
+  | 'D1_confounding'|'D2_selection'|'D3_classification'
+  | 'D4_deviations' |'D5_missing'  |'D6_measurement'|'D7_reporting';
+
+export type TriageDecision = 'include' | 'exclude' | 'review';
+
+export interface StructuredPICO {
+  p: { text: string; n?: number; condition?: string; age_min?:number; age_max?:number };
+  i: { drug?: string; dose?: string; duration?: string; n?: number };
+  c: { comparator: string; type?: 'active'|'placebo'|'other' };
+  o: Array<{ name: string; mean_diff?: number; rr?: number; ci_low?:number; ci_high?:number; p_value?: number }>;
+}
+
+export interface TriageResult {
+  record_id: string;
+  pico?: StructuredPICO;
+  decision: TriageDecision;
+  confidence: number;
+  reasons: string[];
+  exclude_reason_ids?: ExcludeReasonId[];
+  failed_steps?: string[];
+}

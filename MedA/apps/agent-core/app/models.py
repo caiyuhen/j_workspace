@@ -332,3 +332,21 @@ class Prisma2020Checklist(SQLModel, table=True):
     locked: bool = Field(default=False, nullable=False)
     created_at: datetime = Field(default_factory=datetime_utcnow, nullable=False)
     __table_args__ = (UniqueConstraint("project_id", "reviewer_id", name="uq_prisma_project_reviewer"),)
+
+# ─────────────────────────────────────────────────────────────────────
+# WAVE 9a EVIDENCE ARTIFACT TABLE
+# ─────────────────────────────────────────────────────────────────────
+
+class EvidenceArtifact(SQLModel, table=True):
+    __tablename__ = "evidenceartifact"
+    id: int | None = Field(default=None, primary_key=True)
+    literature_record_id: int = Field(foreign_key="literaturerecord.id", index=True)
+    stage: str = Field(max_length=32, nullable=False)
+    decision: str = Field(max_length=16, nullable=False)
+    confidence: float | None = Field(default=None)
+    exclude_reason_ids: list | dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
+    meta_json: list | dict | None = Field(default=None, sa_column=Column(JSON, nullable=True))
+    created_by: str | None = Field(default=None, foreign_key="user.user_id")
+    override_by_user_id: str | None = Field(default=None, foreign_key="user.user_id")
+    created_at: datetime = Field(default_factory=datetime_utcnow, nullable=False)
+    __table_args__ = (UniqueConstraint("literature_record_id", "stage", name="uq_evidenceartifact_lr_stage"),)

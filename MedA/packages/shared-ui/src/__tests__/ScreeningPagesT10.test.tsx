@@ -8,6 +8,7 @@ import {
   type ScreeningPageStats,
   computeNavigation,
 } from "../screening/ScreeningPagesT10";
+import type { DedupeStatus } from "../screening/ScreeningTable";
 
 function sampleStats(overrides: Partial<ScreeningPageStats> = {}): ScreeningPageStats {
   return Object.assign(
@@ -42,7 +43,7 @@ function rows(n: number) {
       doi: "",
       pmid: "",
       abstract: "AB " + i,
-      dedupe_status: (i % 10 === 0 ? "duplicate" : "unique") as const,
+      dedupe_status: (i % 10 === 0 ? "duplicate" : "unique") as DedupeStatus,
       duplicate_of_id: (i % 10 === 0 ? 1 : null) as number | null,
       screening_stage: null,
       screening_decision: null,

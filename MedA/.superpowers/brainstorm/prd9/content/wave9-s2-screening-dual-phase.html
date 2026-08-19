@@ -1,0 +1,208 @@
+<h2>PRD 9 · §2 Wave 9a · Screening Dual-Phase</h2>
+<p class="subtitle">Cochrane 标准 10 步筛选漏斗（N1-N4 + Eligibility + Included） + TA / Fulltext 双阶段表格 + 9 项排除原因</p>
+
+<!-- 10 Step Funnel -->
+<div class="section">
+  <h3>Cochrane 10 步筛选漏斗（PRISMA 2020 对齐）</h3>
+  <div class="mockup" style="background: linear-gradient(180deg, #fff7ed 0%, #eff6ff 100%);">
+    <div class="mockup-header" style="background:#0f766e;color:white;font-weight:700;">FunnelProgressBar 组件 · 10 步渐进式（硬锁：前一步 >0 才解锁下一步）</div>
+    <div class="mockup-body" style="padding:24px;">
+      <div style="display:flex;flex-direction:column;align-items:center;gap:8px;">
+
+        <!-- Step N1 -->
+        <div style="width: 92%;background:#fff;border:2px solid #6366f1; border-radius:16px;padding:12px 20px;display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;">
+          <div style="background:#6366f1;color:white;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-weight:800;">N1</div>
+          <div><div style="font-weight:700;color:#3730a3">Identification · 数据库检索识别</div><div style="font-size:12px;color:#6b7280;">PubMed · Embase · Cochrane CENTRAL · Web of Science · CNKI（5 库）</div></div>
+          <div style="font-size:24px;font-weight:900;color:#3730a3;">8,421</div>
+        </div>
+
+        <!-- Step N2 -->
+        <div style="width: 84%;background:#fff;border:2px solid #8b5cf6; border-radius:16px;padding:12px 20px;display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;">
+          <div style="background:#8b5cf6;color:white;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-weight:800;">N2</div>
+          <div><div style="font-weight:700;color:#6d28d9">Grey lit · 灰色文献/注册</div><div style="font-size:12px;color:#6b7280;">ClinicalTrials.gov · ICTRP · OpenGrey · 会议摘要</div></div>
+          <div style="font-size:24px;font-weight:900;color:#6d28d9;">230</div>
+        </div>
+
+        <!-- Step N3 -->
+        <div style="width: 76%;background:#fff;border:2px solid #ec4899; border-radius:16px;padding:12px 20px;display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;">
+          <div style="background:#ec4899;color:white;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-weight:800;">N3</div>
+          <div><div style="font-weight:700;color:#9d174d">Before dupe · 合并去重前</div><div style="font-size:12px;color:#6b7280;">N1 ∪ N2 合集（SimHash + DOI + PMID 三重去重）</div></div>
+          <div style="font-size:24px;font-weight:900;color:#9d174d;">8,651</div>
+        </div>
+
+        <!-- Step N4 -->
+        <div style="width: 68%;background:#fff;border:2px solid #f43f5e; border-radius:16px;padding:12px 20px;display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;">
+          <div style="background:#f43f5e;color:white;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-weight:800;">N4</div>
+          <div><div style="font-weight:700;color:#881337">After dupe · 跨库去重后</div><div style="font-size:12px;color:#6b7280;">SimHash ≥ 0.92 + DOI/PMID 完全匹配 → duplicate</div></div>
+          <div style="font-size:24px;font-weight:900;color:#881337;">7,204</div>
+        </div>
+
+        <!-- Divider: TA phase -->
+        <div style="width:60%;text-align:center;padding:4px;margin-top:6px;"><div style="display:inline-block;background:#0ea5e9;color:white;padding:4px 16px;border-radius:20px;font-size:12px;font-weight:700;">▼ Title & Abstract 阶段 ▼</div></div>
+
+        <!-- Step E1 -->
+        <div style="width: 60%;background:#fff;border:2px solid #0ea5e9; border-radius:16px;padding:12px 20px;display:grid;grid-template-columns:48px 1fr auto auto;gap:12px;align-items:center;">
+          <div style="background:#0ea5e9;color:white;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-weight:800;">E1</div>
+          <div><div style="font-weight:700;color:#075985">Screened · TA 被筛选</div><div style="font-size:12px;color:#6b7280;">= N4，逐篇标题摘要筛选</div></div>
+          <div style="font-size:20px;font-weight:900;color:#075985;">7,204</div>
+          <div style="font-size:11px;color:#64748b">（= N4）</div>
+        </div>
+
+        <!-- Step E2 -->
+        <div style="width: 52%;background:#fff;border:2px dashed #e11d48; border-radius:16px;padding:12px 20px;display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;">
+          <div style="background:#fee2e2;color:#991b1b;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-weight:800;">E2</div>
+          <div><div style="font-weight:700;color:#881337">Excluded (TA) · TA 排除</div><div style="font-size:12px;color:#6b7280;">9 项 Cochrane 排除原因（研究类型/人群/干预/对照...）</div></div>
+          <div style="font-size:20px;font-weight:900;color:#881337;">6,412</div>
+        </div>
+
+        <!-- Step E3 -->
+        <div style="width: 44%;background:#fff;border:2px solid #0284c7; border-radius:16px;padding:12px 20px;display:grid;grid-template-columns:48px 1fr auto auto;gap:12px;align-items:center;">
+          <div style="background:#0284c7;color:white;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-weight:800;">E3</div>
+          <div><div style="font-weight:700;color:#082f49">Sought for retrieval · 索全文</div><div style="font-size:12px;color:#6b7280;">= E1 − E2，进入 Fulltext 阶段</div></div>
+          <div style="font-size:20px;font-weight:900;color:#082f49;">792</div>
+          <div style="font-size:11px;color:#64748b">TA → FT 入口</div>
+        </div>
+
+        <!-- Divider Fulltext -->
+        <div style="width:38%;text-align:center;padding:4px;margin-top:6px;"><div style="display:inline-block;background:#059669;color:white;padding:4px 16px;border-radius:20px;font-size:12px;font-weight:700;">▼ Full-Text 全文阶段 ▼</div></div>
+
+        <!-- Step E4 -->
+        <div style="width: 38%;background:#fff;border:2px solid #059669; border-radius:16px;padding:12px 20px;display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;">
+          <div style="background:#059669;color:white;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-weight:800;">E4</div>
+          <div><div style="font-weight:700;color:#064e3b">Assessed Eligibility · 全文合格评估</div><div style="font-size:12px;color:#6b7280;">逐篇全文读 + 排除原因证据记录</div></div>
+          <div style="font-size:20px;font-weight:900;color:#064e3b;">792</div>
+        </div>
+
+        <!-- Step E5 -->
+        <div style="width: 30%;background:#fff;border:2px dashed #dc2626; border-radius:16px;padding:12px 20px;display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;">
+          <div style="background:#fee2e2;color:#991b1b;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-weight:800;">E5</div>
+          <div><div style="font-weight:700;color:#7f1d1d">Excluded (FT) · 全文排除</div><div style="font-size:12px;color:#6b7280;">排除原因列表 + 引用定位（Page:Line）</div></div>
+          <div style="font-size:20px;font-weight:900;color:#7f1d1d;">715</div>
+        </div>
+
+        <!-- Step E6 -->
+        <div style="width: 22%;background: linear-gradient(135deg,#10b981,#059669);border:3px solid #047857; border-radius:16px;padding:14px 20px;display:grid;grid-template-columns:48px 1fr auto;gap:12px;align-items:center;">
+          <div style="background:white;color:#047857;border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;font-weight:900;">✓</div>
+          <div><div style="font-weight:800;color:white">Included · 纳入 Meta 分析</div><div style="font-size:12px;color:#d1fae5;">= E4 − E5，进入 Stage 3~6 (QA/Data/Meta/Output)</div></div>
+          <div style="font-size:24px;font-weight:900;color:white;">77</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Two Phase Table Layout -->
+<div class="section">
+  <h3>Dual-Phase 双阶段表格交互（TA 左 / Fulltext 右）</h3>
+  <div class="split">
+    <!-- Phase 1 TA -->
+    <div class="mockup"><div class="mockup-header" style="background:#0ea5e9;color:white;font-weight:700;">Phase 1 · Title + Abstract（工具栏 + 表格）</div>
+      <div class="mockup-body" style="font-size:11px;line-height:1.6;">
+        <div class="mock-nav" style="font-size:11px;padding:6px 10px;">
+          🔍 筛选: PubMed/All | 年份: 2010-2026 | 决策: All
+          <span style="float:right;">
+            <button class="mock-button" style="padding:3px 8px;font-size:11px;background:#10b981;color:white;border:none;">批量 Include</button>
+            <button class="mock-button" style="padding:3px 8px;font-size:11px;background:#ef4444;color:white;border:none;margin:0 4px;">批量 Exclude</button>
+            <button class="mock-button" style="padding:3px 8px;font-size:11px;">清空决策</button>
+          </span>
+        </div>
+        <table style="width:100%;margin-top:8px;font-size:11px;border-collapse:collapse;">
+          <thead><tr style="background:#f1f5f9;">
+            <th style="border:1px solid #cbd5e1;padding:4px;">☑</th>
+            <th style="border:1px solid #cbd5e1;padding:4px;">PMID / Year</th>
+            <th style="border:1px solid #cbd5e1;padding:4px;">标题 & 摘要（PICO 高亮）</th>
+            <th style="border:1px solid #cbd5e1;padding:4px;">Auto-Triage 建议</th>
+            <th style="border:1px solid #cbd5e1;padding:4px;">决策</th>
+          </tr></thead>
+          <tbody>
+            <tr style="background:#ecfdf5;">
+              <td style="border:1px solid #cbd5e1;padding:3px;"><input type="checkbox" checked></td>
+              <td style="border:1px solid #cbd5e1;padding:3px;">38924711 / 2024</td>
+              <td style="border:1px solid #cbd5e1;padding:3px;"><b style="color:#0369a1">P:</b> T2DM (n=420) &nbsp;<b style="color:#be185d">I:</b> GLP-1 &nbsp;<b style="color:#92400e">C:</b> Insulin &nbsp;<b style="color:#166534">O:</b> HbA1c -0.8%</td>
+              <td style="border:1px solid #cbd5e1;padding:3px;text-align:center;"><span style="background:#10b981;color:white;padding:1px 6px;border-radius:4px;">Include (0.91)</span></td>
+              <td style="border:1px solid #cbd5e1;padding:3px;"><span style="color:#16a34a;font-weight:700">✓ Include</span></td>
+            </tr>
+            <tr style="background:#fef2f2;">
+              <td style="border:1px solid #cbd5e1;padding:3px;"><input type="checkbox" checked></td>
+              <td style="border:1px solid #cbd5e1;padding:3px;">37881123 / 2023</td>
+              <td style="border:1px solid #cbd5e1;padding:3px;">T1DM Adolescent case series (n=12) · <b style="color:#881337">研究类型: Case Series</b></td>
+              <td style="border:1px solid #cbd5e1;padding:3px;text-align:center;"><span style="background:#ef4444;color:white;padding:1px 6px;border-radius:4px;">Exclude (0.87)</span></td>
+              <td style="border:1px solid #cbd5e1;padding:3px;"><span style="color:#dc2626;font-weight:700;">✗ 排除 #1</span></td>
+            </tr>
+            <tr>
+              <td style="border:1px solid #cbd5e1;padding:3px;"><input type="checkbox"></td>
+              <td style="border:1px solid #cbd5e1;padding:3px;">36900222 / 2022</td>
+              <td style="border:1px solid #cbd5e1;padding:3px;">Protocol only: GLP-1 vs DPP-4 ... abstract = protocol only</td>
+              <td style="border:1px solid #cbd5e1;padding:3px;text-align:center;"><span style="background:#f59e0b;color:white;padding:1px 6px;border-radius:4px;">Review (0.52)</span></td>
+              <td style="border:1px solid #cbd5e1;padding:3px;"><span style="color:#6b7280;">— 待审</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Phase 2 Fulltext -->
+    <div class="mockup"><div class="mockup-header" style="background:#059669;color:white;font-weight:700;">Phase 2 · Full-Text（左全文右证据卡）</div>
+      <div class="mockup-body" style="font-size:11px;line-height:1.6;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div style="border:1px solid #cbd5e1;border-radius:8px;padding:10px;background:white;">
+            <div class="label" style="font-size:10px;">PDF 全文预览（滚动）</div>
+            <div style="margin-top:8px;border-left:3px solid #10b981;background:#ecfdf5;padding:6px 8px;font-size:10px;margin-bottom:6px;">
+              <b>Line 42:</b> 420 participants with T2DM, duration ≥ 6 months
+            </div>
+            <div style="border-left:3px solid #f59e0b;background:#fffbeb;padding:6px 8px;font-size:10px;margin-bottom:6px;">
+              <b>Line 47:</b> Intervention: semaglutide 1mg weekly x 52w
+            </div>
+            <div style="border-left:3px solid #ef4444;background:#fef2f2;padding:6px 8px;font-size:10px;">
+              <b>Line 49:</b> Exclusion: <span style="color:#881337;">Concurrent insulin use</span> → 对照偏离 PICO C
+            </div>
+          </div>
+          <div style="border:1px solid #cbd5e1;border-radius:8px;padding:10px;background:white;">
+            <div class="label" style="font-size:10px;">ExcludeReasonDialog · Fulltext</div>
+            <div style="margin-top:6px;font-size:11px;">
+              <div style="padding:3px 0;"><label><input type="radio"> 1: Wrong study type (RCT only 需)</label></div>
+              <div style="padding:3px 0;"><label><input type="radio"> 2: Wrong population</label></div>
+              <div style="padding:3px 0;background:#fef2f2;"><label><input type="radio" checked> 6: Wrong intervention <span style="color:#881337;font-weight:700;">✓ Line 49</span></label></div>
+              <div style="padding:3px 0;"><label><input type="radio"> 7: Wrong comparator</label></div>
+              <div style="padding:3px 0;"><label><input type="radio"> 8: Wrong outcome</label></div>
+              <div style="padding:3px 0;"><label><input type="radio"> 9: Other（需备注）</label></div>
+              <textarea class="mock-input" style="width:94%;margin-top:8px;height:46px;font-size:10px;" placeholder="证据摘录：Line 49 明确排除 concurrent insulin..."></textarea>
+              <div style="margin-top:8px;text-align:right;">
+                <button class="mock-button" style="padding:3px 8px;font-size:11px;">取消</button>
+                <button class="mock-button" style="padding:3px 8px;font-size:11px;background:#ef4444;color:white;border:none;margin-left:4px;">✗ Apply 排除</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. 9 Exclude Reasons -->
+<div class="section">
+  <h3>9 项 Cochrane 标准排除原因（TA 阶段预设 2-9；Fulltext 阶段预设 6-9）</h3>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
+    <div class="card" style="border:1px solid #e5e7eb;"><div style="padding:8px 10px;background:#f1f5f9;font-weight:700;font-size:12px;">#1 Duplicate</div><div style="padding:8px;font-size:11px;color:#6b7280;">TA & Fulltext 均 <b style="color:#9ca3af">禁用</b>（系统自动去重）</div></div>
+    <div class="card" style="border:1px solid #e5e7eb;"><div style="padding:8px 10px;background:#f1f5f9;font-weight:700;font-size:12px;">#2 Wrong Study Type</div><div style="padding:8px;font-size:11px;color:#1f2937;">Not RCT / NRSI → Case series / 综述 / protocol</div></div>
+    <div class="card" style="border:1px solid #e5e7eb;"><div style="padding:8px 10px;background:#f1f5f9;font-weight:700;font-size:12px;">#3 Wrong Population</div><div style="padding:8px;font-size:11px;color:#1f2937;">T2DM 标准被偏离 → T1DM / 儿童 / n&lt;10 等</div></div>
+    <div class="card" style="border:1px solid #e5e7eb;"><div style="padding:8px 10px;background:#f1f5f9;font-weight:700;font-size:12px;">#4 Wrong Intervention</div><div style="padding:8px;font-size:11px;color:#1f2937;">PICO I 不匹配 → 研究药物非 GLP-1 类</div></div>
+    <div class="card" style="border:1px solid #e5e7eb;"><div style="padding:8px 10px;background:#f1f5f9;font-weight:700;font-size:12px;">#5 Wrong Comparator</div><div style="padding:8px;font-size:11px;color:#1f2937;">PICO C 不匹配 → 安慰剂对照非胰岛素</div></div>
+    <div class="card" style="border:1px solid #e5e7eb;"><div style="padding:8px 10px;background:#f1f5f9;font-weight:700;font-size:12px;">#6 Wrong Outcome</div><div style="padding:8px;font-size:11px;color:#1f2937;">PICO O 不匹配 → 未报告 HbA1c / 硬终点</div></div>
+    <div class="card" style="border:1px solid #e5e7eb;"><div style="padding:8px 10px;background:#f1f5f9;font-weight:700;font-size:12px;">#7 Overlapping Data</div><div style="padding:8px;font-size:11px;color:#1f2937;">同一试验多报告 → 只保留最长随访</div></div>
+    <div class="card" style="border:1px solid #e5e7eb;"><div style="padding:8px 10px;background:#f1f5f9;font-weight:700;font-size:12px;">#8 No Fulltext</div><div style="padding:8px;font-size:11px;color:#1f2937;">联系作者 2 次无回复 / 付费墙不可得</div></div>
+    <div class="card" style="border:1px solid #e5e7eb;"><div style="padding:8px 10px;background:#f1f5f9;font-weight:700;font-size:12px;">#9 Other</div><div style="padding:8px;font-size:11px;color:#1f2937;">必填备注，例: "协议已撤回 (见 retraction watch #12345)"</div></div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:20px">
+  <div class="option" data-choice="s2_ok" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content"><h3>A. §2 Screening 分镜 OK</h3><p>继续 §3：ROB-2 偏倚风险质量评估（5 域信号灯矩阵）</p></div>
+  </div>
+  <div class="option" data-choice="s2_revise" onclick="toggleSelect(this)">
+    <div class="letter">↺</div>
+    <div class="content"><h3>B. §2 要改</h3><p>漏斗/表格/排除项哪里有问题？例如：想 12 步漏斗、FT 左 PDF 右证据栏对换、排除项想加 10+ 项自定义等</p></div>
+  </div>
+</div>

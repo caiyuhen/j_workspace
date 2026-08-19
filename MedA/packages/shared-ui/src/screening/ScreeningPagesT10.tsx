@@ -247,19 +247,19 @@ export const DashboardScreeningPage: React.FC<DashboardScreeningPageProps> = ({
           <div style={{ background: "#fff", padding: 20, borderRadius: 8, minWidth: 480 }}>
             <h3 style={{ margin: 0, marginBottom: 12 }}>PRISMA 2020 四格手动覆盖 Manual Override</h3>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              {[
-                ["Identification N1", "ov-identification", identification, setIdentification],
-                ["Screening N2", "ov-screening", screening, setScreening],
-                ["Eligibility N3", "ov-eligibility", eligibilityOv, setEligibilityOv],
-                ["Included N4", "ov-included", included, setIncluded],
-              ].map(([label, tid, val, setter]) => (
-                <label key={tid as string} style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
+              {([
+                { label: "Identification N1", tid: "ov-identification", val: identification, setter: setIdentification },
+                { label: "Screening N2", tid: "ov-screening", val: screening, setter: setScreening },
+                { label: "Eligibility N3", tid: "ov-eligibility", val: eligibilityOv, setter: setEligibilityOv },
+                { label: "Included N4", tid: "ov-included", val: included, setter: setIncluded },
+              ] as Array<{ label: string; tid: string; val: string; setter: (x: string) => void }>).map(({ label, tid, val, setter }) => (
+                <label key={tid} style={{ display: "flex", flexDirection: "column", gap: 4, fontSize: 13 }}>
                   <span>{label}</span>
                   <input
-                    data-testid={tid as string}
+                    data-testid={tid}
                     type="number"
-                    value={val as string}
-                    onChange={(e) => (setter as (x: string) => void)(e.target.value)}
+                    value={val}
+                    onChange={(e) => setter(e.target.value)}
                     style={{ padding: "6px 8px", border: "1px solid #d1d5db", borderRadius: 4 }}
                   />
                 </label>
