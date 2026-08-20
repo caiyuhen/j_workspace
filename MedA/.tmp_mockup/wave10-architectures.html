@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Wave 10 · 三种端到端架构方案对比</title>
+<style>
+  :root {
+    --bg:#0f172a; --card:#111827; --ink:#e5e7eb; --muted:#94a3b8;
+    --rec:#10b981; --acc:#6366f1; --warn:#f59e0b; --bad:#ef4444;
+    --bor:#334155;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,"PingFang SC","Microsoft YaHei"}
+  header{padding:28px 36px 12px;border-bottom:1px solid var(--bor)}
+  h1{margin:0;font-size:24px;letter-spacing:.2px}
+  header p{margin:8px 0 0;color:var(--muted)}
+  main{padding:24px 36px 60px;display:grid;gap:22px}
+  .row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
+  @media (max-width:1100px){.row{grid-template-columns:1fr}}
+  .card{background:var(--card);border:1px solid var(--bor);border-radius:14px;padding:22px 22px 18px}
+  .card.rec{border:2px solid var(--rec);box-shadow:0 10px 40px -22px rgba(16,185,129,.4)}
+  .tag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;letter-spacing:.3px}
+  .t-rec{background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.35)}
+  .t-alt{background:rgba(99,102,241,.14);color:#a5b4fc;border:1px solid rgba(99,102,241,.35)}
+  .t-min{background:rgba(148,163,184,.14);color:#cbd5e1;border:1px solid rgba(148,163,184,.3)}
+  h2{margin:10px 0 4px;font-size:18px}
+  h3{margin:18px 0 8px;font-size:14px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px}
+  ul{margin:0;padding-left:20px}
+  li{margin:4px 0}
+  .score{margin-top:14px;display:grid;grid-template-columns:repeat(2,1fr);gap:10px 16px;font-size:13px}
+  .score b{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:2px}
+  .score span{font-weight:700}
+  .good{color:#6ee7b7} .mid{color:#fcd34d} .bad{color:#fca5a5}
+  pre.flow{background:#020617;border:1px solid var(--bor);border-radius:10px;padding:14px 16px;overflow:auto;font:12px/1.55 ui-monospace,Menlo,Consolas,monospace;color:#cbd5e1;margin:6px 0 0}
+  .verdict{margin-top:16px;padding:14px 16px;border-radius:12px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.28)}
+  .verdict b{color:#6ee7b7}
+  .qgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 22px}
+  .q{background:#0b1220;border:1px solid var(--bor);border-radius:10px;padding:12px 14px}
+  .q b{display:block;color:var(--muted);font-size:11px;letter-spacing:.7px;text-transform:uppercase;margin-bottom:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🌊 Wave 10 · End-to-End PubMed + Dashboard 三种架构方案</h1>
+  <p>基于 W1-W9 现有底座（检索→去重→9a筛选→9c分流→9b质量→W5 GRADE→W8.4 报告输出）。目标：真实 PubMed 50-200 篇一键跑通 5 阶段 + 可视化 Dashboard。</p>
+</header>
+
+<main>
+  <section class="row">
+    <!-- Option 3 (Rec) -->
+    <div class="card rec">
+      <span class="tag t-rec">✅ 推荐 · 方案 C</span>
+      <h2>编排 Pipeline Orchestrator（Celery-free，asyncio Task 状态机 + DB）</h2>
+      <p style="color:var(--muted)">新增 1 个 <code>PipelineRun</code> 数据表 + <code>pipeline_engine.py</code> 编排协程。前端轮询 <code>/pipelines/{id}</code>。不引入 Redis/Celery，用 <b>Python asyncio + SQLite</b>，单机一次管 8 个并发 run。</p>
+
+      <h3>核心数据流</h3>
+      <pre class="flow">
+[WorkspaceOneClickPubmedDemo]
+  └ POST /pipelines/run {preset:"sglt2i_ckd"}
+      → id=p-314 (status=queued)
+[pipeline_engine.py · asyncio]
+  ① pubmed_adapter.search → 100 条真数据
+  ② W82b_dedupe(simhash+查重) → E1-E3
+  ③ 9a Screening TA  → E4(E6 候选)
+  ④ 9a Screening FT → EvidenceArtifact E6
+  ⑤ 9c Abstractor    → decision=include/review/exclude
+  ⑥ 9b RoB2 × N      → Overall 低/中/高
+  ⑦ W5 GRADE (读 EA) → 降级 -1 / -2
+  ⑧ W8.4 report.generate_preview() → bytes
+每步 → UPDATE pipeline_runs SET steps[i].status
+[Dashboard 前端]
+  GET /pipelines/p-314 → 每 1500ms refresh
+  阶段进度条 + Funnel + RoB2Matrix + Abstractor卡堆
+  ↓ 点 [下载 PDF] = GET /pipelines/p-314/report.pdf</pre>
+
+      <h3>Pros / Cons</h3>
+      <ul>
+        <li>✅ 0 新依赖（不引入 Redis/RQ）</li>
+        <li>✅ 错误隔离：单步失败 → 标记 <code>failed_step</code>，UI 给出重试按钮</li>
+        <li>✅ 可 resume：同一 run 从断点继续（不是从头跑）</li>
+        <li>✅ 历史 run 可回放（DB 保留）→ 做 A/B 对比</li>
+        <li>⚠️ 单机并发 ≤ 8（够科研用，不够再换 Celery）</li>
+        <li>⚠️ 进程被杀时，run 状态保留，下次启动自动 resume queued</li>
+      </ul>
+
+      <div class="score">
+        <div><b>交付速度</b><span class="good">★★★★★ 3 天</span></div>
+        <div><b>用户体验</b><span class="good">★★★★★ 断点+进度</span></div>
+        <div><b>并发能力</b><span class="mid">★★★☆☆ 8 run</span></div>
+        <div><b>NOTOUCH 合规</b><span class="good">★★★★★ 只追加</span></div>
+        <div><b>可扩展性</b><span class="good">★★★★☆ 换 Celery 2h</span></div>
+        <div><b>新代码量</b><span class="mid">≈1400 行</span></div>
+      </div>
+    </div>
+
+    <!-- Option 2 -->
+    <div class="card">
+      <span class="tag t-alt">方案 B · 同步串行 + Long-Poll SSE</span>
+      <h2>Synchronous Chained Router（SSE 流式推进度）</h2>
+      <p style="color:var(--muted)">单个 <code>POST /pipelines/run-sync</code> 同步调 8 步，用 SSE (<code>text/event-stream</code>) 每步推 event。连接断=用户看不到中间态，但后端完整跑完。</p>
+      <h3>核心数据流</h3>
+      <pre class="flow">
+[前端 EventSource('/pipelines/run-sse')]
+  → onmessage({step:"W8_search",n:86,total:100})
+  → onmessage({step:"9a_screening_ta",...})
+  → onmessage({step:"done",report_url:"/..."})</pre>
+      <ul>
+        <li>✅ 实现简单（无 DB 表，无状态机）</li>
+        <li>⚠️ 浏览器 tab 切后台，SSE 可能被掐</li>
+        <li>⚠️ 进程 kill → 结果全丢（无法 resume）</li>
+        <li>⚠️ 只支持 1 用户 1 run（GIL 单线程）</li>
+      </ul>
+      <div class="score">
+        <div><b>交付速度</b><span class="good">★★★★★ 1.5 天</span></div>
+        <div><b>用户体验</b><span class="mid">★★★☆☆ 断=失联</span></div>
+        <div><b>并发能力</b><span class="bad">★★☆☆☆ 串行</span></div>
+        <div><b>NOTOUCH 合规</b><span class="good">★★★★★ 只追加</span></div>
+        <div><b>可扩展性</b><span class="bad">★★☆☆☆ 重写换异步</span></div>
+        <div><b>新代码量</b><span class="good">≈700 行</span></div>
+      </div>
+    </div>
+
+    <!-- Option 1 -->
+    <div class="card">
+      <span class="tag t-min">方案 A · 重型</span>
+      <h2>Celery + Redis + Flower（生产级）</h2>
+      <p style="color:var(--muted)">补 Redis 容器 + Celery Worker + Flower 监控面板。学术项目 2026 年内一般用不到这么重。可升级路径：方案 C → 切 Celery Broker。</p>
+      <ul>
+        <li>✅ 生产级并发 50+</li>
+        <li>⚠️ 新依赖 3：redis, celery, flower</li>
+        <li>⚠️ docker-compose 改 3 容器</li>
+        <li>⚠️ 7 天工作量（排错+部署文档）</li>
+      </ul>
+      <div class="score">
+        <div><b>交付速度</b><span class="bad">★★☆☆☆ 7 天</span></div>
+        <div><b>用户体验</b><span class="good">★★★★★</span></div>
+        <div><b>并发能力</b><span class="good">★★★★★ 50+</span></div>
+        <div><b>NOTOUCH 合规</b><span class="mid">★★★★☆ (加依赖)</span></div>
+        <div><b>可扩展性</b><span class="good">★★★★★ 无上限</span></div>
+        <div><b>新代码量</b><span class="bad">≈2600 行</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Verdict -->
+  <section class="verdict">
+    <b>🟢 推荐最终选：方案 C（Pipeline Orchestrator asyncio + DB）</b>。理由 3 条：<br>
+    ① 3 天可交付，能赶在用户切回手动 pubmed 搜索前上线；<br>
+    ② 零新依赖 + 完全 append-only NOTOUCH；<br>
+    ③ concurrency 顶到 8 个并发 run = 足够 8 个 researcher 同时工作，后续换 Celery 只动 1 个文件（broker 抽象）。
+  </section>
+
+  <!-- Scope questions preview -->
+  <section class="card">
+    <h3 style="margin-top:4px">❓ 下一个问题（请回答）</h3>
+    <div class="qgrid">
+      <div class="q"><b>单次 run 文献规模（PubMed 返回数）</b>推荐 ≤ <b>200 条</b>，理由：simhash O(n²)=40k 对 约 15s；500 条就 OOM 危险。要支持 &gt;500 得加 BK-Tree（W11 做）。你同意 200 还是想 500？</div>
+      <div class="q"><b>Dashboard 视图数量</b>推荐 3 屏：① Pipeline Runs 列表 ② 单 Run 详情（进度+漏斗+卡堆+报告） ③ Run vs Run A/B 对比屏。还是要简化成 2 屏？</div>
+    </div>
+  </section>
+</main>
+</body>
+</html>
