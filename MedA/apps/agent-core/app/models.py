@@ -350,3 +350,52 @@ class EvidenceArtifact(SQLModel, table=True):
     override_by_user_id: str | None = Field(default=None, foreign_key="user.user_id")
     created_at: datetime = Field(default_factory=datetime_utcnow, nullable=False)
     __table_args__ = (UniqueConstraint("literature_record_id", "stage", name="uq_evidenceartifact_lr_stage"),)
+
+
+class Workspace(SQLModel, table=True):
+    __tablename__ = "workspace"
+    id: str = Field(sa_column=Column(sa.CHAR(36), primary_key=True))
+
+
+class PipelineRun(SQLModel, table=True):
+    __tablename__ = "pipelinerun"
+    id: str = Field(sa_column=Column(sa.CHAR(32), primary_key=True))
+    workspace_id: str = Field(sa_column=Column(sa.CHAR(36), sa.ForeignKey("workspace.id"), nullable=False, index=True))
+    preset: str = Field(sa_column=Column(sa.String(64), nullable=False, index=True))
+    mode: str = Field(sa_column=Column(sa.CHAR(8), nullable=False))
+    max_records: int = Field(default=200, sa_column=Column(sa.SmallInteger, nullable=False, default=200))
+    status: str = Field(sa_column=Column(sa.String(16), nullable=False, index=True))
+    current_step_index: int = Field(default=0, sa_column=Column(sa.SmallInteger, nullable=False, default=0))
+    cancel_flag: bool = Field(default=False, sa_column=Column(sa.Boolean, nullable=False, default=False))
+    steps_json: list = Field(default_factory=list, sa_column=Column(JSON, nullable=False, default=list))
+    error_msg: str | None = Field(default=None, sa_column=Column(Text, nullable=True, default=None))
+    report_blob_path: str | None = Field(default=None, sa_column=Column(sa.String(256), nullable=True, default=None))
+    pico_csv_blob_path: str | None = Field(default=None, sa_column=Column(sa.String(256), nullable=True, default=None))
+    created_at: datetime = Field(default_factory=datetime_utcnow, sa_column=Column(sa.DateTime, nullable=False))
+    updated_at: datetime = Field(default_factory=datetime_utcnow, sa_column=Column(sa.DateTime, nullable=False, onupdate=datetime_utcnow))
+    finished_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime, nullable=True, default=None))
+    __table_args__ = (
+        sa.Index("ix_pipelinerun_ws_created_at_desc", "workspace_id", sa.desc("created_at")),
+        sa.CheckConstraint("max_records >= 1 AND max_records <= 500", name="cc_pipelinerun_max_records"),
+    )
+
+
+class PipelineStepResult(SQLModel, table=True):
+    __tablename__ = "pipelinestepresult"
+    id: int | None = Field(default=None, primary_key=True)
+    run_id: str = Field(sa_column=Column(sa.CHAR(32), sa.ForeignKey("pipelinerun.id"), nullable=False))
+    step_index: int = Field(sa_column=Column(sa.SmallInteger, nullable=False))
+    step_name: str = Field(sa_column=Column(sa.String(32), nullable=False))
+    attempt_no: int = Field(default=1, sa_column=Column(sa.SmallInteger, nullable=False, default=1))
+    status: str = Field(sa_column=Column(sa.String(8), nullable=False))
+    duration_ms: int = Field(sa_column=Column(sa.Integer, nullable=False))
+    n_inputs: int = Field(default=0, sa_column=Column(sa.Integer, nullable=False, default=0))
+    n_outputs: int = Field(default=0, sa_column=Column(sa.Integer, nullable=False, default=0))
+    payload_ref: str | None = Field(default=None, sa_column=Column(sa.String(128), nullable=True, default=None))
+    error_msg: str | None = Field(default=None, sa_column=Column(Text, nullable=True, default=None))
+    retryable: bool = Field(default=True, sa_column=Column(sa.Boolean, nullable=False, default=True))
+    created_at: datetime = Field(default_factory=datetime_utcnow, sa_column=Column(sa.DateTime, nullable=False))
+    __table_args__ = (
+        UniqueConstraint("run_id", "step_index", "attempt_no", name="uq_pipelinestep_run_step_attempt"),
+        sa.Index("ix_pipelinestepresult_run_id", "run_id"),
+    )

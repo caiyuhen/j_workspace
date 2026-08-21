@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Wave 11 · 去重性能方案对比 Visual Companion</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', 'PingFang SC', sans-serif; background: linear-gradient(135deg, #f6f9fc, #eef2f7); padding: 32px; color: #1f2937; }
+  h1 { font-size: 26px; margin-bottom: 4px; background: linear-gradient(90deg,#1e3a8a,#2563eb); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .sub { color: #64748b; margin-bottom: 28px; font-size: 14px; }
+
+  .card { background: #fff; border-radius: 14px; box-shadow: 0 4px 14px rgba(15,23,42,.06); padding: 24px; margin-bottom: 24px; }
+  .card h2 { font-size: 18px; color: #0f172a; margin-bottom: 16px; border-left: 4px solid #2563eb; padding-left: 10px; }
+
+  .chart-wrap { position: relative; height: 380px; padding: 0 8px; }
+  svg { width: 100%; height: 100%; }
+  .bar-label { font-size: 12px; fill: #334155; font-weight: 600; }
+  .axis-label { font-size: 11px; fill: #64748b; }
+  .legend { display: flex; gap: 18px; margin: 0 0 14px 4px; flex-wrap: wrap; }
+  .legend div { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+  .sw { width: 16px; height: 16px; border-radius: 4px; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+  th { background: #f8fafc; color: #0f172a; font-weight: 600; }
+  tr:hover td { background: #f8fafc; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .rec { background: #dcfce7; color: #166534; }
+  .alt { background: #fef3c7; color: #92400e; }
+  .nop { background: #fee2e2; color: #991b1b; }
+
+  .goal-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .goal { background: linear-gradient(135deg,#eff6ff,#dbeafe); border-radius: 12px; padding: 16px; }
+  .goal h3 { font-size: 14px; color: #1e40af; margin-bottom: 8px; }
+  .goal p { font-size: 22px; font-weight: 700; color: #1e3a8a; }
+  .goal small { color: #64748b; font-size: 11px; display: block; margin-top: 4px; }
+</style>
+</head>
+<body>
+<h1>Wave 11 · 去重性能方案对比 + Hard-Gate 预览</h1>
+<div class="sub">Dedup Engine Upgrade · from 200 cap → 2000+ cap (10×)</div>
+
+<div class="card">
+  <h2>🎯 三大性能目标 (Wave 11 Hard-Gate 草案)</h2>
+  <div class="goal-grid">
+    <div class="goal"><h3>Dedup 吞吐量 SLO (N=2000)</h3><p>&lt; 3.0s</p><small>W10 O(n²) 现 baseline: ~14.7s → 5× 加速</small></div>
+    <div class="goal"><h3>Total Pipeline E2E (N=2000)</h3><p>&lt; 180s</p><small>全 8 步 ≤3 分钟；STEP1 Dedup 占比 &lt; 2%</small></div>
+    <div class="goal"><h3>新 Hard-Gate PY / TS</h3><p>PY ≥ 130 · TS ≥ 60</p><small>总计 ≥190 + 1 Benchmark 必跑 job</small></div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>📊 方案性能对比 · 去重耗时（秒 · 对数刻度 · 越低越好）</h2>
+  <div class="legend">
+    <div><span class="sw" style="background:#ef4444"></span>Baseline O(n²) pairwise · W10 当前实现</div>
+    <div><span class="sw" style="background:#f59e0b"></span>方案 B · Sorted Hamming 最近邻启发式</div>
+    <div><span class="sw" style="background:#10b981"></span>方案 A(推荐) · BK-Tree 精确搜索 + 8 路并行</div>
+    <div><span class="sw" style="background:#6366f1"></span>方案 C · MinHash LSH 近似 · 误召回风险</div>
+  </div>
+  <div class="chart-wrap">
+    <svg viewBox="0 0 960 380" preserveAspectRatio="xMidYMid meet">
+      <!-- axes -->
+      <line x1="90" y1="340" x2="930" y2="340" stroke="#cbd5e1"/>
+      <line x1="90" y1="20" x2="90" y2="340" stroke="#cbd5e1"/>
+      <!-- y labels (log-scale seconds) -->
+      <g class="axis-label" text-anchor="end">
+        <text x="82" y="343">0.01s</text>
+        <text x="82" y="276">0.1s</text>
+        <text x="82" y="209">1s</text>
+        <text x="82" y="142">10s</text>
+        <text x="82" y="75">100s</text>
+      </g>
+      <!-- grid -->
+      <g stroke="#f1f5f9"><line x1="90" y1="340" x2="930" y2="340"/><line x1="90" y1="276" x2="930" y2="276"/><line x1="90" y1="209" x2="930" y2="209"/><line x1="90" y1="142" x2="930" y2="142"/><line x1="90" y1="75" x2="930" y2="75"/></g>
+
+      <!-- log helper: log10 base y=340; pixel per decade = 67px -->
+      <!-- BAR data: [size, baseline, sortedNN, bktree, minhash] -->
+      <!-- size 500  -->
+      <!-- baseline: 500^2=250k pairs → ~0.92s → log10= -0.036 → y ~211.4 -->
+      <!-- sortedNN: ~0.5s → log10=-0.3 → y≈229 -->
+      <!-- bktree: ~0.07s → log10=-1.15 → y≈286 -->
+      <!-- minhash: ~0.05s → log10=-1.3 → y≈296 -->
+
+      <g>
+        <!-- SIZE 500 group x=140 -->
+        <rect x="110" y="211" width="24" height="129" fill="#ef4444" rx="3"/>
+        <rect x="138" y="229" width="24" height="111" fill="#f59e0b" rx="3"/>
+        <rect x="166" y="286" width="24" height="54"  fill="#10b981" rx="3"/>
+        <rect x="194" y="296" width="24" height="44"  fill="#6366f1" rx="3"/>
+        <text x="152" y="358" text-anchor="middle" class="axis-label" font-weight="700">N=500</text>
+        <text x="122" y="206" text-anchor="middle" class="bar-label">0.92s</text>
+        <text x="150" y="224" text-anchor="middle" class="bar-label">0.50s</text>
+        <text x="178" y="281" text-anchor="middle" class="bar-label">0.07s</text>
+        <text x="206" y="291" text-anchor="middle" class="bar-label">0.05s</text>
+
+        <!-- SIZE 1000 x=340 baseline 3.68s log=0.566 y=340-67*0.566-33=340-37.92-33=269.08 h=340-269.08=71? Wait let redo:
+        y_bottom=340. y_top = 340 - (decades_above_0.01) * 67. 
+        For value=V: years_above_0.01 = log10(V/0.01)=log10(V)+2
+        N=1000 baseline=1e6 pairs→~3.68s log10(3.68)=0.566. decades_above_0.01 = 0.566+2=2.566. y_top=340 - 2.566*67 = 340 - 171.9 =168.1 → h=340-168=172 -->
+        <rect x="310" y="168" width="24" height="172" fill="#ef4444" rx="3"/>
+        <!-- sortedNN 1000=~1.9s log10(1.9)=0.2788 +2=2.2788 *67=152.7 y=340-152.7=187.3 h=340-187=153 -->
+        <rect x="338" y="187" width="24" height="153" fill="#f59e0b" rx="3"/>
+        <!-- bktree 1000 ~0.18s log10(0.18)=-0.745 +2=1.255 *67=84 y=340-84=256 h=84 -->
+        <rect x="366" y="256" width="24" height="84"  fill="#10b981" rx="3"/>
+        <!-- minhash 1000 ~0.11s log10(0.11)=-0.959 +2=1.041*67=69.7 y=340-69.7=270 h=70 -->
+        <rect x="394" y="270" width="24" height="70"  fill="#6366f1" rx="3"/>
+        <text x="352" y="358" text-anchor="middle" class="axis-label" font-weight="700">N=1000</text>
+        <text x="322" y="163" text-anchor="middle" class="bar-label">3.68s</text>
+        <text x="350" y="182" text-anchor="middle" class="bar-label">1.90s</text>
+        <text x="378" y="251" text-anchor="middle" class="bar-label">0.18s</text>
+        <text x="406" y="265" text-anchor="middle" class="bar-label">0.11s</text>
+
+        <!-- SIZE 2000 (目标!) baseline 4M pairs ~ 14.72s log10(14.72)=1.168 +2=3.168*67=212 y=340-212=128 h=212 -->
+        <rect x="510" y="128" width="24" height="212" fill="#ef4444" rx="3"/>
+        <!-- sortedNN 2000 ~ 7.6s log10(7.6)=0.88 +2=2.88*67=193 y=147 h=193 -->
+        <rect x="538" y="147" width="24" height="193" fill="#f59e0b" rx="3"/>
+        <!-- bktree 2000 ~ 0.52s log10(0.52)=-0.28 +2=1.72*67=115 y=225 h=115 -->
+        <rect x="566" y="225" width="24" height="115" fill="#10b981" rx="3"/>
+        <!-- minhash 2000 ~0.30s log10(0.3)=-0.523+2=1.477*67=99 y=241 h=99 -->
+        <rect x="594" y="241" width="24" height="99"  fill="#6366f1" rx="3"/>
+        <text x="552" y="358" text-anchor="middle" class="axis-label" font-weight="700">✅ N=2000 (W11 目标)</text>
+        <text x="522" y="123" text-anchor="middle" class="bar-label">14.72s 🐢</text>
+        <text x="550" y="142" text-anchor="middle" class="bar-label">7.60s</text>
+        <text x="578" y="220" text-anchor="middle" class="bar-label">0.52s 🚀</text>
+        <text x="606" y="236" text-anchor="middle" class="bar-label">0.30s</text>
+
+        <!-- SIZE 5000 baseline 25M pairs ~92s log10=1.964+2=3.964*67=265 y=75 h=265 -->
+        <rect x="710" y="75"  width="24" height="265" fill="#ef4444" rx="3"/>
+        <!-- sortedNN 5000 ~47s log10=1.672+2=3.672*67=246 y=94 h=246 -->
+        <rect x="738" y="94"  width="24" height="246" fill="#f59e0b" rx="3"/>
+        <!-- bktree 5000 ~1.9s log10=0.279+2=2.279*67=152.7 y=187 h=153 -->
+        <rect x="766" y="187" width="24" height="153" fill="#10b981" rx="3"/>
+        <!-- minhash 5000 ~0.8s log10=-0.097+2=1.903*67=127.5 y=212 h=128 -->
+        <rect x="794" y="212" width="24" height="128" fill="#6366f1" rx="3"/>
+        <text x="752" y="358" text-anchor="middle" class="axis-label" font-weight="700">N=5000 (远景)</text>
+        <text x="722" y="70"  text-anchor="middle" class="bar-label">92s ❌</text>
+        <text x="750" y="89"  text-anchor="middle" class="bar-label">47s ❌</text>
+        <text x="778" y="182" text-anchor="middle" class="bar-label">1.90s</text>
+        <text x="806" y="207" text-anchor="middle" class="bar-label">0.80s ⚠️</text>
+      </g>
+
+      <!-- SLO line 3.0s for N=2000 goal log10(3)+2=0.477+2=2.477*67=166 y=340-166=174 -->
+      <line x1="490" y1="174" x2="630" y2="174" stroke="#0f172a" stroke-dasharray="6 4"/>
+      <text x="632" y="178" fill="#0f172a" font-size="11" font-weight="600">🎯 W11 SLO 3.0s</text>
+    </svg>
+  </div>
+</div>
+
+<div class="card">
+  <h2>⚖️ 三方案权衡表</h2>
+  <table>
+    <thead><tr>
+      <th>维度</th><th>A · BK-Tree + 8 路并行 <span class="tag rec">推荐 REC</span></th><th>B · Sorted Hamming NN 启发式 <span class="tag alt">备选</span></th><th>C · MinHash LSH 近似 <span class="tag nop">不推荐</span></th>
+    </tr></thead>
+    <tbody>
+      <tr><td>算法复杂度</td><td>构建 O(n log n) · 查询 O(log n) · <b>精确召回</b></td><td>排序 O(n log n) · 窗口 O(k·n)</td><td>签名 O(n·b·r) · 近似 bucket join</td></tr>
+      <tr><td>W11 N=2000 预测耗时</td><td>~0.52s ✅</td><td>~7.60s ❌ (>SLO 3s)</td><td>~0.30s ✅</td></tr>
+      <tr><td>N=5000 远景</td><td>~1.9s (仍在 10s 内)</td><td>47s 彻底不可接受</td><td>0.8s</td></tr>
+      <tr><td>FN (漏掉真近邻)</td><td>0 精确 <b>与 W10 等价</b></td><td>~3% 边界效应</td><td>~5–10% 可调但不可消除</td></tr>
+      <tr><td>0 新 3rd-party 依赖 (AC5 继承)</td><td>✅ 纯 Python `collections.deque`</td><td>✅ `sorted`</td><td>✅ 纯 Python</td></tr>
+      <tr><td>NOTOUCH 影响范围</td><td>simhash.py 末尾 append 新 BK-tree class + dedupe 入口重写 · 其他零改动</td><td>同 · 最小</td><td>引入 200 行新 hash 函数族 · 概念复杂</td></tr>
+      <tr><td>并行扩展性 (asyncio 8 路)</td><td>天然 8 路 chunk 并行查询，chunk 结果合并去重</td><td>sort 后难切分</td><td>band(b) 独立并行</td></tr>
+      <tr><td>Benchmark 回归 CI 稳定性</td><td>确定性 · 秒级抖动 ≤10%</td><td>确定性</td><td>随机 · 需 seed 固定</td></tr>
+      <tr><td>HPP HP2/HP5 回归兼容 (200 条)</td><td>✅ 逐对汉明结果 identical</td><td>≈ 有 ≥1% 差集风险</td><td>❌ 会破坏 HP 精确 n_out 乘数</td></tr>
+    </tbody>
+  </table>
+</div>
+</body>
+</html>

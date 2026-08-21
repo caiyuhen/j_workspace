@@ -71,6 +71,13 @@ from app.services.search_source import (
 )
 from app.services.stage_entry import build_stage_entry
 from app.services.workspace import build_workspace_home
+from app.services.pipeline_engine import (
+    create_pipeline_run, run_pipeline, resume_pipeline,
+    PIPELINE_STEPS, VALID_PRESETS, get_first_non_success_index,
+    compute_pipeline_compare,
+)
+from app.models import PipelineRun, PipelineStepResult, Workspace
+import asyncio
 
 router = APIRouter(prefix="/api/workspace", tags=["workspace"])
 
@@ -2029,4 +2036,398 @@ def w9c_abstractor_batch_stats(
         "record_ids": all_record_ids,
         "triage_keys": sorted(str(k) for k in triage_map.keys()),
     }
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# W10 D2-1 · Pipeline Routes (6 append-only routes)
+# NOTOUCH: 0 删改已有 route；仅 append EOF
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+def _load_workspace_or_404(
+    session: Session,
+    workspace_id: str,
+    context: SessionContext,
+) -> Workspace:
+    if not workspace_id.startswith(f"{context.organization_slug}-"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="not workspace member",
+        )
+    ws = session.get(Workspace, workspace_id)
+    if ws is None:
+        if "-NOAUTO-" in workspace_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="workspace not found",
+            )
+        ws = Workspace(id=workspace_id)
+        session.add(ws)
+        session.commit()
+        session.refresh(ws)
+    return ws
+
+
+class _PipelineRunPayload(BaseModel):
+    preset: str
+    mode: str = "snapshot"
+    max_records: int = 200
+
+
+def _run_to_summary(run: PipelineRun) -> dict:
+    return {
+        "id": run.id,
+        "workspace_id": run.workspace_id,
+        "preset": run.preset,
+        "mode": run.mode,
+        "max_records": run.max_records,
+        "status": run.status,
+        "current_step_index": run.current_step_index,
+        "cancel_flag": run.cancel_flag,
+        "created_at": run.created_at.isoformat() if run.created_at else None,
+        "updated_at": run.updated_at.isoformat() if run.updated_at else None,
+        "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+    }
+
+
+@router.post("/{workspace_id}/pipelines/run")
+async def w10_post_pipeline_run(
+    workspace_id: str,
+    payload: _PipelineRunPayload,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    _load_workspace_or_404(session, workspace_id, context)
+
+    if payload.preset not in VALID_PRESETS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"invalid preset: {payload.preset}. valid presets: {list(VALID_PRESETS)}",
+        )
+
+    if not (1 <= payload.max_records <= 200):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="max_records must be between 1 and 200",
+        )
+
+    run = create_pipeline_run(
+        workspace_id=workspace_id,
+        preset=payload.preset,
+        mode=payload.mode,
+        max_records=payload.max_records,
+    )
+
+    asyncio.create_task(run_pipeline(run.id, ctx={}))
+
+    return {
+        "run_id": run.id,
+        "status": run.status,
+        "expected_ms_estimate": 180000,
+    }
+
+
+@router.get("/{workspace_id}/pipelines")
+def w10_get_pipelines_list(
+    workspace_id: str,
+    status: str | None = Query(default=None),
+    preset: str | None = Query(default=None),
+    page: int = Query(1, ge=1),
+    per_page: int = Query(20, ge=1, le=100),
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    _load_workspace_or_404(session, workspace_id, context)
+
+    from sqlmodel import select, func, and_
+
+    q = select(PipelineRun).where(PipelineRun.workspace_id == workspace_id)
+    conds = []
+    if status is not None:
+        conds.append(PipelineRun.status == status)
+    if preset is not None:
+        conds.append(PipelineRun.preset == preset)
+    if conds:
+        q = q.where(and_(*conds))
+
+    q = q.order_by(PipelineRun.created_at.desc())
+    count_q = select(func.count()).select_from(PipelineRun).where(PipelineRun.workspace_id == workspace_id)
+    if conds:
+        count_q = count_q.where(and_(*conds))
+
+    total = int(session.exec(count_q).one() or 0)
+
+    skip = (page - 1) * per_page
+    q = q.offset(skip).limit(per_page)
+    runs = list(session.exec(q).all())
+
+    return {
+        "runs": [_run_to_summary(r) for r in runs],
+        "total": total,
+    }
+
+
+@router.get("/{workspace_id}/pipelines/{run_id}")
+def w10_get_pipeline_detail(
+    workspace_id: str,
+    run_id: str,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    _load_workspace_or_404(session, workspace_id, context)
+
+    from sqlmodel import select
+
+    run = session.exec(
+        select(PipelineRun).where(
+            PipelineRun.workspace_id == workspace_id,
+            PipelineRun.id == run_id,
+        )
+    ).first()
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="pipeline run not found",
+        )
+
+    step_results = list(session.exec(
+        select(PipelineStepResult).where(PipelineStepResult.run_id == run_id)
+    ).all())
+
+    steps_out = []
+    steps_json = run.steps_json if run.steps_json and len(run.steps_json) == 8 else [
+        {
+            "step_index": s["step_index"],
+            "step_name": s["step_name"],
+            "status": "pending",
+            "attempt_no": 0,
+            "started_at": None,
+            "finished_at": None,
+            "duration_ms": 0,
+            "n_in": 0,
+            "n_out": 0,
+            "payload_ref": None,
+            "error_msg": None,
+        }
+        for s in PIPELINE_STEPS
+    ]
+
+    for i, s in enumerate(steps_json):
+        sd = dict(s) if isinstance(s, dict) else {}
+        db_result = next((r for r in step_results if r.step_index == i), None)
+        step_out = {
+            "step_index": sd.get("step_index", i),
+            "step_name": sd.get("step_name", PIPELINE_STEPS[i]["step_name"] if i < len(PIPELINE_STEPS) else f"step_{i}"),
+            "status": sd.get("status", "pending"),
+            "attempt_no": sd.get("attempt_no", 0),
+            "started_at": sd.get("started_at"),
+            "finished_at": sd.get("finished_at"),
+            "duration_ms": sd.get("duration_ms", 0),
+            "n_in": sd.get("n_in", 0),
+            "n_out": sd.get("n_out", 0),
+            "payload_ref": sd.get("payload_ref"),
+            "error_msg": sd.get("error_msg") or (db_result.error_msg if db_result else None),
+        }
+        steps_out.append(step_out)
+
+    while len(steps_out) < 8:
+        i = len(steps_out)
+        steps_out.append({
+            "step_index": i,
+            "step_name": PIPELINE_STEPS[i]["step_name"] if i < len(PIPELINE_STEPS) else f"step_{i}",
+            "status": "pending",
+            "attempt_no": 0,
+            "started_at": None,
+            "finished_at": None,
+            "duration_ms": 0,
+            "n_in": 0,
+            "n_out": 0,
+            "payload_ref": None,
+            "error_msg": None,
+        })
+
+    detail = {
+        "id": run.id,
+        "workspace_id": run.workspace_id,
+        "preset": run.preset,
+        "mode": run.mode,
+        "max_records": run.max_records,
+        "status": run.status,
+        "current_step_index": run.current_step_index,
+        "cancel_flag": run.cancel_flag,
+        "error_msg": run.error_msg,
+        "steps": steps_out[:8],
+        "report_url": f"/pipelines/{run.id}/report.pdf",
+        "created_at": run.created_at.isoformat() if run.created_at else None,
+        "updated_at": run.updated_at.isoformat() if run.updated_at else None,
+        "finished_at": run.finished_at.isoformat() if run.finished_at else None,
+    }
+    return detail
+
+
+@router.post("/{workspace_id}/pipelines/{run_id}/retry/{step_idx:int}")
+async def w10_post_pipeline_retry(
+    workspace_id: str,
+    run_id: str,
+    step_idx: int,
+    force: bool = Query(default=False),
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    _load_workspace_or_404(session, workspace_id, context)
+
+    if step_idx < 0 or step_idx > 7:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="step_idx must be between 0 and 7",
+        )
+
+    from sqlmodel import select
+
+    run = session.exec(
+        select(PipelineRun).where(
+            PipelineRun.workspace_id == workspace_id,
+            PipelineRun.id == run_id,
+        )
+    ).first()
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="pipeline run not found",
+        )
+
+    if run.status == "running":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="run is already running",
+        )
+
+    if not run.steps_json or len(run.steps_json) != 8:
+        run.steps_json = [
+            {
+                "step_index": s["step_index"],
+                "step_name": s["step_name"],
+                "status": "pending",
+                "attempt_no": 0,
+                "started_at": None,
+                "finished_at": None,
+                "duration_ms": 0,
+                "n_in": 0,
+                "n_out": 0,
+                "payload_ref": None,
+                "error_msg": None,
+            }
+            for s in PIPELINE_STEPS
+        ]
+
+    step_status = (run.steps_json[step_idx] or {}).get("status", "pending")
+    if step_status == "success" and not force:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="already success, set force=true to rerun (will cascade pending downstream)",
+        )
+
+    if force:
+        new_steps = [dict(s) if isinstance(s, dict) else {} for s in run.steps_json]
+        for i in range(step_idx, 8):
+            if i < len(new_steps):
+                new_steps[i]["status"] = "pending"
+                new_steps[i]["started_at"] = None
+                new_steps[i]["finished_at"] = None
+                new_steps[i]["error_msg"] = None
+        run.steps_json = new_steps
+        run.status = "queued"
+        run.updated_at = datetime.utcnow()
+        session.add(run)
+        session.commit()
+        session.refresh(run)
+
+    asyncio.create_task(resume_pipeline(run.id, from_step=step_idx, ctx={}))
+
+    return {
+        "queued": True,
+        "resumed_from": step_idx,
+        "force": force,
+    }
+
+
+@router.post("/{workspace_id}/pipelines/{run_id}/cancel")
+def w10_post_pipeline_cancel(
+    workspace_id: str,
+    run_id: str,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    _load_workspace_or_404(session, workspace_id, context)
+
+    from sqlmodel import select
+
+    run = session.exec(
+        select(PipelineRun).where(
+            PipelineRun.workspace_id == workspace_id,
+            PipelineRun.id == run_id,
+        )
+    ).first()
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="pipeline run not found",
+        )
+
+    if run.status in ("success", "failed", "cancelled"):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=f"run is already terminal: {run.status}",
+        )
+
+    run.cancel_flag = True
+    run.updated_at = datetime.utcnow()
+    session.add(run)
+    session.commit()
+    session.refresh(run)
+
+    return {
+        "cancelled": True,
+        "will_stop_at_next_step_entry": True,
+    }
+
+
+@router.get("/{workspace_id}/pipelines/compare/{run_a:str}/{run_b:str}")
+def w10_get_pipeline_compare(
+    workspace_id: str,
+    run_a: str,
+    run_b: str,
+    metrics: str = Query(default="funnel,rob,grade,pico"),
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    _load_workspace_or_404(session, workspace_id, context)
+
+    from sqlmodel import select
+
+    run_a_obj = session.exec(
+        select(PipelineRun).where(
+            PipelineRun.workspace_id == workspace_id,
+            PipelineRun.id == run_a,
+        )
+    ).first()
+    if run_a_obj is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"run_a not found: {run_a}",
+        )
+
+    run_b_obj = session.exec(
+        select(PipelineRun).where(
+            PipelineRun.workspace_id == workspace_id,
+            PipelineRun.id == run_b,
+        )
+    ).first()
+    if run_b_obj is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"run_b not found: {run_b}",
+        )
+
+    return compute_pipeline_compare(run_a_obj, run_b_obj, metrics)
 

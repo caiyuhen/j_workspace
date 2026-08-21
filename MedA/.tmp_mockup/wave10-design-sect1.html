@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>Wave 10 · Design Sect 1/4 · 架构全景</title>
+<style>
+  :root{--bg:#0b1020;--card:#111a2e;--ink:#e6eaf2;--muted:#8fa0c0;--bor:#233053;--g1:#38bdf8;--g2:#6366f1;--g3:#a855f7;--ok:#10b981;--warn:#f59e0b;--bad:#ef4444}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.6 system-ui,"PingFang SC","Microsoft YaHei"}
+  header{padding:28px 40px 14px;border-bottom:1px solid var(--bor)}
+  h1{margin:0;font-size:22px}
+  header p{margin:6px 0 0;color:var(--muted)}
+  main{padding:24px 40px 80px;max-width:1280px}
+  .sect{background:var(--card);border:1px solid var(--bor);border-radius:14px;padding:22px 24px;margin-bottom:22px}
+  h2{margin:0 0 8px;font-size:17px}
+  h2 .num{display:inline-block;min-width:30px;text-align:center;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;padding:1px 10px;border-radius:999px;font-size:12px;font-weight:700;margin-right:10px;letter-spacing:.3px}
+  .muted{color:var(--muted)}
+  /* Arch diagram */
+  .arch{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin:14px 0}
+  .col{background:#0a1228;border:1px solid var(--bor);border-radius:12px;padding:14px 16px}
+  .col h3{margin:0 0 8px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.9px}
+  .node{display:flex;align-items:center;gap:10px;padding:10px 12px;margin:8px 0;background:rgba(56,189,248,.06);border:1px solid rgba(56,189,248,.22);border-radius:10px}
+  .node .ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;font-size:16px;font-weight:700;flex:none}
+  .node b{display:block;font-size:13px}
+  .node span{color:var(--muted);font-size:11px}
+  .node.g2{background:rgba(99,102,241,.07);border-color:rgba(99,102,241,.28)}
+  .node.g2 .ic{background:linear-gradient(135deg,var(--g2),var(--g3))}
+  .node.g3{background:rgba(16,185,129,.07);border-color:rgba(16,185,129,.28)}
+  .node.g3 .ic{background:linear-gradient(135deg,#34d399,var(--g1))}
+  .pipe{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:8px;margin-top:16px}
+  .step{background:#09102a;border:1px solid var(--bor);border-radius:10px;padding:10px 10px 12px;text-align:center;position:relative}
+  .step .n{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px}
+  .step .nm{font-size:12px;font-weight:700;line-height:1.25}
+  .step.arr::after{content:"→";position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:var(--g2);font-weight:700;font-size:14px;z-index:2}
+  .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10.5px;font-weight:700;border:1px solid}
+  .tag-ok{color:#6ee7b7;border-color:rgba(16,185,129,.35);background:rgba(16,185,129,.1)}
+  .tag-neu{color:#a5b4fc;border-color:rgba(99,102,241,.35);background:rgba(99,102,241,.1)}
+  .tag-w{color:#fcd34d;border-color:rgba(245,158,11,.35);background:rgba(245,158,11,.08)}
+  /* States */
+  .states{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+  .st{background:#09102a;border:1px solid var(--bor);border-radius:10px;padding:10px 12px;font-size:12px}
+  .st b{display:block;margin-bottom:2px;font-size:13px}
+  .ok b{color:#6ee7b7}.w b{color:#fcd34d}.b b{color:#fca5a5}.n b{color:#93c5fd}
+  /* Route table */
+  table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12.5px}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--bor);text-align:left}
+  th{color:var(--muted);font-weight:600;text-transform:uppercase;font-size:11px;letter-spacing:.5px}
+  tr:hover td{background:rgba(56,189,248,.04)}
+  .mono{font:12px ui-monospace,Menlo,Consolas,monospace;color:#a5b4fc}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:13px}
+  .kv b{color:var(--muted);font-weight:500}
+</style>
+</head>
+<body>
+<header>
+  <h1>🧩 Sect 1 / 4 · Wave 10 端到端架构全景（方案 C 推荐 · 4 决策已锁）</h1>
+  <p class="muted">Q1=≤200篇 · Q2=3屏Dashboard · Q3=Hybrid双模式 · Q4=断点续跑单步重试</p>
+</header>
+<main>
+  <!-- 1.1 Three Layers -->
+  <section class="sect">
+    <h2><span class="num">1.1</span>三层架构（Dashboard UI · Pipeline Orchestrator · W1-W9 底座）</h2>
+    <p class="muted" style="margin-top:0">严格 NOTOUCH：W1-W9 底座文件（9a/9b/9c/GRADE/Report）只追加不改，所有新逻辑在中间 <b>Orchestrator 层</b> 编排。前端 3 屏 Dashboard 完全在 shared-ui 新增，不碰任何已有组件的默认导出。</p>
+    <div class="arch">
+      <div class="col">
+        <h3>🖥️ Shared-UI Dashboard（New +10 组件）</h3>
+        <div class="node g3"><div class="ic">L</div><div><b>Runs List 页</b><span>表格 + status 筛选 + preset chip</span></div></div>
+        <div class="node g3"><div class="ic">D</div><div><b>Run Detail 页</b><span>8步进度 + Funnel + 卡堆 + RoB2Matrix + Report</span></div></div>
+        <div class="node g3"><div class="ic">AB</div><div><b>A/B Compare 页</b><span>2 run 并排：漏斗差 / 质量分布 / GRADE 差异表</span></div></div>
+        <div class="node g3"><div class="ic">H</div><div><b>usePipelineRun.ts hook</b><span>轮询(1.5s) + 6 actions（重试单步/取消/导出）</span></div></div>
+      </div>
+      <div class="col">
+        <h3>⚙️ Pipeline Orchestrator（NEW 核心 · 0 新依赖）</h3>
+        <div class="node"><div class="ic">⚡</div><div><b>pipeline_engine.py (asyncio)</b><span>状态机 8 步编排 + 指数退避重试</span></div></div>
+        <div class="node"><div class="ic">🗂️</div><div><b>PipelineRun 数据表</b><span>id / status / preset / live_pubmed / steps_json / error</span></div></div>
+        <div class="node"><div class="ic">➡️</div><div><b>PipelineStepResult 表</b><span>每步独立持久化：耗时 / n_inputs / n_outputs / payload_ref</span></div></div>
+        <div class="node"><div class="ic">🔁</div><div><b>resume_run()</b><span>从失败步骤的下一步开始，不重跑已成功的</span></div></div>
+      </div>
+      <div class="col">
+        <h3>🏛️ W1-W9 底座（NOTOUCH · 纯调用）</h3>
+        <div class="node g2"><div class="ic">W8</div><div><b>PubMed Adapter</b><span>Hybrid：Snapshot 默认 + Live EFetch toggle</span></div></div>
+        <div class="node g2"><div class="ic">W82b</div><div><b>SimHash Dedupe</b><span>0 diff，只走 API（已有 12 test GREEN）</span></div></div>
+        <div class="node g2"><div class="ic">9a</div><div><b>TA + FT Screening</b><span>4 判定标准；生成 EA</span></div></div>
+        <div class="node g2"><div class="ic">9c/9b</div><div><b>Abstractor + RoB2</b><span>分流 include/review/exclude + 5域 Overall</span></div></div>
+        <div class="node g2"><div class="ic">W5/W8</div><div><b>GRADE + Report</b><span>降级 3 档 → PDF/Markdown 预览</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1.2 Pipeline 8 Step -->
+  <section class="sect">
+    <h2><span class="num">1.2</span>8 步 Pipeline 顺序 & 每步产出物（状态机可断点位置 = 每步之后）</h2>
+    <div class="pipe">
+      <div class="step arr"><div class="n">STEP 1</div><div class="nm">PubMed Fetch<br>(Hybrid)</div><span class="tag tag-neu">record_ids []</span></div>
+      <div class="step arr"><div class="n">STEP 2</div><div class="nm">SimHash Dedupe</div><span class="tag tag-neu">dedup_count</span></div>
+      <div class="step arr"><div class="n">STEP 3</div><div class="nm">9a TA 筛选</div><span class="tag tag-neu">decisions.json</span></div>
+      <div class="step arr"><div class="n">STEP 4</div><div class="nm">9a FT 筛选</div><span class="tag tag-ok">EvidenceArtifacts</span></div>
+      <div class="step arr"><div class="n">STEP 5</div><div class="nm">9c Abstractor</div><span class="tag tag-ok">PICO extractions</span></div>
+      <div class="step arr"><div class="n">STEP 6</div><div class="nm">9b RoB2 N×5域</div><span class="tag tag-w">Overall 低/中/高</span></div>
+      <div class="step arr"><div class="n">STEP 7</div><div class="nm">W5 GRADE 3档</div><span class="tag tag-w">High/Mod/Low</span></div>
+      <div class="step"><div class="n">STEP 8</div><div class="nm">W8.4 Report 生成</div><span class="tag tag-ok">preview.pdf</span></div>
+    </div>
+    <div class="grid2" style="margin-top:18px">
+      <div>
+        <h3 style="margin:0 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-size:12px">🧪 每步错误隔离约定（Q4 断点续跑核心）</h3>
+        <div class="kv" style="margin-top:8px">
+          <b>自动重试</b><span>每步最多 2 次，退避 1s → 4s（只有网络/LLM 超时可 retry）</span>
+          <b>不可恢复错误</b><span><code>retryable=False</code>：数据完整性校验失败 → 必须人工介入</span>
+          <b>Resume 逻辑</b><span>遍历 8 步，跳过 status=success 的步骤；遇到 last_success 下一步开始执行</span>
+          <b>Cancel 语义</b><span>每步的开头检查 cancel_flag：若 True → 整 run 标 cancelled，保留已完成步骤产物</span>
+        </div>
+      </div>
+      <div>
+        <h3 style="margin:0 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;font-size:12px">🎛️ PipelineRun 状态枚举（前端展示用）</h3>
+        <div class="states">
+          <div class="st n"><b>queued</b>刚入库，等 asyncio runner 取</div>
+          <div class="st w"><b>running</b>当前 step_index = N（1-8）</div>
+          <div class="st ok"><b>success</b>8/8 全绿，报告已生成</div>
+          <div class="st b"><b>failed</b>某步重试 2 次仍失败</div>
+          <div class="st w"><b>resumable</b>失败后人工点击 <code>[RESUME]</code></div>
+          <div class="st n"><b>paused</b>用户手动暂停（<code>cancel_flag</code> 未激活）</div>
+          <div class="st b"><b>cancelled</b>用户点 [CANCEL]</div>
+          <div class="st ok"><b>partial</b>部分步骤跳过（Step7/8 SKIP 人工 CSV 下载）</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 1.3 REST API -->
+  <section class="sect">
+    <h2><span class="num">1.3</span>6 条新增 REST 路由（append-only，不改现有 /api/v1/ws/ 的所有响应字段）</h2>
+    <p class="muted" style="margin-top:0">全部挂在 <span class="mono">/api/v1/ws/{wid}</span> 命名空间下，走 workspace_authz.py 的 owner/collaborator 校验（0 新权限粒度）。</p>
+    <table>
+      <thead><tr><th>Method</th><th>Path</th><th>Request Body（关键字段）</th><th>Response 2xx</th></tr></thead>
+      <tbody>
+        <tr><td><span class="tag tag-ok">POST</span></td><td class="mono">/pipelines/run</td><td><code>preset:str, live_pubmed:bool=False, max_records:int=200</code></td><td><code>{run_id, status:"queued"}</code></td></tr>
+        <tr><td><span class="tag tag-neu">GET</span></td><td class="mono">/pipelines</td><td><code>Query: status, preset, page, per_page=20</code></td><td><code>{runs:[...RunSummary], total}</code></td></tr>
+        <tr><td><span class="tag tag-neu">GET</span></td><td class="mono">/pipelines/{rid}</td><td>—</td><td><code>{run_detail, steps[8], report_url?}</code>（前端轮询此接口）</td></tr>
+        <tr><td><span class="tag tag-w">POST</span></td><td class="mono">/pipelines/{rid}/retry/{step_idx}</td><td><code>{force?:bool}</code></td><td><code>{queued:True, resumed_from:step_idx}</code></td></tr>
+        <tr><td><span class="tag tag-w">POST</span></td><td class="mono">/pipelines/{rid}/cancel</td><td>—</td><td><code>{cancelled:True}</code>（下一个 step 入口生效）</td></tr>
+        <tr><td><span class="tag tag-w">GET</span></td><td class="mono">/pipelines/compare/{ridA}/{ridB}</td><td>Query: <code>metrics=funnel,rob,grade,pico</code></td><td><code>{delta_funnel, rob2_delta, grade_delta, pico_stats}</code></td></tr>
+      </tbody>
+    </table>
+  </section>
+</main>
+</body>
+</html>
