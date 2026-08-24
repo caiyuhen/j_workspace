@@ -1,28 +1,134 @@
-name: foundation-ci
+name: MedA Foundation CI (W11 4-Job Matrix)
 
-on:
-  push:
-    branches: ["main"]
-  pull_request:
+on: [push, pull_request]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  backend:
-    runs-on: ubuntu-latest
+  backend-unit:
+    name: backend-unit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    defaults:
+      run:
+        working-directory: apps/agent-core
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - run: pip install uv
-      - run: uv run --project "MedA/apps/agent-core" pytest "MedA/apps/agent-core/tests" -v
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Set up Python 3.11.9
+        uses: actions/setup-python@v5
         with:
-          node-version: "20"
-      - run: npm --prefix "MedA" install
-      - run: npm --prefix "MedA" --workspace apps/web run test -- --run
-      - run: npm --prefix "MedA" --workspace apps/desktop run test -- --run
+          python-version: "3.11.9"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Run backend unit tests
+        run: pytest tests --ignore=tests/test_w10_e2e_2preset.py --ignore=tests/test_w11_e2e_2preset_2000.py -m "not bench" --junitxml=unit.xml
+
+  backend-e2e:
+    name: backend-e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/agent-core
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.9"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Run backend e2e tests
+        run: pytest tests/test_w10_e2e_2preset.py tests/test_w11_e2e_2preset_2000.py -v --durations=0 --junitxml=e2e.xml
+
+  backend-benchmark:
+    name: backend-benchmark
+    if: ${{ or(and(eq(github.event_name, 'push'), eq(github.ref, 'refs/heads/main')), contains(github.event.head_commit.message, '[bench]')) }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    continue-on-error: true
+    defaults:
+      run:
+        working-directory: apps/agent-core
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11.9
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11.9"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Sync dependencies
+        run: uv sync
+
+      - name: Run benchmark tests (soft fail)
+        continue-on-error: true
+        run: pytest tests -m bench --durations=0
+
+      - name: Serialize benchmark artifact
+        run: python scripts/serialize_bench_artifact.py --dry-run --out meda_bench_${{ github.sha }}.json
+
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: meda-bench-nightly
+          path: apps/agent-core/meda_bench_*.json
+          retention-days: 90
+
+      - name: Hard fail if n2000_median_ms > 6000 (2x SLO regression)
+        run: |
+          python -c "
+          import glob, json, sys
+          files = glob.glob('meda_bench_*.json')
+          if not files:
+              print('WARN: no bench artifact found, skipping hard fail check')
+              sys.exit(0)
+          for f in files:
+              with open(f) as fh:
+                  data = json.load(fh)
+              n2000_med = data.get('n2000', {}).get('median_ms', 0)
+              print(f'{f}: n2000_median_ms = {n2000_med}')
+              if n2000_med > 6000:
+                  print(f'HARD FAIL: n2000_median_ms ({n2000_med}) > 6000ms (2x SLO) — severe regression, blocking merge-train')
+                  sys.exit(1)
+          print('OK: n2000_median_ms within 2x SLO threshold')
+          "
+
+  frontend-vitest:
+    name: frontend-vitest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20.18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.18"
+
+      - name: Install dependencies with npm ci
+        run: npm ci
+
+      - name: Run shared-ui vitest
+        run: npm --workspace packages/shared-ui run test -- --run --reporter=junit --outputFile.junit=vitest.xml

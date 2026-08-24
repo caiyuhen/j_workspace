@@ -376,7 +376,7 @@ class PipelineRun(SQLModel, table=True):
     finished_at: datetime | None = Field(default=None, sa_column=Column(sa.DateTime, nullable=True, default=None))
     __table_args__ = (
         sa.Index("ix_pipelinerun_ws_created_at_desc", "workspace_id", sa.desc("created_at")),
-        sa.CheckConstraint("max_records >= 1 AND max_records <= 500", name="cc_pipelinerun_max_records"),
+        sa.CheckConstraint("max_records >= 1 AND max_records <= 2500", name="cc_pipelinerun_max_records"),
     )
 
 
@@ -398,4 +398,32 @@ class PipelineStepResult(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("run_id", "step_index", "attempt_no", name="uq_pipelinestep_run_step_attempt"),
         sa.Index("ix_pipelinestepresult_run_id", "run_id"),
+    )
+
+
+class DedupDiagnostic(SQLModel, table=True):
+    __tablename__ = "dedupdiagnostic"
+    run_id: str = Field(
+        sa_column=Column(
+            sa.CHAR(32),
+            sa.ForeignKey("pipelinerun.id", ondelete="CASCADE"),
+            primary_key=True,
+            nullable=False,
+        )
+    )
+    step_idx: int = Field(
+        default=1,
+        sa_column=Column(sa.SmallInteger, nullable=False, default=1, primary_key=True),
+    )
+    sizes_hist: dict = Field(sa_column=Column(JSON, nullable=False))
+    hamming_hist: dict = Field(sa_column=Column(JSON, nullable=False))
+    perf_json: dict = Field(sa_column=Column(JSON, nullable=False))
+    created_at: datetime = Field(
+        default_factory=datetime_utcnow,
+        sa_column=Column(sa.DateTime, nullable=False),
+    )
+    __table_args__ = (
+        UniqueConstraint("run_id", "step_idx", name="uq_dedupdiagnostic_run_step_idx"),
+        sa.Index("ix_dedup_run_id", "run_id"),
+        sa.CheckConstraint("step_idx >= 0 AND step_idx <= 7", name="cc_dedup_step_idx_range"),
     )

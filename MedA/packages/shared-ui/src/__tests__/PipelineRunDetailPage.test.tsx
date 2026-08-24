@@ -73,7 +73,7 @@ const flush = async (): Promise<void> => {
 
 describe("PipelineRunDetailPage (22 tests)", () => {
   beforeEach(() => {
-    vi.spyOn(window, "fetch" as never).mockResolvedValue({} as Response);
+    vi.spyOn(window, "fetch").mockResolvedValue({} as Response);
   });
 
   afterEach(() => {

@@ -42,9 +42,9 @@ export function NewRunModal(props: NewRunModalProps): JSX.Element | null {
     maxRecordsStr !== "" &&
     !Number.isNaN(maxRecordsNum) &&
     maxRecordsNum >= 1 &&
-    maxRecordsNum <= 200;
-  const over200 =
-    maxRecordsStr !== "" && !Number.isNaN(maxRecordsNum) && maxRecordsNum > 200;
+    maxRecordsNum <= 2500;
+  const over2500 =
+    maxRecordsStr !== "" && !Number.isNaN(maxRecordsNum) && maxRecordsNum > 2500;
   const valid = preset !== null && maxRecordsValid;
 
   if (!open) return null;
@@ -199,7 +199,7 @@ export function NewRunModal(props: NewRunModalProps): JSX.Element | null {
               marginBottom: 8,
             }}
           >
-            3. Max Records (1-200)
+            3. Max Records (1-2000)
           </div>
           <input
             type="number"
@@ -207,17 +207,19 @@ export function NewRunModal(props: NewRunModalProps): JSX.Element | null {
             value={maxRecordsStr}
             onChange={(e) => setMaxRecordsStr(e.target.value)}
             min={1}
-            max={200}
+            max={2000}
+            step={50}
+            disabled={preset === null}
             style={{
               width: "100%",
               padding: "10px 12px",
               borderRadius: 8,
-              border: `1px solid ${over200 ? "#ef4444" : "#d1d5db"}`,
+              border: `1px solid ${over2500 ? "#ef4444" : "#d1d5db"}`,
               fontSize: 14,
               boxSizing: "border-box",
             }}
           />
-          {over200 && (
+          {over2500 && (
             <div
               data-testid="error-max-records"
               style={{
@@ -227,7 +229,25 @@ export function NewRunModal(props: NewRunModalProps): JSX.Element | null {
                 fontWeight: 600,
               }}
             >
-              W10 Q1 cap ≤ 200
+              超过最大上限 2500 篇（含 buffer）
+            </div>
+          )}
+          {mode === "live" && maxRecordsNum > 500 && (
+            <div
+              data-testid="banner-live-large"
+              aria-label="warn_live_large"
+              style={{
+                marginTop: 10,
+                padding: "10px 12px",
+                borderRadius: 8,
+                background: "#fffbeb",
+                border: "1px solid #f59e0b",
+                color: "#92400e",
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              ⚠️ Live PubMed 模式 N{'>'}500 篇易触发 NCBI 429 限流，建议先用 snapshot 试跑
             </div>
           )}
         </div>

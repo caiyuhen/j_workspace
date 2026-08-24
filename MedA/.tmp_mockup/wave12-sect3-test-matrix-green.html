@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>W12 Sect3 · 测试矩阵 + Hard-Gate 8/8 数值化</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;margin:24px;color:#0f172a;background:#f8fafc}
+  h1{font-size:22px;margin:0 0 4px}
+  h2{font-size:17px;margin:28px 0 10px;color:#1e293b;border-left:4px solid #f59e0b;padding-left:10px}
+  h3{font-size:14px;margin:14px 0 8px;color:#0f172a}
+  .subtitle{color:#64748b;font-size:13px;margin-bottom:20px}
+  .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;margin-right:6px}
+  .tag-green{background:#dcfce7;color:#166534}
+  .tag-blue{background:#dbeafe;color:#1e40af}
+  .tag-amber{background:#fef3c7;color:#92400e}
+  .tag-rose{background:#ffe4e6;color:#9f1239}
+  .tag-violet{background:#ede9fe;color:#5b21b6}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03);margin-bottom:16px}
+  .grid{display:grid;gap:16px}
+  .g-2{grid-template-columns:repeat(2,1fr)}
+  .g-3{grid-template-columns:repeat(3,1fr)}
+  table{width:100%;border-collapse:collapse;font-size:12px;margin:8px 0}
+  th,td{padding:7px 10px;border:1px solid #e2e8f0;text-align:left}
+  th{background:#f1f5f9;font-weight:600;color:#0f172a;text-align:center}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700}
+  tr.py th,tr.py td{background:linear-gradient(90deg,#eff6ff,#fff)}
+  tr.ts th,tr.ts td{background:linear-gradient(90deg,#fdf4ff,#fff)}
+  tr.tot th,tr.tot td{background:linear-gradient(90deg,#fef3c7,#fff);font-weight:900}
+  .bar{height:14px;border-radius:3px;background:#f1f5f9;overflow:hidden;margin:4px 0}
+  .bar>span{display:block;height:100%;border-radius:3px}
+  .b-green{background:#22c55e}
+  .b-blue{background:#3b82f6}
+  .b-violet{background:#8b5cf6}
+  .b-amber{background:#f59e0b}
+  .b-rose{background:#f43f5e}
+  /* Gate audit cards */
+  .gate{border-left:4px solid #f59e0b;border-radius:8px;padding:10px 14px;margin:8px 0;background:#fff;display:grid;grid-template-columns:40px 1fr 90px;gap:12px;align-items:center}
+  .gate .gno{font-size:20px;font-weight:900;color:#92400e}
+  .gate .gtitle{font-weight:700;font-size:13px;color:#0f172a;margin-bottom:3px}
+  .gate .gdesc{font-size:11.5px;color:#475569;line-height:1.5}
+  .gate .gpass{text-align:center;font-weight:900;font-size:13px;padding:4px 6px;border-radius:6px}
+  .pass{background:#dcfce7;color:#166534}
+  .pend{background:#fef3c7;color:#92400e}
+  /* Test module cards */
+  .tmod{border:1px solid #e2e8f0;border-radius:10px;padding:12px;background:#fff;margin:8px 0}
+  .tmod .mh{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+  .tmod .mn{font-weight:700;font-size:13px}
+  .tmod .mc{font-size:12px;padding:2px 8px;border-radius:999px;font-weight:800}
+  .mc-py{background:#dbeafe;color:#1e40af}
+  .mc-ts{background:#f5d0fe;color:#86198f}
+  .tmod table{margin:6px 0 0;font-size:11.5px}
+  .tmod th,.tmod td{padding:5px 8px}
+  .pill{display:inline-block;padding:2px 7px;border-radius:999px;font-size:11px;font-weight:700;margin:1px}
+  .pill-g{background:#dcfce7;color:#166534}
+  .pill-b{background:#dbeafe;color:#1e40af}
+  .pill-a{background:#fef3c7;color:#92400e}
+  .pill-v{background:#ede9fe;color:#5b21b6}
+  .pill-r{background:#fee2e2;color:#991b1b}
+  /* Dashboard module split */
+  .dmod{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;margin:6px 0}
+  .dmod h5{margin:0 0 6px;font-size:12px;color:#0f172a}
+  .dmod ul{margin:0;padding-left:18px;font-size:11.5px;line-height:1.75;color:#334155}
+  .foot{margin-top:24px;padding-top:14px;border-top:1px dashed #cbd5e1;font-size:11px;color:#64748b;line-height:1.6}
+  .kv{display:grid;grid-template-columns:150px 1fr;gap:5px 14px;font-size:12px}
+  .kv dt{color:#64748b;font-weight:500}
+  .kv dd{margin:0;color:#0f172a;font-weight:600}
+  .sticky-note{background:linear-gradient(135deg,#fffbeb,#fef3c7);border:1px solid #fcd34d;border-radius:8px;padding:12px;font-size:12px;color:#713f12}
+  .sticky-note b{color:#92400e}
+</style>
+</head>
+<body>
+
+<h1>Wave 12 · Sect③ 测试矩阵 + Hard-Gate 8/8 数值化</h1>
+<div class="subtitle">
+  <span class="tag tag-blue">PY ≥ 220 GREEN</span>
+  <span class="tag tag-violet">TS ≥ 80 GREEN</span>
+  <span class="tag tag-amber">总计 ≥ 300</span>
+  <span class="tag tag-green">Hard-Gate 8/8</span>
+  <span class="tag tag-rose">0 new deps · NOTOUCH ≤ 6 WL</span>
+</div>
+
+<h2>§3.1 Hard-Gate 8/8 · W12 GATE 审计清单（逐条 PASS 目标）</h2>
+
+<div class="gate">
+  <div class="gno">1</div>
+  <div><div class="gtitle">AC1 · PY 单元 + E2E 新 GREEN 数量精确</div>
+    <div class="gdesc">W11 baseline PY = 824 collected · W12 新增测试 <b>≥ 220 精确（实际 222）</b>，与本节分布表一致。不允许缺项或重复计。</div>
+  </div>
+  <div class="gpass pend">TARGET<br>222 GREEN</div>
+</div>
+<div class="gate">
+  <div class="gno">2</div>
+  <div><div class="gtitle">AC2 · TS 前端新 GREEN 数量精确</div>
+    <div class="gdesc">W11 baseline TS = 721 collected · W12 新增测试 <b>≥ 80 精确（实际 80）</b>，Dashboard 4 screens + smoke layout。</div>
+  </div>
+  <div class="gpass pend">TARGET<br>80 GREEN</div>
+</div>
+<div class="gate">
+  <div class="gno">3</div>
+  <div><div class="gtitle">AC3 · 新增总量 ≥ 300</div>
+    <div class="gdesc">222 + 80 = <b>302 ≥ 300</b>，满足总和门槛。</div>
+  </div>
+  <div class="gpass pend">TARGET<br>≥ 302</div>
+</div>
+<div class="gate">
+  <div class="gno">4</div>
+  <div><div class="gtitle">AC4 · N=10,000 Step1 性能 SLO</div>
+    <div class="gdesc">单 preset N=10k，<b>5-run median ≤ 9.6 s</b>（含 2 次 warmup），CI bound = 12.8 s，2× HARD BLOCK = 19.2 s。</div>
+  </div>
+  <div class="gpass pend">TARGET<br>≤ 9.6 s</div>
+</div>
+<div class="gate">
+  <div class="gno">5</div>
+  <div><div class="gtitle">AC5 · N=50,000 Step1 性能 SLO</div>
+    <div class="gdesc">单 preset N=50k，<b>5-run median ≤ 45.0 s</b>（stretch），CI 1.33× bound = 60.0 s，2× HARD BLOCK = 90.0 s。</div>
+  </div>
+  <div class="gpass pend">TARGET<br>≤ 45 s</div>
+</div>
+<div class="gate">
+  <div class="gno">6</div>
+  <div><div class="gtitle">AC6 · N≤10,000 Parity 0 FN/FP · 42 完整矩阵</div>
+    <div class="gdesc"><b>42 个 Parity GREEN 精确</b>：W11 18 (6 preset×200/2000) + W12 24 (6 preset×500/1k/5k/10k) = 42。<b>严格 0 FN, 0 FP</b>，kept_ids 字节级相等。</div>
+  </div>
+  <div class="gpass pend">TARGET<br>42/42 0 FN/FP</div>
+</div>
+<div class="gate">
+  <div class="gno">7</div>
+  <div><div class="gtitle">AC7 · NOTOUCH v2 14 anchors 保护</div>
+    <div class="gdesc">14 anchor 文件内部逻辑 0 diff；仅允许 <b>WL 字符串编辑 ≤ 6 行新增</b>（W11 已 4 行 = cc_max / step1 dispatcher / max slider / step slider · W12 ≤ +2 行）。</div>
+  </div>
+  <div class="gpass pend">TARGET<br>WL ≤ +2 new</div>
+</div>
+<div class="gate">
+  <div class="gno">8</div>
+  <div><div class="gtitle">AC8 · 0 新增三方依赖</div>
+    <div class="gdesc"><b>pip install 0 new · npm install 0 new</b>。MinHash 用 hashlib，LSH 用 dict/set，Dashboard 用 vanilla HTML+CSS+JS（无 ECharts/React 新包，内联 SVG 图）。pyproject.toml bench marker 仅字符串追加。</div>
+  </div>
+  <div class="gpass pend">TARGET<br>0 pip · 0 npm</div>
+</div>
+
+<h2>§3.2 PY ≥ 220 Green 分布明细（12 个 test 模块 · 精确 222）</h2>
+
+<div class="grid g-2">
+  <div class="card">
+    <h3>12 PY 模块拆分 · 精确 222 GREEN</h3>
+    <table>
+      <thead><tr><th>#</th><th>Test File (new/append)</th><th>Green</th><th>Scope</th></tr></thead>
+      <tbody>
+        <tr><td>D1-1</td><td>test_minhash_signature.py <span class="pill pill-b">NEW</span></td><td class="num">28</td><td>MinHash shingle/determinism/Jaccard</td></tr>
+        <tr><td>D1-2</td><td>test_lsh_band_partition.py <span class="pill pill-b">NEW</span></td><td class="num">26</td><td>LSH b=20/r=5 build + bucket probe</td></tr>
+        <tr><td>D1-3</td><td>test_lsh_recall_math.py <span class="pill pill-b">NEW</span></td><td class="num">14</td><td>数学公式验证 1-(1-J^r)^b 数值</td></tr>
+        <tr><td>D1-4</td><td>test_simhash_bktree_parity.py <span class="pill pill-a">APPEND +24</span></td><td class="num">42</td><td>W11=18 + W12=24 (6×500/1k/5k/10k)</td></tr>
+        <tr><td>D1-5</td><td>test_hybrid_fallback.py <span class="pill pill-b">NEW</span></td><td class="num">18</td><td>FALLBACK_N 边界 ±1 · 分支切换检查</td></tr>
+        <tr><td>D1-6</td><td>test_hybrid_oversample_prefix.py <span class="pill pill-b">NEW</span></td><td class="num">12</td><td>10-bit prefix 补正 · FN≤0.05% 仿真</td></tr>
+        <tr><td>D2-1</td><td>test_dedup_diagnostic_model.py <span class="pill pill-a">APPEND +8</span></td><td class="num">20</td><td>W11=12 + minhash/lsh perf cols 追加</td></tr>
+        <tr><td>D2-2</td><td>test_workspace_step_diag_route.py <span class="pill pill-a">APPEND +6</span></td><td class="num">28</td><td>W11=22 + 新增 hybrid perf fields</td></tr>
+        <tr><td>D2-3</td><td>test_pipeline_engine_step1_real.py <span class="pill pill-a">APPEND +10</span></td><td class="num">30</td><td>W11=20 + N=10k/50k step1 调度</td></tr>
+        <tr><td>D2-4</td><td>test_benchmark_bktree_slo.py <span class="pill pill-a">APPEND +@bench 2-sizes</span></td><td class="num">26</td><td>W11=16 + n10k/n50k 两档 @pytest.mark.bench</td></tr>
+        <tr><td>D2-5</td><td>test_serialize_bench_history.py <span class="pill pill-b">NEW</span></td><td class="num">16</td><td>history_7d/60d JSON 序列化 + schema validate</td></tr>
+        <tr><td>E2E</td><td>test_w12_e2e_2preset_10k_50k.py <span class="pill pill-b">NEW</span></td><td class="num">8</td><td>2 preset × (n10k step1 E2E + n50k step1 E2E) = 4×2</td></tr>
+      </tbody>
+      <tfoot>
+        <tr class="tot"><td colspan="2">PY 合计（D1-1 ~ E2E）</td><td class="num" style="background:#fde68a">222 ✅</td><td>目标 ≥220</td></tr>
+      </tfoot>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>PY Green 分布 · 可视化进度条（精确 222）</h3>
+    <div style="margin:10px 0">
+      <div style="display:grid;grid-template-columns:180px 1fr 44px;gap:8px;align-items:center;font-size:12px">
+        <span>D1-1 MinHash unit</span>
+        <div class="bar"><span class="b-blue" style="width:63%"></span></div><span class="num">28</span>
+        <span>D1-2 LSH unit</span>
+        <div class="bar"><span class="b-blue" style="width:58%"></span></div><span class="num">26</span>
+        <span>D1-3 LSH math recall</span>
+        <div class="bar"><span class="b-violet" style="width:31%"></span></div><span class="num">14</span>
+        <span>D1-4 Parity 矩阵（核心）</span>
+        <div class="bar"><span class="b-green" style="width:94%"></span></div><span class="num">42</span>
+        <span>D1-5 Fallback 分支切换</span>
+        <div class="bar"><span class="b-amber" style="width:40%"></span></div><span class="num">18</span>
+        <span>D1-6 Prefix over-sample</span>
+        <div class="bar"><span class="b-amber" style="width:27%"></span></div><span class="num">12</span>
+        <span>D2-1 DedupDiag model</span>
+        <div class="bar"><span class="b-blue" style="width:44%"></span></div><span class="num">20</span>
+        <span>D2-2 step_diag route</span>
+        <div class="bar"><span class="b-blue" style="width:62%"></span></div><span class="num">28</span>
+        <span>D2-3 step1 engine dispatcher</span>
+        <div class="bar"><span class="b-blue" style="width:67%"></span></div><span class="num">30</span>
+        <span>D2-4 Bench SLO 5档（@bench）</span>
+        <div class="bar"><span class="b-amber" style="width:58%"></span></div><span class="num">26</span>
+        <span>D2-5 bench history serializer</span>
+        <div class="bar"><span class="b-violet" style="width:36%"></span></div><span class="num">16</span>
+        <span>E2E 2 preset (n10k + n50k)</span>
+        <div class="bar"><span class="b-rose" style="width:18%"></span></div><span class="num">8</span>
+      </div>
+    </div>
+    <div style="margin-top:16px">
+      <h3>Fixture 仿真 & 反证（Red-Fail-Green）</h3>
+      <dl class="kv">
+        <dt>反证 D1-4 parity</dt><dd>先注入 1 个 LSH pair 故意少加 → 预期 RED (FN=1) → 移除注入 → GREEN</dd>
+        <dt>反证 D1-5 fallback</dt><dd>Monkey patch FALLBACK_N=5 → len=6 进 hybrid → 预期 FN≠0 → 恢复 N=10000 → GREEN</dd>
+        <dt>反证 D2-4 SLO</dt><dd>先 sleep 故意超 45s → RED → 移除 sleep → GREEN（软失败但 pytest assert 独立）</dd>
+        <dt>Golden Fixture N=10k/50k</dt><dd>sha256 seed = W11 基础（`sglt2i_ckd` × seed 扩展）→ 确定 12k/60k 记录，可重复</dd>
+        <dt>w12_synthetic fixture</dt><dd>6 preset × 5 档（500/1k/2k/10k/50k）= 30 组合 · 约 5.5 MB JSON</dd>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<h2>§3.3 TS ≥ 80 Green 分布明细（6 个 test 模块 · 精确 80）</h2>
+
+<div class="grid g-3">
+  <div class="tmod">
+    <div class="mh"><span class="mn">BenchDashboardSummary.test.tsx <span class="pill pill-v">NEW</span></span><span class="mc mc-ts">24 GREEN</span></div>
+    <ul style="margin:4px 0 6px;padding-left:18px;font-size:11.5px;line-height:1.7;color:#334155">
+      <li>4 KPI 卡渲染（2k/10k/50k/加速比）= 4</li>
+      <li>7 天趋势 SVG chart × 5 size lines + 上下轨虚线 = 6</li>
+      <li>SLO 边界色块（绿/橙/红）on legend = 3</li>
+      <li>injectBenchClient pattern 成功/失败/网络错误 = 6</li>
+      <li>history_7d.json 空状态 / 加载中 spinner = 3</li>
+      <li>Commit id tooltip hover = 2</li>
+    </ul>
+    <div class="bar"><span class="b-violet" style="width:100%"></span></div>
+  </div>
+  <div class="tmod">
+    <div class="mh"><span class="mn">BenchDashboardPerSize.test.tsx <span class="pill pill-v">NEW</span></span><span class="mc mc-ts">20 GREEN</span></div>
+    <ul style="margin:4px 0 6px;padding-left:18px;font-size:11.5px;line-height:1.7;color:#334155">
+      <li>Tab 切换 5 档（500/1k/2k/10k/50k）默认激活 = 6</li>
+      <li>每档独立 SVG 曲线 + p50/p95 叠线 = 5</li>
+      <li>7d/30d/60d 时间范围切换 button = 3</li>
+      <li>与 SLO 目标比较 badge（✅/⚠️/❌）= 4</li>
+      <li>Size 切换 injectClient 重新 fetch = 2</li>
+    </ul>
+    <div class="bar"><span class="b-violet" style="width:83%"></span></div>
+  </div>
+  <div class="tmod">
+    <div class="mh"><span class="mn">BenchDashboardCommitCompare.test.tsx <span class="pill pill-v">NEW</span></span><span class="mc mc-ts">14 GREEN</span></div>
+    <ul style="margin:4px 0 6px;padding-left:18px;font-size:11.5px;line-height:1.7;color:#334155">
+      <li>双下拉 Base Commit vs Head Commit 渲染 = 3</li>
+      <li>Diff 差速比 N× 显示（正加速绿色 / 回归红色）= 3</li>
+      <li>5 size 并排对比 bar chart = 5</li>
+      <li>Same commit 空 Diff 提示 = 1</li>
+      <li>超 2× HARD BLOCK 回归红标 banner = 2</li>
+    </ul>
+    <div class="bar"><span class="b-violet" style="width:58%"></span></div>
+  </div>
+  <div class="tmod">
+    <div class="mh"><span class="mn">BenchDashboardAlertLog.test.tsx <span class="pill pill-v">NEW</span></span><span class="mc mc-ts">10 GREEN</span></div>
+    <ul style="margin:4px 0 6px;padding-left:18px;font-size:11.5px;line-height:1.7;color:#334155">
+      <li>Alert 三级色（绿 PASS / 橙 near / 红 HARD BLOCK）= 3</li>
+      <li>Date + commit hash + size 三列渲染 = 3</li>
+      <li>Filter by severity 下拉过滤 = 2</li>
+      <li>Empty 状态 &gt;60 天自动清除 = 2</li>
+    </ul>
+    <div class="bar"><span class="b-violet" style="width:42%"></span></div>
+  </div>
+  <div class="tmod">
+    <div class="mh"><span class="mn">W12_sharedui_barrel.test.tsx <span class="pill pill-a">APPEND</span></span><span class="mc mc-ts">4 GREEN</span></div>
+    <ul style="margin:4px 0 6px;padding-left:18px;font-size:11.5px;line-height:1.7;color:#334155">
+      <li>4 Dashboard components 在 shared-ui index.ts barrel 正确 export = 4</li>
+    </ul>
+    <div class="bar"><span class="b-violet" style="width:17%"></span></div>
+  </div>
+  <div class="tmod">
+    <div class="mh"><span class="mn">W12_smoke_screen2_layout.test.tsx <span class="pill pill-a">APPEND</span></span><span class="mc mc-ts">8 GREEN</span></div>
+    <ul style="margin:4px 0 6px;padding-left:18px;font-size:11.5px;line-height:1.7;color:#334155">
+      <li>Screen2 DedupDiagCards 更新 hybrid 字段渲染（minhash sig / lsh_cand_count）= 3</li>
+      <li>N=50k slider max 验证 + 5 级 step 滑块 = 2</li>
+      <li>N&gt;10k 时 fallback=False badge 蓝色显示 = 2</li>
+      <li>hybrid perf JSON 三阶段耗时拆分渲染 = 1</li>
+    </ul>
+    <div class="bar"><span class="b-violet" style="width:33%"></span></div>
+  </div>
+</div>
+<div class="card" style="margin-top:16px">
+  <table>
+    <thead><tr><th>Test 模块（TS）</th><th>Green</th><th>覆盖页签</th><th>Inject Client 模式</th></tr></thead>
+    <tbody>
+      <tr><td>BenchDashboardSummary</td><td class="num">24</td><td>① Summary Trends</td><td>injectBenchClient (W10 hook convention)</td></tr>
+      <tr><td>BenchDashboardPerSize</td><td class="num">20</td><td>② Per-Size History</td><td>injectBenchClient</td></tr>
+      <tr><td>BenchDashboardCommitCompare</td><td class="num">14</td><td>③ Commit Compare</td><td>injectBenchClient</td></tr>
+      <tr><td>BenchDashboardAlertLog</td><td class="num">10</td><td>④ Alert Log</td><td>injectBenchClient</td></tr>
+      <tr><td>W12_sharedui_barrel</td><td class="num">4</td><td>shared-ui exports</td><td>barrel import</td></tr>
+      <tr><td>W12_smoke_screen2_layout</td><td class="num">8</td><td>Screen2 DedupDiag augment</td><td>injectDiagClient (W11 已实现)</td></tr>
+    </tbody>
+    <tfoot><tr class="tot"><td>TS 合计</td><td class="num" style="background:#f0abfc">80 ✅</td><td>4 pages + smoke + barrel</td><td></td></tr></tfoot>
+  </table>
+</div>
+
+<h2>§3.4 总计 302 GREEN · PY 222 + TS 80 · 累计对基线影响</h2>
+
+<div class="grid g-2">
+  <div class="card">
+    <h3>总 Green 汇总</h3>
+    <table>
+      <thead><tr><th>类型</th><th>W11 Baseline</th><th>W12 New (精确)</th><th>W12 Total</th><th>目标</th></tr></thead>
+      <tbody>
+        <tr class="py"><th>PY (pytest)</th><td class="num">824 collected</td><td class="num">+222</td><td class="num">≥1046</td><td>≥220 ✅</td></tr>
+        <tr class="ts"><th>TS (vitest)</th><td class="num">721 collected</td><td class="num">+80</td><td class="num">≥801</td><td>≥80 ✅</td></tr>
+        <tr class="tot"><th>TOTAL NEW</th><td class="num"></td><td class="num" style="background:#fde68a">302</td><td class="num"></td><td>≥300 ✅</td></tr>
+      </tbody>
+    </table>
+    <div class="sticky-note" style="margin-top:14px">
+      <b>⚠️ Red-Fail-Green 反证要求</b>：每个 NEW 测试文件在实现代码完成前，先运行测试 → <b>必须观察到 RED（FileNotFound / ImportError / AssertionError）</b> → 然后实现 → GREEN。
+      W11 parity D1-4 要求「故意注入错误 → RED → 还原 → GREEN 连续 3 次稳定」，Golden Test 对比。
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>NOTOUCH v2 + 0 deps · 合规清单</h3>
+    <div>
+      <h5 style="margin:0 0 8px">NOTOUCH 14 anchors · W12 影响评估（WL 新增预估 ≤ +2）</h5>
+      <div class="dmod">
+        <ul>
+          <li><b>保持 0 diff（12 文件）：</b>screening_engine.py · rob2_engine.py · abstractor.py · pubmed_adapter.py L1-238 · workspace.py L1-2040 · simhash.py L1-151 · shared-sdk index.ts L1-504 · shared-ui index.ts L1-142 · FunnelProgressBar.tsx · usePipelineRun.ts · PipelineRunDetailPage.tsx Sect①-③</li>
+          <li><b>已有 WL W11 保留（4 行）：</b>models.py cc_max 2500 · pipeline_engine step1 dispatcher · NewRunModal max 2000 · NewRunModal step 50</li>
+          <li><b>W12 新增 WL（≤ 2 行，若 UI 开放）：</b>① NewRunModal max 2000→50000 & step 50→250（1 行 max, 1 行 step）；② models.py cc_max 2500→50000（可选，仅当允许 UI 级别的 50k 输入时才需要）。合计 ≤ 2。</li>
+        </ul>
+      </div>
+      <h5 style="margin:14px 0 8px">0 new deps · pip / npm 逐项核对</h5>
+      <div class="dmod">
+        <ul>
+          <li><b>MinHash：</b>hashlib.md5 + 内置 dict/set/sorted/list/tuple</li>
+          <li><b>LSH：</b>collections.defaultdict（stdlib）· 纯数据结构</li>
+          <li><b>GH-Pages Dashboard：</b>vanilla HTML/CSS/JS，内联 SVG 折线，无 React/ECharts 新依赖；部署用 peaceiris/actions-gh-pages@v4（GitHub Action，非 pip/npm）</li>
+          <li><b>pyproject.toml：</b>仅 [tool.pytest.ini_options] markers 字符串追加（W11 已追加 bench marker 先例）</li>
+          <li><b>CI YAML：</b>upload-artifact@v4 / download-artifact@v4 继续沿用</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="foot">
+  <b>Spec 下一节点：</b>本节 Sect③ 确认 OK → 写正式设计文档 <code>docs/superpowers/specs/2026-08-24-wave-12-bktree-10k-minhash-50k-dashboard-design.md</code>（整合 Sect①+②+③ 与 Hard-Gate 表），然后 SelfReview 4-Pass（占位符/矛盾/范围漂移/歧义）→ User Review → writing-plans skill 生成 Implementation Plan。
+</div>
+
+</body>
+</html>

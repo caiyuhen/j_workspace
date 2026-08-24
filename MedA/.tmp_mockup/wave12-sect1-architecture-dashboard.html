@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>W12 Sect1 · 架构 + GH-Pages Dashboard 部署</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;margin:24px;color:#0f172a;background:#f8fafc}
+  h1{font-size:22px;margin:0 0 4px}
+  h2{font-size:17px;margin:28px 0 10px;color:#1e293b;border-left:4px solid #0ea5e9;padding-left:10px}
+  .subtitle{color:#64748b;font-size:13px;margin-bottom:20px}
+  .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;margin-right:6px}
+  .tag-green{background:#dcfce7;color:#166534}
+  .tag-blue{background:#dbeafe;color:#1e40af}
+  .tag-amber{background:#fef3c7;color:#92400e}
+  .tag-violet{background:#ede9fe;color:#5b21b6}
+  .tag-rose{background:#ffe4e6;color:#9f1239}
+  .grid{display:grid;gap:16px}
+  .g-2{grid-template-columns:repeat(2,1fr)}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+  .card h3{margin:0 0 10px;font-size:14px;color:#0f172a}
+  /* Architecture diagram boxes */
+  .arch-row{display:flex;align-items:stretch;gap:10px;margin:12px 0}
+  .arch-box{flex:1;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border:1px solid #bfdbfe;border-radius:10px;padding:12px;text-align:center;min-height:78px;display:flex;flex-direction:column;justify-content:center;gap:6px}
+  .arch-box.s0{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-color:#fcd34d}
+  .arch-box.s1{background:linear-gradient(135deg,#eff6ff,#dbeafe);border-color:#93c5fd}
+  .arch-box.s2{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#86efac}
+  .arch-box.fb{background:linear-gradient(135deg,#fdf4ff,#fae8ff);border-color:#f9a8d4}
+  .arch-box .name{font-weight:700;font-size:13px}
+  .arch-box .sub{font-size:11px;color:#475569}
+  .arch-arrow{display:flex;align-items:center;color:#64748b;font-size:20px;font-weight:700}
+  .arch-switch{width:90px;background:#f1f5f9;border:2px dashed #94a3b8;border-radius:10px;padding:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;font-size:11px;gap:4px}
+  .arch-switch .key{font-weight:700;color:#334155;font-size:12px}
+  /* CI jobs */
+  .job{border-left:4px solid;padding:10px 12px;border-radius:6px;background:#fff;margin-bottom:10px}
+  .job .jname{font-weight:700;font-size:13px}
+  .job .jmeta{font-size:11px;color:#64748b;margin-top:4px}
+  .jb-unit{border-color:#22c55e}
+  .jb-e2e{border-color:#3b82f6}
+  .jb-bench{border-color:#f59e0b}
+  .jb-vitest{border-color:#8b5cf6}
+  .jb-deploy{border-color:#0ea5e9}
+  /* Dashboard layout wireframe */
+  .wf{background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px}
+  .wf-top{display:flex;gap:8px;margin-bottom:12px}
+  .wf-tab{padding:6px 14px;border-radius:6px;font-size:12px;font-weight:600}
+  .wf-tab.on{background:#0ea5e9;color:#fff}
+  .wf-tab.off{background:#f1f5f9;color:#64748b}
+  .wf-row{display:flex;gap:10px;margin-bottom:10px}
+  .wf-card{flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;min-height:90px}
+  .wf-card h4{margin:0 0 6px;font-size:12px;color:#0f172a}
+  .wf-metric{font-size:22px;font-weight:800;color:#0ea5e9}
+  .wf-legend{font-size:11px;color:#64748b;margin-top:4px}
+  .wf-chart{height:140px;background:linear-gradient(90deg,#e0f2fe,#bae6fd,#7dd3fc,#38bdf8);border-radius:6px;margin-top:8px;display:flex;align-items:flex-end;padding:8px;gap:4px}
+  .wf-bar{flex:1;background:rgba(14,165,233,.45);border-radius:3px 3px 0 0}
+  .wf-alert-item{padding:6px 10px;margin:4px 0;border-radius:5px;font-size:11px}
+  .wf-a-red{background:#fef2f2;color:#991b1b}
+  .wf-a-amber{background:#fffbeb;color:#92400e}
+  .wf-a-green{background:#f0fdf4;color:#166534}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th,td{padding:7px 10px;border:1px solid #e2e8f0;text-align:left}
+  th{background:#f1f5f9;font-weight:600;color:#0f172a}
+  tr.good td:nth-child(4){background:#f0fdf4;color:#166534;font-weight:700}
+  tr.warn td:nth-child(4){background:#fffbeb;color:#92400e;font-weight:700}
+  tr.bad td:nth-child(4){background:#fef2f2;color:#991b1b;font-weight:700}
+  .foot{margin-top:24px;padding-top:14px;border-top:1px dashed #cbd5e1;font-size:11px;color:#64748b;line-height:1.6}
+  .kv{display:grid;grid-template-columns:120px 1fr;gap:6px 14px;font-size:12px}
+  .kv dt{color:#64748b;font-weight:500}
+  .kv dd{margin:0;color:#0f172a;font-weight:600}
+</style>
+</head>
+<body>
+
+<h1>Wave 12 · Sect① 架构设计与 Dashboard 部署</h1>
+<div class="subtitle">
+  <span class="tag tag-green">方案 A · 分层混合</span>
+  <span class="tag tag-blue">N=10k Parity / N=50k Hybrid</span>
+  <span class="tag tag-amber">5 档 Bench SLO</span>
+  <span class="tag tag-violet">GH-Pages 4 页 Dashboard</span>
+  <span class="tag tag-rose">0 新 deps</span>
+</div>
+
+<h2>§1.1 总体数据流：输入 → 3 层去重 → Fallback 路径</h2>
+<div class="card">
+  <h3>主路径（N > 10,000）· Stage0 → Stage1 → Stage2</h3>
+  <div class="arch-row">
+    <div class="arch-box s0">
+      <div class="name">Stage 0 · MinHash</div>
+      <div class="sub">shingle→md5×100 permutations<br>100-bit signature/doc</div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-box s1">
+      <div class="name">Stage 1 · LSH Band-Partition</div>
+      <div class="sub">b=20 bands × r=5 rows<br>t=0.7 Jaccard → 99.5% recall<br>候选集压缩 ~100×</div>
+    </div>
+    <div class="arch-arrow">→</div>
+    <div class="arch-box s2">
+      <div class="name">Stage 2 · W11 BK-Tree 精确</div>
+      <div class="sub">64-bit SimHash Hamming≤6<br>Union-Find 分组<br>kept_min(id) 输出</div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:22px">回退路径（N ≤ 10,000 · Q3=A MANDATORY）· 直接 W11 BK-only</h3>
+  <div class="arch-row">
+    <div class="arch-box fb" style="flex:0 0 180px">
+      <div class="name">输入 records</div>
+      <div class="sub">if len ≤ 10,000</div>
+    </div>
+    <div class="arch-switch">
+      <div class="key">SKIP LSH</div>
+      <div>强制<br>fallback=True</div>
+    </div>
+    <div class="arch-box s2">
+      <div class="name">纯 BK-Tree Hamming≤6</div>
+      <div class="sub">与 W11 完全相同代码路径<br>保证 byte-identical kept_ids</div>
+    </div>
+    <div class="arch-arrow">=</div>
+    <div class="arch-box" style="background:linear-gradient(135deg,#ecfdf5,#d1fae5);border-color:#6ee7b7">
+      <div class="name">✅ Parity 输出</div>
+      <div class="sub">kept_set 与 W11<br>100% 相同</div>
+    </div>
+  </div>
+</div>
+
+<h2>§1.2 CI 5 Job 矩阵 · 扩展自 W11 4 Job</h2>
+<div class="grid g-2">
+  <div class="card">
+    <h3>执行流水线（均并行 · concurrency.cancel-in-progress=true）</h3>
+    <div class="job jb-unit">
+      <div class="jname">① backend-unit</div>
+      <div class="jmeta">⏱ ~8 min · 硬失败 · pytest 不含 -m bench · 包含 24 新增 parity</div>
+    </div>
+    <div class="job jb-e2e">
+      <div class="jname">② backend-e2e</div>
+      <div class="jmeta">⏱ ~10 min · 硬失败 · HP12 N=10k 单 preset + HP N=50k 单 preset</div>
+    </div>
+    <div class="job jb-bench">
+      <div class="jname">③ backend-benchmark（软失败 · SOFT）</div>
+      <div class="jmeta">⏱ ~20 min · pytest -m bench · 5 档 500/1k/2k/10k/50k<br>job-level continue-on-error=true · 仅当 nX_median > 2×SLO 时 HARD BLOCK</div>
+    </div>
+    <div class="job jb-vitest">
+      <div class="jname">④ frontend-vitest</div>
+      <div class="jmeta">⏱ ~12 min · 硬失败 · 含 Dashboard 4 screens 测试 ~80 GREEN</div>
+    </div>
+    <div class="job jb-deploy">
+      <div class="jname">⑤ deploy-dashboard（仅 main / release/*）</div>
+      <div class="jmeta">⏱ ~3 min · 下载最近 60 天 bench artifact → 生成 JSON → push gh-pages:docs/bench → GitHub Pages 发布</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>deploy-dashboard Job 细节</h3>
+    <dl class="kv">
+      <dt>触发条件</dt><dd>push 到 main 或 release/* · 且 ③ backend-benchmark 完成（needs: [backend-benchmark]）</dd>
+      <dt>Step 1</dt><dd>actions/download-artifact@v4 · 递归最近 60 天 bench artifact（GitHub API list + filter）</dd>
+      <dt>Step 2</dt><dd>python scripts/serialize_bench_history.py → 合并为 history_7d.json / history_60d.json</dd>
+      <dt>Step 3</dt><dd>复制 <code>docs/bench/index.html</code> + 两个 JSON → 临时目录</dd>
+      <dt>Step 4</dt><dd>peaceiris/actions-gh-pages@v4 → publish_dir=./gh-pages-build · destination_dir=bench</dd>
+      <dt>URL</dt><dd>https://{owner}.github.io/MedA/bench/index.html</dd>
+    </dl>
+    <div style="margin-top:14px">
+      <h3 style="margin-bottom:6px">5 档 Bench SLO 一览（Q4=A · 5-size）</h3>
+      <table>
+        <thead><tr><th>N</th><th>目标 median (s)</th><th>CI 1.33× bound (s)</th><th>2× HARD BLOCK (s)</th></tr></thead>
+        <tbody>
+          <tr class="good"><td>500</td><td>1.0</td><td>1.33</td><td>2.0</td></tr>
+          <tr class="good"><td>1,000</td><td>1.5</td><td>2.0</td><td>3.0</td></tr>
+          <tr class="good"><td>2,000</td><td>3.0</td><td>4.0</td><td>6.0</td></tr>
+          <tr class="warn"><td>10,000</td><td>9.6</td><td>12.8</td><td>19.2</td></tr>
+          <tr class="bad"><td>50,000</td><td>45.0</td><td>60.0</td><td>90.0</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<h2>§1.3 GH-Pages Dashboard · 4 页签 Wireframe（Q2=A）</h2>
+<div class="wf">
+  <div class="wf-top">
+    <div class="wf-tab on" id="tab1">① Summary Trends</div>
+    <div class="wf-tab off">② Per-Size History</div>
+    <div class="wf-tab off">③ Commit Compare</div>
+    <div class="wf-tab off">④ Alert Log</div>
+  </div>
+
+  <h3 style="margin:0 0 12px;font-size:14px">① Summary Trends（默认首页）</h3>
+  <div class="wf-row">
+    <div class="wf-card"><h4>7 日均值 · N=2k</h4><div class="wf-metric">2.42 s</div><div class="wf-legend">SLO=3.0s · ✅ 80.7% 余量</div></div>
+    <div class="wf-card"><h4>7 日均值 · N=10k</h4><div class="wf-metric">8.91 s</div><div class="wf-legend">SLO=9.6s · ✅ 92.8% 余量</div></div>
+    <div class="wf-card"><h4>7 日均值 · N=50k</h4><div class="wf-metric">42.3 s</div><div class="wf-legend">SLO=45s · ⚠️ 94.0% 余量</div></div>
+    <div class="wf-card"><h4>vs v0.11.0 加速</h4><div class="wf-metric">×18.4</div><div class="wf-legend">N=50k 对比 W11 O(n²) baseline</div></div>
+  </div>
+  <div class="wf-card" style="min-height:170px">
+    <h4>7 天滚动趋势 · 5 档叠线（SLO 上下轨 = 虚线）</h4>
+    <div class="wf-chart">
+      <div class="wf-bar" style="height:35%"></div>
+      <div class="wf-bar" style="height:42%"></div>
+      <div class="wf-bar" style="height:38%"></div>
+      <div class="wf-bar" style="height:55%"></div>
+      <div class="wf-bar" style="height:48%"></div>
+      <div class="wf-bar" style="height:62%"></div>
+      <div class="wf-bar" style="height:51%"></div>
+      <div class="wf-bar" style="height:70%"></div>
+      <div class="wf-bar" style="height:66%"></div>
+      <div class="wf-bar" style="height:58%"></div>
+      <div class="wf-bar" style="height:75%"></div>
+      <div class="wf-bar" style="height:80%"></div>
+      <div class="wf-bar" style="height:72%"></div>
+      <div class="wf-bar" style="height:88%"></div>
+    </div>
+    <div class="wf-legend">· 横轴 = commit / date · 纵轴 = median(ms) · 绿线 N=500~2k · 蓝线 N=10k · 橙线 N=50k · 红色虚线 = SLO 2× HARD BLOCK</div>
+  </div>
+
+  <h3 style="margin:18px 0 10px;font-size:14px">④ Alert Log（示意）</h3>
+  <div class="wf-card" style="min-height:160px">
+    <div class="wf-alert-item wf-a-green">✅ [2026-08-24 commit abc1234] ALL 5 sizes PASSED · n50k median=42.3s (under 60s bound)</div>
+    <div class="wf-alert-item wf-a-amber">⚠️ [2026-08-22 commit 88a01f2] n50k=58.1s · near CI 60s bound (96.8%) · 建议 review</div>
+    <div class="wf-alert-item wf-a-green">✅ [2026-08-20 commit ffb1091] ALL 5 sizes PASSED</div>
+    <div class="wf-alert-item wf-a-red">❌ [2026-08-18 commit 44ce3a1] n50k=94.2s · EXCEEDED 90s HARD BLOCK · ⛔ deploy-dashboard SKIPPED</div>
+    <div class="wf-alert-item wf-a-green">✅ [2026-08-16 commit 1234def] W12 v0.12.0 baseline · 首次 5-size benchmark 全部 GREEN</div>
+  </div>
+</div>
+
+<div class="foot">
+  <b>NOTOUCH v2 影响评估</b>：W12 新增 WL 预估 ≤ 2 行——① [models.py](file:///d:/workspace/MedA/apps/agent-core/app/models.py) cc_max 2500→50000（若需要，仅当 UI 允许 N=50k 输入时）② [NewRunModal.tsx](file:///d:/workspace/MedA/packages/shared-ui/src/components/NewRunModal.tsx) max 2000→50000。③ [pipeline_engine.py](file:///d:/workspace/MedA/apps/agent-core/app/services/pipeline_engine.py) step1 dispatcher 无需修改，因为 W11 已改为调用独立函数。其余 12 anchor 保持 0 diff。
+  <br><b>下一节点</b>：Sect2 呈现 3 层算法细节（MinHash 100 perm、LSH b=20/r=5 数学证明、BK 并行 chunking、Union-Find deterministic）+ Sect3 测试矩阵（PY≥220 / TS≥80 · 分布明细）+ Hard-Gate 数值化。
+</div>
+
+</body>
+</html>

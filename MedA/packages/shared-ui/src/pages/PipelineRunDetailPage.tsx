@@ -3,6 +3,7 @@ import {
   usePipelineRun,
   type InjectPipelineRunClient,
 } from "../hooks/usePipelineRun";
+import type { InjectDiagClient } from "../hooks/useStepDiag";
 import type {
   PipelineRunDetail,
   PipelineStepInfo,
@@ -17,6 +18,7 @@ import AbstractorCard, {
 } from "../components/AbstractorCard";
 import { RoB2Matrix } from "../grade/RoB2Matrix";
 import { GradeDistributionCard } from "../components/GradeDistributionCard";
+import { PipelineDetailStepDiagFetch } from "../components/PipelineDetailStepDiagFetch";
 
 export interface PipelineRunDetailPageProps {
   workspaceId: string;
@@ -24,6 +26,7 @@ export interface PipelineRunDetailPageProps {
   onBack: () => void;
   onNavigateToCompare: (aId: string) => void;
   injectFetchClient?: Partial<InjectPipelineRunClient>;
+  injectDiagClient?: Partial<InjectDiagClient>;
 }
 
 const STEP_NAMES = [
@@ -171,7 +174,7 @@ function _buildRob2Studies(detail: PipelineRunDetail | undefined): RoB2Overall[]
 }
 
 export function PipelineRunDetailPage(props: PipelineRunDetailPageProps): JSX.Element {
-  const { workspaceId, runId, onBack, onNavigateToCompare, injectFetchClient } = props;
+  const { workspaceId, runId, onBack, onNavigateToCompare, injectFetchClient, injectDiagClient } = props;
   const pipeline = usePipelineRun({ workspaceId, runId, injectFetchClient });
   const { state } = pipeline;
   const detail = state.detail;
@@ -271,9 +274,25 @@ export function PipelineRunDetailPage(props: PipelineRunDetailPageProps): JSX.El
           </button>
           <h1
             data-testid="header-title"
-            style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "#111827" }}
+            style={{ fontSize: 18, fontWeight: 700, margin: 0, color: "#111827", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}
           >
-            📊 Run {runId.slice(0, 8)} · {preset} ·{" "}
+            <span>📊 Run {runId.slice(0, 8)} · {preset} ·</span>
+            <span
+              data-testid="pipeline-id-chip"
+              style={{
+                display: "inline-block",
+                padding: "3px 12px",
+                borderRadius: 999,
+                fontSize: 12,
+                fontWeight: 700,
+                background: "#f3e8ff",
+                color: "#6b21a8",
+                border: "1px solid #c4b5fd",
+                fontFamily: "monospace",
+              }}
+            >
+              RUN #{runId}
+            </span>
             <span
               data-testid={`mode-badge-${mode}`}
               style={{
@@ -434,10 +453,12 @@ export function PipelineRunDetailPage(props: PipelineRunDetailPageProps): JSX.El
         >
           {steps.map((step, idx) => {
             const stIcon = _stepStatusIcon(step.status);
+            const isDedupStep = idx === 1;
             return (
               <div
                 key={idx}
                 data-testid={`step-column-${idx}`}
+                aria-label={isDedupStep ? "去重" : undefined}
                 style={{
                   position: "relative",
                   padding: 12,
@@ -451,8 +472,27 @@ export function PipelineRunDetailPage(props: PipelineRunDetailPageProps): JSX.El
                 }}
               >
                 <div>
-                  <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600 }}>
-                    Step {idx}
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <div style={{ fontSize: 11, color: "#6b7280", fontWeight: 600 }}>
+                      Step {idx}
+                    </div>
+                    {isDedupStep && (
+                      <span
+                        data-testid="step-dedup-star-badge"
+                        aria-label="去重"
+                        style={{
+                          fontSize: 10,
+                          padding: "1px 6px",
+                          borderRadius: 999,
+                          background: "#fef3c7",
+                          color: "#92400e",
+                          fontWeight: 700,
+                          border: "1px solid #fcd34d",
+                        }}
+                      >
+                        ⭐ NEW
+                      </span>
+                    )}
                   </div>
                   <div
                     data-testid={`step-name-${idx}`}
@@ -523,6 +563,15 @@ export function PipelineRunDetailPage(props: PipelineRunDetailPageProps): JSX.El
           <FunnelProgressBar stats={funnelStats} />
         </div>
       </div>
+
+      {/* ③-B DEDUP DIAGNOSTICS */}
+      <PipelineDetailStepDiagFetch
+        workspaceId={workspaceId}
+        runId={runId}
+        stepIndex={1}
+        stepStatus={steps[1]?.status ?? "pending"}
+        injectFetchClient={injectDiagClient}
+      />
 
       {/* ④ EVIDENCE ARTIFACT CARD GRID */}
       <div

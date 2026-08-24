@@ -342,3 +342,93 @@ def search_records_wrapper(preset: str, *, mode: str = "snapshot", max_records: 
         except ConnectionError:
             return _load_preset_snapshot(preset, max_records), "snapshot-fallback-after-live-failed"
     raise AssertionError(f"mode must be snapshot|live, got {mode}")
+
+# ---- APPEND: Wave 11 2000-record Snapshot Helper (NOTOUCH L1-238) ----
+_SNAPSHOT_CACHE_2000: dict[str, list[dict]] = {}
+
+def _load_preset_snapshot_2000(preset: str) -> list[dict]:
+    """Wave 11 fixture helper: returns exactly 2000 synthetic records for the given preset.
+
+    Records are formatted compatibly with ctx["fetched_records"] used by step1 dedup:
+    each record has id, nct_id, title, authors, journal, year, abstract, source, preset fields.
+    Deterministic via sha256(preset) seed + per-idx hashing so runs are reproducible.
+
+    Note: 2000 exceeds W10 search_records_wrapper cap of 200, so this helper bypasses
+    that wrapper entirely and is called directly from W11+ test fixtures / entry points.
+    """
+    import hashlib as _hashlib
+    if preset in _SNAPSHOT_CACHE_2000 and len(_SNAPSHOT_CACHE_2000[preset]) >= 2000:
+        return _SNAPSHOT_CACHE_2000[preset]
+    seed = int(_hashlib.sha256(preset.encode()).hexdigest()[:12], 16)
+    rng_state = seed
+    def _next_int(mod: int) -> int:
+        nonlocal rng_state
+        rng_state = (rng_state * 1103515245 + 12345) & 0x7FFFFFFF
+        return rng_state % mod
+    records: list[dict] = []
+    presets_full = {
+        "sglt2i_ckd": ("SGLT2i", "Chronic Kidney Disease", "Dapagliflozin", "RAAS inhibitor"),
+        "empagliflozin_hf": ("Empagliflozin", "Heart Failure", "Empagliflozin", "Standard of Care"),
+        "glp1_weightloss": ("GLP-1 RA", "Obesity Weight Loss", "Liraglutide", "Placebo"),
+        "liraglutide_nafld": ("Liraglutide", "NASH NAFLD", "Liraglutide 1.8mg", "Vitamin E"),
+        "pkd_tolvaptan": ("Tolvaptan", "Autosomal Dominant PKD", "Tolvaptan 90mg", "Standard Care"),
+        "ckd_blood_pressure_control": ("BP Control", "CKD Hypertension", "Intensive BP <120", "Standard BP <140"),
+    }
+    p = presets_full.get(preset, (preset, "General Medicine", "Active Drug", "Placebo"))
+    drug_class, condition, active_tx, control_tx = p
+    journal_pool = [
+        "N Engl J Med", "Lancet", "JAMA", "BMJ", "Ann Intern Med",
+        "Kidney Int", "J Am Soc Nephrol", "Diabetes Care", "Circulation", "J Am Coll Cardiol",
+        "Obesity (Silver Spring)", "Hepatology", "J Hepatol", "Am J Kidney Dis", "Hypertension",
+    ]
+    for i in range(2000):
+        title_hash = (seed + i * 2654435761) & 0xFFFFFFFF
+        nct_suffix = seed % 1000000 + i
+        year = 2018 + ((title_hash >> 3) % 9)
+        jidx = (title_hash >> 7) % len(journal_pool)
+        n_months_follow = 6 + ((title_hash >> 5) % 60)
+        n_arms = 2
+        sample_size = 80 + _next_int(1200)
+        nct_no = f"NCT{nct_suffix:08d}"
+        pmid_no = f"{(seed % 39000000) + i:08d}"
+        primary_pct = 12.0 + _next_int(4500) / 100.0
+        control_pct = primary_pct + 5.0 + _next_int(2500) / 100.0
+        hr_val = 0.60 + _next_int(2500) / 10000.0
+        p_val_str = "<0.001" if _next_int(100) < 82 else f"{_next_int(500)/10000:.4f}"
+        title = (
+            f"{active_tx} vs {control_tx} in {condition}: "
+            f"A Randomized, Double-Blind Trial (Synthetic#{i+1} [{nct_no}] H={title_hash:x})"
+        )
+        authors_team = (
+            f"Consortium-{preset[:4].upper()}-{1000 + i}; "
+            f"Spiroff A, Chen L, Kobayashi M, dos Santos R, Okafor T"
+        )
+        abstract = (
+            f"[BACKGROUND] {drug_class} agents have shown promise in {condition}. "
+            f"We evaluated {active_tx} versus {control_tx} for the primary composite endpoint. "
+            f"[METHODS] Phase 3, multicenter RCT ({n_arms}-arm, double-dummy). n={sample_size} "
+            f"randomized 1:1, follow-up {n_months_follow}m. Inclusion: confirmed {condition}. "
+            f"[PRIMARY ENDPOINT] Composite: renal function decline ≥50%, ESKD, or renal death. "
+            f"[RESULTS] Active {primary_pct:.1f}% vs Control {control_pct:.1f}%; "
+            f"HR {hr_val:.2f}, 95%CI [{hr_val*0.82:.2f}-{hr_val*1.12:.2f}], p={p_val_str}. "
+            f"NNT = {max(3, int(100/abs(control_pct-primary_pct)+0.5))}. "
+            f"[CONCLUSION] {active_tx} significantly reduced composite outcome vs {control_tx}. "
+            f"(Synthetic fixture preset={preset} idx={i} seed={seed})"
+        )
+        doi = f"10.{1000 + _next_int(8999)}/synth-preset-{preset}-{i:05d}"
+        records.append({
+            "id": f"pmid-{pmid_no}",
+            "pmid": pmid_no,
+            "doi": doi,
+            "nct_id": nct_no,
+            "title": title,
+            "authors": authors_team,
+            "journal": journal_pool[jidx],
+            "year": year,
+            "abstract": abstract,
+            "source": f"snapshot-2000:{preset}",
+            "preset": preset,
+            "sample_size": sample_size,
+        })
+    _SNAPSHOT_CACHE_2000[preset] = records
+    return records

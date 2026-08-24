@@ -437,9 +437,12 @@ async def run_single_step(
 
     t0 = time.perf_counter_ns()
     try:
-        n_in, n_out, payload_ref = _exec_step_N(step_index, run_copy, ctx)
-        duration_ms = int((time.perf_counter_ns() - t0) / 1_000_000)
-        mark_step_success(run_copy, step_index, duration_ms, n_in, n_out, payload_ref, attempt_no)
+        if step_index == 1:
+            await _exec_step1_real_dedup(run_copy, ctx)
+        else:
+            n_in, n_out, payload_ref = _exec_step_N(step_index, run_copy, ctx)
+            duration_ms = int((time.perf_counter_ns() - t0) / 1_000_000)
+            mark_step_success(run_copy, step_index, duration_ms, n_in, n_out, payload_ref, attempt_no)
         return True, False
     except Exception as exc:
         duration_ms = int((time.perf_counter_ns() - t0) / 1_000_000)
@@ -690,3 +693,61 @@ def compute_pipeline_compare(run_a: PipelineRun, run_b: PipelineRun, metrics_req
     if "grade" in requested or not requested:  result["grade_delta"] = compute_grade_delta(run_a, run_b)
     if "pico" in requested or not requested:   result["pico"] = compute_pico_diff(run_a, run_b)
     return result
+
+
+async def _exec_step1_real_dedup(run: PipelineRun, ctx: dict[str, Any]) -> None:
+    import time as _time
+    from app.models import DedupDiagnostic
+    from app.services.simhash import find_duplicates_bktree
+
+    t_start = _time.perf_counter_ns()
+
+    records = ctx["fetched_records"]
+    n_in = len(records)
+
+    if ctx.get("cancel_flag"):
+        return
+
+    enable_parity_check = n_in <= 200
+
+    kept_ids, diag = await find_duplicates_bktree(records, n_jobs=8, enable_parity_check=enable_parity_check)
+
+    if ctx.get("cancel_flag"):
+        return
+
+    n_out = len(kept_ids)
+    kept_id_set = set(kept_ids)
+    ctx["kept_records"] = [r for r in records if r["id"] in kept_id_set]
+
+    duration_ms = int((_time.perf_counter_ns() - t_start) / 1_000_000)
+
+    if ctx.get("cancel_flag"):
+        return
+
+    with Session(engine) as session:
+        existing = session.exec(
+            select(DedupDiagnostic).where(
+                DedupDiagnostic.run_id == run.id,
+                DedupDiagnostic.step_idx == 1,
+            )
+        ).first()
+        if existing is None:
+            dd = DedupDiagnostic(
+                run_id=run.id,
+                step_idx=1,
+                sizes_hist=diag["sizes_hist"],
+                hamming_hist=diag["hamming_hist"],
+                perf_json=diag["perf"],
+            )
+            session.add(dd)
+        else:
+            existing.sizes_hist = diag["sizes_hist"]
+            existing.hamming_hist = diag["hamming_hist"]
+            existing.perf_json = diag["perf"]
+            session.add(existing)
+        session.commit()
+
+    if ctx.get("cancel_flag"):
+        return
+
+    mark_step_success(run, 1, duration_ms, n_in, n_out)

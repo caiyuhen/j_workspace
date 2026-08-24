@@ -2431,3 +2431,96 @@ def w10_get_pipeline_compare(
 
     return compute_pipeline_compare(run_a_obj, run_b_obj, metrics)
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# W11 D2-2 · Step Diag REST route
+# NOTOUCH: 0 删改 L1-L2432；仅 append EOF
+# ══════════════════════════════════════════════════════════════════════════════
+
+
+@router.get("/{workspace_id}/pipelines/{run_id}/steps/{step_idx:int}/diag")
+def w11_get_pipeline_step_diag(
+    workspace_id: str,
+    run_id: str,
+    step_idx: int,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> dict:
+    from app.models import DedupDiagnostic
+    from sqlalchemy.exc import IntegrityError
+
+    if step_idx != 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": "BAD_STEP_IDX",
+                "detail": "diag only for step_idx=1 in W11",
+            },
+        )
+
+    _load_workspace_or_404(session, workspace_id, context)
+
+    from sqlmodel import select
+
+    run = session.exec(
+        select(PipelineRun).where(
+            PipelineRun.workspace_id == workspace_id,
+            PipelineRun.id == run_id,
+        )
+    ).first()
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="pipeline run not found",
+        )
+
+    try:
+        step_result = session.exec(
+            select(PipelineStepResult).where(
+                PipelineStepResult.run_id == run_id,
+                PipelineStepResult.step_index == step_idx,
+            )
+        ).first()
+
+        if step_result is None or step_result.status != "success":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "error": "DIAG_NOT_READY",
+                    "detail": "step_idx not success",
+                },
+            )
+
+        diag = session.exec(
+            select(DedupDiagnostic).where(
+                DedupDiagnostic.run_id == run_id,
+                DedupDiagnostic.step_idx == step_idx,
+            )
+        ).first()
+
+        if diag is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "error": "DIAG_NOT_WRITTEN",
+                    "detail": "DedupDiagnostic row not written",
+                },
+            )
+
+        return {
+            "sizes_hist": diag.sizes_hist,
+            "hamming_hist": diag.hamming_hist,
+            "perf": diag.perf_json,
+        }
+    except HTTPException:
+        raise
+    except IntegrityError as exc:
+        detail_str = str(exc)[:200]
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail={
+                "error": "DB_ERROR",
+                "detail": detail_str,
+            },
+        )
+

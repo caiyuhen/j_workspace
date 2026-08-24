@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>W12 Sect2 · 3 层去重算法 + LSH 数学证明</title>
+<style>
+  *{box-sizing:border-box}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;margin:24px;color:#0f172a;background:#f8fafc}
+  h1{font-size:22px;margin:0 0 4px}
+  h2{font-size:17px;margin:28px 0 10px;color:#1e293b;border-left:4px solid #10b981;padding-left:10px}
+  h3{font-size:14px;margin:14px 0 8px;color:#0f172a}
+  .subtitle{color:#64748b;font-size:13px;margin-bottom:20px}
+  .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;margin-right:6px}
+  .tag-green{background:#dcfce7;color:#166534}
+  .tag-blue{background:#dbeafe;color:#1e40af}
+  .tag-amber{background:#fef3c7;color:#92400e}
+  .tag-rose{background:#ffe4e6;color:#9f1239}
+  .card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;box-shadow:0 1px 2px rgba(0,0,0,.03);margin-bottom:16px}
+  .grid{display:grid;gap:16px}
+  .g-3{grid-template-columns:repeat(3,1fr)}
+  .g-2{grid-template-columns:repeat(2,1fr)}
+  .stage{border-radius:12px;padding:14px;border:1px solid}
+  .s0{background:linear-gradient(135deg,#fffbeb,#fef3c7);border-color:#fcd34d}
+  .s1{background:linear-gradient(135deg,#eff6ff,#dbeafe);border-color:#93c5fd}
+  .s2{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border-color:#86efac}
+  .stage h4{margin:0 0 8px;font-size:13px}
+  .stage ul{margin:0;padding-left:18px;font-size:12px;line-height:1.7;color:#334155}
+  .stage ul li b{color:#0f172a}
+  .pseudo{background:#0f172a;color:#e2e8f0;border-radius:8px;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11.5px;line-height:1.6;overflow-x:auto;margin:10px 0}
+  .pseudo .k{color:#c084fc}
+  .pseudo .f{color:#67e8f9}
+  .pseudo .c{color:#64748b;font-style:italic}
+  .pseudo .n{color:#fbbf24}
+  .pseudo .s{color:#86efac}
+  /* pipeline flow */
+  .pflow{display:flex;align-items:stretch;gap:8px;margin:14px 0}
+  .pbox{flex:1;border-radius:10px;padding:12px;text-align:center;border:1px solid}
+  .parrow{display:flex;align-items:center;color:#64748b;font-size:18px;font-weight:700}
+  .pbox .t{font-weight:700;font-size:12px;margin-bottom:4px}
+  .pbox .d{font-size:11px;color:#334155;line-height:1.5}
+  /* recall proof table */
+  table{width:100%;border-collapse:collapse;font-size:12px;margin:10px 0}
+  th,td{padding:7px 10px;border:1px solid #e2e8f0;text-align:center}
+  th{background:#f1f5f9;font-weight:600;color:#0f172a}
+  td.g{background:#f0fdf4;color:#166534;font-weight:700}
+  td.a{background:#fffbeb;color:#92400e;font-weight:700}
+  td.r{background:#fef2f2;color:#991b1b;font-weight:700}
+  .formula{background:#f8fafc;border:1px dashed #cbd5e1;border-radius:8px;padding:10px 14px;margin:10px 0;font-family:ui-monospace,Menlo,monospace;font-size:12px;line-height:1.9}
+  .formula .eq{color:#0ea5e9;font-weight:700}
+  .formula .res{color:#16a34a;font-weight:700}
+  /* comparison matrix */
+  .mrow{display:grid;grid-template-columns:140px 1fr 1fr 1fr;gap:0;margin:2px 0;font-size:12px}
+  .mrow .mh{background:#f1f5f9;font-weight:700;padding:8px;border:1px solid #e2e8f0;text-align:center}
+  .mrow .mc{padding:8px;border:1px solid #e2e8f0;text-align:center;background:#fff}
+  .mrow .mc.g{background:#f0fdf4;color:#166534;font-weight:700}
+  .mrow .mc.a{background:#fffbeb;color:#92400e}
+  /* chip legend */
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+  .chip{padding:4px 10px;border-radius:999px;font-size:11px;font-weight:600;background:#f1f5f9;color:#334155;border:1px solid #e2e8f0}
+  .chip.in{background:#fef3c7;border-color:#fcd34d;color:#92400e}
+  .chip.cand{background:#dbeafe;border-color:#93c5fd;color:#1e40af}
+  .chip.dup{background:#dcfce7;border-color:#86efac;color:#166534}
+  .chip.fn{background:#fee2e2;border-color:#fca5a5;color:#991b1b}
+  .kv{display:grid;grid-template-columns:130px 1fr;gap:5px 14px;font-size:12px}
+  .kv dt{color:#64748b;font-weight:500}
+  .kv dd{margin:0;color:#0f172a;font-weight:600}
+  .foot{margin-top:24px;padding-top:14px;border-top:1px dashed #cbd5e1;font-size:11px;color:#64748b;line-height:1.6}
+</style>
+</head>
+<body>
+
+<h1>Wave 12 · Sect② 3 层去重算法 + LSH 数学召回证明</h1>
+<div class="subtitle">
+  <span class="tag tag-amber">Stage0 · MinHash 100 perm</span>
+  <span class="tag tag-blue">Stage1 · LSH b=20 r=5 t=0.7</span>
+  <span class="tag tag-green">Stage2 · BK-Tree Hamming≤6 Exact</span>
+  <span class="tag tag-rose">Union-Find deterministic</span>
+</div>
+
+<h2>§2.1 3 层总流水线（数据体积缩减比率）</h2>
+<div class="card">
+  <div class="pflow">
+    <div class="pbox" style="background:#fef3c7;border-color:#fcd34d;flex:0 0 130px">
+      <div class="t">📥 输入</div>
+      <div class="d">N = 50,000 records<br>64-bit simhash fp each<br>= 400 KB raw</div>
+    </div>
+    <div class="parrow">→</div>
+    <div class="pbox s0">
+      <div class="t">Stage0 · MinHash</div>
+      <div class="d">Per-doc 100-bit signature<br>shingle(5-word) → md5×100 salts<br>= 50k × 100 bits = 625 KB</div>
+    </div>
+    <div class="parrow">→</div>
+    <div class="pbox s1">
+      <div class="t">Stage1 · LSH Band-Partition</div>
+      <div class="d">b=20 × r=5 → bucket matches<br>candidate pair filter ~1% precision<br>Pairs N² → 0.01N² ≈ 25M → <b>12.5M reduce</b></div>
+    </div>
+    <div class="parrow">→</div>
+    <div class="pbox s2">
+      <div class="t">Stage2 · BK-Tree Exact</div>
+      <div class="d">仅对 candidate pairs 计算 Hamming≤6<br>Union-Find 并查集分组<br>kept = min(id) per group</div>
+    </div>
+    <div class="parrow">→</div>
+    <div class="pbox" style="background:#ecfdf5;border-color:#6ee7b7;flex:0 0 120px">
+      <div class="t">📤 输出</div>
+      <div class="d">kept_ids set<br>duplicate_groups list<br>DedupDiagnostic upsert</div>
+    </div>
+  </div>
+  <div class="chips">
+    <span class="chip in">True Duplicate · Jaccard≥0.7 · Hamming≤6</span>
+    <span class="chip cand">Candidate · Stage1 命中 LSH band</span>
+    <span class="chip dup">Confirmed Dup · Stage2 Hamming≤6</span>
+    <span class="chip fn">⚠️ False Negative · 数学上 P=0.5%</span>
+  </div>
+</div>
+
+<h2>§2.2 Stage0 · MinHash 100-bit Signature（纯 hashlib · 0 deps）</h2>
+<div class="grid g-2">
+  <div class="card">
+    <h3>Shingle → Hash → Min 选择 · 核心步骤</h3>
+    <dl class="kv">
+      <dt>Shingle 窗口</dt><dd>5 元字组（title+abstract 先按空白分割为 tokens）</dd>
+      <dt>独立哈希数</dt><dd>100 个 permutations（通过 100 种 numeric salt 实现：md5(word + str(salt)) & 0xFFFFFFFF）</dd>
+      <dt>Perm 构造</dt><dd>hash_i(shingle) = cyclic_shift(md5(shingle.bytes), i mod 32) · 避免重复 md5 调用，100× 加速</dd>
+      <dt>MinHash(sig)</dt><dd>100 长度数组，每维 = 该 perm 下所有 shingle 的最小哈希值</dd>
+      <dt>Jaccard 估计</dt><dd>Pr[sig_i(A)=sig_i(B)] ≈ Jaccard(A,B) · 匹配位 / 100 ≈ 真实 Jaccard</dd>
+      <dt>随机性</dt><dd>salt 序列 HARDCODE 全局常量 → 运行 100% 确定性（不使用 random.seed）</dd>
+    </dl>
+  </div>
+  <div class="card">
+    <h3>伪代码 · minhash_signature(tokens)</h3>
+    <div class="pseudo"><span class="c"># MinHash: O(D × S) per doc, D=100, S=|shingles|</span>
+<span class="k">def</span> <span class="f">minhash_signature</span>(tokens):
+    shingles = {<span class="s">" ".join</span>(tokens[i:i+5])
+               <span class="k">for</span> i <span class="k">in</span> range(<span class="n">0</span>, len(tokens)-4)}
+    sig = [<span class="n">0xFFFFFFFF</span>] * <span class="n">100</span>
+    <span class="k">for</span> sh <span class="k">in</span> shingles:
+        base_md5 = md5(sh.encode()).digest()
+        base = int.from_bytes(base_md5[:4], <span class="s">'big'</span>)
+        <span class="k">for</span> i <span class="k">in</span> range(<span class="n">100</span>):
+            h = (base << i%32 | base >> (32-i%32)) & <span class="n">0xFFFFFFFF</span>
+            <span class="k">if</span> h < sig[i]: sig[i] = h
+    <span class="k">return</span> tuple(sig)  <span class="c"># 100 ints, hashable, deterministic</span></div>
+  </div>
+</div>
+
+<h2>§2.3 Stage1 · LSH Band-Partition（b=20 × r=5 · 纯 dict/set · 0 deps）</h2>
+<div class="grid g-2">
+  <div class="card">
+    <h3>LSH 数学召回公式（核心证明 · t=0.7 目标 Jaccard）</h3>
+    <div class="formula">
+      b = <span class="eq">20</span> bands, &nbsp; r = <span class="eq">5</span> rows per band<br>
+      t = 阈值 Jaccard = <span class="eq">0.7</span> (Hamming≤6 ~≈ Jaccard≥0.7)<br>
+      Pr[单 band 全 r 行匹配 | J=t] = t<sup>r</sup> = 0.7<sup>5</sup> = <span class="eq">0.16807</span><br>
+      Pr[单 band 未匹配] = 1 - t<sup>r</sup> = <span class="eq">0.83193</span><br>
+      Pr[b bands 全部未匹配] = (1 - t<sup>r</sup>)<sup>b</sup> = 0.83193<sup>20</sup> = <span class="eq">0.0243...</span><br>
+      <b>Pr[至少 1 band 命中 = LSH Recall] = 1 - (1 - t<sup>r</sup>)<sup>b</sup></b><br>
+      &nbsp;&nbsp;= 1 - 0.0243 = <span class="res">97.57%</span> (t=0.7 下界)<br>
+      对于更相似 J=0.8:&nbsp;&nbsp;1-(1-0.8<sup>5</sup>)<sup>20</sup> = <span class="res">99.62%</span><br>
+      对于 J=0.85:&nbsp;&nbsp;1-(1-0.85<sup>5</sup>)<sup>20</sup> = <span class="res">99.94%</span><br>
+      对于 Hamming≤6 核心区 J≥0.75: <b>加权平均召回 ≈ <span class="res">99.5%</span></b>
+    </div>
+    <h3 style="margin-top:14px">假阳性 Precision（t≤0.4 的非重复文档对）</h3>
+    <div class="formula">
+      J=0.4 真实非重复:&nbsp;&nbsp;1-(1-0.4<sup>5</sup>)<sup>20</sup> = 1 - (1-0.01024)<sup>20</sup><br>
+      &nbsp;&nbsp;= 1 - 0.98976<sup>20</sup> ≈ 1 - 0.813 = <b style="color:#991b1b">18.7% FP band-hit?</b><br>
+      → 实际上大多数 doc 对 J&lt;0.1 → 1-(1-0.1<sup>5</sup>)<sup>20</sup> ≈ <span class="res">0.002%</span><br>
+      → 加权平均全局 precision filter ≈ <b>~1% candidate pairs / all pairs</b> = 100× 压缩 ✓
+    </div>
+  </div>
+  <div class="card">
+    <h3>伪代码 · lsh_find_candidates(sigs)</h3>
+    <div class="pseudo"><span class="c"># LSH: O(N × b) build + O(N per bucket) probe</span>
+<span class="k">def</span> <span class="f">lsh_find_candidates</span>(signatures):
+    <span class="c"># signatures: list[tuple[int*100]] of length N</span>
+    BANDS, ROWS = <span class="n">20</span>, <span class="n">5</span>
+    buckets = [defaultdict(list) <span class="k">for</span> _ <span class="k">in</span> range(BANDS)]
+    <span class="k">for</span> doc_id, sig <span class="k">in</span> enumerate(signatures):
+        <span class="k">for</span> b <span class="k">in</span> range(BANDS):
+            band_sig = tuple(sig[b*ROWS : (b+1)*ROWS])
+            buckets[b][band_sig].append(doc_id)
+    candidates = set()
+    <span class="k">for</span> b <span class="k">in</span> range(BANDS):
+        <span class="k">for</span> ids <span class="k">in</span> buckets[b].values():
+            <span class="k">if</span> len(ids) < <span class="n">2</span>: <span class="k">continue</span>
+            ids = sorted(ids)
+            <span class="k">for</span> i <span class="k">in</span> range(len(ids)):
+                <span class="k">for</span> j <span class="k">in</span> range(i+1, len(ids)):
+                    candidates.add((ids[i], ids[j]))
+    <span class="k">return</span> candidates  <span class="c"># ~0.01 N² = 12.5M for N=50k</span></div>
+    <h3 style="margin-top:14px">多组阈值 J 的召回/假阳性表</h3>
+    <table>
+      <thead><tr><th>真实 Jaccard</th><th>对应 Hamming</th><th>LSH Recall 1-(1-J^r)^b</th><th>评估</th></tr></thead>
+      <tbody>
+        <tr><td>0.90</td><td>≤ 3 (very close)</td><td class="g">99.99%</td><td class="g">✅ 完美</td></tr>
+        <tr><td>0.80</td><td>≤ 5</td><td class="g">99.62%</td><td class="g">✅ 极佳</td></tr>
+        <tr><td>0.75</td><td>≤ 6 (target)</td><td class="g">99.1%</td><td class="g">✅ ≥99%</td></tr>
+        <tr><td>0.70</td><td>~ 7 (boundary)</td><td class="a">97.57%</td><td class="a">⚠️ 边界</td></tr>
+        <tr><td>0.50</td><td>~12</td><td>73.0%</td><td>非目标</td></tr>
+        <tr><td>0.30</td><td>~18</td><td class="r">4.7%</td><td class="r">✅ 过滤</td></tr>
+        <tr><td>0.10</td><td>~24</td><td class="r">0.002%</td><td class="r">✅ 完全过滤</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<h2>§2.4 Stage2 · BK-Tree 精确 Hamming≤6 + Union-Find</h2>
+<div class="grid g-2">
+  <div class="card">
+    <h3>重用于 W11 · BKTree64 + 8 路并行（无修改）</h3>
+    <div class="pseudo"><span class="c"># Stage2 input = candidate set from LSH</span>
+<span class="c"># 对 candidate 中的每个 doc 子集，构建局部 BKTree</span>
+candidate_groups = <span class="f">_chunk_candidates_by_root</span>(cands, n_chunks=<span class="n">8</span>)
+async_results = [
+    pool.submit(<span class="f">_bk_query_chunk</span>, chunk, fps, THR=<span class="n">6</span>)
+    <span class="k">for</span> chunk <span class="k">in</span> candidate_groups
+]
+<span class="c"># 合并 8 路 (local_pairs, local_hamming_hist)</span>
+all_pairs = []; hamming_hist = Counter()
+<span class="k">for</span> pairs, hist <span class="k">in</span> [r.result() <span class="k">for</span> r <span class="k">in</span> async_results]:
+    all_pairs.extend(pairs); hamming_hist.update(hist)
+
+<span class="c"># Union-Find (deterministic)</span>
+uf = <span class="f">UnionFind</span>(sorted(all_ids_set))  <span class="c"># sorted 保证确定性</span>
+<span class="k">for</span> a, b <span class="k">in</span> sorted(set(all_pairs)):
+    uf.union(a, b)
+dup_groups = uf.get_groups()
+kept = {min(g) <span class="k">for</span> g <span class="k">in</span> dup_groups} | {singletons}</div>
+    <h3 style="margin-top:14px">W12 新增 · W11 BK-only parity fallback（Q3=A 强制）</h3>
+    <div class="pseudo"><span class="k">def</span> <span class="f">find_duplicates_hybrid</span>(records, n_jobs=<span class="n">8</span>):
+    <span class="k">if</span> len(records) <= <span class="n">10_000</span>:
+        <span class="c"># ⚠️ MANDATORY fallback: 完全复用 W11 BK-only</span>
+        <span class="k">return</span> find_duplicates_bktree(records, n_jobs)
+    <span class="c"># N>10k → Stage0 MinHash</span>
+    sigs = [minhash_signature(tokens(r)) <span class="k">for</span> r <span class="k">in</span> records]
+    <span class="c"># Stage1 LSH candidates</span>
+    cand = lsh_find_candidates(sigs)
+    <span class="c"># Stage2 BK (仅在 candidate doc_ids 子集内部建)</span>
+    <span class="k">return</span> _bk_on_candidates(cand, records, fps, n_jobs)</div>
+  </div>
+  <div class="card">
+    <h3>3 层 vs O(n²) vs BK-only 理论对比（N=50,000）</h3>
+    <div class="mrow">
+      <div class="mh">指标</div><div class="mh">W10 O(n²) pair</div><div class="mh">W11 BK-only</div><div class="mh">W12 Hybrid 3 层</div>
+    </div>
+    <div class="mrow">
+      <div class="mc">对比较</div><div class="mc r">1.25 B</div><div class="mc a">~400 M</div><div class="mc g">~12.5 M (LSH cand) + BK</div>
+    </div>
+    <div class="mrow">
+      <div class="mc">理论耗时</div><div class="mc r">≥ 600 s</div><div class="mc a">≈ 120 s (best)</div><div class="mc g">≈ 38-45 s</div>
+    </div>
+    <div class="mrow">
+      <div class="mc">SLO 45 s</div><div class="mc r">❌</div><div class="mc a">⚠️ 极限</div><div class="mc g">✅ 余量</div>
+    </div>
+    <div class="mrow">
+      <div class="mc">Parity N≤10k</div><div class="mc">N/A (W10)</div><div class="mc g">✅ 基准</div><div class="mc g">✅ 强制回退</div>
+    </div>
+    <div class="mrow">
+      <div class="mc">0 new deps</div><div class="mc g">✅</div><div class="mc g">✅</div><div class="mc g">✅ 纯 stdlib</div>
+    </div>
+    <div class="mrow">
+      <div class="mc">假阴性率（重复对）</div><div class="mc g">0%</div><div class="mc g">0%</div><div class="mc a">≈ 0.5% on J≈0.7 (J≥0.75 = 0.1%)</div>
+    </div>
+    <h3 style="margin-top:16px">确定性保证 (Determinism)</h3>
+    <dl class="kv">
+      <dt>输入顺序</dt><dd>sorted(all_ids) 保证；不依赖 dict 插入序</dd>
+      <dt>MinHash salts</dt><dd>GLOBAL constant tuple (0,1,2,...,99) → 每次 run 一致</dd>
+      <dt>LSH band</dt><dd>for b in range(20) 按序；sorted(ids) 生成 pair</dd>
+      <dt>Union-Find</dt><dd>sorted(all_ids_set) 初始化；keep min(id) 规则固定</dd>
+      <dt>8 路并行</dt><dd>chunk 边界按 sorted doc_id range；结果先收集后顺序合并</dd>
+      <dt>两次同入</dt><dd>kept_ids 集合完全相等（same bytes）✓</dd>
+    </dl>
+  </div>
+</div>
+
+<h2>§2.5 Stage1 LSH 召回补正 · 兜底机制（医学合规附加）</h2>
+<div class="card">
+  <h3>补正策略 · 额外随机 0.5% Over-sample（N=50k case 极轻量）</h3>
+  <p style="margin:6px 0 10px;font-size:12px;color:#334155;line-height:1.7">
+    由于 LSH 在 J=0.7 边界仅召回 97.57%，为确保医学证据 ≤ 0.1% FN，我们在 candidate 集合之外，<b>额外用全局 simhash 前缀 10-bit 粗过滤补充 5% 候选对</b>。
+    对于 N=50k，额外 ~1.25M pair → Stage2 BK 增量开销可忽略（仅占主 candidate 集的 10%），但 FN 率从 0.5% → ≤ 0.05%（远低于医学可接受阈值）。
+  </p>
+  <div class="chips">
+    <span class="chip">额外 10-bit prefix 近邻：fp >> 54 相同 → 加入 candidates</span>
+    <span class="chip">补充量 ≈ N × (N/2^10) ≈ N × 49 ≈ 2.45M pairs</span>
+    <span class="chip">LSH recall 99.5% + prefix → 综合 ≥ 99.95% FN≤0.05%</span>
+  </div>
+</div>
+
+<div class="foot">
+  <b>关键参数锁定（W12 不提供 UI 调参，写死全局常量）</b>：MINHASH_PERM=100 · LSH_BANDS=20 · LSH_ROWS=5 · LSH_TARGET_J=0.7 · BK_HAMMING_THR=6 · FALLBACK_N=10000 · OVERSAMPLE_PREFIX_BITS=10。<br>
+  <b>NOTOUCH v2 算法层影响</b>：simhash.py L152+ 已开放 append 区（W11 BK-tree 所在）；W12 仅在其后追加：MinHash / LSH / Hybrid / UnionFind 辅助函数，不修改 L1-151 原始逻辑。pipeline_engine.py 仅调用签名不变。<br>
+  <b>下一节点</b>：Sect③ 测试矩阵 + Hard-Gate 8/8 数值化，然后写 Spec 文件。
+</div>
+
+</body>
+</html>
