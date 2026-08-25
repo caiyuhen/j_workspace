@@ -47,8 +47,9 @@ jobs:
 
       - name: NOTOUCH v2 AC7 audit exit99
         run: |
-          if [ -f scripts/notouch_v2_audit.py ]; then
-            python scripts/notouch_v2_audit.py ${{ github.event.before || 'HEAD~1' }}
+          cd ../..
+          if [ -f apps/agent-core/scripts/notouch_v2_audit.py ]; then
+            python apps/agent-core/scripts/notouch_v2_audit.py efbb21d9086e3d50f1ef9c4de9c0e8c1e5e1c8e4
           else
             echo "NOTOUCH script not yet available, skipping audit"
           fi
@@ -287,8 +288,8 @@ jobs:
         with:
           node-version: ${{ env.NODE_VER }}
 
-      - name: Install dependencies with npm ci
-        run: npm ci
+      - name: Install dependencies (npm install since no lockfile, AC8 0 deps added)
+        run: npm install --no-audit --no-fund
 
       - name: Run shared-ui vitest (4 Dashboard 68 + barrel smoke 12)
         run: npm --workspace packages/shared-ui run test -- --run --reporter=junit --outputFile.junit=vitest-shared-ui.xml
