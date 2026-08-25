@@ -12,3 +12,4 @@ Thumbs.db
 playwright-report/
 test-results/
 coverage/
+apps/agent-core/tests/fixtures/w12_synthetic_50k.json

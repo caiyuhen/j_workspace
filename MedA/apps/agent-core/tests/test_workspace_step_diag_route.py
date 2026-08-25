@@ -619,3 +619,198 @@ class TestH200Extras:
         body = resp.json()
         assert body["perf"]["tag"] == "T22EXTRA"
         assert len(body["sizes_hist"]) >= 2
+
+
+# ============================================================
+# T23-T28 · D1-5 APPEND 6 tests · hybrid response assertions
+# + ValidateBeforeCreate 422/400 maxRecords=50001 rejected
+# ============================================================
+
+
+def _make_hybrid_diag(session: Session, run_id: str, step_idx: int = 1) -> None:
+    sizes = {"1": 49500, "2": 500, "3": 12}
+    hamming = {"hd0": 1200, "hd1": 200, "hd2": 50, "hd3": 12}
+    perf = {
+        "version": "w12-hybrid-v1",
+        "hybrid_version": "w12-hybrid-v1",
+        "n_records": 50000,
+        "fallback_used": False,
+        "lsh_candidates": 124500,
+        "lsh_candidate_count": 124500,
+        "lsh_candidate_filter_ratio": 0.0001,
+        "lsh_filter_ratio": 0.0001,
+        "oversample_prefix": True,
+        "over_prefix_count": 8421,
+        "tag": "HYBRID50K",
+        "stage_ms": {
+            "minhash_ms": 3200.5,
+            "lsh_ms": 410.2,
+            "oversample_ms": 155.0,
+            "oversample_prefix_ms": 155.0,
+            "bk_ms": 18500.3,
+            "union_ms": 200.0,
+            "total_ms": 22466.0,
+        },
+    }
+    dd = DedupDiagnostic(
+        run_id=run_id,
+        step_idx=step_idx,
+        sizes_hist=sizes,
+        hamming_hist=hamming,
+        perf_json=perf,
+    )
+    session.add(dd)
+    session.commit()
+
+
+class TestIHybridResponse:
+    def test_T23_200_hybrid_version_string_present_in_perf(self):
+        client = TestClient(app)
+        token = _dev_login(client, ORG_SLUG, ORG_NAME, USER_ID_A)
+        with Session(engine) as s:
+            _ensure_workspace(s, WORKSPACE_ID)
+            rid = _make_run(s, WORKSPACE_ID, status="success", preset=PRESET_A)
+            _make_step_result(s, rid, 1, status="success")
+            _make_hybrid_diag(s, rid, step_idx=1)
+        resp = client.get(
+            f"/api/workspace/{WORKSPACE_ID}/pipelines/{rid}/steps/1/diag",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200, f"T23 non-200: {resp.status_code} {resp.text}"
+        body = resp.json()
+        perf = body.get("perf", {})
+        has_version = "version" in perf or "hybrid_version" in perf
+        assert has_version, "T23: version or hybrid_version key missing from perf"
+        ver = perf.get("hybrid_version", perf.get("version", ""))
+        assert ver == "w12-hybrid-v1", f"T23: expected w12-hybrid-v1, got {ver!r}"
+        assert isinstance(ver, str)
+
+    def test_T24_200_stage_ms_keys_minhash_lsh_present(self):
+        client = TestClient(app)
+        token = _dev_login(client, ORG_SLUG, ORG_NAME, USER_ID_A)
+        with Session(engine) as s:
+            _ensure_workspace(s, WORKSPACE_ID)
+            rid = _make_run(s, WORKSPACE_ID, status="success", preset=PRESET_A)
+            _make_step_result(s, rid, 1, status="success")
+            _make_hybrid_diag(s, rid, step_idx=1)
+        resp = client.get(
+            f"/api/workspace/{WORKSPACE_ID}/pipelines/{rid}/steps/1/diag",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200, f"T24 non-200: {resp.status_code} {resp.text}"
+        body = resp.json()
+        stage_ms = body.get("perf", {}).get("stage_ms", {})
+        assert "minhash_ms" in stage_ms, "T24: stage_ms.minhash_ms missing"
+        assert "lsh_ms" in stage_ms, "T24: stage_ms.lsh_ms missing"
+        mh_val = stage_ms["minhash_ms"]
+        lsh_val = stage_ms["lsh_ms"]
+        assert isinstance(mh_val, (int, float)) and mh_val >= 0, "T24: minhash_ms type/range"
+        assert isinstance(lsh_val, (int, float)) and lsh_val >= 0, "T24: lsh_ms type/range"
+
+    def test_T25_200_stage_oversample_and_bk_ms_nonneg(self):
+        client = TestClient(app)
+        token = _dev_login(client, ORG_SLUG, ORG_NAME, USER_ID_A)
+        with Session(engine) as s:
+            _ensure_workspace(s, WORKSPACE_ID)
+            rid = _make_run(s, WORKSPACE_ID, status="success", preset=PRESET_A)
+            _make_step_result(s, rid, 1, status="success")
+            _make_hybrid_diag(s, rid, step_idx=1)
+        resp = client.get(
+            f"/api/workspace/{WORKSPACE_ID}/pipelines/{rid}/steps/1/diag",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200, f"T25 non-200: {resp.status_code} {resp.text}"
+        body = resp.json()
+        stage_ms = body.get("perf", {}).get("stage_ms", {})
+        has_ov = "oversample_ms" in stage_ms or "oversample_prefix_ms" in stage_ms
+        assert has_ov, "T25: oversample_ms / oversample_prefix_ms missing from stage_ms"
+        assert "bk_ms" in stage_ms, "T25: stage_ms.bk_ms missing"
+        ov_val = stage_ms.get("oversample_prefix_ms", stage_ms.get("oversample_ms", -1))
+        bk_val = stage_ms["bk_ms"]
+        assert isinstance(ov_val, (int, float)) and ov_val >= 0
+        assert isinstance(bk_val, (int, float)) and bk_val >= 0
+
+    def test_T26_200_lsh_candidate_count_integer_type_in_perf(self):
+        client = TestClient(app)
+        token = _dev_login(client, ORG_SLUG, ORG_NAME, USER_ID_A)
+        with Session(engine) as s:
+            _ensure_workspace(s, WORKSPACE_ID)
+            rid = _make_run(s, WORKSPACE_ID, status="success", preset=PRESET_B)
+            _make_step_result(s, rid, 1, status="success")
+            _make_hybrid_diag(s, rid, step_idx=1)
+        resp = client.get(
+            f"/api/workspace/{WORKSPACE_ID}/pipelines/{rid}/steps/1/diag",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200, f"T26 non-200: {resp.status_code} {resp.text}"
+        body = resp.json()
+        perf = body.get("perf", {})
+        has_lshc = "lsh_candidates" in perf or "lsh_candidate_count" in perf
+        assert has_lshc, "T26: lsh_candidates / lsh_candidate_count missing from perf"
+        lshc = perf.get("lsh_candidate_count", perf.get("lsh_candidates", -1))
+        assert isinstance(lshc, int) and lshc >= 0, f"T26: lsh_candidate_count type/val = {lshc!r}"
+
+    def test_T27_200_lsh_filter_ratio_and_over_prefix_count(self):
+        client = TestClient(app)
+        token = _dev_login(client, ORG_SLUG, ORG_NAME, USER_ID_A)
+        with Session(engine) as s:
+            _ensure_workspace(s, WORKSPACE_ID)
+            rid = _make_run(s, WORKSPACE_ID, status="success", preset=PRESET_B)
+            _make_step_result(s, rid, 1, status="success")
+            _make_hybrid_diag(s, rid, step_idx=1)
+        resp = client.get(
+            f"/api/workspace/{WORKSPACE_ID}/pipelines/{rid}/steps/1/diag",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200, f"T27 non-200: {resp.status_code} {resp.text}"
+        body = resp.json()
+        perf = body.get("perf", {})
+        has_ratio = "lsh_candidate_filter_ratio" in perf or "lsh_filter_ratio" in perf
+        assert has_ratio, "T27: lsh_filter_ratio / lsh_candidate_filter_ratio missing"
+        ratio = perf.get("lsh_filter_ratio", perf.get("lsh_candidate_filter_ratio", -1))
+        assert isinstance(ratio, (int, float)) and 0.0 <= float(ratio) <= 1.0
+        has_opc = (
+            "over_prefix_count" in perf
+            or "oversample_prefix_pair_count" in perf
+            or "oversample_prefix" in perf
+        )
+        assert has_opc, "T27: over_prefix_count / oversample_prefix missing"
+
+
+class TestJValidateBeforeCreateMaxRecords50001:
+    def test_T28_400_schemex_validate_max_records_50001_rejected(self):
+        from fastapi import HTTPException
+        from app.routers.workspace import (
+            schemex_validate_before_create_or_400,
+            MAX_RECORDS_HARD_CAP,
+        )
+
+        assert MAX_RECORDS_HARD_CAP == 50000, f"T28: hard cap should be 50000, got {MAX_RECORDS_HARD_CAP}"
+
+        raised_exc = None
+        try:
+            schemex_validate_before_create_or_400(
+                preset=PRESET_A,
+                mode="snapshot",
+                max_records=50001,
+                valid_presets=[PRESET_A, PRESET_B],
+            )
+        except HTTPException as he:
+            raised_exc = he
+        except Exception as e:
+            raised_exc = e
+
+        assert raised_exc is not None, "T28: expected HTTPException for max_records=50001, got None"
+
+        if isinstance(raised_exc, HTTPException):
+            assert raised_exc.status_code in (400, 422), (
+                f"T28: expected 400/422, got status_code={raised_exc.status_code}"
+            )
+            detail = raised_exc.detail if isinstance(raised_exc.detail, dict) else {"_raw": raised_exc.detail}
+            assert "SCHEMEX" in str(detail.get("error", "")) or "MAX" in str(detail.get("error", "")).upper(), (
+                f"T28: error key should mention SCHEMEX / MAX limit, got detail={detail!r}"
+            )
+            if "hard_cap" in detail:
+                assert detail["hard_cap"] == 50000
+        else:
+            pytest.fail(f"T28: expected HTTPException, got {type(raised_exc).__name__}: {raised_exc}")

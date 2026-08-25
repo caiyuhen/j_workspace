@@ -292,3 +292,268 @@ def test_DM12_created_at_auto_default_utc_now(db_session):
     assert q.created_at is not None
     assert t_before <= q.created_at <= t_after
     assert isinstance(q.created_at, dt.datetime)
+
+
+# ============================================================
+# DM13-DM20 · D1-4 APPEND 8 tests · new DedupDiag hybrid fields
+# perf_json: hybrid_version, stage_*_ms, lsh_candidate_count,
+#            lsh_filter_ratio, over_prefix_count
+# ============================================================
+
+def test_DM13_hybrid_version_string_w12_hybrid_v1(db_session):
+    wid = _make_wid(db_session)
+    rid = "p-dm13" + "x" * 27
+    _make_run(db_session, wid, rid)
+    perf_in = {
+        "version": "w12-hybrid-v1",
+        "hybrid_version": "w12-hybrid-v1",
+        "n_records": 52000,
+    }
+    dd = DedupDiagnostic(
+        run_id=rid,
+        step_idx=1,
+        sizes_hist={"1": 50000},
+        hamming_hist={"hd0": 1},
+        perf_json=perf_in,
+    )
+    db_session.add(dd)
+    db_session.commit()
+    db_session.expire_all()
+    q = db_session.query(DedupDiagnostic).filter_by(run_id=rid, step_idx=1).first()
+    assert q.perf_json.get("version") == "w12-hybrid-v1"
+    assert q.perf_json.get("hybrid_version") == "w12-hybrid-v1"
+    assert isinstance(q.perf_json["hybrid_version"], str)
+
+
+def test_DM14_stage_minhash_ms_nonnegative_int_or_float(db_session):
+    wid = _make_wid(db_session)
+    rid = "p-dm14" + "x" * 27
+    _make_run(db_session, wid, rid)
+    stage_ms_in = {
+        "minhash_ms": 1234,
+        "lsh_ms": 0,
+        "oversample_ms": 0.0,
+        "bk_ms": 567.89,
+        "union_ms": 42,
+        "total_ms": 1843.89,
+    }
+    perf_in = {"version": "w12-hybrid-v1", "stage_ms": stage_ms_in}
+    dd = DedupDiagnostic(
+        run_id=rid,
+        step_idx=1,
+        sizes_hist={"1": 100},
+        hamming_hist={},
+        perf_json=perf_in,
+    )
+    db_session.add(dd)
+    db_session.commit()
+    db_session.expire_all()
+    q = db_session.query(DedupDiagnostic).filter_by(run_id=rid, step_idx=1).first()
+    stage_ms = q.perf_json["stage_ms"]
+    assert "minhash_ms" in stage_ms
+    val = stage_ms["minhash_ms"]
+    assert isinstance(val, (int, float))
+    assert val >= 0
+    assert val == 1234
+
+
+def test_DM15_stage_lsh_ms_present_and_types_ok(db_session):
+    wid = _make_wid(db_session)
+    rid = "p-dm15" + "x" * 27
+    _make_run(db_session, wid, rid)
+    perf_in = {
+        "version": "w12-hybrid-v1",
+        "stage_ms": {
+            "minhash_ms": 100,
+            "lsh_ms": 250.5,
+            "oversample_ms": 50,
+            "bk_ms": 800,
+            "union_ms": 10,
+            "total_ms": 1210.5,
+        },
+    }
+    dd = DedupDiagnostic(
+        run_id=rid,
+        step_idx=2,
+        sizes_hist={"1": 2000},
+        hamming_hist={"hd0": 1},
+        perf_json=perf_in,
+    )
+    db_session.add(dd)
+    db_session.commit()
+    db_session.expire_all()
+    q = db_session.query(DedupDiagnostic).filter_by(run_id=rid, step_idx=2).first()
+    stage_ms = q.perf_json["stage_ms"]
+    assert "lsh_ms" in stage_ms
+    lsh_val = stage_ms["lsh_ms"]
+    assert isinstance(lsh_val, (int, float))
+    assert lsh_val >= 0
+    assert abs(lsh_val - 250.5) < 1e-6
+
+
+def test_DM16_stage_oversample_prefix_ms_key_exists(db_session):
+    wid = _make_wid(db_session)
+    rid = "p-dm16" + "x" * 27
+    _make_run(db_session, wid, rid)
+    perf_in = {
+        "version": "w12-hybrid-v1",
+        "stage_ms": {
+            "minhash_ms": 0,
+            "lsh_ms": 0,
+            "oversample_ms": 77.77,
+            "oversample_prefix_ms": 77.77,
+            "bk_ms": 0,
+            "union_ms": 0,
+            "total_ms": 77.77,
+        },
+    }
+    dd = DedupDiagnostic(
+        run_id=rid,
+        step_idx=1,
+        sizes_hist={"1": 10000},
+        hamming_hist={},
+        perf_json=perf_in,
+    )
+    db_session.add(dd)
+    db_session.commit()
+    db_session.expire_all()
+    q = db_session.query(DedupDiagnostic).filter_by(run_id=rid, step_idx=1).first()
+    stage_ms = q.perf_json["stage_ms"]
+    has_oversample = "oversample_ms" in stage_ms or "oversample_prefix_ms" in stage_ms
+    assert has_oversample, "oversample_ms or oversample_prefix_ms must exist in stage_ms"
+    ov_val = stage_ms.get("oversample_prefix_ms", stage_ms.get("oversample_ms", -1))
+    assert isinstance(ov_val, (int, float))
+    assert ov_val >= 0
+
+
+def test_DM17_stage_bk_ms_present_nonneg(db_session):
+    wid = _make_wid(db_session)
+    rid = "p-dm17" + "x" * 27
+    _make_run(db_session, wid, rid)
+    perf_in = {
+        "version": "w12-hybrid-v1",
+        "stage_ms": {
+            "minhash_ms": 10,
+            "lsh_ms": 20,
+            "oversample_ms": 5,
+            "bk_ms": 9999.99,
+            "union_ms": 1,
+            "total_ms": 10035.99,
+        },
+    }
+    dd = DedupDiagnostic(
+        run_id=rid,
+        step_idx=3,
+        sizes_hist={"1": 50000},
+        hamming_hist={"hd0": 10, "hd1": 2},
+        perf_json=perf_in,
+    )
+    db_session.add(dd)
+    db_session.commit()
+    db_session.expire_all()
+    q = db_session.query(DedupDiagnostic).filter_by(run_id=rid, step_idx=3).first()
+    stage_ms = q.perf_json["stage_ms"]
+    assert "bk_ms" in stage_ms
+    bk_val = stage_ms["bk_ms"]
+    assert isinstance(bk_val, (int, float))
+    assert bk_val >= 0
+    assert abs(bk_val - 9999.99) < 1e-3
+
+
+def test_DM18_lsh_candidate_count_integer_type(db_session):
+    wid = _make_wid(db_session)
+    rid = "p-dm18" + "x" * 27
+    _make_run(db_session, wid, rid)
+    perf_in = {
+        "version": "w12-hybrid-v1",
+        "lsh_candidates": 12450,
+        "lsh_candidate_count": 12450,
+    }
+    dd = DedupDiagnostic(
+        run_id=rid,
+        step_idx=1,
+        sizes_hist={"1": 50000},
+        hamming_hist={"hd0": 100},
+        perf_json=perf_in,
+    )
+    db_session.add(dd)
+    db_session.commit()
+    db_session.expire_all()
+    q = db_session.query(DedupDiagnostic).filter_by(run_id=rid, step_idx=1).first()
+    has_count = "lsh_candidates" in q.perf_json or "lsh_candidate_count" in q.perf_json
+    assert has_count, "lsh_candidates or lsh_candidate_count key missing in perf_json"
+    cnt_val = q.perf_json.get("lsh_candidate_count", q.perf_json.get("lsh_candidates", -1))
+    assert isinstance(cnt_val, int)
+    assert cnt_val >= 0
+    assert cnt_val == 12450
+
+
+def test_DM19_lsh_filter_ratio_float_between_0_and_1(db_session):
+    wid = _make_wid(db_session)
+    rid = "p-dm19" + "x" * 27
+    _make_run(db_session, wid, rid)
+    ratio_val = 0.001245
+    perf_in = {
+        "version": "w12-hybrid-v1",
+        "lsh_candidate_filter_ratio": ratio_val,
+        "lsh_filter_ratio": ratio_val,
+    }
+    dd = DedupDiagnostic(
+        run_id=rid,
+        step_idx=1,
+        sizes_hist={"1": 50000},
+        hamming_hist={},
+        perf_json=perf_in,
+    )
+    db_session.add(dd)
+    db_session.commit()
+    db_session.expire_all()
+    q = db_session.query(DedupDiagnostic).filter_by(run_id=rid, step_idx=1).first()
+    has_ratio = "lsh_candidate_filter_ratio" in q.perf_json or "lsh_filter_ratio" in q.perf_json
+    assert has_ratio, "lsh_candidate_filter_ratio or lsh_filter_ratio key missing"
+    r_val = q.perf_json.get("lsh_filter_ratio", q.perf_json.get("lsh_candidate_filter_ratio", -1))
+    assert isinstance(r_val, (int, float))
+    assert 0.0 <= float(r_val) <= 1.0
+    assert abs(float(r_val) - ratio_val) < 1e-6
+
+
+def test_DM20_over_prefix_count_integer_nonnegative(db_session):
+    wid = _make_wid(db_session)
+    rid = "p-dm20" + "x" * 27
+    _make_run(db_session, wid, rid)
+    op_cnt = 8421
+    perf_in = {
+        "version": "w12-hybrid-v1",
+        "oversample_prefix": True,
+        "over_prefix_count": op_cnt,
+        "oversample_prefix_pair_count": op_cnt,
+    }
+    dd = DedupDiagnostic(
+        run_id=rid,
+        step_idx=1,
+        sizes_hist={"1": 50000},
+        hamming_hist={"hd0": 10, "hd3": 1},
+        perf_json=perf_in,
+    )
+    db_session.add(dd)
+    db_session.commit()
+    db_session.expire_all()
+    q = db_session.query(DedupDiagnostic).filter_by(run_id=rid, step_idx=1).first()
+    has_op = (
+        "over_prefix_count" in q.perf_json
+        or "oversample_prefix_pair_count" in q.perf_json
+        or "oversample_prefix" in q.perf_json
+    )
+    assert has_op, "oversample-related key missing in perf_json (over_prefix_count / oversample_prefix_pair_count / oversample_prefix)"
+    if "over_prefix_count" in q.perf_json:
+        cnt = q.perf_json["over_prefix_count"]
+        assert isinstance(cnt, int)
+        assert cnt >= 0
+        assert cnt == op_cnt
+    elif "oversample_prefix_pair_count" in q.perf_json:
+        cnt = q.perf_json["oversample_prefix_pair_count"]
+        assert isinstance(cnt, int)
+        assert cnt >= 0
+        assert cnt == op_cnt
+    else:
+        assert q.perf_json["oversample_prefix"] is True or isinstance(q.perf_json["oversample_prefix"], bool)

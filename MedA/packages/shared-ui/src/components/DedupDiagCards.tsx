@@ -9,6 +9,17 @@ export interface DedupPerf {
   parallel_eff_x: number;
   slo_2000: number;
   ratio: number;
+  stage_ms?: {
+    minhash_ms?: number;
+    lsh_ms?: number;
+    oversample_ms?: number;
+    bk_ms?: number;
+    union_ms?: number;
+    total_ms?: number;
+  };
+  lsh_candidates?: number;
+  lsh_candidate_filter_ratio?: number;
+  oversample_prefix?: boolean;
 }
 
 export interface DedupDiag {
@@ -381,9 +392,61 @@ export function DedupPerfCard({ perf }: { perf: DedupPerf }): JSX.Element {
     },
   ];
 
+  const minhashMs = perf.stage_ms?.minhash_ms ?? 0;
+  const lshCandidates = perf.lsh_candidates ?? 0;
+  const lshFilterRatio = perf.lsh_candidate_filter_ratio ?? 0;
+  const oversampleEnabled = perf.oversample_prefix ? 1 : 0;
+
   return _cardContainer(
     <>
       <h4 data-testid="dedup-perf-title" style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, margin: 0 }}>BK-Tree 性能</h4>
+      <div data-testid="hybrid-chips-row" style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        <span
+          data-testid="chip-minhash"
+          title="MinHash"
+          style={{
+            padding: "3px 10px",
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 600,
+            background: "#dbeafe",
+            color: "#1e40af",
+            border: "1px solid #93c5fd",
+          }}
+        >
+          MinHash · {minhashMs.toFixed(1)} ms
+        </span>
+        <span
+          data-testid="chip-lsh-filter"
+          title="LSH Filter"
+          style={{
+            padding: "3px 10px",
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 600,
+            background: "#fae8ff",
+            color: "#86198f",
+            border: "1px solid #f0abfc",
+          }}
+        >
+          LSH Filter · {lshCandidates.toLocaleString()} cand ({(lshFilterRatio * 100).toFixed(1)}%)
+        </span>
+        <span
+          data-testid="chip-oversample"
+          title="Oversample"
+          style={{
+            padding: "3px 10px",
+            borderRadius: 999,
+            fontSize: 12,
+            fontWeight: 600,
+            background: "#fef3c7",
+            color: "#92400e",
+            border: "1px solid #fcd34d",
+          }}
+        >
+          Oversample · prefix {oversampleEnabled}
+        </span>
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
         {rows.map((r) => (
           <div

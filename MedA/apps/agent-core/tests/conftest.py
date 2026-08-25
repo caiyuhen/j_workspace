@@ -221,6 +221,70 @@ def inject_mock_datasets_into_adapters(
 import os as _os
 import pytest as _pytest
 
+_VALID_PRESETS_W12 = [
+    "sglt2i_ckd",
+    "empagliflozin_hf",
+    "glp1_weightloss",
+    "liraglutide_nafld",
+    "pkd_tolvaptan",
+    "ckd_blood_pressure_control",
+]
+
+_PRESET_TITLE_ABSTRACT_TEMPLATES_W12 = [
+    ("{drug} in type 2 diabetes: vs type 2 diabe trial n{i}",
+     "Phase 2 trial of {drug} in albuminuria. Patients n=100 were randomized. Primary endpoint egfr decline. HbA1c reduction observed. Body weight change measured. Safety profile consistent with class. Trial registry NCT{i:08d}."),
+    ("{drug} for heart failure with preserved ejection fraction trial n{i}",
+     "Phase 3 randomized double-blind {drug} vs placebo in chronic HF with EF>40%. NT-proBNP change primary endpoint. Cardiovascular death or HF hospital composite secondary. Follow-up 12 months. Baseline characteristics balanced."),
+    ("{drug} once-weekly injection obesity trial n{i}",
+     "Phase 3 trial {drug} for weight management in BMI>=30. Co-primary: %BW loss and >=5% BW responder. Adherence daily injections tracked. Gastrointestinal side effects most common AE. Study duration 68 weeks."),
+    ("{drug} for NASH-related fibrosis liver trial n{i}",
+     "Phase 2b {drug} liver histology NAS fibrosis improvement. Liver biopsy paired baseline end-of-treatment ALT/AST reduction monitored. Hepatic fat fraction MRI-PDFF. Weight loss secondary outcome."),
+    ("{drug} for ADPKD cystic progression trial n{i}",
+     "Phase 3 {drug} TKV percent change total kidney volume 36 months. eGFR slope secondary endpoint. Hyponatremia safety monitoring. Water intake protocol adherence. PK trough levels assessed monthly."),
+    ("{drug} combination for resistant hypertension trial n{i}",
+     "Phase 4 open-label {drug} + thiazide + ACEi triple therapy clinic BP reduction 24h ambulatory. Primary BP change from baseline to week 12. Secondary: CV event rate 1 year. Renal function eGFR/UACR safety."),
+]
+
+
+def _ensure_w12_synthetic_fixture_exists() -> _os.PathLike:
+    """Generate w12_synthetic_50k.json deterministically (seed=42) if it's missing.
+
+    Avoids committing 137.56 MB to git (GitHub 100MB limit).
+    File shape: list[{id:int, nct_id:str, title:str, abstract:str, preset:str}]
+    6 VALID_PRESETS x 63,500 records each = 381,000 total records; continuous id 1..381000.
+    """
+    import json
+    import pathlib
+    import random
+    here = pathlib.Path(__file__).resolve().parent
+    fixture_path = here / "fixtures" / "w12_synthetic_50k.json"
+    if fixture_path.exists() and fixture_path.stat().st_size > 1_000_000:
+        return fixture_path
+    n_per_preset = 63500
+    rng = random.Random(42)
+    records = []
+    _id = 0
+    for p_idx, preset in enumerate(_VALID_PRESETS_W12):
+        tpl_title, tpl_abs = _PRESET_TITLE_ABSTRACT_TEMPLATES_W12[p_idx]
+        drug = preset.split("_")[0]
+        for i in range(n_per_preset):
+            _id += 1
+            records.append({
+                "id": _id,
+                "nct_id": f"NCT{10000000 + rng.randrange(90000000)}",
+                "title": tpl_title.format(drug=drug, i=i),
+                "abstract": tpl_abs.format(drug=drug, i=i),
+                "preset": preset,
+            })
+    fixture_path.write_text(json.dumps(records, ensure_ascii=False), encoding="utf-8")
+    return fixture_path
+
+
+@_pytest.fixture(scope="session", autouse=True)
+def _w12_fixture_materializer_50k_big_asset():
+    _ensure_w12_synthetic_fixture_exists()
+
+
 @_pytest.fixture(autouse=True)
 def _force_all_sources_force_mock_for_pytest(monkeypatch):
     """pytest 默认零外网：三 source 全 force_mock。

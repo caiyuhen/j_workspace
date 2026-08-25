@@ -6,10 +6,12 @@ import json
 from pathlib import Path
 from app.services.simhash import (
     find_duplicates_bktree,
+    find_duplicates_hybrid,
     _find_duplicates_pairwise_ground_truth,
     simhash64,
     hamming_distance,
     SIMHASH_HAMMING_THRESHOLD as THR,
+    FALLBACK_N_PARITY,
 )
 
 
@@ -402,3 +404,292 @@ def test_P18_ckd_blood_pressure_control_shuffle_parity_kept_set(preset_records):
     if s_orig != s_shuf:
         _print_set_diff("orig", s_orig, "shuf", s_shuf)
     assert s_orig == s_shuf, f"P18 shuffle parity failed: |orig|={len(s_orig)} |shuf|={len(s_shuf)}"
+
+
+# ============================================================
+# P19-P42 · D1-3 APPEND 24 tests · 6 preset × 4 sizes (500/1k/5k/10k)
+# BK kept_ids set == Hybrid kept_ids set (fallback mode: n≤10000 → BK-only)
+# ============================================================
+EXTRA_SIZES = [500, 1000, 5000, 10000]
+SIZE_LABELS = {500: "n500", 1000: "n1k", 5000: "n5k", 10000: "n10k"}
+PRESET_IDX = {p: i for i, p in enumerate(PRESETS)}
+
+
+def _records_for_preset_size(preset: str, n: int) -> list[dict]:
+    base = _synthetic_records_for_preset(preset, max(n, 200))
+    if len(base) >= n:
+        return base[:n]
+    extra = _synthetic_records_for_preset(preset, n + 200)
+    return extra[:n]
+
+
+def test_P19_sglt2i_ckd_n500_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("sglt2i_ckd", 500)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P19 BK vs Hybrid parity n500: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P20_empagliflozin_hf_n500_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("empagliflozin_hf", 500)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P20 BK vs Hybrid parity n500: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P21_glp1_weightloss_n500_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("glp1_weightloss", 500)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P21 BK vs Hybrid parity n500: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P22_liraglutide_nafld_n500_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("liraglutide_nafld", 500)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P22 BK vs Hybrid parity n500: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P23_pkd_tolvaptan_n500_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("pkd_tolvaptan", 500)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P23 BK vs Hybrid parity n500: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P24_ckd_blood_pressure_control_n500_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("ckd_blood_pressure_control", 500)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P24 BK vs Hybrid parity n500: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P25_sglt2i_ckd_n1k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("sglt2i_ckd", 1000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P25 BK vs Hybrid parity n1k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P26_empagliflozin_hf_n1k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("empagliflozin_hf", 1000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P26 BK vs Hybrid parity n1k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P27_glp1_weightloss_n1k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("glp1_weightloss", 1000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P27 BK vs Hybrid parity n1k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P28_liraglutide_nafld_n1k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("liraglutide_nafld", 1000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P28 BK vs Hybrid parity n1k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P29_pkd_tolvaptan_n1k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("pkd_tolvaptan", 1000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P29 BK vs Hybrid parity n1k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P30_ckd_blood_pressure_control_n1k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("ckd_blood_pressure_control", 1000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P30 BK vs Hybrid parity n1k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P31_sglt2i_ckd_n5k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("sglt2i_ckd", 5000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P31 BK vs Hybrid parity n5k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P32_empagliflozin_hf_n5k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("empagliflozin_hf", 5000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P32 BK vs Hybrid parity n5k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P33_glp1_weightloss_n5k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("glp1_weightloss", 5000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P33 BK vs Hybrid parity n5k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P34_liraglutide_nafld_n5k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("liraglutide_nafld", 5000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P34 BK vs Hybrid parity n5k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P35_pkd_tolvaptan_n5k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("pkd_tolvaptan", 5000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P35 BK vs Hybrid parity n5k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P36_ckd_blood_pressure_control_n5k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("ckd_blood_pressure_control", 5000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P36 BK vs Hybrid parity n5k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P37_sglt2i_ckd_n10k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("sglt2i_ckd", 10000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P37 BK vs Hybrid parity n10k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P38_empagliflozin_hf_n10k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("empagliflozin_hf", 10000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P38 BK vs Hybrid parity n10k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P39_glp1_weightloss_n10k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("glp1_weightloss", 10000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P39 BK vs Hybrid parity n10k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P40_liraglutide_nafld_n10k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("liraglutide_nafld", 10000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P40 BK vs Hybrid parity n10k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P41_pkd_tolvaptan_n10k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("pkd_tolvaptan", 10000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P41 BK vs Hybrid parity n10k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+def test_P42_ckd_blood_pressure_control_n10k_bk_eq_hybrid_parity():
+    records = _records_for_preset_size("ckd_blood_pressure_control", 10000)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, _ = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID", s_h)
+    assert s_bk == s_h, f"P42 BK vs Hybrid parity n10k: |BK|={len(s_bk)} |H|={len(s_h)}"
+
+
+# ============================================================
+# D1-3 Red反证 test · monkey.patch FALLBACK_N → tiny 100
+# Force n=200 go through full 3-stage hybrid → still equals BK set (0 FN/FP)
+# ============================================================
+def test_P43_RED_disproof_monkeypatch_fallback_small_n_full_hybrid_eq_bk(monkeypatch):
+    import app.services.simhash as simhash_mod
+
+    monkeypatch.setattr(simhash_mod, "FALLBACK_N_PARITY", 100)
+
+    records = _records_for_preset_size("sglt2i_ckd", 200)
+    kept_bk, _ = asyncio.run(find_duplicates_bktree(records, THR, n_jobs=8, enable_parity_check=False))
+    kept_h, diag_h = find_duplicates_hybrid(records, THR, n_jobs=8, enable_parity_check=False)
+
+    perf = diag_h.get("perf_json", {})
+    assert perf.get("fallback_used") is False, (
+        "RED反证: monkeypatch FALLBACK_N=100 后 n=200 应走完整 3-stage hybrid (fallback_used=False)"
+    )
+    assert perf.get("version") == "w12-hybrid-v1"
+
+    s_bk, s_h = set(kept_bk), set(kept_h)
+    fn = len(s_bk - s_h)
+    fp = len(s_h - s_bk)
+    if s_bk != s_h:
+        _print_set_diff("BK", s_bk, "HYBRID-3stage", s_h)
+        print(f"  FN (BK has but Hybrid missing) = {fn}")
+        print(f"  FP (Hybrid has but BK missing)  = {fp}")
+    assert fn == 0 and fp == 0, (
+        f"RED反证 FAIL: full 3-stage hybrid vs BK 0 FN/FP required. "
+        f"Got FN={fn}, FP={fp}, |BK|={len(s_bk)}, |H|={len(s_h)}"
+    )

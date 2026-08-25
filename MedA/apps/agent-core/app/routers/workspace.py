@@ -2524,3 +2524,88 @@ def w11_get_pipeline_step_diag(
             },
         )
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SchemeX: ValidateBeforeCreate (max≤50000) W12 D3-2 APPEND-ONLY BLOCK
+# ══════════════════════════════════════════════════════════════════════════════
+MAX_RECORDS_HARD_CAP: int = 50000
+
+
+class _SchemeXValidationError(Exception):
+    def __init__(self, code: str, detail: str):
+        self.code = code
+        self.detail = detail
+        super().__init__(f"{code}: {detail}")
+
+
+def ValidateBeforeCreate(
+    *,
+    preset: str,
+    mode: str,
+    max_records: int,
+    valid_presets: list[str] | None = None,
+) -> None:
+    """SchemeX 前置校验器：Pipeline Run 创建前校验。
+
+    校验规则：
+    1. preset 必须在 valid_presets 列表中（若提供）
+    2. mode 必须是 "snapshot" 或 "live"
+    3. max_records 必须是整数且 1 ≤ max ≤ 50000 (MAX_RECORDS_HARD_CAP)
+
+    Raises:
+        _SchemeXValidationError: 任一校验失败时抛出，含 code + detail。
+    """
+    if valid_presets is not None and preset not in valid_presets:
+        raise _SchemeXValidationError(
+            code="SCHEMEX_INVALID_PRESET",
+            detail=f"preset '{preset}' not in valid set: {valid_presets}",
+        )
+
+    if mode not in ("snapshot", "live"):
+        raise _SchemeXValidationError(
+            code="SCHEMEX_INVALID_MODE",
+            detail=f"mode must be 'snapshot' or 'live', got '{mode}'",
+        )
+
+    if not isinstance(max_records, int) or isinstance(max_records, bool):
+        raise _SchemeXValidationError(
+            code="SCHEMEX_MAXRECORDS_TYPE",
+            detail=f"max_records must be int, got {type(max_records).__name__}",
+        )
+
+    if not (1 <= max_records <= MAX_RECORDS_HARD_CAP):
+        raise _SchemeXValidationError(
+            code="SCHEMEX_MAXRECORDS_OOB",
+            detail=(
+                f"max_records must satisfy 1 ≤ N ≤ {MAX_RECORDS_HARD_CAP}, "
+                f"got {max_records}"
+            ),
+        )
+
+
+def schemex_validate_before_create_or_400(
+    *,
+    preset: str,
+    mode: str,
+    max_records: int,
+    valid_presets: list[str] | None = None,
+) -> None:
+    """HTTP 友好包装：校验失败抛出 HTTP 400。"""
+    try:
+        ValidateBeforeCreate(
+            preset=preset,
+            mode=mode,
+            max_records=max_records,
+            valid_presets=valid_presets,
+        )
+    except _SchemeXValidationError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "error": exc.code,
+                "detail": exc.detail,
+                "scheme": "SchemeX",
+                "hard_cap": MAX_RECORDS_HARD_CAP,
+            },
+        )
+

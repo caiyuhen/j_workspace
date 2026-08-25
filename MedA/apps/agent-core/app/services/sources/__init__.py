@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Final
 
 from .protocol import SourceAdapter
-from .pubmed_adapter import PubMedAdapter
+from .pubmed_adapter import PubMedAdapter, _load_preset_50k
 from .cnki_adapter import CnkiAdapter
 from .wanfang_adapter import WanfangAdapter
 

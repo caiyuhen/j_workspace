@@ -432,3 +432,44 @@ def _load_preset_snapshot_2000(preset: str) -> list[dict]:
         })
     _SNAPSHOT_CACHE_2000[preset] = records
     return records
+
+# ---- APPEND: Wave 12 50k Fixture Loader (NOTOUCH L1-238) ----
+_SNAPSHOT_CACHE_50K: dict[str, list[dict]] = {}
+_FIXTURE_50K_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    "..", "..", "tests", "fixtures", "w12_synthetic_50k.json"
+)
+
+def _load_preset_50k(preset_name: str, size_n: int) -> list[dict]:
+    """Wave 12 fixture helper: loads from w12_synthetic_50k.json (381k total records),
+    filters by preset, then returns first N=size_n records.
+
+    Fixture structure: top-level list of 381k records across 6 preset groups × 63500.
+    Each record has: id, nct_id, title, abstract, preset (plus optional authors/journal/year).
+    Cached in-memory per-preset so subsequent calls skip full JSON parse.
+
+    Args:
+        preset_name: one of 6 presets (sglt2i_ckd, empagliflozin_hf, glp1_weightloss,
+            liraglutide_nafld, pkd_tolvaptan, ckd_blood_pressure_control)
+        size_n: number of records to take from the top of that preset's slice
+
+    Returns:
+        list[dict]: first N records for the given preset from the fixture slice
+    """
+    import json as _json
+    if preset_name in _SNAPSHOT_CACHE_50K:
+        return _SNAPSHOT_CACHE_50K[preset_name][:size_n]
+    fixture_abs = os.path.abspath(_FIXTURE_50K_PATH)
+    with open(fixture_abs, "r", encoding="utf-8") as f:
+        all_records = _json.load(f)
+    presets_seen: dict[str, list[dict]] = {}
+    for r in all_records:
+        p = r.get("preset")
+        if p not in presets_seen:
+            presets_seen[p] = []
+        presets_seen[p].append(r)
+    for p_key, p_list in presets_seen.items():
+        _SNAPSHOT_CACHE_50K[p_key] = p_list
+    if preset_name not in _SNAPSHOT_CACHE_50K:
+        return []
+    return _SNAPSHOT_CACHE_50K[preset_name][:size_n]

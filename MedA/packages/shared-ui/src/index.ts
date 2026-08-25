@@ -147,3 +147,7 @@ export { NewRunModal } from "./components/NewRunModal";
 export { GradeDistributionCard } from "./components/GradeDistributionCard";
 export type { PipelineRunStatus, PipelineMode, PipelineRunSummary, PipelineStepInfo, PipelineRunDetail, PipelineCompareResult } from "@meda/shared-sdk";
 export * from './components/DedupDiagCards';
+export { BenchDashboardSummary } from "./components/bench/BenchDashboardSummary";
+export { BenchDashboardPerSize } from "./components/bench/BenchDashboardPerSize";
+export { BenchDashboardCommitCompare } from "./components/bench/BenchDashboardCommitCompare";
+export { BenchDashboardAlertLog } from "./components/bench/BenchDashboardAlertLog";

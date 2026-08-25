@@ -251,3 +251,86 @@ async def test_S8_parity_breaks_on_hacked_pairwise_truth_raises(db_session):
             await _exec_step1_real_dedup(run, ctx)
     finally:
         _sh_mod._find_duplicates_pairwise_ground_truth = orig_pairwise
+
+
+# =============== W12 EXTENSION APPEND EOF ===============
+from app.services.sources.pubmed_adapter import _load_preset_50k
+from app.services.simhash import find_duplicates_bktree
+
+
+async def _run_engine_with_ctx(size: int, preset: str):
+    wid = _make_wid()
+    run = create_pipeline_run(wid, preset, max_records=min(size, 50000))
+    mark_step_success(run, 0, 100, size, size, attempt_no=1)
+    records = _load_preset_50k(preset, size)
+    ctx = {"fetched_records": records}
+    await _exec_step1_real_dedup(run, ctx)
+    with Session(engine) as ss:
+        dd = ss.exec(
+            select(DedupDiagnostic).where(
+                DedupDiagnostic.run_id == run.id,
+                DedupDiagnostic.step_idx == 1,
+            )
+        ).first()
+    return ctx, dd
+
+
+_N10K_FALLBACK_PARAMS = [
+    (500, "sglt2i_ckd"),
+    (1000, "sglt2i_ckd"),
+    (2000, "sglt2i_ckd"),
+    (10000, "sglt2i_ckd"),
+    (10000, "empagliflozin_hf"),
+]
+
+
+@pytest.mark.parametrize("size,preset", _N10K_FALLBACK_PARAMS)
+async def test_W12_N10k_fallback_used_true_parity_bk(size, preset, db_session):
+    ctx, dd = await _run_engine_with_ctx(size, preset)
+    assert dd is not None
+    assert dd.perf_json is not None
+    assert dd.perf_json.get("fallback_used") is True, (
+        f"preset={preset} N={size}: expected fallback_used=True, got {dd.perf_json.get('fallback_used')}"
+    )
+    records = _load_preset_50k(preset, size)
+    kept_bk, _ = await find_duplicates_bktree(records, n_jobs=8, enable_parity_check=(size <= 200))
+    kept_engine = [r["id"] for r in ctx.get("kept_records", [])]
+    assert set(kept_engine) == set(kept_bk), (
+        f"preset={preset} N={size}: fallback parity FAILED engine={len(kept_engine)} vs BK-only={len(kept_bk)}"
+    )
+
+
+_N50K_HYBRID_PARAMS = [
+    (10000, "sglt2i_ckd"),
+    (10000, "empagliflozin_hf"),
+    (10000, "glp1_weightloss"),
+    (10000, "liraglutide_nafld"),
+    (50000, "pkd_tolvaptan"),
+]
+
+
+@pytest.mark.parametrize("size,preset", _N50K_HYBRID_PARAMS)
+async def test_W12_N50k_hybrid_fallback_false_version_present(size, preset, db_session):
+    if size == 50000:
+        try:
+            ctx, dd = await _run_engine_with_ctx(size, preset)
+        except MemoryError:
+            pytest.skip(f"N50k CI only (memory limit locally) preset={preset}")
+    else:
+        ctx, dd = await _run_engine_with_ctx(size, preset)
+    assert dd is not None
+    assert dd.perf_json is not None
+    perf = dd.perf_json
+    if size == 10000:
+        pass
+    else:
+        assert perf.get("fallback_used") is False, (
+            f"preset={preset} N={size}: expected hybrid fallback_used=False, got {perf.get('fallback_used')}"
+        )
+    assert perf.get("version") == "w12-hybrid-v1", (
+        f"preset={preset} N={size}: version expected w12-hybrid-v1, got {perf.get('version')}"
+    )
+    if size > 10000:
+        assert "lsh_candidates" in perf
+        assert isinstance(perf["lsh_candidates"], int)
+

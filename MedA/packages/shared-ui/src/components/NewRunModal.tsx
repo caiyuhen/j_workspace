@@ -207,8 +207,8 @@ export function NewRunModal(props: NewRunModalProps): JSX.Element | null {
             value={maxRecordsStr}
             onChange={(e) => setMaxRecordsStr(e.target.value)}
             min={1}
-            max={2000}
-            step={50}
+            max={50000}
+            step={250}
             disabled={preset === null}
             style={{
               width: "100%",

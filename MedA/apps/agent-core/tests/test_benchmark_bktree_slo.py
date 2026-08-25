@@ -234,3 +234,71 @@ def test_Low_std_N5000(bench_stats_cache):
         assert cv <= 0.25, (
             f"N=5000 std/median={cv:.3f} > 0.25 (std={s['std_ms']:.1f} med={s['median_ms']:.1f})"
         )
+
+
+# =============== W12 EXTENSION APPEND EOF ===============
+from app.services.sources.pubmed_adapter import _load_preset_50k
+
+
+W12_BENCH_SIZES = [500, 1000, 2000, 10000, 50000]
+W12_SLO_SOFT_MS = {500: 1300, 1000: 1950, 2000: 3900, 10000: 9600, 50000: 45000}
+W12_SLO_HARD_MS = {500: 2600, 1000: 3900, 2000: 7800, 10000: 19200, 50000: 90000}
+W12_BENCH_PRESET = "sglt2i_ckd"
+
+
+def _w12_percentile(values: list[float], pct: float) -> float:
+    sorted_v = sorted(values)
+    k = (len(sorted_v) - 1) * (pct / 100.0)
+    f = int(k)
+    c = f + 1
+    if c >= len(sorted_v):
+        return sorted_v[-1]
+    d = k - f
+    return sorted_v[f] * (1 - d) + sorted_v[c] * d
+
+
+def _w12_collect_durations_ms(n: int, warmup: int = 2, run: int = 3, cooldown_s: float = 2.0):
+    from app.services.simhash import find_duplicates_hybrid
+    records = _load_preset_50k(W12_BENCH_PRESET, n)
+    for w in range(warmup):
+        asyncio.run(find_duplicates_hybrid(records, n_jobs=8, enable_parity_check=(n <= 200)))
+        time.sleep(cooldown_s)
+    durations_ms = []
+    for r in range(run):
+        t0 = perf_counter()
+        asyncio.run(find_duplicates_hybrid(records, n_jobs=8, enable_parity_check=(n <= 200)))
+        t1 = perf_counter()
+        durations_ms.append((t1 - t0) * 1000.0)
+        if r < run - 1:
+            time.sleep(cooldown_s)
+    return durations_ms
+
+
+@pytest.mark.bench
+@pytest.mark.parametrize("size", W12_BENCH_SIZES)
+def test_W12_p50_under_SLO_soft(size):
+    if size == 50000:
+        pytest.skip("N50k CI only")
+    durations = _w12_collect_durations_ms(size, warmup=2, run=3, cooldown_s=2.0)
+    p50 = statistics.median(durations)
+    import sys
+    print(f"\n  [W12 BENCH N={size}] durations={[round(d,0) for d in durations]}ms  p50={p50:.0f}ms  soft SLO={W12_SLO_SOFT_MS[size]}ms  HARD={W12_SLO_HARD_MS[size]}ms", file=sys.stderr)
+    assert p50 <= W12_SLO_HARD_MS[size], (
+        f"N={size} HARD BLOCK p50={p50:.0f}ms > 2×SLO={W12_SLO_HARD_MS[size]}ms"
+    )
+    assert p50 <= W12_SLO_SOFT_MS[size], (
+        f"N={size} soft SLO p50={p50:.0f}ms > target={W12_SLO_SOFT_MS[size]}ms"
+    )
+
+
+@pytest.mark.bench
+@pytest.mark.parametrize("size", W12_BENCH_SIZES)
+def test_W12_p95_under_1p5x_HARD_bound(size):
+    if size == 50000:
+        pytest.skip("N50k CI only")
+    durations = _w12_collect_durations_ms(size, warmup=2, run=3, cooldown_s=2.0)
+    p95 = _w12_percentile(durations, 95)
+    p95_bound = W12_SLO_HARD_MS[size] * 1.5
+    assert p95 <= p95_bound, (
+        f"N={size} p95={p95:.0f}ms > 1.5×HARD={p95_bound:.0f}ms (durations={[round(d,0) for d in durations]})"
+    )

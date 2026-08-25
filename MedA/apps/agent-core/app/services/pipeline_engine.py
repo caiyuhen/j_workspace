@@ -710,7 +710,7 @@ async def _exec_step1_real_dedup(run: PipelineRun, ctx: dict[str, Any]) -> None:
 
     enable_parity_check = n_in <= 200
 
-    kept_ids, diag = await find_duplicates_bktree(records, n_jobs=8, enable_parity_check=enable_parity_check)
+    kept_ids, diag = await find_duplicates_hybrid(records, n_jobs=8, enable_parity_check=enable_parity_check)
 
     if ctx.get("cancel_flag"):
         return

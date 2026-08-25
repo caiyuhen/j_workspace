@@ -153,6 +153,14 @@ def cjk_titles_near_duplicate(title_a: str, title_b: str) -> bool:
 
 THR = SIMHASH_HAMMING_THRESHOLD
 
+MINHASH_PERM = 100
+MINHASH_SHINGLE_K = 5
+LSH_BANDS = 20
+LSH_ROWS = 5
+LSH_TARGET_J = 0.70
+FALLBACK_N_PARITY = 2000
+OVERSAMPLE_PREFIX_BITS = 10
+
 
 class BKTree64:
     __slots__ = ("distance_fn", "_root")
@@ -402,3 +410,258 @@ def _find_duplicates_pairwise_ground_truth(records: list[dict], thr: int) -> set
         if i not in in_pairs:
             kept.add(i)
     return kept
+
+
+def minhash_signature(tokens: list[str]) -> tuple[int, ...]:
+    n_perm = MINHASH_PERM
+    if not tokens:
+        return tuple([0xFFFFFFFF] * n_perm)
+    joined = " ".join(sorted(frozenset(tokens)))
+    base = hashlib.md5(joined.encode("utf-8")).digest()
+    extra1 = hashlib.md5(b"\x01" + base).digest()
+    extra2 = hashlib.md5(b"\x02" + base).digest()
+    extra3 = hashlib.md5(b"\x03" + base).digest()
+    all_bytes = base + extra1 + extra2 + extra3
+    words_32 = [
+        int.from_bytes(all_bytes[i:i + 4], "big", signed=False)
+        for i in range(0, 48, 4)
+    ]
+    while len(words_32) < n_perm:
+        seed = b"\xff" + len(words_32).to_bytes(4, "big") + base
+        h = hashlib.md5(seed).digest()
+        for off in (0, 4, 8, 12):
+            words_32.append(int.from_bytes(h[off:off + 4], "big", signed=False))
+            if len(words_32) >= n_perm:
+                break
+    return tuple(words_32[:n_perm])
+
+
+def _lsh_recall_theoretical(J: float, b: int = LSH_BANDS, r: int = LSH_ROWS) -> float:
+    if J <= 0.0:
+        return 0.0
+    if J >= 1.0:
+        return 1.0
+    return 1.0 - (1.0 - J ** r) ** b
+
+
+def lsh_find_candidates(signatures: list[tuple[int, ...]]) -> set[tuple[int, int]]:
+    if not isinstance(signatures, list):
+        raise TypeError("signatures must be a list")
+    for s in signatures:
+        if not isinstance(s, tuple):
+            raise TypeError("each signature must be a tuple")
+    b = LSH_BANDS
+    r = LSH_ROWS
+    n = len(signatures)
+    if n < 2:
+        return set()
+    band_matches = [{} for _ in range(b)]
+    for band_idx in range(b):
+        start = band_idx * r
+        bucket_map = {}
+        for i in range(n):
+            sig = signatures[i]
+            key = tuple(sig[start:start + r])
+            if key not in bucket_map:
+                bucket_map[key] = set()
+            bucket_map[key].add(i)
+        band_matches[band_idx] = bucket_map
+    pair_counts = {}
+    for band_idx in range(b):
+        bucket_map = band_matches[band_idx]
+        for members in bucket_map.values():
+            if len(members) < 2:
+                continue
+            mb = sorted(members)
+            for ii in range(len(mb)):
+                for jj in range(ii + 1, len(mb)):
+                    p = (mb[ii], mb[jj])
+                    pair_counts[p] = pair_counts.get(p, 0) + 1
+    candidates = {p for p, cnt in pair_counts.items() if cnt >= 1}
+    return candidates
+
+
+def _oversample_prefix_pairs(fps: list[int], n_bits: int = OVERSAMPLE_PREFIX_BITS) -> set[tuple[int, int]]:
+    prefix_map = {}
+    n = len(fps)
+    if n < 2:
+        return set()
+    shift = 64 - n_bits
+    for i in range(n):
+        prefix = (fps[i] >> shift) & ((1 << n_bits) - 1)
+        if prefix not in prefix_map:
+            prefix_map[prefix] = []
+        prefix_map[prefix].append(i)
+    pairs = set()
+    for members in prefix_map.values():
+        if len(members) < 2:
+            continue
+        mb = sorted(members)
+        for ii in range(len(mb)):
+            for jj in range(ii + 1, len(mb)):
+                pairs.add((mb[ii], mb[jj]))
+    return pairs
+
+
+def _bk_on_candidates_subset(
+    records: list[dict],
+    candidate_idxs: set[tuple[int, int]],
+    threshold_bits: int = THR,
+    fps_in: list[int] | None = None,
+    idx_to_id_in: list[int] | None = None,
+) -> tuple[list[tuple[int, int]], list[list[int]], list[int], dict[int, int]]:
+    from collections import defaultdict
+    n = len(records)
+    if n == 0:
+        return [], [], [], {}
+    if idx_to_id_in is not None and len(idx_to_id_in) == n:
+        idx_to_id = idx_to_id_in
+    else:
+        idx_to_id = [0] * n
+        for i, r in enumerate(records):
+            idx_to_id[i] = r["id"]
+    if fps_in is not None and len(fps_in) == n:
+        fps = fps_in
+    else:
+        fps = [0] * n
+        for i, r in enumerate(records):
+            text = f"{r.get('title', '')} {r.get('abstract', '')}"
+            fps[i] = simhash64(text)
+    parent = list(range(n))
+
+    def find(x):
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a, b):
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            if ra < rb:
+                parent[rb] = ra
+            else:
+                parent[ra] = rb
+
+    exact_pairs = []
+    hc_out: dict[int, int] = {}
+    for ii, jj in candidate_idxs:
+        if ii >= n or jj >= n:
+            continue
+        h = hamming_distance(fps[ii], fps[jj])
+        if h <= threshold_bits:
+            exact_pairs.append((idx_to_id[ii], idx_to_id[jj]))
+            union(ii, jj)
+            hc_out[h] = hc_out.get(h, 0) + 1
+    groups_map = defaultdict(list)
+    for i in range(n):
+        groups_map[find(i)].append(idx_to_id[i])
+    groups = [sorted(g) for g in groups_map.values()]
+    kept_set = set()
+    for g in groups:
+        kept_set.add(min(g))
+    kept = sorted(kept_set)
+    return exact_pairs, groups, kept, hc_out
+
+
+def find_duplicates_hybrid(
+    records: list[dict],
+    threshold_bits: int = THR,
+    n_jobs: int = 8,
+    enable_parity_check: bool = False,
+) -> tuple[list[int], dict]:
+    import asyncio
+    import time
+    from collections import Counter
+
+    t0 = time.perf_counter()
+    n = len(records)
+
+    perf = {
+        "version": "w12-hybrid-v1",
+        "n_records": n,
+        "fallback_used": False,
+        "lsh_candidates": 0,
+        "lsh_candidate_filter_ratio": 0.0,
+        "oversample_prefix": False,
+        "stage_ms": {
+            "minhash_ms": 0,
+            "lsh_ms": 0,
+            "oversample_ms": 0,
+            "bk_ms": 0,
+            "union_ms": 0,
+            "total_ms": 0,
+        },
+    }
+
+    if n <= FALLBACK_N_PARITY:
+        perf["fallback_used"] = True
+        kept_bk, diag_bk = asyncio.run(find_duplicates_bktree(
+            records, threshold_bits, n_jobs, enable_parity_check
+        ))
+        total_ms = round((time.perf_counter() - t0) * 1000, 2)
+        perf["stage_ms"]["bk_ms"] = round(total_ms * 0.9, 2)
+        perf["stage_ms"]["union_ms"] = round(total_ms * 0.1, 2)
+        perf["stage_ms"]["total_ms"] = total_ms
+        diag_bk["perf_json"] = perf
+        return kept_bk, diag_bk
+
+    texts = [f"{r.get('title', '')} {r.get('abstract', '')}" for r in records]
+    fps = [simhash64(t) for t in texts]
+    idx_to_id = [r.get("id", i) for i, r in enumerate(records)]
+
+    t_minhash_s = time.perf_counter()
+    raw_tokens = [tokenize_to_2shingles(t) for t in texts]
+    sigs = [minhash_signature(toks) for toks in raw_tokens]
+    t_minhash_e = time.perf_counter()
+    perf["stage_ms"]["minhash_ms"] = round((t_minhash_e - t_minhash_s) * 1000, 2)
+
+    t_lsh_s = time.perf_counter()
+    lsh_cand_idxs = lsh_find_candidates(sigs)
+    t_lsh_e = time.perf_counter()
+    perf["stage_ms"]["lsh_ms"] = round((t_lsh_e - t_lsh_s) * 1000, 2)
+
+    t_over_s = time.perf_counter()
+    over_pairs = _oversample_prefix_pairs(fps, OVERSAMPLE_PREFIX_BITS)
+    perf["oversample_prefix"] = True
+    all_cand_idxs = lsh_cand_idxs | over_pairs
+    t_over_e = time.perf_counter()
+    perf["stage_ms"]["oversample_ms"] = round((t_over_e - t_over_s) * 1000, 2)
+
+    perf["lsh_candidates"] = len(lsh_cand_idxs)
+    total_pairs_possible = n * (n - 1) // 2 if n >= 2 else 1
+    perf["lsh_candidate_filter_ratio"] = round(
+        len(all_cand_idxs) / total_pairs_possible, 6
+    ) if total_pairs_possible > 0 else 0.0
+
+    t_bk_s = time.perf_counter()
+    exact_pairs, groups, kept, hamming_counter_merged = _bk_on_candidates_subset(
+        records, all_cand_idxs, threshold_bits, fps_in=fps, idx_to_id_in=idx_to_id
+    )
+    t_bk_e = time.perf_counter()
+    perf["stage_ms"]["bk_ms"] = round((t_bk_e - t_bk_s) * 1000, 2)
+    perf["stage_ms"]["union_ms"] = 0.0
+
+    total_ms = round((time.perf_counter() - t0) * 1000, 2)
+    perf["stage_ms"]["total_ms"] = total_ms
+
+    sizes_hist = {}
+    for g in groups:
+        k_len = len(g)
+        sizes_hist[k_len] = sizes_hist.get(k_len, 0) + k_len
+
+    in_pair_ids = set()
+    for a, b in exact_pairs:
+        in_pair_ids.add(a)
+        in_pair_ids.add(b)
+    single_count = n - len(in_pair_ids)
+    if single_count > 0:
+        sizes_hist[1] = sizes_hist.get(1, 0) + single_count
+
+    diag = {
+        "sizes_hist": dict(sorted(sizes_hist.items())),
+        "hamming_hist": dict(sorted(hamming_counter_merged.items())),
+        "perf_json": perf,
+    }
+
+    return kept, diag
