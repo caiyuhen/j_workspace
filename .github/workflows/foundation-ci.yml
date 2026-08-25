@@ -271,6 +271,9 @@ jobs:
     name: frontend-vitest
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: MedA
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -288,26 +291,27 @@ jobs:
         run: npm ci
 
       - name: Run shared-ui vitest (4 Dashboard 68 + barrel smoke 12)
-        run: npm --workspace MedA/packages/shared-ui run test -- --run --reporter=junit --outputFile.junit=vitest-shared-ui.xml
+        run: npm --workspace packages/shared-ui run test -- --run --reporter=junit --outputFile.junit=vitest-shared-ui.xml
 
       - name: Run shared-sdk vitest
-        run: npm --workspace MedA/packages/shared-sdk run test -- --run --reporter=junit --outputFile.junit=vitest-shared-sdk.xml
+        run: npm --workspace packages/shared-sdk run test -- --run --reporter=junit --outputFile.junit=vitest-shared-sdk.xml
 
       - name: Run apps/admin vitest
-        run: npm --workspace MedA/apps/admin run test -- --run --reporter=junit --outputFile.junit=vitest-admin.xml
+        run: npm --workspace apps/admin run test -- --run --reporter=junit --outputFile.junit=vitest-admin.xml
 
       - name: Run apps/web vitest
-        run: npm --workspace MedA/apps/web run test -- --run --reporter=junit --outputFile.junit=vitest-web.xml
+        run: npm --workspace apps/web run test -- --run --reporter=junit --outputFile.junit=vitest-web.xml
 
       - name: Run apps/desktop vitest
-        run: npm --workspace MedA/apps/desktop run test -- --run --reporter=junit --outputFile.junit=vitest-desktop.xml
+        run: npm --workspace apps/desktop run test -- --run --reporter=junit --outputFile.junit=vitest-desktop.xml
 
       - name: Upload vitest results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: frontend-vitest-results
-          path: "**/vitest-*.xml"
+          path: "MedA/**/vitest-*.xml"
+
 
   deploy-dashboard:
     name: deploy-dashboard
