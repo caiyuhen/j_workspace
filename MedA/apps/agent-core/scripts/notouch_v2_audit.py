@@ -1,13 +1,18 @@
 """NOTOUCH v2 Audit for W12.
 Usage: python scripts/notouch_v2_audit.py <BASELINE_COMMIT>
+Optional env:
+  ANCHOR_PREFIX=str    prepended to each anchor path (e.g. "MedA/" for CI repo
+                       roots where the code monorepo lives one level deeper).
 Exit 0 = PASS, Exit 99 = HARD FAIL (blocks merge).
 Only counts edits to 14 ANCHORS. WL whitelist lines allowed EXACTLY 2 additions:
   1. NewRunModal.tsx L209 max="2000" -> max="50000"   (attr only)
   2. NewRunModal.tsx L211 step="50"  -> step="250"    (attr only)
 Append zones after pre-defined anchor offsets count as 0 WL.
 """
-import sys, subprocess, re, pathlib
-ANCHORS = [
+import sys, subprocess, re, pathlib, os
+_PREFIX = os.environ.get("ANCHOR_PREFIX", "") or ""
+def _p(*parts): return _PREFIX + parts[0]
+_ANCHORS_RAW = [
     ("apps/agent-core/app/services/screening_engine.py", 749),
     ("apps/agent-core/app/services/rob2_engine.py", 66),
     ("apps/agent-core/app/services/abstractor.py", 722),
@@ -23,12 +28,15 @@ ANCHORS = [
     ("packages/shared-ui/src/pages/PipelineRunDetailPage.tsx", 10**9),
     ("packages/shared-ui/src/components/NewRunModal.tsx", 10**9),
 ]
-ALLOWED_WL_LINES_ADDED = {
+ANCHORS = [(_p(raw), ln) for raw, ln in _ANCHORS_RAW]
+_ALLOWED_RAW = {
     "packages/shared-ui/src/components/NewRunModal.tsx": {
         re.compile(r'max=\{?\s*["\']?50000'),
         re.compile(r'step=\{?\s*["\']?250'),
     }
 }
+ALLOWED_WL_LINES_ADDED = {(_PREFIX + k): v for k, v in _ALLOWED_RAW.items()}
+
 
 def main(base: str) -> int:
     bad = []

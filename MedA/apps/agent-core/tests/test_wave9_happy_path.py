@@ -12,7 +12,7 @@ from app.services.screening_engine import (
     calc_funnel_locks_integrity,
     FUNNEL_ORDER,
     query_evidence_artifact_count,
-    bulk_upsert_evidence_artifacts,
+    bulk_insert_evidence_artifacts,
 )
 from app.services.rob2_engine import (
     TL,
@@ -101,7 +101,7 @@ def test_wave9_happy_path_end_to_end(db_session: Session):
     ta_include_eas = []
     for rid in ta_include_ids:
         ta_include_eas.append(
-            EA(
+            dict(
                 literature_record_id=rid,
                 stage="screening_ta",
                 decision="include",
@@ -115,7 +115,7 @@ def test_wave9_happy_path_end_to_end(db_session: Session):
     ta_exclude_eas = []
     for rid in ta_exclude_ids:
         ta_exclude_eas.append(
-            EA(
+            dict(
                 literature_record_id=rid,
                 stage="screening_ta",
                 decision="exclude",
@@ -126,9 +126,9 @@ def test_wave9_happy_path_end_to_end(db_session: Session):
             )
         )
 
-    inserted = bulk_upsert_evidence_artifacts(db_session, ta_include_eas + ta_exclude_eas)
+    inserted = bulk_insert_evidence_artifacts(db_session, ta_include_eas + ta_exclude_eas)
     assert inserted == 40, f"40 TA upserts expected, got {inserted}"
-    db_session.flush()
+    db_session.commit()
 
     ta_include_count = query_evidence_artifact_count(
         db_session, stage="screening_ta", decision="include", project_id=project.id
@@ -139,14 +139,14 @@ def test_wave9_happy_path_end_to_end(db_session: Session):
     assert ta_include_count == 30, f"TA include=30 expected, got {ta_include_count}"
     assert ta_exclude_count == 10, f"TA exclude=10 expected, got {ta_exclude_count}"
 
-    # ========== Step 4: funnel 验证 E3=60 ==========
+    # ========== Step 4: funnel 验证 E3=90（100 - 10 TA excludes） ==========
     e2_ta_excluded = ta_exclude_count
     funnel_ta = calc_funnel_from_records(
         n3=100, n4_dupes_removed=0, e2=e2_ta_excluded
     )
     e3_expected = 100 - e2_ta_excluded
     assert funnel_ta["E3"] == e3_expected, f"E3={e3_expected} expected, got {funnel_ta['E3']}"
-    assert funnel_ta["E3"] == 60, f"E3=60 expected, got {funnel_ta['E3']}"
+    assert funnel_ta["E3"] == 90, f"E3=90 expected, got {funnel_ta['E3']}"
 
     # ========== Step 5: 4 studies ROB-2 — 3 low + 1 some → grade_ro_downgrade = -1 ==========
     rob_study_ids = [r.id for r in records[:4]]
@@ -174,7 +174,7 @@ def test_wave9_happy_path_end_to_end(db_session: Session):
         computed_overall = calc_rob2_overall(meta["domains"])
         assert computed_overall == meta["overall"]
         rob_eas.append(
-            EA(
+            dict(
                 literature_record_id=rid,
                 stage="quality_ro",
                 decision="include",
@@ -187,9 +187,9 @@ def test_wave9_happy_path_end_to_end(db_session: Session):
                 created_by=user.user_id,
             )
         )
-    inserted_rob = bulk_upsert_evidence_artifacts(db_session, rob_eas)
+    inserted_rob = bulk_insert_evidence_artifacts(db_session, rob_eas)
     assert inserted_rob == 4, f"4 ROB-2 upserts expected, got {inserted_rob}"
-    db_session.flush()
+    db_session.commit()
 
     rob_overalls = [TL.LOW, TL.LOW, TL.LOW, TL.SOME]
     downgrade = grade_ro_downgrade(rob_overalls)
@@ -206,7 +206,7 @@ def test_wave9_happy_path_end_to_end(db_session: Session):
     abs_eas = []
     for rid in abs_include_ids:
         abs_eas.append(
-            EA(
+            dict(
                 literature_record_id=rid,
                 stage="screening_fulltext",
                 decision="include",
@@ -222,7 +222,7 @@ def test_wave9_happy_path_end_to_end(db_session: Session):
 
     for rid in abs_review_ids:
         abs_eas.append(
-            EA(
+            dict(
                 literature_record_id=rid,
                 stage="screening_fulltext",
                 decision="review",
@@ -238,7 +238,7 @@ def test_wave9_happy_path_end_to_end(db_session: Session):
 
     for rid in abs_exclude_ids:
         abs_eas.append(
-            EA(
+            dict(
                 literature_record_id=rid,
                 stage="screening_fulltext",
                 decision="exclude",
@@ -253,9 +253,9 @@ def test_wave9_happy_path_end_to_end(db_session: Session):
             )
         )
 
-    inserted_abs = bulk_upsert_evidence_artifacts(db_session, abs_eas)
+    inserted_abs = bulk_insert_evidence_artifacts(db_session, abs_eas)
     assert inserted_abs == 10, f"10 Abstractor upserts expected, got {inserted_abs}"
-    db_session.flush()
+    db_session.commit()
 
     abs_include_count = query_evidence_artifact_count(
         db_session, stage="screening_fulltext", decision="include", project_id=project.id
@@ -270,7 +270,7 @@ def test_wave9_happy_path_end_to_end(db_session: Session):
     assert abs_review_count == 5, f"Abstractor review=5 expected, got {abs_review_count}"
     assert abs_exclude_count == 2, f"Abstractor exclude=2 expected, got {abs_exclude_count}"
 
-    # ========== Step 7: evidence_artifact WHERE decision='include' count = 33 ==========
+    # ========== Step 7: evidence_artifact WHERE decision='include' count = 37 ==========
     ea_include_total = db_session.exec(
         select(func.count(EA.id)).select_from(EA).join(
             LiteratureRecord, EA.literature_record_id == LiteratureRecord.id
@@ -282,9 +282,9 @@ def test_wave9_happy_path_end_to_end(db_session: Session):
         )
     ).one()
 
-    expected_total = 30 + 3
+    expected_total = 30 + 4 + 3
     assert ea_include_total == expected_total, (
-        f"evidence_artifact include count = {expected_total} (30 TA + 3 9c) expected, "
+        f"evidence_artifact include count = {expected_total} (30 TA + 4 ROB-2 + 3 9c) expected, "
         f"got {ea_include_total}"
     )
 
