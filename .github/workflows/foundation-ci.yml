@@ -52,6 +52,7 @@ jobs:
           echo "GITHUB_WORKSPACE=$GITHUB_WORKSPACE"
           cd "$GITHUB_WORKSPACE"
           pwd
+          git fetch --depth=1 origin efbb21d9086e3d50f1ef9c4de9c0e8c1e5e1c8e4 2>/dev/null || true
           if [ -f MedA/apps/agent-core/scripts/notouch_v2_audit.py ]; then
             python MedA/apps/agent-core/scripts/notouch_v2_audit.py efbb21d9086e3d50f1ef9c4de9c0e8c1e5e1c8e4
           else
