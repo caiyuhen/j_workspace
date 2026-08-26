@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
+import App from "../src/App";
 
 describe("desktop renderer", () => {
-  it("exposes the MedA desktop shell title", async () => {
-    const module = await import("../src/App");
-
-    expect(typeof module.default).toBe("function");
+  it("exposes the MedA desktop shell title", () => {
+    expect(typeof App).toBe("function");
   });
 });
