@@ -59,22 +59,29 @@ jobs:
           fi
 
       - name: Run backend unit tests (excl bench/e2e/needs_network)
-        run: >
-          uv run pytest tests
-          --ignore=tests/test_w10_e2e_2preset.py
-          --ignore=tests/test_w11_e2e_2preset_2000.py
-          --ignore=tests/test_w12_e2e_2preset_10k_50k.py
-          -m "not bench and not needs_network"
-          --junitxml=unit-py${{ matrix.python-version }}.xml
-          -p no:cacheprovider
-          --no-header
+        run: |
+          set -o pipefail
+          uv run pytest tests \
+            --ignore=tests/test_w10_e2e_2preset.py \
+            --ignore=tests/test_w11_e2e_2preset_2000.py \
+            --ignore=tests/test_w12_e2e_2preset_10k_50k.py \
+            -m "not bench and not needs_network" \
+            --junitxml=unit-py${{ matrix.python-version }}.xml \
+            -p no:cacheprovider \
+            --no-header \
+            -v \
+            --tb=short \
+            -r f \
+            2>&1 | tee pytest-py${{ matrix.python-version }}.log
 
       - name: Upload unit results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: backend-unit-results-py${{ matrix.python-version }}
-          path: MedA/apps/agent-core/*.xml
+          path: |
+            MedA/apps/agent-core/*.xml
+            MedA/apps/agent-core/pytest-py*.log
 
   backend-e2e-hp:
     name: backend-e2e-hp
