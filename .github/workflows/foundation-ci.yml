@@ -60,8 +60,8 @@ jobs:
 
       - name: Run backend unit tests (excl bench/e2e/needs_network)
         run: |
-          set -o pipefail
-          uv run pytest tests \
+          LOG=pytest-py${{ matrix.python-version }}.log
+          timeout 1500 uv run pytest tests \
             --ignore=tests/test_w10_e2e_2preset.py \
             --ignore=tests/test_w11_e2e_2preset_2000.py \
             --ignore=tests/test_w12_e2e_2preset_10k_50k.py \
@@ -69,10 +69,15 @@ jobs:
             --junitxml=unit-py${{ matrix.python-version }}.xml \
             -p no:cacheprovider \
             --no-header \
-            -v \
+            -x \
             --tb=short \
             -r f \
-            2>&1 | tee pytest-py${{ matrix.python-version }}.log
+            > "$LOG" 2>&1
+          EC=$?
+          echo "pytest exit_code=$EC"
+          echo "--- Last 150 lines of $LOG ---"
+          tail -n 150 "$LOG"
+          exit $EC
 
       - name: Upload unit results
         if: always()

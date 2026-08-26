@@ -30,6 +30,7 @@ def test_unknown_preset_exits_code_2():
         encoding="utf-8",
         errors="replace",
         env=env,
+        timeout=120,
     )
     assert proc.returncode == 2
     assert "Available keys:" in proc.stderr
@@ -163,6 +164,7 @@ main()
         encoding="utf-8",
         errors="replace",
         env=env,
+        timeout=180,
     )
     assert proc.returncode == 0, f"stderr={proc.stderr}\nstdout={proc.stdout}"
     marker = "--- JSON ---"
