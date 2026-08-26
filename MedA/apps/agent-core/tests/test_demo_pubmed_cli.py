@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import subprocess
 import sys
 import types
@@ -19,10 +20,14 @@ from scripts.demo_pubmed_end2end import DEMO_PRESETS_PY, run_pubmed_demo
 
 
 def test_unknown_preset_exits_code_2():
+    env = os.environ.copy()
+    existing_pp = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(SCRIPT_DIR) + (os.pathsep + existing_pp if existing_pp else "")
     proc = subprocess.run(
         [sys.executable, str(SCRIPT_PATH), "nonexistent_xyz_999"],
         capture_output=True,
         text=True,
+        env=env,
     )
     assert proc.returncode == 2
     assert "Available keys:" in proc.stderr
