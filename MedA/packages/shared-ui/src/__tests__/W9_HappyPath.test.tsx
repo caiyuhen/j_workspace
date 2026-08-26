@@ -160,7 +160,7 @@ describe("W9 Happy Path Integration (vitest)", () => {
     expect(e6LabelEl).toBeTruthy();
     expect(e6LabelEl.textContent).toContain(`(${E6})`);
 
-    // (e) rob2EvaluateStudy × 4 (3 low + 1 D1 some) → GRADE 降级 assert -1
+    // (e) rob2Evaluate × 4 (3 low + 1 D1 some) → GRADE 降级 assert -1
     const robStudies = [
       { id: "rob-1", overall: "low" },
       { id: "rob-2", overall: "low" },
@@ -189,7 +189,7 @@ describe("W9 Happy Path Integration (vitest)", () => {
       mockClient.robEval.mockResolvedValueOnce(robResults[i]);
       let robOut!: unknown;
       await act(async () => {
-        robOut = await result.current.rob2EvaluateStudy(robStudies[i].id);
+        robOut = await result.current.rob2Evaluate(robStudies[i].id);
       });
       // 将 rob 结果也加入 state.items（模拟实际行为）
       mockClient.decide.mockResolvedValueOnce(robEA[i]);

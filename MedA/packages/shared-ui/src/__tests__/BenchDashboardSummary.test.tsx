@@ -35,8 +35,9 @@ describe("BenchDashboardSummary (24)", () => {
     expect(container.querySelector("svg")).toBeTruthy();
   });
   it("5 shows 3 runs in title when entries=3", () => {
-    render(<BenchDashboardSummary history={{ ...mkEmpty(), entries: mkEntries(3) }} />);
-    expect(screen.getByText(/3 runs/)).toBeTruthy();
+    const { container } = render(<BenchDashboardSummary history={{ ...mkEmpty(), entries: mkEntries(3) }} />);
+    const title = container.querySelector("h2") as HTMLElement;
+    expect(title.textContent).toContain("3 runs");
   });
   it("6 shows latest N2k value formatted 2 decimals", () => {
     render(<BenchDashboardSummary history={{ ...mkEmpty(), entries: mkEntries(5) }} />);
@@ -51,8 +52,11 @@ describe("BenchDashboardSummary (24)", () => {
     expect(screen.getByText(/40\.40s/)).toBeTruthy();
   });
   it("9 alerts count 0 for data i≤30 (no alerts)", () => {
-    render(<BenchDashboardSummary history={{ ...mkEmpty(), entries: mkEntries(5) }} />);
-    expect(screen.getByText("0", { exact: false })).toBeTruthy();
+    const { container } = render(<BenchDashboardSummary history={{ ...mkEmpty(), entries: mkEntries(5) }} />);
+    const kpiCards = container.querySelectorAll(".grid > div.rounded-lg");
+    const alertsCard = kpiCards[kpiCards.length - 1] as HTMLElement;
+    const valueEl = alertsCard.querySelector(".text-2xl") as HTMLElement;
+    expect(valueEl.textContent).toBe("0");
   });
   it("10 alerts>0 KPI color class has red", () => {
     const { container } = render(<BenchDashboardSummary history={{ ...mkEmpty(), entries: mkEntries(40) }} />);
@@ -60,10 +64,12 @@ describe("BenchDashboardSummary (24)", () => {
     const lastKpi = kpiValues[kpiValues.length - 1] as HTMLElement;
     expect(lastKpi.style.color).toBe("rgb(239, 68, 68)");
   });
-  it("11 latest N10k=WARN i=21 → color #f59e0b class WARN apply", () => {
+  it("11 latest N10k=WARN i=24 → color rgb(245, 158, 11) + value 9.20s", () => {
     const { container } = render(<BenchDashboardSummary history={{ ...mkEmpty(), entries: mkEntries(25) }} />);
-    const text = container.textContent || "";
-    expect(text).toMatch(/WARN|8\.95s/);
+    const kpiValues = container.querySelectorAll(".text-2xl");
+    const n10kKpi = kpiValues[1] as HTMLElement; // index 1 = N=10k (AC4)
+    expect(n10kKpi.style.color).toBe("rgb(245, 158, 11)"); // WARN color
+    expect(n10kKpi.textContent).toBe("9.20s");
   });
   it("12 KPI cards count 4 exactly when data present", () => {
     const { container } = render(<BenchDashboardSummary history={{ ...mkEmpty(), entries: mkEntries(10) }} />);
@@ -111,8 +117,9 @@ describe("BenchDashboardSummary (24)", () => {
   });
   it("23 HARD_BLOCK color used for N=50k KPI when i=40 (over threshold)", () => {
     const { container } = render(<BenchDashboardSummary history={{ ...mkEmpty(), entries: mkEntries(40) }} />);
-    const html = container.innerHTML;
-    expect(html).toMatch(/#ef4444|HARD_BLOCK/);
+    const kpiValues = container.querySelectorAll(".text-2xl");
+    const n50kKpi = kpiValues[2] as HTMLElement; // index 2 = N=50k (AC5)
+    expect(n50kKpi.style.color).toBe("rgb(239, 68, 68)"); // HARD_BLOCK color
   });
   it("24 legend labels include all 5 sizes (N=500/N=1k/N=2k/N=10k/N=50k)", () => {
     const { container } = render(<BenchDashboardSummary history={{ ...mkEmpty(), entries: mkEntries(5) }} />);

@@ -27,24 +27,24 @@ describe("NewRunModal W11 D3-3 (12 it GREEN)", () => {
     return { ...utils, onClose, onConfirm };
   };
 
-  it("T1 默认渲染 max=200 step=50 value=200", () => {
+  it("T1 默认渲染 max=200 step=250 value=200", () => {
     renderModal({ initialPreset: "sglt2i_ckd" });
     const input = screen.getByTestId("input-max-records") as HTMLInputElement;
     expect(input.value).toBe("200");
-    expect(Number(input.getAttribute("max"))).toBe(2000);
-    expect(Number(input.getAttribute("step"))).toBe(50);
+    expect(Number(input.getAttribute("max"))).toBe(50000);
+    expect(Number(input.getAttribute("step"))).toBe(250);
   });
 
-  it("T2 input max属性 = 2000 DOM getAttribute 断言", () => {
+  it("T2 input max属性 = 50000 DOM getAttribute 断言", () => {
     renderModal({ initialPreset: "sglt2i_ckd" });
     const input = screen.getByTestId("input-max-records") as HTMLInputElement;
-    expect(input.getAttribute("max")).toBe("2000");
+    expect(input.getAttribute("max")).toBe("50000");
   });
 
-  it("T3 input step 属性 = 50", () => {
+  it("T3 input step 属性 = 250", () => {
     renderModal({ initialPreset: "sglt2i_ckd" });
     const input = screen.getByTestId("input-max-records") as HTMLInputElement;
-    expect(input.getAttribute("step")).toBe("50");
+    expect(input.getAttribute("step")).toBe("250");
   });
 
   it("T4 fireEvent 拖拽 2000 → value=2000 valid 无 error", () => {

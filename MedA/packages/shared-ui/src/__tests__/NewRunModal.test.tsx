@@ -84,14 +84,14 @@ describe("NewRunModal W10 D3-2 (18 it)", () => {
     expect(onConfirm).not.toHaveBeenCalled();
   });
 
-  it("7: max_records = 201 → 显示 red error \"≤200\" text visible", () => {
-    renderModal();
+  it("7: max_records = 2501 → 显示 red error \"超过最大上限 2500 篇（含 buffer）\" text visible", () => {
+    renderModal({ initialPreset: "sglt2i_ckd" });
     const input = screen.getByTestId("input-max-records") as HTMLInputElement;
-    fireEvent.change(input, { target: { value: "201" } });
+    fireEvent.change(input, { target: { value: "2501" } });
     const err = screen.getByTestId("error-max-records");
     expect(err).toBeTruthy();
     const txt = err.textContent || "";
-    expect(txt.includes("≤200") || txt.includes("200")).toBe(true);
+    expect(txt.includes("2500")).toBe(true);
   });
 
   it("8: max_records = 99 → valid", () => {

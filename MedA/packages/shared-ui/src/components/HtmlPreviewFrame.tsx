@@ -84,6 +84,7 @@ export default function HtmlPreviewFrame({
         title={ariaLabel}
         srcDoc={srcDoc}
         sandbox={sandboxAttr}
+        csp={CSP_CONTENT}
         referrerPolicy="no-referrer"
         loading="lazy"
         role="region"

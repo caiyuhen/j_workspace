@@ -1,5 +1,5 @@
-import { describe, it, expect, fireEvent } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
 import { BenchDashboardPerSize } from "../components/bench/BenchDashboardPerSize";
 import { HistoryPayload } from "../components/bench/BenchDashboardSummary";
@@ -37,14 +37,14 @@ describe("BenchDashboardPerSize (20)", () => {
   });
   it("5 click n500 switches active button", () => {
     const { container } = render(<BenchDashboardPerSize history={base} />);
-    const n500 = Array.from(container.querySelectorAll("button")).find(b => b.textContent === "n500")!;
+    const n500 = Array.from(container.querySelectorAll("button")).find(b => (b.textContent || "").trim() === "n500")!;
     fireEvent.click(n500);
     const active = container.querySelector('button.bg-slate-800');
     expect(active?.textContent).toBe("n500");
   });
   it("6 click 30d switches window active", () => {
     const { container } = render(<BenchDashboardPerSize history={base} />);
-    const b30 = Array.from(container.querySelectorAll("button")).find(b => b.textContent === "30d")!;
+    const b30 = Array.from(container.querySelectorAll("button")).find(b => (b.textContent || "").trim() === "30d")!;
     fireEvent.click(b30);
     expect(container.querySelector('button.bg-indigo-600')?.textContent).toBe("30d");
   });
@@ -60,13 +60,13 @@ describe("BenchDashboardPerSize (20)", () => {
   });
   it("9 click n50k target line y=45s present without crash", () => {
     const { container } = render(<BenchDashboardPerSize history={base} />);
-    const btn = Array.from(container.querySelectorAll("button")).find(b => b.textContent === "n50000")!;
+    const btn = Array.from(container.querySelectorAll("button")).find(b => (b.textContent || "").trim() === "n50000")!;
     fireEvent.click(btn);
     expect(container.querySelector("svg")).toBeTruthy();
   });
   it("10 60d window button click ok", () => {
     const { container } = render(<BenchDashboardPerSize history={base} />);
-    fireEvent.click(Array.from(container.querySelectorAll("button")).find(b => b.textContent === "60d")!);
+    fireEvent.click(Array.from(container.querySelectorAll("button")).find(b => (b.textContent || "").trim() === "60d")!);
     expect(container.querySelector('button.bg-indigo-600')?.textContent).toBe("60d");
   });
   it("11 header text shows selected size placeholder", () => {
@@ -90,7 +90,7 @@ describe("BenchDashboardPerSize (20)", () => {
   });
   it("16 n2000 click switches target 3.0s line", () => {
     const { container } = render(<BenchDashboardPerSize history={base} />);
-    fireEvent.click(Array.from(container.querySelectorAll("button")).find(b=>b.textContent==="n2000")!);
+    fireEvent.click(Array.from(container.querySelectorAll("button")).find(b => (b.textContent || "").trim() === "n2000")!);
     expect(container.querySelector("svg")).toBeTruthy();
   });
   it("17 1000 entries still ok", () => {
@@ -104,7 +104,7 @@ describe("BenchDashboardPerSize (20)", () => {
   });
   it("19 n1000 select header text includes n1000", () => {
     const { container } = render(<BenchDashboardPerSize history={base} />);
-    fireEvent.click(Array.from(container.querySelectorAll("button")).find(b=>b.textContent==="n1000")!);
+    fireEvent.click(Array.from(container.querySelectorAll("button")).find(b => (b.textContent || "").trim() === "n1000")!);
     expect(container.textContent).toContain("n1000");
   });
   it("20 30+30d=60 entries window=60 not crash", () => {

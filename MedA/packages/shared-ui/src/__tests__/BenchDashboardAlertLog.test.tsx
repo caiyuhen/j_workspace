@@ -1,5 +1,5 @@
-import { describe, it, expect, fireEvent } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import React from "react";
 import { BenchDashboardAlertLog } from "../components/bench/BenchDashboardAlertLog";
 import { HistoryPayload } from "../components/bench/BenchDashboardSummary";
@@ -39,18 +39,18 @@ describe("BenchDashboardAlertLog (10)", () => {
   });
   it("5 click HARD_BLOCK filter shows exactly 1 alert row", () => {
     const { container } = render(<BenchDashboardAlertLog history={base} />);
-    const btn = Array.from(container.querySelectorAll("button")).find(b => b.textContent === "HARD_BLOCK")!;
+    const btn = Array.from(container.querySelectorAll("button")).find(b => (b.textContent || "").trim() === "HARD_BLOCK")!;
     fireEvent.click(btn);
     expect(container.querySelectorAll(".divide-y > div").length).toBe(1);
   });
   it("6 click WARN filter → 2 alert rows", () => {
     const { container } = render(<BenchDashboardAlertLog history={base} />);
-    fireEvent.click(Array.from(container.querySelectorAll("button")).find(b => b.textContent === "WARN")!);
+    fireEvent.click(Array.from(container.querySelectorAll("button")).find(b => (b.textContent || "").trim() === "WARN")!);
     expect(container.querySelectorAll(".divide-y > div").length).toBe(2);
   });
   it("7 click PASS filter → 0 rows + No alerts message", () => {
     const { container } = render(<BenchDashboardAlertLog history={base} />);
-    fireEvent.click(Array.from(container.querySelectorAll("button")).find(b => b.textContent === "PASS")!);
+    fireEvent.click(Array.from(container.querySelectorAll("button")).find(b => (b.textContent || "").trim() === "PASS")!);
     expect(container.textContent).toContain("No alerts");
   });
   it("8 HARD_BLOCK severity chip background red #ef4444", () => {
@@ -65,7 +65,7 @@ describe("BenchDashboardAlertLog (10)", () => {
   });
   it("10 click WARN → entries count becomes 2", () => {
     const { container } = render(<BenchDashboardAlertLog history={base} />);
-    fireEvent.click(Array.from(container.querySelectorAll("button")).find(b => b.textContent === "WARN")!);
+    fireEvent.click(Array.from(container.querySelectorAll("button")).find(b => (b.textContent || "").trim() === "WARN")!);
     expect(container.textContent).toMatch(/2 entries/);
   });
 });

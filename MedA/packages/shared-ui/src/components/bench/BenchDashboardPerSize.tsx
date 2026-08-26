@@ -31,8 +31,8 @@ export const BenchDashboardPerSize: React.FC<{ history: HistoryPayload }> = ({ h
           <line x1={padL} y1={padT} x2={padL} y2={padT+ih} stroke="#94a3b8"/>
           <line x1={padL} y1={padT+ih} x2={padL+iw} y2={padT+ih} stroke="#94a3b8"/>
           <line x1={padL} y1={yFor(target_s)} x2={padL+iw} y2={yFor(target_s)} stroke="#dc2626" strokeDasharray="5 5"/>
-          <polyline points={entries.map((e,i)=>`${xFor(i)},${yFor(e.slo[size]?.median_s ?? 0)}`).join(" ")} fill="none" stroke="#2563eb" strokeWidth={2}/>
-          <polyline points={entries.map((e,i)=>`${xFor(i)},${yFor(e.slo[size]?.p95_s ?? 0)}`).join(" ")} fill="none" stroke="#f97316" strokeDasharray="6 3" strokeWidth={2}/>
+          <polyline points={entries.map((e,i)=>`${xFor(i)},${yFor(e.slo?.[size]?.median_s ?? 0)}`).join(" ")} fill="none" stroke="#2563eb" strokeWidth={2}/>
+          <polyline points={entries.map((e,i)=>`${xFor(i)},${yFor(e.slo?.[size]?.p95_s ?? 0)}`).join(" ")} fill="none" stroke="#f97316" strokeDasharray="6 3" strokeWidth={2}/>
         </svg>
       </div>
     </div>

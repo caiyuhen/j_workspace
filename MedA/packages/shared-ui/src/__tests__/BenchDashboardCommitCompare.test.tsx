@@ -1,5 +1,5 @@
-import { describe, it, expect, fireEvent } from "vitest";
-import { render } from "@testing-library/react";
+import { describe, it, expect } from "vitest";
+import { render, fireEvent } from "@testing-library/react";
 import React from "react";
 import { BenchDashboardCommitCompare } from "../components/bench/BenchDashboardCommitCompare";
 import { HistoryPayload } from "../components/bench/BenchDashboardSummary";
@@ -55,9 +55,9 @@ describe("BenchDashboardCommitCompare (14)", () => {
   });
   it("8 select base index 0 & head 1 default", () => {
     const { container } = render(<BenchDashboardCommitCompare history={mk(false)} />);
-    const sels = container.querySelectorAll("select");
-    expect(Number(sels[0].getAttribute("value"))).toBe(0);
-    expect(Number(sels[1].getAttribute("value"))).toBe(1);
+    const sels = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+    expect(Number(sels[0].value)).toBe(0);
+    expect(Number(sels[1].value)).toBe(1);
   });
   it("9 changing base select updates diff bar positions", () => {
     const { container } = render(<BenchDashboardCommitCompare history={mk(false)} />);
