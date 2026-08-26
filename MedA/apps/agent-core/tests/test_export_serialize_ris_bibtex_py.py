@@ -9,8 +9,8 @@ FIXTURE_DIR = os.path.join(os.path.dirname(__file__), "fixtures", "export")
 
 
 def _read_text_normalize(path: str) -> str:
-    with open(path, "r", encoding="utf-8") as f:
-        return f.read().replace("\r\n", "\n").replace("\r", "\n")
+    with open(path, "r", encoding="utf-8-sig") as f:
+        return f.read().replace("\r\n", "\n").replace("\r", "\n").lstrip("\ufeff")
 
 
 @pytest.fixture
@@ -22,8 +22,8 @@ def records_3():
 def test_serialize_ris_py_matches_ts_golden(records_3):
     golden = _read_text_normalize(os.path.join(FIXTURE_DIR, "sample_3entries.ris"))
     out_str = serialize_ris_py(records_3, ris_utf8_bom=True)
-    out_norm = out_str.replace("\r\n", "\n").replace("\r", "\n")
-    assert out_norm == golden, "RIS output lines mismatch TS golden (normalized newlines)"
+    out_norm = out_str.replace("\r\n", "\n").replace("\r", "\n").lstrip("\ufeff")
+    assert out_norm == golden, "RIS output lines mismatch TS golden (normalized newlines+BOM)"
 
 
 def test_serialize_ris_py_no_bom_flag(records_3):
@@ -37,5 +37,5 @@ def test_serialize_ris_py_no_bom_flag(records_3):
 def test_serialize_bibtex_py_matches_ts_golden(records_3):
     golden = _read_text_normalize(os.path.join(FIXTURE_DIR, "sample_3entries.bib"))
     out_str = serialize_bibtex_py(records_3, cite_key_prefix="meda")
-    out_norm = out_str.replace("\r\n", "\n").replace("\r", "\n")
-    assert out_norm == golden, "BibTeX output lines mismatch TS golden (normalized newlines)"
+    out_norm = out_str.replace("\r\n", "\n").replace("\r", "\n").lstrip("\ufeff")
+    assert out_norm == golden, "BibTeX output lines mismatch TS golden (normalized newlines+BOM)"
