@@ -697,8 +697,9 @@ def compute_pipeline_compare(run_a: PipelineRun, run_b: PipelineRun, metrics_req
 
 async def _exec_step1_real_dedup(run: PipelineRun, ctx: dict[str, Any]) -> None:
     import time as _time
+    import asyncio as _asyncio
     from app.models import DedupDiagnostic
-    from app.services.simhash import find_duplicates_bktree
+    from app.services.simhash import find_duplicates_hybrid, THR as _THR_BITS
 
     t_start = _time.perf_counter_ns()
 
@@ -710,10 +711,14 @@ async def _exec_step1_real_dedup(run: PipelineRun, ctx: dict[str, Any]) -> None:
 
     enable_parity_check = n_in <= 200
 
-    kept_ids, diag = await find_duplicates_hybrid(records, n_jobs=8, enable_parity_check=enable_parity_check)
+    kept_ids, diag = await _asyncio.to_thread(
+        find_duplicates_hybrid, records, _THR_BITS, 8, enable_parity_check
+    )
 
     if ctx.get("cancel_flag"):
         return
+
+    perf_merged = {**diag.get("perf", {}), **diag.get("perf_json", {})}
 
     n_out = len(kept_ids)
     kept_id_set = set(kept_ids)
@@ -737,13 +742,13 @@ async def _exec_step1_real_dedup(run: PipelineRun, ctx: dict[str, Any]) -> None:
                 step_idx=1,
                 sizes_hist=diag["sizes_hist"],
                 hamming_hist=diag["hamming_hist"],
-                perf_json=diag["perf"],
+                perf_json=perf_merged,
             )
             session.add(dd)
         else:
             existing.sizes_hist = diag["sizes_hist"]
             existing.hamming_hist = diag["hamming_hist"]
-            existing.perf_json = diag["perf"]
+            existing.perf_json = perf_merged
             session.add(existing)
         session.commit()
 

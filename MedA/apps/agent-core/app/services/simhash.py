@@ -161,6 +161,183 @@ LSH_TARGET_J = 0.70
 FALLBACK_N_PARITY = 2000
 OVERSAMPLE_PREFIX_BITS = 10
 
+BUCKET_FULL_ENUM_MAX = 512
+
+EXACT_BLOCK_COUNT = 8
+EXACT_BLOCK_BITS = 8
+
+_SIMHASH_FIELD_W = 24
+_SIMHASH_FIELD_MASK = (1 << _SIMHASH_FIELD_W) - 1
+_SIMHASH_BYTE_TABLES = tuple(
+    tuple(
+        sum(
+            1 << (_SIMHASH_FIELD_W * ((7 - p) * 8 + k))
+            for k in range(8)
+            if (b >> k) & 1
+        )
+        for b in range(256)
+    )
+    for p in range(8)
+)
+_SIMHASH_TOKEN_VEC_CACHE: dict[str, int] = {}
+_SIMHASH_TOKEN_VEC_CACHE_MAX = 400_000
+_SIMHASH_FP_CACHE: dict[str, int] = {}
+_SIMHASH_FP_CACHE_MAX = 200_000
+
+
+def _token_bit_vector(tok: str) -> int:
+    d = hashlib.md5(tok.encode("utf-8")).digest()
+    t = _SIMHASH_BYTE_TABLES
+    v = (
+        t[0][d[0]] + t[1][d[1]] + t[2][d[2]] + t[3][d[3]]
+        + t[4][d[4]] + t[5][d[5]] + t[6][d[6]] + t[7][d[7]]
+    )
+    if len(_SIMHASH_TOKEN_VEC_CACHE) < _SIMHASH_TOKEN_VEC_CACHE_MAX:
+        _SIMHASH_TOKEN_VEC_CACHE[tok] = v
+    return v
+
+
+def _simhash64_fast(text: str) -> int:
+    """Bit-identical drop-in for :func:`simhash64` with per-token/per-doc caching.
+
+    ``simhash64`` lives inside the NOTOUCH anchor region, so the hot path is
+    reimplemented here: per-position ``+1/-1`` accumulation is replaced by
+    packed big-integer set-bit counting (``accumulator[i] > 0`` is equivalent to
+    ``2 * ones[i] > n_tokens``).
+    """
+    norm = normalize_text_for_hash(text)
+    if len(norm) < 10:
+        return 0
+    cached = _SIMHASH_FP_CACHE.get(norm)
+    if cached is not None:
+        return cached
+    tokens = _tokenize(norm)
+    n_tok = len(tokens)
+    if n_tok == 0:
+        return 0
+    if n_tok > _SIMHASH_FIELD_MASK:
+        return simhash64(text)
+    acc = 0
+    get = _SIMHASH_TOKEN_VEC_CACHE.get
+    for tok in tokens:
+        v = get(tok)
+        if v is None:
+            v = _token_bit_vector(tok)
+        acc += v
+    w = _SIMHASH_FIELD_W
+    mask = _SIMHASH_FIELD_MASK
+    fp = 0
+    for j in range(64):
+        if (((acc >> (w * j)) & mask) << 1) > n_tok:
+            fp |= 1 << j
+    if len(_SIMHASH_FP_CACHE) < _SIMHASH_FP_CACHE_MAX:
+        _SIMHASH_FP_CACHE[norm] = fp
+    return fp
+
+
+def _bucket_pairs(members: list[int], out: set[tuple[int, int]]) -> None:
+    """Emit index pairs for one hash bucket.
+
+    Buckets up to ``BUCKET_FULL_ENUM_MAX`` members are fully enumerated
+    (``C(m,2)``). Larger buckets only emit the ``m-1`` chain pairs, which keeps
+    the transitive closure identical while avoiding quadratic memory blowup on
+    degenerate inputs (e.g. 10k records sharing one fingerprint).
+    """
+    m = len(members)
+    if m < 2:
+        return
+    mb = sorted(members)
+    if m > BUCKET_FULL_ENUM_MAX:
+        prev = mb[0]
+        for k in range(1, m):
+            cur = mb[k]
+            out.add((prev, cur))
+            prev = cur
+        return
+    for ii in range(m):
+        a = mb[ii]
+        for jj in range(ii + 1, m):
+            out.add((a, mb[jj]))
+
+
+def _exact_block_verified_pairs(
+    fps: list[int], threshold_bits: int = THR
+) -> set[tuple[int, int]]:
+    """Recall-complete near-duplicate search over 64-bit fingerprints.
+
+    Each fingerprint is cut into ``EXACT_BLOCK_COUNT`` blocks of
+    ``EXACT_BLOCK_BITS`` bits. A pair at hamming distance ``d`` dirties at most
+    ``d`` blocks, so with ``d <= EXACT_BLOCK_COUNT - 2`` at least two blocks are
+    untouched and the pair must collide on one of the ``C(8,2)=28`` block-pair
+    indexes (pigeonhole). Returned pairs are already hamming-verified, so the
+    result is exactly the ground-truth pair set that a full BK-tree scan yields.
+    """
+    out: set[tuple[int, int]] = set()
+    n = len(fps)
+    if n < 2:
+        return out
+
+    first_idx: dict[int, int] = {}
+    same_fp_groups: dict[int, list[int]] = {}
+    for i in range(n):
+        fp = fps[i]
+        prev = first_idx.get(fp)
+        if prev is None:
+            first_idx[fp] = i
+            same_fp_groups[fp] = [i]
+        else:
+            same_fp_groups[fp].append(i)
+    for members in same_fp_groups.values():
+        _bucket_pairs(members, out)
+
+    fps_u = list(first_idx.keys())
+    idxs_u = list(first_idx.values())
+    m = len(fps_u)
+    if m < 2:
+        return out
+
+    nb = EXACT_BLOCK_COUNT
+    bw = EXACT_BLOCK_BITS
+    bmask = (1 << bw) - 1
+    blocks = [
+        tuple((fp >> (bw * bi)) & bmask for bi in range(nb))
+        for fp in fps_u
+    ]
+    clean_needed = nb - threshold_bits
+    if clean_needed >= 2:
+        keys = [(a, b) for a in range(nb) for b in range(a + 1, nb)]
+    else:
+        keys = [(a,) for a in range(nb)]
+
+    seen: set[tuple[int, int]] = set()
+    for key_blocks in keys:
+        buckets: dict[tuple, list[int]] = {}
+        for u in range(m):
+            bl = blocks[u]
+            k = tuple(bl[x] for x in key_blocks)
+            bucket = buckets.get(k)
+            if bucket is None:
+                buckets[k] = [u]
+            else:
+                bucket.append(u)
+        for members in buckets.values():
+            if len(members) < 2:
+                continue
+            for ii in range(len(members)):
+                ui = members[ii]
+                fi = fps_u[ui]
+                for jj in range(ii + 1, len(members)):
+                    uj = members[jj]
+                    sk = (ui, uj)
+                    if sk in seen:
+                        continue
+                    seen.add(sk)
+                    if bin((fi ^ fps_u[uj]) & 0xFFFFFFFFFFFFFFFF).count("1") <= threshold_bits:
+                        a = idxs_u[ui]
+                        b = idxs_u[uj]
+                        out.add((a, b) if a < b else (b, a))
+    return out
+
 
 class BKTree64:
     __slots__ = ("distance_fn", "_root")
@@ -607,10 +784,10 @@ def find_duplicates_hybrid(
         return kept_bk, diag_bk
 
     texts = [f"{r.get('title', '')} {r.get('abstract', '')}" for r in records]
-    fps = [simhash64(t) for t in texts]
     idx_to_id = [r.get("id", i) for i, r in enumerate(records)]
 
     t_minhash_s = time.perf_counter()
+    fps = [_simhash64_fast(t) for t in texts]
     raw_tokens = [tokenize_to_2shingles(t) for t in texts]
     sigs = [minhash_signature(toks) for toks in raw_tokens]
     t_minhash_e = time.perf_counter()
@@ -624,7 +801,8 @@ def find_duplicates_hybrid(
     t_over_s = time.perf_counter()
     over_pairs = _oversample_prefix_pairs(fps, OVERSAMPLE_PREFIX_BITS)
     perf["oversample_prefix"] = True
-    all_cand_idxs = lsh_cand_idxs | over_pairs
+    exact_block_pairs = _exact_block_verified_pairs(fps, threshold_bits)
+    all_cand_idxs = lsh_cand_idxs | over_pairs | exact_block_pairs
     t_over_e = time.perf_counter()
     perf["stage_ms"]["oversample_ms"] = round((t_over_e - t_over_s) * 1000, 2)
 

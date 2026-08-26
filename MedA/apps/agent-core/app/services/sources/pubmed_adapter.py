@@ -437,7 +437,7 @@ def _load_preset_snapshot_2000(preset: str) -> list[dict]:
 _SNAPSHOT_CACHE_50K: dict[str, list[dict]] = {}
 _FIXTURE_50K_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
-    "..", "..", "tests", "fixtures", "w12_synthetic_50k.json"
+    "..", "..", "..", "tests", "fixtures", "w12_synthetic_50k.json"
 )
 
 def _load_preset_50k(preset_name: str, size_n: int) -> list[dict]:
