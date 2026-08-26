@@ -21,6 +21,8 @@ markers = [
     "needs_network: 标记需要真实外网的测试，默认 skip。运行：pytest -m needs_network",
     "needs_browser: 标记需要真实浏览器的测试，默认 skip。运行：pytest --runeedsbrowser -m needs_browser",
     "bench: SLO tests that run only in backend-benchmark job",
+    "asyncio: pytest-asyncio marker for async tests (pytest-asyncio>=1.4.0 auto-registered, explicit for --strict-markers)",
+    "parametrize: built-in pytest parametrize marker, explicit for --strict-markers",
 ]
 
 [dependency-groups]
