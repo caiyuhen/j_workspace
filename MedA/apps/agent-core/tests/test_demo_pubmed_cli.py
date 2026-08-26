@@ -27,6 +27,8 @@ def test_unknown_preset_exits_code_2():
         [sys.executable, str(SCRIPT_PATH), "nonexistent_xyz_999"],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
         env=env,
     )
     assert proc.returncode == 2
@@ -151,10 +153,16 @@ sys.argv = [r"{script_path_str}", "sglt2i_ckd", "--json", "--no-csv"]
 from scripts.demo_pubmed_end2end import main
 main()
 '''
+    env = os.environ.copy()
+    existing_pp = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = str(SCRIPT_DIR) + (os.pathsep + existing_pp if existing_pp else "")
     proc = subprocess.run(
         [sys.executable, "-c", wrapper],
         capture_output=True,
         text=True,
+        encoding="utf-8",
+        errors="replace",
+        env=env,
     )
     assert proc.returncode == 0, f"stderr={proc.stderr}\nstdout={proc.stdout}"
     marker = "--- JSON ---"
