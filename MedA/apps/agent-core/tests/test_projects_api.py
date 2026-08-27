@@ -6,8 +6,22 @@ from app.main import app
 def test_create_project_with_org_scope() -> None:
     client = TestClient(app)
 
+    login = client.post(
+        "/api/auth/dev-login",
+        json={
+            "organization_slug": "demo-hospital",
+            "organization_name": "Demo Hospital",
+            "user_id": "u-001",
+            "display_name": "Dr. Chen",
+            "role": "org_admin",
+            "client_type": "web",
+        },
+    )
+    token = login.json()["token"]
+
     response = client.post(
         "/api/projects",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "organization_slug": "demo-hospital",
             "owner_user_id": "u-001",

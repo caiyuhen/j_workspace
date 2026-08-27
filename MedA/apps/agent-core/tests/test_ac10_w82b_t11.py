@@ -12,7 +12,9 @@ BASELINE_SHA_PREFIX = {
     "serialize_ris.py": "596988705bb3dda4",
     "serialize_bibtex.py": "078c426e4250698e",
     "search_run.py": "25a106b4fd5f4c78",
-    "pico.py": "3393c9dd936316ed",
+    # pico.py was intentionally changed after 8.2A: the fake `llm:*` extractor now
+    # raises llm_not_implemented instead of pretending to call an LLM.
+    "pico.py": "39c7b73104eab456",
 }
 
 

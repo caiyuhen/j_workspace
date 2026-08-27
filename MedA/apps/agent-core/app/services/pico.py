@@ -42,7 +42,13 @@ STUDY_TYPE_RULES = [
 
 
 class PicoExtractionError(Exception):
-    def __init__(self, message: str, code: Literal["no_records_provided", "llm_not_configured", "pico_failed"]):
+    def __init__(
+        self,
+        message: str,
+        code: Literal[
+            "no_records_provided", "llm_not_configured", "llm_not_implemented", "pico_failed"
+        ],
+    ):
         super().__init__(message)
         self.code = code
 
@@ -110,12 +116,10 @@ def _rule_baseline_extract(rec: LiteratureRecord) -> LiteraturePico:
 
 
 async def _llm_extract(rec: LiteratureRecord, provider: str) -> LiteraturePico:
-    try:
-        raise RuntimeError(f"LLM provider {provider!r} not wired yet in Wave 8")
-    except Exception:
-        base = _rule_baseline_extract(rec)
-        base.extraction_method = f"llm:{provider}+fallback_rule"
-        return base
+    raise PicoExtractionError(
+        f"LLM provider {provider!r} is not wired yet; no LLM SDK is installed.",
+        "llm_not_implemented",
+    )
 
 
 def extract_pico_for_record(
@@ -176,7 +180,7 @@ def batch_extract_pico(
             extract_pico_for_record(session, rid, method=method)
             processed += 1
         except PicoExtractionError as exc:
-            if exc.code == "llm_not_configured":
+            if exc.code in {"llm_not_configured", "llm_not_implemented"}:
                 raise
             failed += 1
             rec.pico_status = "failed"

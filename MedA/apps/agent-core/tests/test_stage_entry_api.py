@@ -21,6 +21,7 @@ def test_stage_entry_returns_stage_specific_summary() -> None:
 
     project = client.post(
         "/api/projects",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "organization_slug": "demo-hospital",
             "owner_user_id": "u-001",
@@ -65,6 +66,7 @@ def test_stage_entry_rejects_unknown_stage() -> None:
 
     project = client.post(
         "/api/projects",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "organization_slug": "demo-hospital",
             "owner_user_id": "u-001",
@@ -101,6 +103,7 @@ def test_stage_entry_supports_multiple_research_stages() -> None:
 
     project = client.post(
         "/api/projects",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "organization_slug": "demo-hospital",
             "owner_user_id": "u-001",

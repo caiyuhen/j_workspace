@@ -42,15 +42,18 @@ def login_with_dev_session(session: Session, payload: DevLoginRequest) -> Sessio
             role=payload.role,
         )
         session.add(membership)
-    else:
-        membership.role = payload.role
+
+    # The role always comes from the stored membership, never from the request
+    # body: an existing member must not be able to escalate itself by asking for
+    # a higher role at login time.
+    effective_role = membership.role
 
     token = f"meda_{uuid4().hex}"
     auth_session = AuthSession(
         token=token,
         user_id=payload.user_id,
         organization_slug=payload.organization_slug,
-        role=payload.role,
+        role=effective_role,
         client_type=payload.client_type,
     )
     session.add(auth_session)
@@ -66,6 +69,6 @@ def login_with_dev_session(session: Session, payload: DevLoginRequest) -> Sessio
             slug=payload.organization_slug,
             name=payload.organization_name,
         ),
-        role=payload.role,
+        role=effective_role,
         client_type=payload.client_type,
     )

@@ -782,10 +782,12 @@ class TestJValidateBeforeCreateMaxRecords50001:
         from fastapi import HTTPException
         from app.routers.workspace import (
             schemex_validate_before_create_or_400,
-            MAX_RECORDS_HARD_CAP,
+            SCHEMEX_MAX_RECORDS_CAP,
         )
 
-        assert MAX_RECORDS_HARD_CAP == 50000, f"T28: hard cap should be 50000, got {MAX_RECORDS_HARD_CAP}"
+        assert SCHEMEX_MAX_RECORDS_CAP == 50000, (
+            f"T28: hard cap should be 50000, got {SCHEMEX_MAX_RECORDS_CAP}"
+        )
 
         raised_exc = None
         try:

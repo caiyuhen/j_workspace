@@ -427,19 +427,17 @@ class TestFComparePipelines:
         )
         assert resp.status_code == 200, f"A21 non-200: {resp.status_code} {resp.text}"
         body = resp.json()
-        assert "run_a" in body, "A21 missing run_a"
-        assert "run_b" in body, "A21 missing run_b"
+        assert "run_a_id" in body, "A21 missing run_a_id"
+        assert "run_b_id" in body, "A21 missing run_b_id"
         assert "metrics_requested" in body, "A21 missing metrics_requested"
-        assert "funnel" in body, "A21 missing funnel section"
-        assert "rob" in body, "A21 missing rob section"
-        assert "grade" in body, "A21 missing grade section"
+        assert "funnel_delta" in body, "A21 missing funnel_delta section"
+        assert "rob2_delta" in body, "A21 missing rob2_delta section"
+        assert "grade_delta" in body, "A21 missing grade_delta section"
         assert "pico" in body, "A21 missing pico section"
-        for section in ("funnel",):
-            for key, val in body[section].items():
-                assert isinstance(val, dict), f"A21 {section}.{key} should be dict"
-                assert "a" in val and "b" in val and "delta" in val, (
-                    f"A21 {section}.{key} missing a/b/delta keys"
-                )
+        for row in body["funnel_delta"]:
+            assert isinstance(row, dict), f"A21 funnel_delta row should be dict: {row}"
+            for key in ("step", "a_n", "b_n", "diff"):
+                assert key in row, f"A21 funnel_delta row missing {key}: {row}"
 
     def test_A22_get_compare_401_not_logged_in(self):
         client = TestClient(app)

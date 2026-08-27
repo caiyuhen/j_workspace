@@ -77,6 +77,7 @@ from app.services.pipeline_engine import (
     compute_pipeline_compare,
 )
 from app.models import PipelineRun, PipelineStepResult, Workspace
+import app.services.pipeline_engine as _pipeline_engine
 import asyncio
 
 router = APIRouter(prefix="/api/workspace", tags=["workspace"])
@@ -681,6 +682,11 @@ def records_batch_extract_pico(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="no_records_provided",
             ) from exc
+        if exc.code == "llm_not_implemented":
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail=str(exc),
+            ) from exc
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail=str(exc),
@@ -717,6 +723,11 @@ def records_get_pico(
             extracted_at=_fmt_iso(pico.created_at),
         )
     except PicoExtractionError as exc:
+        if exc.code == "llm_not_implemented":
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail=str(exc),
+            ) from exc
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(exc),
@@ -1543,6 +1554,22 @@ def w9a_evidence_artifact_list(
     }
 
 
+@router.post("/evidence-artifact/export-csv")
+def w9a_evidence_artifact_export_csv(
+    payload: EvidenceListQuery,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> Response:
+    listed = w9a_evidence_artifact_list(payload=payload, context=context, session=session)
+    lines = ["record_id,stage,decision"]
+    for item in listed["items"]:
+        lines.append(f"{item['literature_record_id']},{item['stage']},{item['decision']}")
+    return Response(
+        content="\n".join(lines) + "\n",
+        media_type="text/csv; charset=utf-8",
+    )
+
+
 @router.get("/evidence-artifact/{id}")
 def w9a_evidence_artifact_get(
     id: int,
@@ -1660,22 +1687,14 @@ def w9a_screening_funnel_stats(
     n4_dedup = int(payload.n4_dupes_removed_override or (n3 // 6 if n3 > 0 else 0))
     ta_excluded = int(n3 * 0.89) if n3 else 0
     ft_excluded = int(n3 * 0.09) if n3 else 0
-    n1_records = list(range(n3))
-    n2_records = list(range(n3))
-    n3_records = list(range(n3))
-    n4_records = list(range(max(0, n3 - n4_dedup)))
-    e2_records = list(range(ta_excluded))
-    e4_records = list(range(max(0, n3 - ta_excluded)))
-    e5_records = list(range(ft_excluded))
 
     raw_counts = calc_funnel_from_records(
-        n1_records=n1_records,
-        n2_records=n2_records,
-        n3_records=n3_records,
-        n4_records=n4_records,
-        e2_records=e2_records,
-        e4_records=e4_records,
-        e5_records=e5_records,
+        n1=n3,
+        n2=n3,
+        n3=n3,
+        n4_dupes_removed=n4_dedup,
+        e2=ta_excluded,
+        e5=ft_excluded,
     )
 
     labels_map = {
@@ -2105,10 +2124,11 @@ async def w10_post_pipeline_run(
             detail=f"invalid preset: {payload.preset}. valid presets: {list(VALID_PRESETS)}",
         )
 
-    if not (1 <= payload.max_records <= 200):
+    engine_cap = _pipeline_engine.MAX_RECORDS_HARD_CAP
+    if not (1 <= payload.max_records <= engine_cap):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="max_records must be between 1 and 200",
+            detail=f"max_records must be between 1 and {engine_cap}",
         )
 
     run = create_pipeline_run(
@@ -2526,9 +2546,12 @@ def w11_get_pipeline_step_diag(
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SchemeX: ValidateBeforeCreate (max≤50000) W12 D3-2 APPEND-ONLY BLOCK
+# SchemeX: ValidateBeforeCreate (corpus cap) W12 D3-2 APPEND-ONLY BLOCK
 # ══════════════════════════════════════════════════════════════════════════════
-MAX_RECORDS_HARD_CAP: int = 50000
+# Corpus-level cap for the W12 large-scale ingest path. This is deliberately
+# larger than pipeline_engine.MAX_RECORDS_HARD_CAP (the per-run snapshot fetch
+# cap) and than the PipelineRun.max_records DB CHECK upper bound (2500).
+SCHEMEX_MAX_RECORDS_CAP: int = 50000
 
 
 class _SchemeXValidationError(Exception):
@@ -2550,7 +2573,7 @@ def ValidateBeforeCreate(
     校验规则：
     1. preset 必须在 valid_presets 列表中（若提供）
     2. mode 必须是 "snapshot" 或 "live"
-    3. max_records 必须是整数且 1 ≤ max ≤ 50000 (MAX_RECORDS_HARD_CAP)
+    3. max_records 必须是整数且 1 ≤ max ≤ 50000 (SCHEMEX_MAX_RECORDS_CAP)
 
     Raises:
         _SchemeXValidationError: 任一校验失败时抛出，含 code + detail。
@@ -2573,11 +2596,11 @@ def ValidateBeforeCreate(
             detail=f"max_records must be int, got {type(max_records).__name__}",
         )
 
-    if not (1 <= max_records <= MAX_RECORDS_HARD_CAP):
+    if not (1 <= max_records <= SCHEMEX_MAX_RECORDS_CAP):
         raise _SchemeXValidationError(
             code="SCHEMEX_MAXRECORDS_OOB",
             detail=(
-                f"max_records must satisfy 1 ≤ N ≤ {MAX_RECORDS_HARD_CAP}, "
+                f"max_records must satisfy 1 ≤ N ≤ {SCHEMEX_MAX_RECORDS_CAP}, "
                 f"got {max_records}"
             ),
         )
@@ -2605,7 +2628,7 @@ def schemex_validate_before_create_or_400(
                 "error": exc.code,
                 "detail": exc.detail,
                 "scheme": "SchemeX",
-                "hard_cap": MAX_RECORDS_HARD_CAP,
+                "hard_cap": SCHEMEX_MAX_RECORDS_CAP,
             },
         )
 

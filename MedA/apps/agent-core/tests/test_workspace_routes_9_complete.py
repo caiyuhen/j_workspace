@@ -79,7 +79,35 @@ def _dev_login_and_create_project(client: TestClient) -> tuple[str, int]:
         assert items, "no projects found for user"
         project_id = items[0]["id"]
 
+    _seed_literature_records(int(project_id))
+
     return token, int(project_id)
+
+
+# The cases below reference literature record ids literally; evidenceartifact
+# .literature_record_id is a real FK, so those rows have to exist first.
+_SEEDED_RECORD_IDS = (6, 42, 99, 501, 502)
+
+
+def _seed_literature_records(project_id: int) -> None:
+    from sqlmodel import Session
+
+    from app.db import engine
+    from app.models import LiteratureRecord
+
+    with Session(engine) as session:
+        for rid in _SEEDED_RECORD_IDS:
+            if session.get(LiteratureRecord, rid) is not None:
+                continue
+            session.add(
+                LiteratureRecord(
+                    id=rid,
+                    project_id=project_id,
+                    title=f"T13 seeded record {rid}",
+                    source_key="pubmed",
+                )
+            )
+        session.commit()
 
 
 class TestWorkspaceRoutes9Complete:
@@ -139,7 +167,7 @@ class TestWorkspaceRoutes9Complete:
         assert isinstance(body["count"], int)
 
     def test_T4_evidence_list_empty_record_ids_returns_empty(self):
-        """T4: evidence list empty record_ids=[] -> empty list items (no 400)."""
+        """T4: evidence list empty record_ids=[] -> 400 (see R1 in full_9)."""
         client = TestClient(app)
         token, pid = _dev_login_and_create_project(client)
 
@@ -149,11 +177,9 @@ class TestWorkspaceRoutes9Complete:
             json={"pi_id": pid, "record_ids": []},
         )
 
-        assert resp.status_code == 200, f"T4 expected 200 w/ empty items, got {resp.status_code}: {resp.text}"
-        body = resp.json()
-        assert body.get("items") == [] or (isinstance(body.get("items"), list) and len(body["items"]) == 0), (
-            f"T4 expected empty items list, got items={body.get('items')}"
-        )
+        assert resp.status_code == 400, f"T4 expected 400 for empty record_ids, got {resp.status_code}: {resp.text}"
+        detail = (resp.json() or {}).get("detail", "")
+        assert "record_ids" in detail, f"T4 detail should reference record_ids: {detail!r}"
 
     # ── T5 / T6: evidence-artifact/decide ────────────────────────────────
     def test_T5_evidence_decide_success(self):

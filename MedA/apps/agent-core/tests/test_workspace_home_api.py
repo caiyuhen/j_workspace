@@ -24,6 +24,7 @@ def test_workspace_home_returns_project_scoped_summary() -> None:
 
     project = client.post(
         "/api/projects",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "organization_slug": "demo-hospital",
             "owner_user_id": "u-001",
@@ -70,6 +71,7 @@ def test_workspace_home_prefers_project_records_when_available() -> None:
 
     project = client.post(
         "/api/projects",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "organization_slug": "demo-hospital",
             "owner_user_id": "u-001",

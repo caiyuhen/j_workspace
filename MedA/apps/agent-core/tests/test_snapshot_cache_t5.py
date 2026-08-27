@@ -5,7 +5,7 @@ import hashlib
 import pytest
 from fastapi.testclient import TestClient
 from app.db import SessionLocal
-from app.models import ReportSnapshot, User, Organization, ResearchProject, GradeAssessment
+from app.models import ReportSnapshot, User, Organization, OutcomeDefinition, ResearchProject, GradeAssessment
 
 @pytest.fixture()
 def _client_pid(db_session):
@@ -18,8 +18,16 @@ def _client_pid(db_session):
     db_session.add_all([u, org]); db_session.flush()
     p = ResearchProject(organization_slug="t5-hospital", owner_user_id=u.user_id, name="T5 Project", description="t5", workspace_key="ws-t5")
     db_session.add(p); db_session.flush()
+    # gradeassessment.outcome_id is a real FK, so the referenced outcome must exist.
+    outcome = OutcomeDefinition(
+        project_id=p.id,
+        outcome_key="t5-outcome-1",
+        label="T5 Outcome 1",
+        measure_type="binary",
+    )
+    db_session.add(outcome); db_session.flush()
     g = GradeAssessment(
-        project_id=p.id, outcome_id=1, reviewer_id=999,
+        project_id=p.id, outcome_id=outcome.id, reviewer_id=999,
         domains_5={"risk_of_bias":"no_concerns","indirectness":"no_concerns","inconsistency":"no_concerns","imprecision":"no_concerns","publication_bias":"no_concerns"},
         upgrades_3={"large_effect":False,"dose_response":False,"confounders_reduce":False},
         certainty_final="High",

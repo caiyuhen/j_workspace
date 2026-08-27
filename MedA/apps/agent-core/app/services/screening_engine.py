@@ -550,8 +550,6 @@ def validate_exclude_decision(
         return True
 
     for rid in exclude_ids:
-        if rid == 1:
-            raise KeyError(rid)
         reason = EXCLUDE_REASONS.get(rid)
         if reason is None:
             raise ValueError(f"exclude_reason_id={rid} not in EXCLUDE_REASONS")

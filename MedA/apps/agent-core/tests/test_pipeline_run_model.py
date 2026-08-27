@@ -53,14 +53,16 @@ def test_M2_defaults_max_records_200_cancel_flag_F(db_session):
     assert r.current_step_index == 0
 
 
-def test_M3_max_records_rejects_gt_500_checkconstraint(db_session):
+def test_M3_max_records_rejects_gt_cap_checkconstraint(db_session):
+    # The CHECK upper bound was widened to 2500 in W11 (see models.py
+    # cc_pipelinerun_max_records); anything above that must still be rejected.
     wid = _make_wid(db_session)
     r = PipelineRun(
         id="p-003aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
         workspace_id=wid,
         preset="sglt2i_ckd",
         mode="snapshot",
-        max_records=501,
+        max_records=2501,
         status="queued",
         steps_json=[]
     )

@@ -21,6 +21,7 @@ def test_project_list_requires_session_and_returns_org_scoped_projects() -> None
 
     client.post(
         "/api/projects",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "organization_slug": "demo-hospital",
             "owner_user_id": "u-001",

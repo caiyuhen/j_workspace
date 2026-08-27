@@ -3,7 +3,7 @@ from sqlmodel import Session, select
 
 from app.db import get_session
 from app.deps.auth import SessionContext, get_current_session
-from app.models import Membership, Organization, ResearchProject
+from app.models import Membership, Organization, ResearchProject, User
 from app.schemas import CreateProjectRequest, ProjectResponse
 from app.services.audit import record_audit_event
 from app.services.events import broker
@@ -26,12 +26,28 @@ def list_projects(
 
 @router.post("", response_model=ProjectResponse, status_code=status.HTTP_201_CREATED)
 def create_project(
-    payload: CreateProjectRequest, session: Session = Depends(get_session)
+    payload: CreateProjectRequest,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
 ) -> ProjectResponse:
-    organization = session.get(Organization, payload.organization_slug)
+    if payload.organization_slug != context.organization_slug:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="organization_slug outside of the current session scope",
+        )
+
+    organization = session.get(Organization, context.organization_slug)
     if organization is None:
-        organization = Organization(slug=payload.organization_slug, name=payload.organization_slug)
-        session.add(organization)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="organization not found",
+        )
+
+    if session.get(User, payload.owner_user_id) is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"owner user not found: {payload.owner_user_id}",
+        )
 
     membership = session.exec(
         select(Membership).where(

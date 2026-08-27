@@ -29,6 +29,7 @@ def _login_and_create_project(client: TestClient) -> tuple[str, int]:
 
     project = client.post(
         "/api/projects",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "organization_slug": "demo-hospital",
             "owner_user_id": "u-t3-001",

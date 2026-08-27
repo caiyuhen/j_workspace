@@ -33,7 +33,7 @@ ORG_NAME = "MedA W10 Org"
 USER_ID_A = "u-w10-001"
 WORKSPACE_ID = f"{ORG_SLUG}-ws-e2e-001"
 
-_STEP_FACTORS = [0.96, 0.86, 0.58, 0.56, 0.76, 0.98, 1.0, 1.0]
+
 
 _PRESET_SIZES = {
     "sglt2i_ckd": 178,
@@ -79,21 +79,24 @@ def _suppress_task_warnings():
         yield
 
 
-def _expected_step_n_out(max_records: int) -> list[int]:
-    expected = []
-    n_prev = max_records
-    for i in range(8):
-        if i == 0:
-            n_in = max_records
-        else:
-            n_in = n_prev
-        if i == 7:
-            n_out = 1
-        else:
-            n_out = max(1, int(n_in * _STEP_FACTORS[i]))
-        expected.append(n_out)
-        n_prev = n_out
-    return expected
+def _assert_funnel_monotonic(steps: list[dict], label: str) -> None:
+    """Step0 fetches the real preset corpus and step1 runs real dedup, so exact
+    per-step counts are data-dependent. Assert the funnel invariants instead:
+    every stage is >= 1, never grows, and the final report step emits exactly 1.
+    """
+    prev = None
+    for i, step in enumerate(steps):
+        n_out = int(step.get("n_out", 0))
+        assert n_out >= 1, f"{label} step{i} n_out={n_out} must be >= 1"
+        if prev is not None:
+            assert n_out <= prev, (
+                f"{label} step{i} n_out={n_out} grew above previous step ({prev}); "
+                "the screening funnel must be monotonically non-increasing"
+            )
+        prev = n_out
+    assert int(steps[7].get("n_out", 0)) == 1, (
+        f"{label} step7 must emit exactly 1 report, got {steps[7].get('n_out')}"
+    )
 
 
 def _set_cancel_after_step(session: Session, run_id: str, step_index: int) -> dict:
@@ -160,13 +163,7 @@ class TestHP1HP3Sglt2iCkdRun:
             for i, step in enumerate(steps):
                 assert step.get("status") == "success", f"HP2 step{i} status {step.get('status')}"
 
-            expected = _expected_step_n_out(200)
-            for i, step in enumerate(steps):
-                actual = int(step.get("n_out", 0))
-                diff = abs(actual - expected[i])
-                assert diff <= 1, (
-                    f"HP2 step{i} n_out mismatch: actual={actual} expected={expected[i]} diff={diff} > 1"
-                )
+            _assert_funnel_monotonic(steps, "HP2")
 
     def test_HP3_detail_funnel_grade_rob_finished_report(self):
         with Session(engine) as s:
@@ -263,11 +260,11 @@ class TestHP4HP6Glp1Weightloss:
                 assert step.get("status") == "success", f"HP5 step{i} status {step.get('status')}"
 
             step0_n_out = int((steps[0] or {}).get("n_out", 0))
-            expected_step0 = max(1, int(188 * _STEP_FACTORS[0]))
-            diff = abs(step0_n_out - expected_step0)
-            assert diff <= 1, (
-                f"HP5 step0.n_out={step0_n_out} vs expected factor*max ~{expected_step0}, diff={diff} > 1"
+            assert step0_n_out == _PRESET_SIZES["glp1_weightloss"], (
+                f"HP5 step0.n_out={step0_n_out} must equal the real fetched corpus size "
+                f"{_PRESET_SIZES['glp1_weightloss']}"
             )
+            _assert_funnel_monotonic(steps, "HP5")
 
     def test_HP6_list_filter_glp1_only(self):
         with Session(engine) as s:
@@ -411,13 +408,7 @@ class TestHP7HP8CancelResume:
                 )
             funnel = compute_funnel_counts_for_run(db_run)
             assert len(funnel) == 8
-            expected = _expected_step_n_out(150)
-            for i in range(8):
-                if i == 7:
-                    assert funnel[i] == 1, f"HP8 report step n_out should be 1"
-                else:
-                    diff = abs(funnel[i] - expected[i])
-                    assert diff <= 1, f"HP8 funnel[{i}]={funnel[i]} vs expected {expected[i]}"
+            _assert_funnel_monotonic([{"n_out": n} for n in funnel], "HP8")
 
 
 class TestHP9HP10CompareNoRequests:
@@ -458,10 +449,13 @@ class TestHP9HP10CompareNoRequests:
             delta = compute_funnel_delta(sglt_db, glp1_db)
 
         step0 = delta[0]
-        expected_diff = int(200 * 0.96) - int(188 * 0.96)
+        # step0 now reports the real fetched corpus size, which is capped by the
+        # preset's own snapshot size rather than by max_records.
+        expected_diff = _PRESET_SIZES["sglt2i_ckd"] - _PRESET_SIZES["glp1_weightloss"]
         actual_diff = step0["diff"]
-        assert abs(actual_diff - expected_diff) <= 2, (
-            f"HP9 funnel_delta[0].diff={actual_diff}, expected ~{expected_diff}, tolerance ±2"
+        assert actual_diff == expected_diff, (
+            f"HP9 funnel_delta[0].diff={actual_diff}, expected {expected_diff} "
+            f"(real corpus sizes {_PRESET_SIZES['sglt2i_ckd']} vs {_PRESET_SIZES['glp1_weightloss']})"
         )
 
         grade_sglt = compute_grade_delta(sglt_db, sglt_db)

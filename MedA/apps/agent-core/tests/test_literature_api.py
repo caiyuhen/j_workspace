@@ -33,6 +33,7 @@ def _login_and_create_project(client: TestClient) -> tuple[str, int]:
 
     project = client.post(
         "/api/projects",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "organization_slug": "demo-hospital",
             "owner_user_id": "u-001",
@@ -514,6 +515,7 @@ def test_dedupe_does_not_cross_projects() -> None:
 
     second = client.post(
         "/api/projects",
+        headers={"Authorization": f"Bearer {token}"},
         json={
             "organization_slug": "demo-hospital",
             "owner_user_id": "u-001",

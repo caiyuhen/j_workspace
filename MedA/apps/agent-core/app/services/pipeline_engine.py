@@ -342,12 +342,8 @@ def _clone_run(run: PipelineRun) -> PipelineRun:
     )
 
 
-def _exec_step_N(
-    idx: int,
-    run: PipelineRun,
-    ctx: dict[str, Any] | None,
-) -> tuple[int, int, str | None]:
-    ctx = ctx or {}
+def _apply_fault_injection(idx: int, ctx: dict[str, Any]) -> None:
+    """Test-only fault hooks, shared by the simulated steps and the real step1."""
     fail_key = f"fail_forever_step{idx}"
     fail_once_key = f"fail_once_step{idx}"
     fail_mode_key = f"fail_mode_step{idx}"
@@ -369,18 +365,34 @@ def _exec_step_N(
         if cnt <= 1:
             raise TimeoutError(f"fail-once flaky step{idx}")
 
-    factors = [0.96, 0.86, 0.58, 0.56, 0.76, 0.98, 1.0, 1.0]
+
+def _exec_step_N(
+    idx: int,
+    run: PipelineRun,
+    ctx: dict[str, Any] | None,
+) -> tuple[int, int, str | None]:
+    ctx = ctx or {}
+    _apply_fault_injection(idx, ctx)
+
     if idx == 0:
+        # Real fetch: load the preset corpus and hand it to step1 through ctx.
+        from app.services.sources.pubmed_adapter import _load_preset_snapshot
+
+        records = ctx.get("fetched_records")
+        if not records:
+            records = _load_preset_snapshot(run.preset, run.max_records)
+            ctx["fetched_records"] = records
         n_in = run.max_records
-    else:
-        n_in = _get_step_n_out(run, idx - 1) or run.max_records
+        n_out = len(records)
+        return n_in, n_out, ctx.get("pubmed_out", f"snapshot:{run.preset}")
+
+    factors = [0.96, 0.86, 0.58, 0.56, 0.76, 0.98, 1.0, 1.0]
+    n_in = _get_step_n_out(run, idx - 1) or run.max_records
     if idx == 7:
         n_out = 1
     else:
         n_out = max(1, int(n_in * factors[idx]))
-    if idx == 0:
-        payload_ref = ctx.get("pubmed_out", "storage/fake")
-    elif idx == 7:
+    if idx == 7:
         payload_ref = f"storage/{run.id}/report.pdf"
     else:
         payload_ref = None
@@ -703,7 +715,15 @@ async def _exec_step1_real_dedup(run: PipelineRun, ctx: dict[str, Any]) -> None:
 
     t_start = _time.perf_counter_ns()
 
-    records = ctx["fetched_records"]
+    _apply_fault_injection(1, ctx)
+
+    records = ctx.get("fetched_records")
+    if not records:
+        # Resuming directly at step1 (or ctx not carried over): re-fetch the corpus.
+        from app.services.sources.pubmed_adapter import _load_preset_snapshot
+
+        records = _load_preset_snapshot(run.preset, run.max_records)
+        ctx["fetched_records"] = records
     n_in = len(records)
 
     if ctx.get("cancel_flag"):

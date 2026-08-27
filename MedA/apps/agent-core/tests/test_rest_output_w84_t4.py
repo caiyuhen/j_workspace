@@ -10,7 +10,7 @@ def client_and_seed(db_session):
     """提供 TestClient + 1 project + 必要依赖。"""
     from app.routers.workspace import router as ws_router
     from fastapi import FastAPI
-    from app.models import User, Organization, ResearchProject
+    from app.models import User, Organization, OutcomeDefinition, ResearchProject
     app = FastAPI()
     app.include_router(ws_router)
     u = User(user_id="u-t4-001", display_name="T4")
@@ -18,6 +18,19 @@ def client_and_seed(db_session):
     db_session.add_all([u, org]); db_session.flush()
     p = ResearchProject(organization_slug="t4-hospital", owner_user_id=u.user_id, name="T4 Project", description="w84 t4", workspace_key="ws-t4")
     db_session.add(p); db_session.flush()
+    # The tests below reference outcome_id 1..12 literally; those rows must exist
+    # because gradeassessment.outcome_id is a real FK to outcomedefinition.id.
+    for i in range(1, 13):
+        db_session.add(
+            OutcomeDefinition(
+                id=i,
+                project_id=p.id,
+                outcome_key=f"t4-outcome-{i}",
+                label=f"T4 Outcome {i}",
+                measure_type="binary",
+            )
+        )
+    db_session.flush()
     db_session.commit()
     return TestClient(app), p.id
 
