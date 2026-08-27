@@ -80,8 +80,9 @@ class TestHybridFallback:
         assert _IMPORT_OK and 9 in kept and 17 not in kept and 21 not in kept
     def test_hybrid_vs_bk_parity_result_equal_when_below_fallback(self):
         assert _IMPORT_OK
+        import asyncio
         from app.services.simhash import find_duplicates_bktree
         recs = [{"id":i,"title":f"kw {i//3} same group"} for i in range(500)]
         kept_h, _ = find_duplicates_hybrid(recs)
-        kept_b, _ = find_duplicates_bktree(recs)
+        kept_b, _ = asyncio.run(find_duplicates_bktree(recs))
         assert set(kept_h) == set(kept_b)

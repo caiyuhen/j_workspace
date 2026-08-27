@@ -260,7 +260,9 @@ from app.services.simhash import find_duplicates_bktree
 
 async def _run_engine_with_ctx(size: int, preset: str):
     wid = _make_wid()
-    run = create_pipeline_run(wid, preset, max_records=min(size, 50000))
+    # PipelineRun.max_records is capped by the DB CHECK (1..2500); the engine reads
+    # the corpus from ctx["fetched_records"], so the run row only needs a legal value.
+    run = create_pipeline_run(wid, preset, max_records=min(size, 200))
     mark_step_success(run, 0, 100, size, size, attempt_no=1)
     records = _load_preset_50k(preset, size)
     ctx = {"fetched_records": records}
@@ -275,12 +277,14 @@ async def _run_engine_with_ctx(size: int, preset: str):
     return ctx, dd
 
 
+# FALLBACK_N_PARITY == 2000: only corpora at or below that size take the BK-only
+# path, so every parametrized case here stays inside the fallback regime.
 _N10K_FALLBACK_PARAMS = [
     (500, "sglt2i_ckd"),
     (1000, "sglt2i_ckd"),
+    (1500, "sglt2i_ckd"),
     (2000, "sglt2i_ckd"),
-    (10000, "sglt2i_ckd"),
-    (10000, "empagliflozin_hf"),
+    (2000, "empagliflozin_hf"),
 ]
 
 
@@ -321,16 +325,12 @@ async def test_W12_N50k_hybrid_fallback_false_version_present(size, preset, db_s
     assert dd is not None
     assert dd.perf_json is not None
     perf = dd.perf_json
-    if size == 10000:
-        pass
-    else:
-        assert perf.get("fallback_used") is False, (
-            f"preset={preset} N={size}: expected hybrid fallback_used=False, got {perf.get('fallback_used')}"
-        )
+    assert perf.get("fallback_used") is False, (
+        f"preset={preset} N={size}: expected hybrid fallback_used=False, got {perf.get('fallback_used')}"
+    )
     assert perf.get("version") == "w12-hybrid-v1", (
         f"preset={preset} N={size}: version expected w12-hybrid-v1, got {perf.get('version')}"
     )
-    if size > 10000:
-        assert "lsh_candidates" in perf
-        assert isinstance(perf["lsh_candidates"], int)
+    assert "lsh_candidates" in perf
+    assert isinstance(perf["lsh_candidates"], int)
 

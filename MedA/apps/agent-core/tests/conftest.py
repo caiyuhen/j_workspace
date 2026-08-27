@@ -246,19 +246,34 @@ _PRESET_TITLE_ABSTRACT_TEMPLATES_W12 = [
 ]
 
 
+_W12_FIXTURE_VERSION = "w12-synth-v3"
+
+_W12_FILLER_PER_RECORD = 16
+
+
 def _ensure_w12_synthetic_fixture_exists() -> _os.PathLike:
     """Generate w12_synthetic_50k.json deterministically (seed=42) if it's missing.
 
     Avoids committing 137.56 MB to git (GitHub 100MB limit).
     File shape: list[{id:int, nct_id:str, title:str, abstract:str, preset:str}]
     6 VALID_PRESETS x 63,500 records each = 381,000 total records; continuous id 1..381000.
+
+    Every 11th record is an exact twin of its predecessor, so dedup removes
+    ~9% of the corpus (kept ratio ~0.91) while all other records stay pairwise
+    farther apart than SIMHASH_HAMMING_THRESHOLD.
     """
     import json
     import pathlib
     import random
     here = pathlib.Path(__file__).resolve().parent
     fixture_path = here / "fixtures" / "w12_synthetic_50k.json"
-    if fixture_path.exists() and fixture_path.stat().st_size > 1_000_000:
+    meta_path = fixture_path.with_suffix(".meta")
+    if (
+        fixture_path.exists()
+        and fixture_path.stat().st_size > 1_000_000
+        and meta_path.exists()
+        and meta_path.read_text(encoding="utf-8").strip() == _W12_FIXTURE_VERSION
+    ):
         return fixture_path
     n_per_preset = 63500
     rng = random.Random(42)
@@ -267,16 +282,31 @@ def _ensure_w12_synthetic_fixture_exists() -> _os.PathLike:
     for p_idx, preset in enumerate(_VALID_PRESETS_W12):
         tpl_title, tpl_abs = _PRESET_TITLE_ABSTRACT_TEMPLATES_W12[p_idx]
         drug = preset.split("_")[0]
+        prev_title = ""
+        prev_abs = ""
         for i in range(n_per_preset):
             _id += 1
+            if i % 11 == 0 and i > 0:
+                title, abstract = prev_title, prev_abs
+            else:
+                filler = " ".join(
+                    f"k{p_idx}x{i}q{j}" for j in range(_W12_FILLER_PER_RECORD)
+                )
+                title = tpl_title.format(drug=drug, i=i)
+                abstract = (
+                    f"{drug} cohort {i} site {i % 97} arm {i % 7} "
+                    f"visit {i % 13}. {filler}"
+                )
+                prev_title, prev_abs = title, abstract
             records.append({
                 "id": _id,
                 "nct_id": f"NCT{10000000 + rng.randrange(90000000)}",
-                "title": tpl_title.format(drug=drug, i=i),
-                "abstract": tpl_abs.format(drug=drug, i=i),
+                "title": title,
+                "abstract": abstract,
                 "preset": preset,
             })
     fixture_path.write_text(json.dumps(records, ensure_ascii=False), encoding="utf-8")
+    meta_path.write_text(_W12_FIXTURE_VERSION, encoding="utf-8")
     return fixture_path
 
 

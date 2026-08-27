@@ -112,7 +112,6 @@ class TestLshBandPartition:
         c2 = lsh_find_candidates(s)
         assert _IMPORT_OK and (999,1000) not in c2
     def test_band_buckets_are_released_after_call_no_memory_leak(self):
-        import gc, os, psutil  # noqa: F401
         pytest.skip("optional mem test; skip for sandbox")
     def test_zero_sigs_returns_empty_set(self):
         assert _IMPORT_OK and lsh_find_candidates([]) == set()

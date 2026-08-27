@@ -31,6 +31,7 @@ from app.services.pipeline_engine import (
     run_pipeline,
     PIPELINE_STEPS,
 )
+from app.services.sources.pubmed_adapter import _load_preset_50k
 
 PRESETS_HP12 = ("sglt2i_ckd", "empagliflozin_hf")
 SIZES_HP12 = (10_000, 50_000)
@@ -41,6 +42,10 @@ USER_ID_A = "u-w12-001"
 WORKSPACE_ID = f"{ORG_SLUG}-ws-e2e-hp12-001"
 
 FIXTURE_50K_PATH = pathlib.Path(__file__).parent / "fixtures" / "w12_synthetic_50k.json"
+
+# PipelineRun.max_records is bounded by the DB CHECK cc_pipelinerun_max_records
+# (1..2500); the real N10k/N50k corpus is injected through ctx["fetched_records"].
+_LEGAL_MAX_RECORDS = 200
 
 MAX_TIMEOUT_S_PER_SIZE = {
     10_000: 180,
@@ -78,17 +83,10 @@ def _ensure_workspace(session: Session, wid: str) -> None:
 
 
 def _load_synth_records(preset: str, size: int) -> list[dict]:
-    """Load records from w12_synthetic_50k.json fixture (6 preset × 5 sizes)."""
+    """Load `size` records for `preset` out of the flat w12_synthetic_50k.json fixture."""
     if not FIXTURE_50K_PATH.exists():
         pytest.skip(f"fixture not found: {FIXTURE_50K_PATH}. Generate via D0-1 first.")
-    with open(FIXTURE_50K_PATH, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    if preset not in data:
-        pytest.skip(f"preset={preset!r} missing in fixture keys={list(data.keys())}")
-    sz_key = str(size)
-    if sz_key not in data[preset]:
-        pytest.skip(f"size={size} missing for preset={preset}. keys={list(data[preset].keys())}")
-    records = data[preset][sz_key]
+    records = _load_preset_50k(preset, size)
     assert isinstance(records, list) and len(records) == size, (
         f"fixture size mismatch preset={preset} size={size}: got len={len(records)}"
     )
@@ -166,7 +164,7 @@ class TestHP12E2E10k50k:
             workspace_id=WORKSPACE_ID,
             preset=preset,
             mode="snapshot",
-            max_records=size,
+            max_records=_LEGAL_MAX_RECORDS,
         )
         ctx = _build_ctx(preset, size)
         dur_s, db_run = _run_pipeline_with_timeout(run.id, ctx, size)
@@ -203,7 +201,7 @@ class TestHP12E2E10k50k:
             workspace_id=WORKSPACE_ID,
             preset=preset,
             mode="snapshot",
-            max_records=size,
+            max_records=_LEGAL_MAX_RECORDS,
         )
         ctx = _build_ctx(preset, size)
         dur_s, db_run = _run_pipeline_with_timeout(run.id, ctx, size)

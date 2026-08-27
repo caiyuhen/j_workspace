@@ -299,40 +299,34 @@ def _exact_block_verified_pairs(
     nb = EXACT_BLOCK_COUNT
     bw = EXACT_BLOCK_BITS
     bmask = (1 << bw) - 1
-    blocks = [
-        tuple((fp >> (bw * bi)) & bmask for bi in range(nb))
-        for fp in fps_u
-    ]
     clean_needed = nb - threshold_bits
     if clean_needed >= 2:
-        keys = [(a, b) for a in range(nb) for b in range(a + 1, nb)]
+        key_shifts = [
+            (bw * a, bw * b) for a in range(nb) for b in range(a + 1, nb)
+        ]
     else:
-        keys = [(a,) for a in range(nb)]
+        key_shifts = [(bw * a, bw * a) for a in range(nb)]
 
-    seen: set[tuple[int, int]] = set()
-    for key_blocks in keys:
-        buckets: dict[tuple, list[int]] = {}
+    for sa, sb in key_shifts:
+        buckets: dict[int, list[int]] = {}
         for u in range(m):
-            bl = blocks[u]
-            k = tuple(bl[x] for x in key_blocks)
+            fp = fps_u[u]
+            k = (((fp >> sa) & bmask) << bw) | ((fp >> sb) & bmask)
             bucket = buckets.get(k)
             if bucket is None:
                 buckets[k] = [u]
             else:
                 bucket.append(u)
         for members in buckets.values():
-            if len(members) < 2:
+            n_mem = len(members)
+            if n_mem < 2:
                 continue
-            for ii in range(len(members)):
+            for ii in range(n_mem):
                 ui = members[ii]
                 fi = fps_u[ui]
-                for jj in range(ii + 1, len(members)):
+                for jj in range(ii + 1, n_mem):
                     uj = members[jj]
-                    sk = (ui, uj)
-                    if sk in seen:
-                        continue
-                    seen.add(sk)
-                    if bin((fi ^ fps_u[uj]) & 0xFFFFFFFFFFFFFFFF).count("1") <= threshold_bits:
+                    if (fi ^ fps_u[uj]).bit_count() <= threshold_bits:
                         a = idxs_u[ui]
                         b = idxs_u[uj]
                         out.add((a, b) if a < b else (b, a))
@@ -375,23 +369,44 @@ class BKTree64:
 
     def query(self, target: int, radius: int) -> list:
         out = []
-        if radius < 0:
+        if radius < 0 or self._root is None:
             return out
 
-        def _walk(node):
-            if node is None:
-                return
-            cfp, cpay, cchildren = node
-            d = self.distance_fn(cfp, target)
+        stack = [self._root]
+        if self.distance_fn is hamming_distance:
+            # Fast path: inline popcount + iterative walk (no per-node call frames).
+            t = target & 0xFFFFFFFFFFFFFFFF
+            while stack:
+                cfp, cpay, cchildren = stack.pop()
+                d = ((cfp & 0xFFFFFFFFFFFFFFFF) ^ t).bit_count()
+                if d <= radius:
+                    out.extend(cpay)
+                if not cchildren:
+                    continue
+                lo = d - radius
+                if lo < 0:
+                    lo = 0
+                for cd in range(lo, d + radius + 1):
+                    child = cchildren.get(cd)
+                    if child is not None:
+                        stack.append(child)
+            return out
+
+        dist = self.distance_fn
+        while stack:
+            cfp, cpay, cchildren = stack.pop()
+            d = dist(cfp, target)
             if d <= radius:
                 out.extend(cpay)
-            lo = max(0, d - radius)
-            hi = d + radius + 1
-            for cd in range(lo, hi):
-                if cd in cchildren:
-                    _walk(cchildren[cd])
-
-        _walk(self._root)
+            if not cchildren:
+                continue
+            lo = d - radius
+            if lo < 0:
+                lo = 0
+            for cd in range(lo, d + radius + 1):
+                child = cchildren.get(cd)
+                if child is not None:
+                    stack.append(child)
         return out
 
 
@@ -469,7 +484,7 @@ async def find_duplicates_bktree(
     id_to_fp = {}
     for r in records:
         text = f"{r.get('title', '')} {r.get('abstract', '')}"
-        fp = simhash64(text)
+        fp = _simhash64_fast(text)
         fps.append((fp, r["id"]))
         id_to_fp[r["id"]] = fp
     t_fp = time.perf_counter()
@@ -491,8 +506,7 @@ async def find_duplicates_bktree(
                 near = t.query(fp_self, threshold_bits)
                 for other_id in near:
                     if other_id > id_self:
-                        fp_other = id_to_fp[other_id]
-                        h = hamming_distance(fp_self, fp_other)
+                        h = (fp_self ^ id_to_fp[other_id]).bit_count()
                         if h <= threshold_bits:
                             local_hist[h] = local_hist.get(h, 0) + 1
                             local_pairs.append((id_self, other_id))
@@ -649,11 +663,10 @@ def lsh_find_candidates(signatures: list[tuple[int, ...]]) -> set[tuple[int, int
         for members in bucket_map.values():
             if len(members) < 2:
                 continue
-            mb = sorted(members)
-            for ii in range(len(mb)):
-                for jj in range(ii + 1, len(mb)):
-                    p = (mb[ii], mb[jj])
-                    pair_counts[p] = pair_counts.get(p, 0) + 1
+            band_pairs: set[tuple[int, int]] = set()
+            _bucket_pairs(list(members), band_pairs)
+            for p in band_pairs:
+                pair_counts[p] = pair_counts.get(p, 0) + 1
     candidates = {p for p, cnt in pair_counts.items() if cnt >= 1}
     return candidates
 
@@ -669,14 +682,9 @@ def _oversample_prefix_pairs(fps: list[int], n_bits: int = OVERSAMPLE_PREFIX_BIT
         if prefix not in prefix_map:
             prefix_map[prefix] = []
         prefix_map[prefix].append(i)
-    pairs = set()
+    pairs: set[tuple[int, int]] = set()
     for members in prefix_map.values():
-        if len(members) < 2:
-            continue
-        mb = sorted(members)
-        for ii in range(len(mb)):
-            for jj in range(ii + 1, len(mb)):
-                pairs.add((mb[ii], mb[jj]))
+        _bucket_pairs(members, pairs)
     return pairs
 
 
@@ -703,7 +711,7 @@ def _bk_on_candidates_subset(
         fps = [0] * n
         for i, r in enumerate(records):
             text = f"{r.get('title', '')} {r.get('abstract', '')}"
-            fps[i] = simhash64(text)
+            fps[i] = _simhash64_fast(text)
     parent = list(range(n))
 
     def find(x):

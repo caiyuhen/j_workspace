@@ -261,12 +261,12 @@ def _w12_collect_durations_ms(n: int, warmup: int = 2, run: int = 3, cooldown_s:
     from app.services.simhash import find_duplicates_hybrid
     records = _load_preset_50k(W12_BENCH_PRESET, n)
     for w in range(warmup):
-        asyncio.run(find_duplicates_hybrid(records, n_jobs=8, enable_parity_check=(n <= 200)))
+        find_duplicates_hybrid(records, n_jobs=8, enable_parity_check=(n <= 200))
         time.sleep(cooldown_s)
     durations_ms = []
     for r in range(run):
         t0 = perf_counter()
-        asyncio.run(find_duplicates_hybrid(records, n_jobs=8, enable_parity_check=(n <= 200)))
+        find_duplicates_hybrid(records, n_jobs=8, enable_parity_check=(n <= 200))
         t1 = perf_counter()
         durations_ms.append((t1 - t0) * 1000.0)
         if r < run - 1:
