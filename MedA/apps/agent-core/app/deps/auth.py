@@ -5,6 +5,7 @@ from sqlmodel import Session
 
 from app.db import get_session
 from app.models import AuthSession, Organization, User
+from app.services.jwt_tokens import TokenError, decode_token
 
 
 @dataclass
@@ -26,6 +27,15 @@ def get_current_session(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="missing bearer token")
 
     token = authorization.replace("Bearer ", "", 1)
+    try:
+        decode_token(token)
+    except TokenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)
+        ) from exc
+
+    # A valid signature is not enough: the session row is what makes revocation
+    # possible, so a token whose row is gone must be rejected.
     auth_session = session.get(AuthSession, token)
     if auth_session is None:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="invalid session")

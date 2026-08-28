@@ -1,5 +1,3 @@
-from uuid import uuid4
-
 from sqlmodel import Session, select
 
 from app.models import AuthSession, Membership, Organization, User
@@ -9,6 +7,7 @@ from app.schemas import (
     SessionResponse,
     SessionUserResponse,
 )
+from app.services.jwt_tokens import issue_token
 
 
 def login_with_dev_session(session: Session, payload: DevLoginRequest) -> SessionResponse:
@@ -48,7 +47,12 @@ def login_with_dev_session(session: Session, payload: DevLoginRequest) -> Sessio
     # a higher role at login time.
     effective_role = membership.role
 
-    token = f"meda_{uuid4().hex}"
+    token = issue_token(
+        user_id=payload.user_id,
+        organization_slug=payload.organization_slug,
+        role=effective_role,
+        client_type=payload.client_type,
+    )
     auth_session = AuthSession(
         token=token,
         user_id=payload.user_id,

@@ -10,12 +10,17 @@ dependencies = [
   "sqlmodel>=0.0.22",
   "rank-bm25>=0.2.2",
   "beautifulsoup4>=4.12.0",
+  "alembic>=1.13.0",
+  "pyjwt>=2.9.0",
 ]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
-addopts = '-p no:warnings --strict-markers -m "not needs_network"'
+# `bench` is excluded by default because those tests assert wall-clock timings and
+# run-to-run variance; CI runs them in the dedicated backend-benchmark job with
+# continue-on-error, so they were never a gate. Run them via: pytest -m bench
+addopts = '-p no:warnings --strict-markers -m "not needs_network and not bench"'
 asyncio_mode = "auto"
 markers = [
     "needs_network: 标记需要真实外网的测试，默认 skip。运行：pytest -m needs_network",

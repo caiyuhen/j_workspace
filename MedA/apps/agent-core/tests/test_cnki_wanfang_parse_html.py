@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import importlib
 from pathlib import Path
 
 import pytest
@@ -18,7 +17,6 @@ def _read(name: str) -> str:
 
 
 def _is_captcha_html(html: str) -> bool:
-    importlib.reload(cnki_mod)
     fn = getattr(cnki_mod, "_is_captcha_html", None)
     if fn is None:
         raise NotImplementedError("_is_captcha_html not yet implemented in cnki_adapter")
@@ -26,7 +24,6 @@ def _is_captcha_html(html: str) -> bool:
 
 
 def _is_login_required_html(html: str) -> bool:
-    importlib.reload(wanfang_mod)
     fn = getattr(wanfang_mod, "_is_login_required_html", None)
     if fn is None:
         raise NotImplementedError("_is_login_required_html not yet implemented in wanfang_adapter")
