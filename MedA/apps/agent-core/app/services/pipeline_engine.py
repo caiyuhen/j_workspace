@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import time
 from datetime import datetime
 from typing import Any
@@ -366,6 +367,449 @@ def _apply_fault_injection(idx: int, ctx: dict[str, Any]) -> None:
             raise TimeoutError(f"fail-once flaky step{idx}")
 
 
+# Study designs that title/abstract screening rejects outright: they are secondary
+# literature, and the design is always stated in the abstract, so no full text is
+# needed to make the call.
+_TA_EXCLUDED_DESIGNS: frozenset[str] = frozenset({"review"})
+
+# All six presets ask an intervention-effect question, so full-text screening keeps
+# only designs that can answer one. An unknown design is kept rather than dropped:
+# absence of design metadata is not evidence of ineligibility.
+_FT_ELIGIBLE_DESIGNS: frozenset[str] = frozenset({"RCT", "cohort", "registry"})
+
+# The PICO extractor reports a coarse text-derived study type; map it onto the
+# design vocabulary the abstractor and RoB 2 engines speak.
+_TEXT_STUDY_TYPE_TO_DESIGN: dict[str, str] = {
+    "rct": "RCT",
+    "observational": "cohort",
+    "review": "review",
+}
+
+
+def _screening_pool(idx: int, run: PipelineRun, ctx: dict[str, Any]) -> list[dict]:
+    """Records entering step `idx`, preferring what the previous step actually kept."""
+    records = ctx.get("kept_records") or ctx.get("fetched_records")
+    if records:
+        return records
+
+    # Resuming mid-pipeline: the surviving id set from step1 is gone, so re-fetch the
+    # corpus and keep as many records as the previous step reported. The exact set
+    # cannot be recovered, but the funnel size can.
+    from app.services.sources.pubmed_adapter import _load_preset_snapshot
+
+    records = _load_preset_snapshot(run.preset, run.max_records)
+    ctx["fetched_records"] = records
+    prev_n_out = _get_step_n_out(run, idx - 1)
+    if 0 < prev_n_out < len(records):
+        records = records[:prev_n_out]
+    return records
+
+
+def _screen_one(rec: dict, protocol: dict[str, Any]) -> dict[str, Any]:
+    """Rule-extract PICO from one record and run the abstractor triage on it."""
+    from app.services.abstractor import PICOElement, triage_study
+    from app.services.pico import extract_pico_fields
+
+    fields = extract_pico_fields(rec.get("title") or "", rec.get("abstract") or "")
+    pico = {
+        "population": PICOElement(type=fields["population"], text=fields["population"]),
+        "intervention": PICOElement(type=fields["intervention"], text=fields["intervention"]),
+        "comparator": PICOElement(type=fields["comparison"], text=fields["comparison"]),
+        "outcome": PICOElement(type=fields["outcome"], text=fields["outcome"]),
+    }
+    design = rec.get("study_design") or _TEXT_STUDY_TYPE_TO_DESIGN.get(
+        fields["study_type"] or ""
+    )
+    study_meta = {"study_design": design, "risk_of_bias_overall": None}
+    return {
+        "record": rec,
+        "pico": fields,
+        "study_design": design,
+        "triage": triage_study(pico, protocol, study_meta),
+    }
+
+
+def _preset_protocol(preset: str) -> dict[str, Any]:
+    from app.services.preset_profiles import PRESET_PROFILES
+
+    profile = PRESET_PROFILES.get(preset)
+    return profile.protocol() if profile else {}
+
+
+def _exec_screen_ta(run: PipelineRun, ctx: dict[str, Any]) -> tuple[int, int, None]:
+    """step2 — title/abstract screening: real PICO extraction + abstractor triage.
+
+    `n_out` counts include *and* review: a record the triage cannot resolve from the
+    title and abstract alone is exactly what goes on to full-text screening.
+    """
+    from app.services.abstractor import AbstractorDecision
+
+    pool = _screening_pool(2, run, ctx)
+    protocol = _preset_protocol(run.preset)
+
+    kept: list[dict[str, Any]] = []
+    for rec in pool:
+        screened = _screen_one(rec, protocol)
+        if screened["triage"]["decision"] == AbstractorDecision.EXCLUDE:
+            continue
+        if screened["study_design"] in _TA_EXCLUDED_DESIGNS:
+            continue
+        kept.append(screened)
+
+    ctx["ta_records"] = kept
+    return len(pool), len(kept), None
+
+
+def _exec_screen_ft(run: PipelineRun, ctx: dict[str, Any]) -> tuple[int, int, None]:
+    """step3 — full-text screening: design eligibility + verifiable PICO."""
+    screened_in = ctx.get("ta_records")
+    if screened_in is None:
+        protocol = _preset_protocol(run.preset)
+        pool = _screening_pool(3, run, ctx)
+        screened_in = [_screen_one(rec, protocol) for rec in pool]
+
+    kept: list[dict[str, Any]] = []
+    for screened in screened_in:
+        design = screened["study_design"]
+        if design is not None and design not in _FT_ELIGIBLE_DESIGNS:
+            continue
+        pico = screened["pico"]
+        # Nothing at all could be pinned down from the retrieved text, so eligibility
+        # is unverifiable and the record cannot be carried into extraction.
+        if not any(
+            pico[k] for k in ("population", "intervention", "comparison", "outcome")
+        ):
+            continue
+        kept.append(screened)
+
+    ctx["ft_records"] = kept
+    return len(screened_in), len(kept), None
+
+
+def _abstract_outcome(rec: dict) -> dict[str, Any] | None:
+    """Pull the effect estimate out of one record, or None if it has none.
+
+    Data abstraction is what step4 actually does, and a study whose result cannot be
+    abstracted cannot enter RoB 2 or GRADE — there is nothing to rate. Structured
+    fields win over the abstract text; the regexes are the fallback for records that
+    only carry prose.
+    """
+    p_value = rec.get("p_value")
+    if not isinstance(p_value, (int, float)):
+        p_value = None
+    sample_size = rec.get("sample_size")
+    if not isinstance(sample_size, int):
+        sample_size = None
+
+    text = rec.get("abstract") or ""
+    if p_value is None:
+        m = _RX_P_VALUE.search(text)
+        if m:
+            # "p<0.001" states an upper bound, not a value; take the bound, which is
+            # all the significance test downstream needs.
+            p_value = float(m.group("num"))
+    if sample_size is None:
+        m = _RX_SAMPLE_SIZE.search(text)
+        if m:
+            sample_size = int(m.group("num"))
+
+    if p_value is None and sample_size is None:
+        return None
+
+    hazard_ratio = None
+    m = _RX_HAZARD_RATIO.search(text)
+    if m:
+        hazard_ratio = float(m.group("num"))
+
+    return {"p_value": p_value, "sample_size": sample_size, "hazard_ratio": hazard_ratio}
+
+
+_RX_P_VALUE = re.compile(r"\bp\s*[=<>]\s*(?P<num>\d*\.?\d+)", re.IGNORECASE)
+_RX_SAMPLE_SIZE = re.compile(r"\bn\s*=\s*(?P<num>\d+)", re.IGNORECASE)
+_RX_HAZARD_RATIO = re.compile(r"\b(?:HR|RR|OR)\s*[= ]\s*(?P<num>\d*\.?\d+)", re.IGNORECASE)
+_RX_DROPOUT = re.compile(r"dropout\s+(?P<num>\d*\.?\d+)\s*%", re.IGNORECASE)
+
+
+def _exec_abstractor(run: PipelineRun, ctx: dict[str, Any]) -> tuple[int, int, None]:
+    """step4 — data abstraction: keep the studies whose results can be abstracted."""
+    from app.services.abstractor import AbstractorDecision
+
+    screened_in = ctx.get("ft_records")
+    if screened_in is None:
+        protocol = _preset_protocol(run.preset)
+        screened_in = [_screen_one(rec, protocol) for rec in _screening_pool(4, run, ctx)]
+
+    abstracted: list[dict[str, Any]] = []
+    for screened in screened_in:
+        if screened["triage"]["decision"] == AbstractorDecision.EXCLUDE:
+            continue
+        outcome = _abstract_outcome(screened["record"])
+        if outcome is None:
+            continue
+        abstracted.append({**screened, "outcome": outcome})
+
+    ctx["abstracted_records"] = abstracted
+    return len(screened_in), len(abstracted), None
+
+
+def _abstracted_pool(run: PipelineRun, ctx: dict[str, Any]) -> list[dict[str, Any]]:
+    """The abstracted studies entering step5, re-deriving them if ctx has none.
+
+    A resume that starts at step5 or later arrives with an empty ctx, so the
+    screening and abstraction chain is replayed from the corpus. Step1's reported
+    output size is the entry pool, which is what `_screening_pool(2, ...)` uses.
+    """
+    records = ctx.get("abstracted_records")
+    if records is None:
+        _exec_screen_ta(run, ctx)
+        _exec_screen_ft(run, ctx)
+        _exec_abstractor(run, ctx)
+        records = ctx["abstracted_records"]
+    return records
+
+
+def _dropout_pct(text: str) -> float | None:
+    m = _RX_DROPOUT.search(text)
+    return float(m.group("num")) if m else None
+
+
+def _rob2_domains_for(screened: dict[str, Any]) -> tuple[bool, list[dict[str, str]]]:
+    """Derive the five RoB 2 domain ratings for one abstracted study.
+
+    Every signal comes from what the record actually says: the design, whether the
+    abstract reports blinding, the reported dropout, and whether an effect estimate
+    with a p-value could be abstracted. Nothing is assumed favourably — a signal the
+    text does not carry counts as a concern, not as low risk.
+    """
+    from app.services.rob2_engine import TL, domain_d1_rating, r
+
+    rec = screened["record"]
+    text = f"{rec.get('title') or ''} {rec.get('abstract') or ''}".lower()
+    randomized = screened["study_design"] == "RCT"
+    open_label = not randomized or "double-blind" not in text
+    # The abstracted endpoints are event counts and lab values, which are measured
+    # the same way regardless of who knows the allocation.
+    signals = {
+        "open_label": open_label,
+        "outcome_type": "objective",
+        "blinded_outcome": not open_label,
+    }
+    domains = [r(1, domain_d1_rating(signals))]
+    # D2 deviations from the intended intervention: unblinded care can diverge.
+    domains.append(r(2, TL.SOME if open_label else TL.LOW))
+    # D3 missing outcome data.
+    dropout = _dropout_pct(text)
+    if dropout is None:
+        d3 = TL.SOME
+    elif dropout >= 15.0:
+        d3 = TL.HIGH
+    elif dropout >= 5.0:
+        d3 = TL.SOME
+    else:
+        d3 = TL.LOW
+    domains.append(r(3, d3))
+    # D4 outcome measurement.
+    domains.append(r(4, TL.LOW if not open_label else TL.SOME))
+    # D5 selection of the reported result: with no p-value there is nothing to check
+    # the pre-specified analysis against.
+    outcome = screened.get("outcome") or {}
+    domains.append(r(5, TL.LOW if outcome.get("p_value") is not None else TL.SOME))
+    return randomized, domains
+
+
+# `compute_rob2_delta` reports three buckets. A `critical` ROBINS-I verdict is at
+# least high risk, so it is counted as high rather than silently dropped.
+_ROB2_BUCKETS: tuple[str, ...] = ("low", "some", "high")
+_ROB2_RATING_TO_BUCKET: dict[str, str] = {
+    "low": "low",
+    "some_concerns": "some",
+    "high": "high",
+    "critical": "high",
+}
+
+
+def _exec_rob2_assessment(run: PipelineRun, ctx: dict[str, Any]) -> tuple[int, int, str]:
+    """step5 — risk of bias: RoB 2 for randomized trials, ROBINS-I for the rest.
+
+    Assessing a study never removes it from the review, so `n_out == n_in`. The
+    bucket counts ride along in `payload_ref` so the compare view can read the real
+    distribution back without a second pass over the corpus.
+    """
+    from app.services.rob2_engine import calc_rob2_overall, calc_robinsi_overall
+
+    pool = _abstracted_pool(run, ctx)
+
+    assessed: list[dict[str, Any]] = []
+    counts = {bucket: 0 for bucket in _ROB2_BUCKETS}
+    for screened in pool:
+        randomized, domains = _rob2_domains_for(screened)
+        rating = (
+            calc_rob2_overall(domains) if randomized else calc_robinsi_overall(domains)
+        )
+        bucket = _ROB2_RATING_TO_BUCKET[rating]
+        counts[bucket] += 1
+        assessed.append({
+            **screened,
+            "rob2": {
+                "tool": "rob2" if randomized else "robins_i",
+                "domains": domains,
+                "rating": rating,
+                "overall": bucket,
+            },
+        })
+
+    ctx["rob2_records"] = assessed
+    payload_ref = "rob2:" + ",".join(f"{b}={counts[b]}" for b in _ROB2_BUCKETS)
+    return len(pool), len(assessed), payload_ref
+
+
+def parse_rob2_payload_ref(payload_ref: str | None) -> dict[str, int] | None:
+    """Read back the bucket counts step5 recorded, or None if it recorded none."""
+    if not payload_ref or not payload_ref.startswith("rob2:"):
+        return None
+    counts: dict[str, int] = {}
+    for part in payload_ref[len("rob2:"):].split(","):
+        bucket, _, raw = part.partition("=")
+        if bucket in _ROB2_BUCKETS and raw.isdigit():
+            counts[bucket] = int(raw)
+    if len(counts) != len(_ROB2_BUCKETS):
+        return None
+    return counts
+
+
+_GRADE_CERTAINTY_TO_LETTER: dict[str, str] = {
+    "High": "H",
+    "Moderate": "M",
+    "Low": "L",
+    # GRADE has four levels and the compare view has three; "very low" certainty is
+    # reported as low rather than invented as a fourth letter.
+    "VeryLow": "L",
+}
+
+
+def _grade_domains_for_outcome(
+    outcome_label: str,
+    assessed: list[dict[str, Any]],
+) -> tuple[Any, Any]:
+    """Rate the five GRADE domains and three upgrade criteria for one outcome."""
+    import statistics
+
+    from app.services.grade_engine import Grade3Upgrades, Grade5Domains
+    from app.services.rob2_engine import grade_ro_downgrade
+
+    n = len(assessed)
+    ratings = [s["rob2"]["rating"] for s in assessed]
+    risk_of_bias = {0: "no_concerns", -1: "some_concerns", -2: "major_concerns"}[
+        grade_ro_downgrade(ratings)
+    ]
+
+    # Indirectness: does the body of evidence report *this* outcome at all?
+    needle = outcome_label.lower()
+    reporting = sum(
+        1
+        for s in assessed
+        if needle in (s["record"].get("abstract") or "").lower()
+    )
+    reporting_pct = reporting / n if n else 0.0
+    if reporting_pct >= 0.5:
+        indirectness = "no_concerns"
+    elif reporting_pct > 0.0:
+        indirectness = "some_concerns"
+    else:
+        indirectness = "major_concerns"
+
+    # Inconsistency: how far apart the reported effect estimates are.
+    hrs = [
+        s["outcome"]["hazard_ratio"]
+        for s in assessed
+        if s.get("outcome", {}).get("hazard_ratio")
+    ]
+    if len(hrs) < 2:
+        inconsistency = "some_concerns"
+    else:
+        mean_hr = statistics.fmean(hrs)
+        cv = statistics.pstdev(hrs) / mean_hr if mean_hr else 0.0
+        if cv >= 0.5:
+            inconsistency = "major_concerns"
+        elif cv >= 0.3:
+            inconsistency = "some_concerns"
+        else:
+            inconsistency = "no_concerns"
+
+    # Imprecision: the usual sample-size thresholds for an optimally powered body
+    # of evidence.
+    total_n = sum(s["outcome"].get("sample_size") or 0 for s in assessed)
+    if total_n < 400:
+        imprecision = "major_concerns"
+    elif total_n < 2000:
+        imprecision = "some_concerns"
+    else:
+        imprecision = "no_concerns"
+
+    # Publication bias: below ten studies a funnel plot cannot be interpreted, so
+    # the domain is undetectable rather than clean.
+    publication_bias = "no_concerns" if n >= 10 else "some_concerns"
+
+    domains = Grade5Domains(
+        risk_of_bias=risk_of_bias,
+        indirectness=indirectness,
+        inconsistency=inconsistency,
+        imprecision=imprecision,
+        publication_bias=publication_bias,
+    )
+    upgrades = Grade3Upgrades(
+        # A large effect only earns an upgrade at the conventional RR<0.5 / >2.0.
+        large_effect=bool(hrs) and not 0.5 < statistics.median(hrs) < 2.0,
+        # Neither a dose-response gradient nor residual confounding that would bias
+        # towards the null is recoverable from the retrieved text.
+        dose_response=False,
+        confounders_reduce=False,
+    )
+    return domains, upgrades
+
+
+def _exec_grade_downgrade(run: PipelineRun, ctx: dict[str, Any]) -> tuple[int, int, str]:
+    """step6 — GRADE certainty, rated once per outcome of the review question.
+
+    The funnel turns from studies into outcomes here, so `n_out` is the number of
+    outcomes rated. The letters ride along in `payload_ref` for the compare view.
+    """
+    from app.services.grade_engine import compute_certainty_final
+    from app.services.preset_profiles import get_profile
+
+    assessed = ctx.get("rob2_records")
+    if assessed is None:
+        _exec_rob2_assessment(run, ctx)
+        assessed = ctx["rob2_records"]
+
+    labels = get_profile(run.preset).outcome_labels
+    outcomes: list[dict[str, Any]] = []
+    for label in labels:
+        domains, upgrades = _grade_domains_for_outcome(label, assessed)
+        certainty = compute_certainty_final(domains, upgrades, start="High")
+        outcomes.append({
+            "outcome": label,
+            "certainty": certainty,
+            "letter": _GRADE_CERTAINTY_TO_LETTER[certainty],
+            "domains": dict(domains.items()),
+            "n_studies": len(assessed),
+        })
+
+    ctx["grade_outcomes"] = outcomes
+    payload_ref = "grade:" + ",".join(o["letter"] for o in outcomes)
+    return len(assessed), len(outcomes), payload_ref
+
+
+def parse_grade_payload_ref(payload_ref: str | None) -> list[str] | None:
+    """Read back the per-outcome certainty letters step6 recorded."""
+    if not payload_ref or not payload_ref.startswith("grade:"):
+        return None
+    letters = [p for p in payload_ref[len("grade:"):].split(",") if p]
+    if not letters or any(x not in ("H", "M", "L") for x in letters):
+        return None
+    return letters
+
+
 def _exec_step_N(
     idx: int,
     run: PipelineRun,
@@ -385,6 +829,21 @@ def _exec_step_N(
         n_in = run.max_records
         n_out = len(records)
         return n_in, n_out, ctx.get("pubmed_out", f"snapshot:{run.preset}")
+
+    if idx == 2:
+        return _exec_screen_ta(run, ctx)
+
+    if idx == 3:
+        return _exec_screen_ft(run, ctx)
+
+    if idx == 4:
+        return _exec_abstractor(run, ctx)
+
+    if idx == 5:
+        return _exec_rob2_assessment(run, ctx)
+
+    if idx == 6:
+        return _exec_grade_downgrade(run, ctx)
 
     factors = [0.96, 0.86, 0.58, 0.56, 0.76, 0.98, 1.0, 1.0]
     n_in = _get_step_n_out(run, idx - 1) or run.max_records

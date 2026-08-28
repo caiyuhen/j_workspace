@@ -241,34 +241,131 @@ import time as _time
 from app.services.pipeline_engine import VALID_PRESETS as _VALID_PRESETS
 
 _SNAPSHOT_CACHE: dict[str, list[dict]] = {}
+
+
+# Study designs are spread deterministically so the downstream RoB 2 / GRADE steps
+# see a realistic mix instead of one uniform design. The weights below are the
+# proportions of the corpus assigned to each design, in order.
+_DESIGN_MIX: tuple[tuple[str, int], ...] = (
+    ("RCT", 62),
+    ("cohort", 18),
+    ("registry", 8),
+    ("case_control", 7),
+    ("review", 5),
+)
+
+
+def _design_for_index(i: int) -> str:
+    """Pick a study design from the fixed mix by position, so runs are reproducible."""
+    total = sum(w for _, w in _DESIGN_MIX)
+    slot = (i * 7) % total
+    cursor = 0
+    for design, weight in _DESIGN_MIX:
+        cursor += weight
+        if slot < cursor:
+            return design
+    return _DESIGN_MIX[-1][0]
+
+
+_COUNTRY_POOL = (
+    "Canada", "Denmark", "Japan", "Brazil", "Germany", "Australia",
+    "South Korea", "Netherlands", "Sweden", "Spain", "Israel", "Poland",
+    "Mexico", "Norway", "Finland", "Portugal", "Chile", "Austria",
+)
+_FUNDER_POOL = (
+    "Wellcome Trust", "NIDDK", "Horizon Europe", "CIHR", "JSPS Kakenhi",
+    "NHMRC", "Novo Nordisk Foundation", "Swedish Research Council",
+    "Fondation Leducq", "Helmholtz Association", "MRC", "FAPESP",
+)
+_AUTHOR_POOL = (
+    "Alvarez P", "Beaumont R", "Castellanos J", "Duarte M", "Eriksen H",
+    "Fontaine L", "Ghosh S", "Halvorsen K", "Ishikawa Y", "Jankowski W",
+    "Kovacs Z", "Lindqvist E", "Moretti G", "Nakamura H", "Oyelaran B",
+    "Pettersen A", "Quintana R", "Rasmussen T", "Sorensen V", "Tanaka K",
+)
+
+
 def _load_preset_snapshot(preset: str, max_records: int) -> list[dict]:
-    """Inline synthetic snapshots for 6 presets (matches demo_pubmed_end2end.py top fixtures). No disk IO needed."""
+    """Synthetic snapshot corpus for the 6 demo presets. No disk IO needed.
+
+    The text carries the population / intervention / comparator / outcome and study
+    design of the preset, because steps 2-6 run the real screening, RoB 2 and GRADE
+    engines against it. A corpus of `"<preset> synthetic study #N"` strings would
+    make every record fail extraction identically and the funnel meaningless.
+    """
     import hashlib
+    from app.services.preset_profiles import get_profile
+
     if preset in _SNAPSHOT_CACHE and len(_SNAPSHOT_CACHE[preset]) >= max_records:
         return _SNAPSHOT_CACHE[preset][:max_records]
-    preset_sizes = {
-        "sglt2i_ckd": 178,
-        "empagliflozin_hf": 132,
-        "glp1_weightloss": 188,
-        "liraglutide_nafld": 112,
-        "pkd_tolvaptan": 74,
-        "ckd_blood_pressure_control": 156,
-    }
-    n = min(max_records, preset_sizes.get(preset, 100))
+
+    profile = get_profile(preset)
+    n = min(max_records, profile.snapshot_size)
     seed = int(hashlib.sha256(preset.encode()).hexdigest()[:8], 16)
+    journal_pool = [
+        "N Engl J Med", "Lancet", "JAMA", "BMJ", "Ann Intern Med",
+        "Kidney Int", "J Am Soc Nephrol", "Diabetes Care", "Circulation",
+    ]
     records = []
     for i in range(n):
         nct_no = f"NCT{seed % 1000000 + i:08d}"
         title_hash = (seed + i * 2654435761) & 0xFFFFFFFF
+        design = _design_for_index(i)
+        # A p-value under 0.05 is what lets the abstractor call a study includable,
+        # so it must vary rather than be constant across the corpus.
+        p_value = round(0.001 + ((title_hash >> 11) % 900) / 10000.0, 4)
+        design_phrase = {
+            "RCT": "randomized controlled trial, double-blind",
+            "cohort": "prospective cohort study",
+            "registry": "registry-based cohort",
+            "case_control": "retrospective case-control study",
+            "review": "systematic review and meta-analysis",
+        }[design]
+        # Every record shares the preset's PICO wording, so without enough per-record
+        # detail the shared boilerplate dominates the simhash signature and step1
+        # collapses the whole corpus into a handful of clusters.
+        sample_size = 80 + (title_hash % 1900)
+        follow_up_months = 6 + ((title_hash >> 4) % 60)
+        hazard_ratio = round(0.55 + ((title_hash >> 9) % 400) / 1000.0, 3)
+        site_count = 3 + ((title_hash >> 17) % 140)
+        cohort_tag = f"{preset[:4].upper()}-{title_hash % 99991:05d}"
+        country = _COUNTRY_POOL[(title_hash >> 13) % len(_COUNTRY_POOL)]
+        funder = _FUNDER_POOL[(title_hash >> 19) % len(_FUNDER_POOL)]
+        lead_author = _AUTHOR_POOL[(title_hash >> 23) % len(_AUTHOR_POOL)]
+        ci_low = round(hazard_ratio * 0.82, 3)
+        ci_high = round(hazard_ratio * 1.14, 3)
+        dropout_pct = round(2.0 + ((title_hash >> 21) % 180) / 10.0, 1)
         records.append({
             "id": f"pmid-{seed % 100000 + i:06d}",
             "nct_id": nct_no,
-            "title": f"{preset} synthetic study #{i + 1} [{nct_no}] hash={title_hash:x}",
-            "authors": "Synthetic Author Team",
-            "journal": "Synthetic J Evid Based Med (Snapshot Fixture)",
+            "title": (
+                f"{profile.intervention_text} versus {profile.comparator_text} "
+                f"in {profile.condition}: a {design_phrase} of {sample_size} adults "
+                f"across {site_count} sites in {country} "
+                f"(cohort {cohort_tag} #{i + 1} [{nct_no}] hash={title_hash:x})"
+            ),
+            "authors": f"{lead_author}; Synthetic Author Team {cohort_tag}",
+            "journal": journal_pool[(title_hash >> 7) % len(journal_pool)],
             "year": 2020 + (i % 7),
-            "abstract": f"Synthetic abstract for preset={preset}, idx={i}, seed={seed}. PICO details generated deterministically.",
+            "abstract": (
+                f"[BACKGROUND] Adults with {profile.condition}. "
+                f"Population: {profile.population_text}. "
+                f"[METHODS] {design_phrase}; {profile.intervention_text} "
+                f"compared with {profile.comparator_text}; n={sample_size} enrolled "
+                f"at {site_count} sites in {country}, followed {follow_up_months} "
+                f"months (cohort {cohort_tag}); funded by {funder}; "
+                f"dropout {dropout_pct}%. "
+                f"[OUTCOMES] {', '.join(profile.outcome_labels)}. "
+                f"[RESULTS] HR {hazard_ratio} (95% CI {ci_low}-{ci_high}), "
+                f"p={p_value}, hash={title_hash:x}, idx={i}, seed={seed}. "
+                f"[CONCLUSION] Lead investigator {lead_author} reports the "
+                f"{cohort_tag} cohort under preset={preset}."
+            ),
             "source": f"snapshot:{preset}",
+            "preset": preset,
+            "study_design": design,
+            "p_value": p_value,
+            "sample_size": sample_size,
         })
     _SNAPSHOT_CACHE[preset] = records
     return records[:max_records]

@@ -19,11 +19,13 @@ _LLM_PROVIDER: Literal["claude", "openai"] | None = (
 POP_TERMS = [
     "T2DM", "2型糖尿病", "2 型糖尿病", "T1DM", "CKD", "慢性肾病", "CKD 3b", "HFrEF", "心衰",
     "高血压", "STEMI", "NSTEMI", "ACS", "急性冠脉综合征", "肥胖", "NAFLD",
+    "ADPKD", "多囊肾", "NASH",
 ]
 INT_TERMS = [
     "SGLT2", "SGLT2i", "达格列净", "Dapagliflozin", "恩格列净", "Empagliflozin",
     "GLP-1", "GLP1", "司美格鲁肽", "Semaglutide", "利拉鲁肽", "Liraglutide",
     "二甲双胍", "Metformin", "胰岛素", "Insulin", "ACEI", "ARB", "他汀", "Statin",
+    "Tolvaptan", "托伐普坦",
 ]
 CMP_TERMS = [
     "安慰剂", "placebo", "常规治疗", "usual care", "对照", "control",
@@ -33,6 +35,13 @@ OUT_TERMS = [
     "MACE", "主要心血管不良事件", "3P-MACE", "4P-MACE", "HF 住院", "心衰住院", "住院率",
     "全因死亡", "all-cause mortality", "心血管死亡", "CV death", "eGFR 下降", "肌酐翻倍",
     "复合肾脏终点", "HbA1c", "体重变化",
+    # English phrasings of the same endpoints; the Chinese-only list above misses
+    # the way these outcomes are written in most indexed abstracts.
+    "all-cause death", "cardiovascular death", "CV events",
+    "HF hospitalization", "heart failure hospitalization",
+    "eGFR drop", "eGFR decline", "eGFR slope", "TKV",
+    "weight loss", "fibrosis", "SBP",
+    "serious AEs", "serious adverse events",
 ]
 STUDY_TYPE_RULES = [
     ("rct", re.compile(r"\bRCT\b|randomiz|随机|随机对照|randomized controlled", re.IGNORECASE)),
@@ -60,32 +69,29 @@ class BatchResult:
     failed: int
 
 
-def _extract_population(text: str) -> tuple[str | None, float]:
-    found = [t for t in POP_TERMS if t.lower() in text.lower()]
+def _match_terms(text: str, terms: list[str]) -> tuple[str | None, float]:
+    """Lowercase the haystack once, then collect every term it contains."""
+    low = text.lower()
+    found = [t for t in terms if t.lower() in low]
     if not found:
         return None, 0.0
     return "；".join(sorted(set(found))), min(1.0, 0.25 + 0.15 * len(found))
+
+
+def _extract_population(text: str) -> tuple[str | None, float]:
+    return _match_terms(text, POP_TERMS)
 
 
 def _extract_intervention(text: str) -> tuple[str | None, float]:
-    found = [t for t in INT_TERMS if t.lower() in text.lower()]
-    if not found:
-        return None, 0.0
-    return "；".join(sorted(set(found))), min(1.0, 0.25 + 0.15 * len(found))
+    return _match_terms(text, INT_TERMS)
 
 
 def _extract_comparison(text: str) -> tuple[str | None, float]:
-    found = [t for t in CMP_TERMS if t.lower() in text.lower()]
-    if not found:
-        return None, 0.0
-    return "；".join(sorted(set(found))), min(1.0, 0.25 + 0.15 * len(found))
+    return _match_terms(text, CMP_TERMS)
 
 
 def _extract_outcome(text: str) -> tuple[str | None, float]:
-    found = [t for t in OUT_TERMS if t.lower() in text.lower()]
-    if not found:
-        return None, 0.0
-    return "；".join(sorted(set(found))), min(1.0, 0.25 + 0.15 * len(found))
+    return _match_terms(text, OUT_TERMS)
 
 
 def _detect_study_type(text: str) -> tuple[str | None, float]:
@@ -95,23 +101,35 @@ def _detect_study_type(text: str) -> tuple[str | None, float]:
     return None, 0.0
 
 
-def _rule_baseline_extract(rec: LiteratureRecord) -> LiteraturePico:
-    text = f"{rec.title}\n{rec.abstract}"
+def extract_pico_fields(title: str, abstract: str) -> dict[str, object]:
+    """Rule-based PICO extraction for plain records (pipeline ctx dicts, no ORM row)."""
+    text = f"{title}\n{abstract}"
     pop, p_w = _extract_population(text)
     intr, i_w = _extract_intervention(text)
-    cmp, c_w = _extract_comparison(text)
+    cmp_, c_w = _extract_comparison(text)
     out, o_w = _extract_outcome(text)
     study, s_w = _detect_study_type(text)
-    conf = round(sum([p_w, i_w, c_w, o_w, s_w]) / 5.0, 3)
+    return {
+        "population": pop,
+        "intervention": intr,
+        "comparison": cmp_,
+        "outcome": out,
+        "study_type": study,
+        "confidence": round(sum([p_w, i_w, c_w, o_w, s_w]) / 5.0, 3),
+    }
+
+
+def _rule_baseline_extract(rec: LiteratureRecord) -> LiteraturePico:
+    fields = extract_pico_fields(rec.title or "", rec.abstract or "")
     return LiteraturePico(
         record_id=rec.id,
-        population=pop,
-        intervention=intr,
-        comparison=cmp,
-        outcome=out,
-        study_type=study,
+        population=fields["population"],
+        intervention=fields["intervention"],
+        comparison=fields["comparison"],
+        outcome=fields["outcome"],
+        study_type=fields["study_type"],
         extraction_method="rule_baseline",
-        confidence=conf,
+        confidence=fields["confidence"],
     )
 
 
