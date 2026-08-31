@@ -44,13 +44,18 @@ def test_workspace_home_returns_project_scoped_summary() -> None:
     assert response.status_code == 200
     assert body["project"]["id"] == project_id
     assert body["project"]["name"] == "糖尿病真实世界研究"
-    assert body["project"]["current_stage"] == "方案设计"
+    # 新建项目没有任何落库记录，所以当前阶段停在第一个未完成阶段，且没有更新时间
+    assert body["project"]["current_stage"] == "选题"
+    assert body["project"]["updated_at_label"] == ""
     assert body["hero_cta"]["label"] == "继续上次研究"
     assert body["stages"][0]["key"] == "topic"
-    assert body["recent_tasks"][0]["title"] == "完善纳排标准草案"
-    assert body["recent_artifacts"][0]["title"] == "方案初稿 v0.3"
+    assert all(stage["status"] == "pending" for stage in body["stages"])
+    # 空态：没有任务/产物/活动/待办，不再用合成文案填充
+    assert body["recent_tasks"] == []
+    assert body["recent_artifacts"] == []
+    assert body["activity"] == []
+    assert body["todos"] == []
     assert body["assistant"]["headline"] == "MedA 助手建议"
-    assert body["todos"][0]["title"] == "确认研究终点定义"
 
 
 def test_workspace_home_prefers_project_records_when_available() -> None:

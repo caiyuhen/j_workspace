@@ -127,6 +127,7 @@ from app.schemas import (
 )
 from app.services.literature_parser import normalize_title, parse_literature_text
 from app.services.source_catalog import SOURCE_CATALOG, SOURCE_KEYS
+from app.services.workspace import latest_project_update_label
 
 UNIQUE_STATUSES = {"unique", "confirmed_unique"}
 
@@ -346,7 +347,7 @@ def build_library_response(
             name=project.name,
             workspace_key=project.workspace_key,
             current_stage="检索",
-            updated_at_label="刚刚更新",
+            updated_at_label=latest_project_update_label(session, project_id),
         ),
         stage_key="search",
         records=[_to_record_summary(record) for record in records],

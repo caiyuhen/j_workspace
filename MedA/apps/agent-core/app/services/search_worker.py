@@ -145,15 +145,13 @@ async def _execute_single_source(session: Session, srs: SearchRunSource) -> None
             source_key=srs.source_key,
         )
         default_rates = {"pubmed": 3.0, "cnki": 0.3, "wanfang": 0.3}
-        cfg = getattr(run, "search_source_config_json", None) or {}
-        if isinstance(cfg, dict):
-            default_rates.update(cfg.get("rate_limit_rps") or {})
+        default_rates.update(_extract_rate_limits_from_snapshot(run.query_snapshot))
         ctx = SearchRunContext(
             project_id=run.project_id,
             search_run_id=run.id,
             rate_limit_rps=default_rates,
             pubmed_api_key=os.getenv("PUBMED_API_KEY"),
-            adapter_modes={},
+            adapter_modes=_extract_adapter_modes_from_snapshot(run.query_snapshot),
         )
         result = await adapter.run_search(query, ctx)
         # 写入：去重、规范化、import_unified_entries（Task 5 定义）
@@ -183,10 +181,15 @@ async def _execute_single_source(session: Session, srs: SearchRunSource) -> None
         srs.hits_on_source = result.hits_on_source
         srs.records_retrieved = len(result.records)
         srs.records_imported = imported.count
+        notes: list[str] = []
+        if result.is_mock:
+            # Mock rows must stay identifiable, otherwise a completed source is
+            # indistinguishable from one that really reached the site.
+            notes.append(f"mock data: {'; '.join(result.warnings) or 'injected dataset'}")
         if imported.skipped_count > 0:
-            srs.error_message = (
-                f"skipped {imported.skipped_count} malformed entries"
-            )
+            notes.append(f"skipped {imported.skipped_count} malformed entries")
+        if notes:
+            srs.error_message = " | ".join(notes)[:400]
     except Exception as exc:  # noqa: BLE001
         srs.status = "failed"
         srs.error_message = (
@@ -250,9 +253,14 @@ def _update_runs_status_and_counts(session: Session) -> None:
         if run.total_after_dedupe > 0 and run.status != "failed":
             try:
                 recompute_bm25_for_search_run(session, run.id)
-            except Exception:  # noqa: BLE001
-                # BM25 is non-fatal: records still exist without score
-                pass
+            except Exception as exc:  # noqa: BLE001
+                # BM25 is non-fatal: records still exist without score. It is
+                # still recorded, because a silently missing score looks exactly
+                # like a score of zero downstream.
+                run.error_message = (
+                    f"bm25 recompute failed: {exc.__class__.__name__}: {exc!s}"
+                )[:400]
+                session.add(run)
 
 
 def _extract_bool_from_snapshot(snapshot: str) -> str:
@@ -271,3 +279,46 @@ def _extract_filters_from_snapshot(snapshot: str) -> dict[str, list[str]]:
     except Exception:
         return {}
     return obj.get("filters") or {}
+
+
+def _extract_adapter_modes_from_snapshot(snapshot: str) -> dict[str, str]:
+    """Per-run adapter mode overrides, keyed by source.
+
+    Modes travel with the run's query snapshot; anything absent or invalid is
+    dropped so the adapter falls back to its env/default resolution instead of
+    being silently forced into a mode nobody asked for.
+    """
+    import json
+    try:
+        obj = json.loads(snapshot)
+    except Exception:
+        return {}
+    raw = obj.get("adapter_modes")
+    if not isinstance(raw, dict):
+        return {}
+    return {
+        str(k): v
+        for k, v in raw.items()
+        if v in ("prefer_real", "force_mock", "force_real")
+    }
+
+
+def _extract_rate_limits_from_snapshot(snapshot: str) -> dict[str, float]:
+    """Per-run rate limit overrides (requests per second), keyed by source."""
+    import json
+    try:
+        obj = json.loads(snapshot)
+    except Exception:
+        return {}
+    raw = obj.get("rate_limit_rps")
+    if not isinstance(raw, dict):
+        return {}
+    out: dict[str, float] = {}
+    for k, v in raw.items():
+        try:
+            rps = float(v)
+        except (TypeError, ValueError):
+            continue
+        if rps > 0:
+            out[str(k)] = rps
+    return out

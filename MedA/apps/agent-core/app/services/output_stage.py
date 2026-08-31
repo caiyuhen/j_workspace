@@ -3,27 +3,27 @@ from __future__ import annotations
 class OutputStageError(Exception):
     pass
 
-def _simulate_rule_O1(*, locked: bool, touch: str) -> None:
+def assert_rule_O1(*, locked: bool, touch: str) -> None:
     if locked and touch in {"domains_5", "upgrades_3", "certainty_final"}:
         raise OutputStageError("grade_locked_cannot_change_assessment")
 
-def _simulate_rule_O2(*, has_meta: bool) -> None:
+def assert_rule_O2(*, has_meta: bool) -> None:
     if not has_meta:
         raise OutputStageError("grade_requires_completed_meta_analysis")
 
-def _simulate_rule_O5(*, grade_count: int) -> None:
+def assert_rule_O5(*, grade_count: int) -> None:
     if grade_count <= 0:
         raise OutputStageError("report_requires_at_least_one_grade_assessment")
 
-def _simulate_rule_O6_incomplete(*, md: str, html: str, txt: str) -> None:
+def assert_rule_O6_complete(*, md: str, html: str, txt: str) -> None:
     if not (md and html and txt):
         raise OutputStageError("report_snapshot_incomplete_missing_content_sections")
 
-def _simulate_rule_O7(*, locked: bool) -> None:
+def assert_rule_O7(*, locked: bool) -> None:
     if locked:
         raise OutputStageError("prisma_checklist_locked_cannot_change_items")
 
-def _simulate_rule_O8(*, keys_count: int) -> None:
+def assert_rule_O8(*, keys_count: int) -> None:
     if keys_count != 5:
         raise OutputStageError("grade_invalid_domain_count_require_exact_5_keys")
 

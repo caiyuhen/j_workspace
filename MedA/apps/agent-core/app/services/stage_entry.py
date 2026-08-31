@@ -18,6 +18,10 @@ from app.schemas import (
     WorkspaceItemSummary,
     WorkspaceProjectSummary,
 )
+from app.services.workspace import (
+    compute_stage_statuses,
+    latest_project_update_label,
+)
 
 ARTIFACT_STAGE_MAP = {
     "protocol": "topic",
@@ -31,7 +35,6 @@ ARTIFACT_STAGE_MAP = {
 STAGE_ENTRY_CONFIG = {
     "topic": {
         "label": "选题",
-        "status": "done",
         "goal": "明确研究问题与研究边界",
         "primary_action": StageEntryAction(
             label="进入研究问题定义",
@@ -80,7 +83,6 @@ STAGE_ENTRY_CONFIG = {
     },
     "search": {
         "label": "检索",
-        "status": "done",
         "goal": "完成检索式与来源配置",
         "primary_action": StageEntryAction(
             label="进入检索式管理",
@@ -136,7 +138,6 @@ STAGE_ENTRY_CONFIG = {
     },
     "screening": {
         "label": "筛选",
-        "status": "in_progress",
         "goal": "完成文献纳入排除判断",
         "primary_action": StageEntryAction(
             label="进入标题摘要筛选",
@@ -185,7 +186,6 @@ STAGE_ENTRY_CONFIG = {
     },
     "extraction": {
         "label": "抽取",
-        "status": "pending",
         "goal": "把非结构化内容转成结构化证据",
         "primary_action": StageEntryAction(
             label="进入抽取字段模板",
@@ -234,7 +234,6 @@ STAGE_ENTRY_CONFIG = {
     },
     "analysis": {
         "label": "分析",
-        "status": "pending",
         "goal": "组织变量、方法和结果表达",
         "primary_action": StageEntryAction(
             label="进入分析变量",
@@ -283,7 +282,6 @@ STAGE_ENTRY_CONFIG = {
     },
     "output": {
         "label": "产出",
-        "status": "pending",
         "goal": "形成最终交付产物",
         "primary_action": StageEntryAction(
             label="进入方案文档",
@@ -359,14 +357,6 @@ def build_stage_entry(
         )
         for task in tasks[:2]
     ]
-    if not recent_tasks:
-        recent_tasks = [
-            WorkspaceItemSummary(
-                title=f"继续推进{config['label']}阶段任务",
-                subtitle="进入该阶段任务承接页",
-                target=f"/workspace/stage/{stage_key}/tasks",
-            )
-        ]
 
     recent_artifacts = [
         WorkspaceItemSummary(
@@ -377,14 +367,6 @@ def build_stage_entry(
         for artifact in artifacts
         if ARTIFACT_STAGE_MAP.get(artifact.artifact_type) == stage_key
     ][:2]
-    if not recent_artifacts:
-        recent_artifacts = [
-            WorkspaceItemSummary(
-                title=f"{config['label']}阶段产物承接",
-                subtitle="进入该阶段产物承接页",
-                target=f"/workspace/stage/{stage_key}/artifacts",
-            )
-        ]
 
     primary_action = config["primary_action"]
     entry_cards = config["entry_cards"]
@@ -532,17 +514,19 @@ def build_stage_entry(
             },
         ]
 
+    stage_statuses = compute_stage_statuses(session, project_id)
+
     return StageEntryResponse(
         project=WorkspaceProjectSummary(
             id=project_id,
             name=project.name,
             workspace_key=project.workspace_key,
             current_stage=config["label"],
-            updated_at_label="刚刚更新",
+            updated_at_label=latest_project_update_label(session, project_id),
         ),
         stage_key=stage_key,
         stage_label=config["label"],
-        stage_status=config["status"],
+        stage_status=stage_statuses[stage_key],
         stage_goal=config["goal"],
         primary_action=primary_action,
         entry_cards=entry_cards,

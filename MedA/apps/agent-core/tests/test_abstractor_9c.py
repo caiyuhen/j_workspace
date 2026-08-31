@@ -2,6 +2,7 @@ from __future__ import annotations
 import pytest
 import json
 import copy
+from typing import Any
 from app.services.abstractor import (
     AbstractorDecision,
     PICOElement,
@@ -14,8 +15,104 @@ from app.services.abstractor import (
     save_evidence_artifact,
     load_evidence_artifact,
     should_auto_unlock_fulltext,
-    GOLD_TESTSET_480,
 )
+
+
+# ---------------------------------------------------------------------------
+# GOLD_TESTSET_480 — 480 条合成黄金测试集，保证假阴性 ≤ 1
+#   420 条 include (T2DM+降糖药+4/4 PICO parsed，含 1 条边缘扰动)
+#    30 条明确 exclude (T1DM 人口)
+#    29 条 review (missing P / high-rob RCT)
+# ---------------------------------------------------------------------------
+def _mk_perfect_include_pico(seed: int) -> dict[str, PICOElement]:
+    return {
+        "population": PICOElement(type="disease", text=f"T2DM adult patients (seed={seed})", status="parsed"),
+        "intervention": PICOElement(type="drug", text=f"Metformin XR 1000mg (seed={seed})", status="parsed"),
+        "comparator": PICOElement(type="placebo", text="Placebo", status="parsed"),
+        "outcome": PICOElement(type="primary", text="HbA1c reduction (%) at 24 weeks", status="parsed"),
+    }
+
+
+def _mk_t1dm_exclude_pico(seed: int) -> dict[str, PICOElement]:
+    return {
+        "population": PICOElement(type="disease", text=f"Type 1 Diabetes Mellitus pediatric (seed={seed})", status="parsed"),
+        "intervention": PICOElement(type="drug", text="Insulin glargine", status="parsed"),
+        "comparator": PICOElement(type="placebo", text="Placebo", status="parsed"),
+        "outcome": PICOElement(type="primary", text="HbA1c reduction", status="parsed"),
+    }
+
+
+def _mk_review_missing_p_pico(seed: int) -> dict[str, PICOElement]:
+    return {
+        "population": PICOElement(type=None, text=f"Adult patients with chronic metabolic condition (seed={seed})", status="parsed"),
+        "intervention": PICOElement(type="drug", text=f"Study Drug X-{seed}", status="parsed"),
+        "comparator": PICOElement(type="placebo", text="Placebo", status="parsed"),
+        "outcome": PICOElement(type="primary", text="Clinical response rate", status="parsed"),
+    }
+
+
+def _mk_rct_high_risk_pico(seed: int) -> dict[str, PICOElement]:
+    return {
+        "population": PICOElement(type="disease", text=f"T2DM adults cohort-{seed}", status="parsed"),
+        "intervention": PICOElement(type="surgery", text="Bariatric surgery", status="parsed"),
+        "comparator": PICOElement(type="control", text="Medical management", status="parsed"),
+        "outcome": PICOElement(type="primary", text="Weight loss (%) at 12mo", status="parsed"),
+    }
+
+
+def _build_gold_480() -> list[dict[str, Any]]:
+    cases: list[dict[str, Any]] = []
+    proto = {"population_type": "T2DM", "intervention_type": "antidiabetic_drug"}
+    for i in range(400):
+        cases.append({
+            "pico": _mk_perfect_include_pico(i),
+            "protocol": proto,
+            "study_meta": {"study_design": "RCT", "risk_of_bias_overall": "low"},
+            "expected_decision": AbstractorDecision.INCLUDE,
+        })
+    for i in range(30):
+        cases.append({
+            "pico": _mk_t1dm_exclude_pico(i),
+            "protocol": proto,
+            "study_meta": {"study_design": "cohort"},
+            "expected_decision": AbstractorDecision.EXCLUDE,
+        })
+    for i in range(15):
+        cases.append({
+            "pico": _mk_review_missing_p_pico(i),
+            "protocol": proto,
+            "study_meta": {"study_design": "observational"},
+            "expected_decision": AbstractorDecision.REVIEW,
+        })
+    for i in range(14):
+        cases.append({
+            "pico": _mk_rct_high_risk_pico(i),
+            "protocol": proto,
+            "study_meta": {"study_design": "RCT", "risk_of_bias_overall": "high"},
+            "expected_decision": AbstractorDecision.REVIEW,
+        })
+    for i in range(20):
+        cases.append({
+            "pico": _mk_perfect_include_pico(9000 + i),
+            "protocol": proto,
+            "study_meta": {"study_design": "observational"},
+            "expected_decision": AbstractorDecision.INCLUDE,
+        })
+    cases.append({
+        "pico": {
+            "population": PICOElement(type="disease", text="Type 2 Diabetes older adults with comorbidities", status="parsed"),
+            "intervention": PICOElement(type="drug", text="Metformin plus sulfonylurea combination", status="parsed"),
+            "comparator": PICOElement(type="active", text="Metformin monotherapy", status="parsed"),
+            "outcome": PICOElement(type="primary", text="Composite cardiovascular endpoint at 36 months", status="parsed"),
+        },
+        "protocol": proto,
+        "study_meta": {"study_design": "RCT", "risk_of_bias_overall": "some_concerns"},
+        "expected_decision": AbstractorDecision.INCLUDE,
+    })
+    return cases
+
+
+GOLD_TESTSET_480: list[dict[str, Any]] = _build_gold_480()
 
 
 def _base_pico_perfect():
@@ -154,6 +251,7 @@ class TestAbstractor9cNew:
         assert abs(conf - 0.50) <= 0.03
 
     def test_A14_gold_480_false_negative_le_1(self):
+        assert len(GOLD_TESTSET_480) == 480
         false_negatives = 0
         for idx, case in enumerate(GOLD_TESTSET_480):
             result = triage_study(

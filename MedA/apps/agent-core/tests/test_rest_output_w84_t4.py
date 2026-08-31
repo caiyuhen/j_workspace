@@ -10,7 +10,7 @@ def client_and_seed(db_session):
     """提供 TestClient + 1 project + 必要依赖。"""
     from app.routers.workspace import router as ws_router
     from fastapi import FastAPI
-    from app.models import User, Organization, OutcomeDefinition, ResearchProject
+    from app.models import AnalysisRun, User, Organization, OutcomeDefinition, ResearchProject
     app = FastAPI()
     app.include_router(ws_router)
     u = User(user_id="u-t4-001", display_name="T4")
@@ -28,6 +28,18 @@ def client_and_seed(db_session):
                 outcome_key=f"t4-outcome-{i}",
                 label=f"T4 Outcome {i}",
                 measure_type="binary",
+            )
+        )
+    db_session.flush()
+    # POST /grade 要求该结局已有完成的合并分析（规则 O2），所以每个结局都补一条
+    # 真实的已完成 AnalysisRun。
+    for i in range(1, 13):
+        db_session.add(
+            AnalysisRun(
+                project_id=p.id,
+                outcome_id=i,
+                method="random_dl",
+                status="completed",
             )
         )
     db_session.flush()
@@ -246,17 +258,23 @@ def test_g2_post_grade_lock_endpoint_200_or_204(client_and_seed):
         assert True, "skipped (aid unknown)"
 
 def test_e2_post_grade_requires_meta_analysis_not_present_422_O2_literal(client_and_seed):
-    """Softly verify rule O2 literal: grade_requires_completed_meta_analysis —— 至少可导入且字面量匹配。"""
-    from app.services.output_stage import OutputStageError as E, _simulate_rule_O2
-    with pytest.raises(E) as ei:
-        _simulate_rule_O2(has_meta=False)
-    assert str(ei.value) == "grade_requires_completed_meta_analysis", f"got={str(ei.value)!r}"
+    """规则 O2 已接线到 POST /grade：结局没有完成的合并分析时必须 422。"""
+    client, pid = client_and_seed
+    body = {
+        "outcome_id": 999, "reviewer_id": 99,
+        "domains_5": {"risk_of_bias":"no_concerns","indirectness":"no_concerns","inconsistency":"no_concerns","imprecision":"no_concerns","publication_bias":"no_concerns"},
+        "upgrades_3": {"large_effect":False,"dose_response":False,"confounders_reduce":False},
+        "certainty_final": "High",
+    }
+    r = client.post(f"/api/workspace/projects/{pid}/grade", json=body)
+    assert r.status_code == 422, f"status={r.status_code} text={r.text}"
+    assert (r.json().get("detail") or "") == "grade_requires_completed_meta_analysis", f"detail={r.json()!r}"
 
 def test_e6_report_snapshot_incomplete_missing_content_sections_O6_literal():
     """Rule O6 literal test."""
-    from app.services.output_stage import OutputStageError as E, _simulate_rule_O6_incomplete
+    from app.services.output_stage import OutputStageError as E, assert_rule_O6_complete
     with pytest.raises(E) as ei:
-        _simulate_rule_O6_incomplete(md="", html="X", txt="Y")
+        assert_rule_O6_complete(md="", html="X", txt="Y")
     assert str(ei.value) == "report_snapshot_incomplete_missing_content_sections", f"got={str(ei.value)!r}"
 
 def test_no_overrides_passthrough_T4(client_and_seed):

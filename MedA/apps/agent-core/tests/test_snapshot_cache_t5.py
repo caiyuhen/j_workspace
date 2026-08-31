@@ -67,9 +67,9 @@ def test_t5_three_outputs_length_gt_50_bytes_after_save(_client_pid):
 
 def test_t5_O6_incomplete_422_if_any_md_html_txt_empty(_client_pid):
     """Rule O6 report_snapshot_incomplete_missing_content_sections literal — server-side enforced."""
-    from app.services.output_stage import OutputStageError as E, _simulate_rule_O6_incomplete
+    from app.services.output_stage import OutputStageError as E, assert_rule_O6_complete
     with pytest.raises(E) as ei:
-        _simulate_rule_O6_incomplete(md="OK", html="", txt="OK")
+        assert_rule_O6_complete(md="OK", html="", txt="OK")
     assert str(ei.value) == "report_snapshot_incomplete_missing_content_sections", f"got={str(ei.value)!r}"
 
 def test_t5_REST_report_list_endpoint_get_project_pid_reports_200(_client_pid):

@@ -439,19 +439,24 @@ def generate_forest_svg(
     outcome_id: int,
     model: str = "random_dl",
 ) -> bytes:
-    try:
-        result = run_meta_analysis(db, project_id, outcome_id, model)
-    except Exception:
-        studies = _collect_studies(db, project_id, outcome_id)
-        result = {
-            "studies": [],
-            "pooled_effect": {"value": 1.0, "ci_low": 1.0, "ci_high": 1.0},
-            "heterogeneity": {"I2": 0.0},
-        }
+    """Render the forest plot of a real meta-analysis.
 
-    studies = result.get("studies", [])
-    pooled = result.get("pooled_effect", {})
+    Whatever `run_meta_analysis` raises propagates: a plot that showed a neutral
+    pooled effect for an outcome that cannot be pooled would be
+    indistinguishable from a real null result.
+    """
+    result = run_meta_analysis(db, project_id, outcome_id, model)
+
+    studies = result["studies"]
+    pooled = result["pooled_effect"]
     k = len(studies)
+    # The axis is a ratio scale centred on 1. A mean difference lives on a
+    # difference scale and can be zero or negative, so it is shifted onto the axis
+    # by its no-effect value; the printed numbers stay the real estimates.
+    is_ratio = bool(studies) and "rr" in studies[0]
+
+    def _axis_x(value: float) -> float:
+        return value if is_ratio else value + 1.0
 
     row_h = 30
     top_pad = 60
@@ -492,17 +497,17 @@ def generate_forest_svg(
 
     for i, s in enumerate(studies):
         y = top_pad + i * row_h + row_h / 2
-        label = s.get("label", f"S{i+1}")
+        label = s["label"]
         lines.append(
             f'<text x="{left_pad - 10}" y="{y + 4}" font-size="11" text-anchor="end" fill="#222">{xml_escape(label)}</text>'
         )
-        rr = max(s.get("rr", s.get("md", 1.0) + 1.0), 0.01)
-        ci_low = max(s.get("ci_low", 0.1), 0.01)
-        ci_high = max(s.get("ci_high", 10.0), 0.01)
-        cx = _log_scale(rr)
-        lx = _log_scale(ci_low)
-        rx = _log_scale(ci_high)
-        w = s.get("weight", 10.0)
+        effect, ci_low, ci_high = s.get("rr"), s["ci_low"], s["ci_high"]
+        if effect is None:
+            effect = s["md"]
+        cx = _log_scale(_axis_x(effect))
+        lx = _log_scale(_axis_x(ci_low))
+        rx = _log_scale(_axis_x(ci_high))
+        w = s["weight"]
         box_size = max(6.0, min(14.0, 6.0 + w / 5.0))
         lines.append(
             f'<line x1="{lx}" y1="{y}" x2="{rx}" y2="{y}" stroke="#2563eb" stroke-width="1.5"/>'
@@ -510,11 +515,11 @@ def generate_forest_svg(
         lines.append(
             f'<rect x="{cx - box_size/2}" y="{y - box_size/2}" width="{box_size}" height="{box_size}" fill="#2563eb" stroke="#1e40af" stroke-width="0.5"/>'
         )
-        weight_str = f'{s.get("weight", 0.0):.1f}%'
+        weight_str = f'{w:.1f}%'
         lines.append(
             f'<text x="{x1 + 20}" y="{y + 4}" font-size="10" fill="#333">{xml_escape(weight_str)}</text>'
         )
-        rr_str = f'{rr:.2f} [{ci_low:.2f}, {ci_high:.2f}]'
+        rr_str = f'{effect:.2f} [{ci_low:.2f}, {ci_high:.2f}]'
         lines.append(
             f'<text x="{x1 + 75}" y="{y + 4}" font-size="10" fill="#333">{xml_escape(rr_str)}</text>'
         )
@@ -523,12 +528,10 @@ def generate_forest_svg(
     lines.append(
         f'<text x="{left_pad - 10}" y="{y_pool + 4}" font-size="12" font-weight="bold" text-anchor="end" fill="#222">Pooled</text>'
     )
-    p_val = max(pooled.get("value", 1.0), 0.01)
-    p_lo = max(pooled.get("ci_low", 0.1), 0.01)
-    p_hi = max(pooled.get("ci_high", 10.0), 0.01)
-    pcx = _log_scale(p_val)
-    plx = _log_scale(p_lo)
-    prx = _log_scale(p_hi)
+    p_val, p_lo, p_hi = pooled["value"], pooled["ci_low"], pooled["ci_high"]
+    pcx = _log_scale(_axis_x(p_val))
+    plx = _log_scale(_axis_x(p_lo))
+    prx = _log_scale(_axis_x(p_hi))
     lines.append(
         f'<line x1="{plx}" y1="{y_pool}" x2="{prx}" y2="{y_pool}" stroke="#16a34a" stroke-width="2"/>'
     )

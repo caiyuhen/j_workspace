@@ -23,6 +23,7 @@ from app.services.source_catalog import (
     SOURCE_KEYS,
     source_labels_for_keys,
 )
+from app.services.workspace import latest_project_update_label
 
 DEFAULT_ENABLED_SOURCES = ["pubmed", "embase"]
 DEFAULT_SEARCH_FIELDS = ["title", "abstract"]
@@ -160,6 +161,7 @@ def enabled_source_keys_for_project(
 
 
 def _build_response(
+    session: Session,
     project: ResearchProject,
     config: SearchSourceConfig,
 ) -> SearchSourceConfigResponse:
@@ -185,7 +187,7 @@ def _build_response(
             name=project.name,
             workspace_key=project.workspace_key,
             current_stage="检索",
-            updated_at_label="刚刚更新",
+            updated_at_label=latest_project_update_label(session, project.id or 0),
         ),
         stage_key="search",
         available_sources=[
@@ -219,7 +221,7 @@ def get_source_config(
     project: ResearchProject,
 ) -> SearchSourceConfigResponse:
     config = get_or_create_source_config(session, project)
-    return _build_response(project, config)
+    return _build_response(session, project, config)
 
 
 def save_source_config(
@@ -241,4 +243,4 @@ def save_source_config(
     session.commit()
     session.refresh(config)
 
-    return _build_response(project, config)
+    return _build_response(session, project, config)

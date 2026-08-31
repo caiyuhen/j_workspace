@@ -16,6 +16,7 @@ from app.schemas import (
 )
 from app.services.search_source import enabled_source_keys_for_project
 from app.services.source_catalog import source_labels_for_keys
+from app.services.workspace import latest_project_update_label
 
 
 class SearchQueryNotFoundError(Exception):
@@ -228,7 +229,7 @@ def get_or_create_search_query_editor(
             name=project.name,
             workspace_key=project.workspace_key,
             current_stage="检索",
-            updated_at_label="刚刚更新",
+            updated_at_label=latest_project_update_label(session, project_id),
         ),
         stage_key="search",
         query_id=query.id or 0,
@@ -322,7 +323,7 @@ def get_search_query_snapshot(
             name=project.name,
             workspace_key=project.workspace_key,
             current_stage="检索",
-            updated_at_label="刚刚更新",
+            updated_at_label=latest_project_update_label(session, project.id or 0),
         ),
         stage_key="search",
         query_id=query_id,

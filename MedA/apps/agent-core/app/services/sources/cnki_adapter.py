@@ -24,17 +24,12 @@ INJECTED_DATASET: list[UnifiedLiteratureEntry] | None = None
 
 
 class AdapterCaptchaError(Exception):
-    """验证码且page=1无结果仅 force_real 模式抛"""
-    pass
-
-
-class AdapterLoginRequiredError(Exception):
-    """强制登录要求 page=1 无结果"""
+    """CNKI 返回验证码/人机验证页，无法取得结果列表"""
     pass
 
 
 class AdapterParseError(Exception):
-    """hits_count≥1 parse 返回 0 selector失效"""
+    """列表页解析出 0 条：真 0 结果或 selector 失效"""
     pass
 
 
@@ -159,7 +154,7 @@ class CnkiAdapter:
                 )
                 for r in INJECTED_DATASET
             ]
-            return AdapterResult(hits_on_source=len(out), records=out, warnings=[])
+            return AdapterResult(hits_on_source=len(out), records=out, warnings=[], is_mock=True)
 
         cn_bt = _safe_translate(query.boolean_text, "cnki")
         _raw = int(query.max_pages_cn) if isinstance(getattr(query, "max_pages_cn", None), int) else (query.max_pages_cn or 1)
@@ -170,14 +165,13 @@ class CnkiAdapter:
 
         try:
             html = await _fetch_cnki_html(cn_bt)
-            if _BANNED_PATTERNS.search(html):
-                raise RuntimeError("CNKI 返回了验证码/被封禁页面（按关键词命中）")
+            if _is_captcha_html(html):
+                raise AdapterCaptchaError("CNKI 返回了验证码/人机验证页面")
             parsed = _parse_cnki_list_html(html)
-            hits = len(parsed) or None
             if len(parsed) == 0:
-                raise RuntimeError("CNKI 解析到 0 条记录")
+                raise AdapterParseError("CNKI 解析到 0 条记录（真 0 结果或 selector 失效）")
             return AdapterResult(
-                hits_on_source=hits,
+                hits_on_source=len(parsed),
                 records=parsed,
                 warnings=[f"CNKI 公开检索成功 {len(parsed)} 条（粗检索首页）"] + warnings_list,
             )
@@ -195,8 +189,12 @@ class CnkiAdapter:
                     for r in INJECTED_DATASET
                 ]
                 return AdapterResult(
-                    hits_on_source=len(out), records=out,
+                    # hits_on_source describes the live source, which was never
+                    # reached, so it stays unknown rather than borrowing the
+                    # mock count.
+                    hits_on_source=None, records=out,
                     warnings=[f"CNKI 真抓失败 ({exc.__class__.__name__}: {exc})，fallback 注入数据 {len(out)} 条"] + warnings_list,
+                    is_mock=True,
                 )
             return AdapterResult(
                 hits_on_source=None, records=[],

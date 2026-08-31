@@ -120,10 +120,6 @@ class DedupeRunResult:
 def _count_records_with(session: Session, pid: int, **filters) -> int:
     conds = [LiteratureRecord.project_id == pid]
     for k, v in filters.items():
-        if isinstance(v, tuple):
-            col, op, val = v[0], v[1], v[2] if len(v) > 2 else None  # type: ignore[misc]
-            # not used
-            continue
         if v is None:
             conds.append(getattr(LiteratureRecord, k).is_(None))
         elif isinstance(v, Iterable) and not isinstance(v, str):
@@ -540,7 +536,7 @@ def validate_exclude_decision(
     stage: str,
     exclude_ids: list[int],
     meta_json: dict | None = None,
-) -> bool | None:
+) -> bool:
     meta = meta_json or {}
     stage_lc = stage.lower() if isinstance(stage, str) else ""
     is_ta = "ta" in stage_lc
@@ -591,6 +587,8 @@ def validate_exclude_decision(
                     f"got {actual_len}"
                 )
 
+    return True
+
 
 # ---------------------------------------------------------------------------
 # Wave9a Task4 追加 helpers（append-only，不改动上方函数）
@@ -631,16 +629,19 @@ def calc_funnel_locks_integrity(**kws) -> dict[str, dict]:
 def calc_screening_integrity_from_counts(
     included_ta: int = 0,
     excluded_ta: int = 0,
+    screened_pool: int | None = None,
 ) -> dict:
     """计算 T/A 阶段筛选完整性：screened_total = included_ta + excluded_ta。
 
     返回 {"included_ta": int, "excluded_ta": int, "screened_total": int, "integrity_ok": bool}。
-    integrity_ok 恒为 True（只要 screened_total == included_ta + excluded_ta）。
+    integrity_ok 需要一个独立的比对来源：`screened_pool` 是进入 T/A 的记录数
+    （漏斗的 E1）。未提供时无从校验，因此 integrity_ok 为 None——
+    把两数之和拿去和它自己比会得到恒真的假校验。
     """
     it = max(int(included_ta), 0)
     et = max(int(excluded_ta), 0)
     total = it + et
-    integrity_ok = (total == it + et)
+    integrity_ok = None if screened_pool is None else (total == int(screened_pool))
     return {
         "included_ta": it,
         "excluded_ta": et,

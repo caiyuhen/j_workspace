@@ -109,11 +109,21 @@ class TestWave9aFunnel:
         result = calc_screening_integrity_from_counts(
             included_ta=800,
             excluded_ta=200,
+            screened_pool=1000,
         )
 
         assert result["screened_total"] == 1000
         assert result["integrity_ok"] is True
         assert result["screened_total"] == result["included_ta"] + result["excluded_ta"]
+
+        # Without an independent pool size there is nothing to compare the sum
+        # against, so integrity is unknown rather than trivially satisfied.
+        assert calc_screening_integrity_from_counts(
+            included_ta=800, excluded_ta=200
+        )["integrity_ok"] is None
+        assert calc_screening_integrity_from_counts(
+            included_ta=800, excluded_ta=200, screened_pool=1200
+        )["integrity_ok"] is False
 
     def test_s9_exclude_6_7_requires_evidence_quotes_fulltext_stage(self):
         """S9: exclude #6/7 需 evidence_quotes → 传空 ValueError (Fulltext 阶段)。"""

@@ -85,12 +85,12 @@ def binary_rr_95ci(a, n1, c, n2, cc=False):
         rr = 0.0
     else:
         rr = p1 / p2
-    ccf = 0.711
-    a_safe = (a2 if a2 > 0 else 0.5) + ccf
-    c_safe = (c2 if c2 > 0 else 0.5) + ccf
-    n1_safe = n1_eff + ccf
-    n2_safe = n2_eff + ccf
-    var_log = 1.0 / a_safe - 1.0 / n1_safe + 1.0 / c_safe - 1.0 / n2_safe
+    # Katz log-RR variance: 1/a - 1/n1 + 1/c - 1/n2. Zero cells are already
+    # handled by the Haldane-Anscombe 0.5 correction in _apply_cc_2x2, so no
+    # extra offset is added on top of it here.
+    a_safe = a2 if a2 > 0 else 0.5
+    c_safe = c2 if c2 > 0 else 0.5
+    var_log = 1.0 / a_safe - 1.0 / n1_eff + 1.0 / c_safe - 1.0 / n2_eff
     if var_log < 0.0:
         var_log = 0.0
     se_log = math.sqrt(var_log)
@@ -149,9 +149,10 @@ def binary_rd_95ci(a, n1, c, n2, cc=False):
 
 def continuous_md_95ci(m1, s1, n1, m2, s2, n2):
     md = m1 - m2
-    nc = 0.68
-    var1 = s1 * s1 / (n1 + nc)
-    var2 = s2 * s2 / (n2 + nc)
+    # SE(MD) = sqrt(s1²/n1 + s2²/n2) — the standard formula, with no offset on
+    # the sample sizes.
+    var1 = s1 * s1 / n1
+    var2 = s2 * s2 / n2
     se = math.sqrt(var1 + var2)
     z = 1.959963984540054
     ci_low = md - z * se

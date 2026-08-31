@@ -80,14 +80,25 @@ def _calc_outcome_quality(pico: PICO) -> float:
     return 0.5
 
 
+def _calc_triage_confidence(pico: PICO, study_type: str | None) -> float:
+    """Score how well the extracted PICO matches an eligible study.
+
+    The same score is reported whatever the decision is: it measures the
+    extraction, not the branch that was taken.
+    """
+    return round(
+        0.7 * _calc_pico_match_score(pico)
+        + 0.2 * (1.0 if _is_study_type_ok(study_type) else 0.0)
+        + 0.1 * _calc_outcome_quality(pico),
+        4,
+    )
+
+
 def triage(pico: PICO, study_type: str | None) -> tuple[TriageDecision, list[str], float]:
     reasons: list[str] = []
     exclude_ids: list[int] = []
 
-    st_ok = _is_study_type_ok(study_type)
-    pico_match = _calc_pico_match_score(pico)
-    outcome_quality = _calc_outcome_quality(pico)
-    confidence = round(0.7 * pico_match + 0.2 * (1.0 if st_ok else 0.0) + 0.1 * outcome_quality, 4)
+    confidence = _calc_triage_confidence(pico, study_type)
 
     never_auto_exclude = (
         study_type is not None and study_type in NEVER_AUTO_EXCLUDE_STUDY_TYPES
@@ -99,7 +110,7 @@ def triage(pico: PICO, study_type: str | None) -> tuple[TriageDecision, list[str
             return "review", reasons, confidence
         reasons.append(f"C1: illegal study_type={study_type}")
         exclude_ids.append(EXCLUDE_REASON_STUDY_TYPE_ILLEGAL)
-        return "exclude", reasons, 0.2
+        return "exclude", reasons, confidence
 
     if pico.condition is not None and not pico.condition_matches_t2dm():
         if never_auto_exclude:
@@ -107,7 +118,7 @@ def triage(pico: PICO, study_type: str | None) -> tuple[TriageDecision, list[str
             return "review", reasons, confidence
         reasons.append(f"C2: condition={pico.condition} not T2DM")
         exclude_ids.append(EXCLUDE_REASON_CONDITION_WRONG)
-        return "exclude", reasons, 0.25
+        return "exclude", reasons, confidence
 
     if (
         pico.all_fields_present()
@@ -116,8 +127,6 @@ def triage(pico: PICO, study_type: str | None) -> tuple[TriageDecision, list[str
         and pico.outcome_p_value < 0.05
     ):
         reasons.append("C3: PICO 4/4 ok + outcome p_value<0.05")
-        if confidence < 0.85:
-            confidence = 0.85
         return "include", reasons, confidence
 
     if not pico.all_fields_present():
@@ -155,10 +164,13 @@ def run_pipeline_with_llm_fallback(
         pico.intervention = None
         pico.comparison = None
         pico.outcome = None
+        # The title alone yields at most the condition, so the score is that of a
+        # 1/4 PICO with no known study type — low by construction rather than by decree.
         result = TriageResult(
             decision="review",
             reasons=["fallback 2x LLM fail → title match only → review"],
-            confidence=0.3,
+            confidence=_calc_triage_confidence(pico, None),
+            pico_snapshot=asdict(pico),
             failed_steps=failed_steps,
         )
         return result, failed_steps
@@ -486,7 +498,6 @@ def triage_study(
 
     if p_missing and not p_status == "failed":
         result["decision"] = AbstractorDecision.REVIEW
-        result["confidence"] = 0.62
         return result
 
     if never_auto_exclude and rob_overall == "high":
@@ -502,8 +513,6 @@ def triage_study(
         and p_match >= 0.90
     ):
         result["decision"] = AbstractorDecision.INCLUDE
-        if result["confidence"] < 0.85:
-            result["confidence"] = 0.86
         return result
 
     return result
@@ -619,104 +628,3 @@ def load_evidence_artifact(path: str) -> EvidenceArtifact:
 # ---------------------------------------------------------------------------
 def should_auto_unlock_fulltext(triage_result: dict[str, Any]) -> bool:
     return triage_result.get("decision") == AbstractorDecision.INCLUDE
-
-
-# ---------------------------------------------------------------------------
-# GOLD_TESTSET_480 — 480 条黄金测试集，保证假阴性 ≤ 1
-#   400 条 perfect include (T2DM+降糖药+4/4 PICO parsed)
-#    50 条明确 exclude (T1DM 人口)
-#    29 条 review (missing P / high-rob RCT / parse fail)
-#     1 条 边缘 include (带微小扰动 — 不应误排除，保证 FN = 0)
-# ---------------------------------------------------------------------------
-def _mk_perfect_include_pico(seed: int) -> dict[str, PICOElement]:
-    return {
-        "population": PICOElement(type="disease", text=f"T2DM adult patients (seed={seed})", status="parsed"),
-        "intervention": PICOElement(type="drug", text=f"Metformin XR 1000mg (seed={seed})", status="parsed"),
-        "comparator": PICOElement(type="placebo", text="Placebo", status="parsed"),
-        "outcome": PICOElement(type="primary", text="HbA1c reduction (%) at 24 weeks", status="parsed"),
-    }
-
-
-def _mk_t1dm_exclude_pico(seed: int) -> dict[str, PICOElement]:
-    return {
-        "population": PICOElement(type="disease", text=f"Type 1 Diabetes Mellitus pediatric (seed={seed})", status="parsed"),
-        "intervention": PICOElement(type="drug", text="Insulin glargine", status="parsed"),
-        "comparator": PICOElement(type="placebo", text="Placebo", status="parsed"),
-        "outcome": PICOElement(type="primary", text="HbA1c reduction", status="parsed"),
-    }
-
-
-def _mk_review_missing_p_pico(seed: int) -> dict[str, PICOElement]:
-    return {
-        "population": PICOElement(type=None, text=f"Adult patients with chronic metabolic condition (seed={seed})", status="parsed"),
-        "intervention": PICOElement(type="drug", text=f"Study Drug X-{seed}", status="parsed"),
-        "comparator": PICOElement(type="placebo", text="Placebo", status="parsed"),
-        "outcome": PICOElement(type="primary", text="Clinical response rate", status="parsed"),
-    }
-
-
-def _mk_rct_high_risk_pico(seed: int) -> dict[str, PICOElement]:
-    return {
-        "population": PICOElement(type="disease", text=f"T2DM adults cohort-{seed}", status="parsed"),
-        "intervention": PICOElement(type="surgery", text="Bariatric surgery", status="parsed"),
-        "comparator": PICOElement(type="control", text="Medical management", status="parsed"),
-        "outcome": PICOElement(type="primary", text="Weight loss (%) at 12mo", status="parsed"),
-    }
-
-
-def _build_gold_480() -> list[dict[str, Any]]:
-    cases: list[dict[str, Any]] = []
-    proto = {"population_type": "T2DM", "intervention_type": "antidiabetic_drug"}
-    for i in range(400):
-        cases.append({
-            "pico": _mk_perfect_include_pico(i),
-            "protocol": proto,
-            "study_meta": {"study_design": "RCT", "risk_of_bias_overall": "low"},
-            "expected_decision": AbstractorDecision.INCLUDE,
-        })
-    for i in range(30):
-        cases.append({
-            "pico": _mk_t1dm_exclude_pico(i),
-            "protocol": proto,
-            "study_meta": {"study_design": "cohort"},
-            "expected_decision": AbstractorDecision.EXCLUDE,
-        })
-    for i in range(15):
-        cases.append({
-            "pico": _mk_review_missing_p_pico(i),
-            "protocol": proto,
-            "study_meta": {"study_design": "observational"},
-            "expected_decision": AbstractorDecision.REVIEW,
-        })
-    for i in range(14):
-        cases.append({
-            "pico": _mk_rct_high_risk_pico(i),
-            "protocol": proto,
-            "study_meta": {"study_design": "RCT", "risk_of_bias_overall": "high"},
-            "expected_decision": AbstractorDecision.REVIEW,
-        })
-    for i in range(20):
-        cases.append({
-            "pico": _mk_perfect_include_pico(9000 + i),
-            "protocol": proto,
-            "study_meta": {"study_design": "observational"},
-            "expected_decision": AbstractorDecision.INCLUDE,
-        })
-    return cases
-
-
-GOLD_TESTSET_480: list[dict[str, Any]] = _build_gold_480()
-assert len(GOLD_TESTSET_480) == 479
-_edge_case = {
-    "pico": {
-        "population": PICOElement(type="disease", text="Type 2 Diabetes older adults with comorbidities", status="parsed"),
-        "intervention": PICOElement(type="drug", text="Metformin plus sulfonylurea combination", status="parsed"),
-        "comparator": PICOElement(type="active", text="Metformin monotherapy", status="parsed"),
-        "outcome": PICOElement(type="primary", text="Composite cardiovascular endpoint at 36 months", status="parsed"),
-    },
-    "protocol": {"population_type": "T2DM", "intervention_type": "antidiabetic_drug"},
-    "study_meta": {"study_design": "RCT", "risk_of_bias_overall": "some_concerns"},
-    "expected_decision": AbstractorDecision.INCLUDE,
-}
-GOLD_TESTSET_480.append(_edge_case)
-assert len(GOLD_TESTSET_480) == 480

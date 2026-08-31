@@ -28,8 +28,9 @@ def test_ac1_cohen_kappa_4x4_07143():
 def test_ac2_binary_rr_95ci_no_cc():
     res = binary_rr_95ci(a=20, n1=100, c=10, n2=100, cc=False)
     assert abs(res["rr"] - 2.0) <= 1e-9
-    assert abs(res["ci_low"] - 1.0092) <= 0.0001
-    assert abs(res["ci_high"] - 3.9636) <= 0.0001
+    # Katz: var(logRR) = 1/20 - 1/100 + 1/10 - 1/100 = 0.13, se = 0.360555
+    assert abs(res["ci_low"] - 0.9866) <= 0.0001
+    assert abs(res["ci_high"] - 4.0545) <= 0.0001
 
 
 def test_ac3_5studies_fixed_iv_vs_mh_rr_diff_le_002():
@@ -72,8 +73,9 @@ def test_ac5_compute_heterogeneity_i2_672_pq_0015():
 def test_ac6_continuous_md_95ci_04_ci():
     res = continuous_md_95ci(m1=5.2, s1=1.1, n1=50, m2=4.8, s2=0.9, n2=50)
     assert abs(res["md"] - 0.4) <= 1e-9
-    assert abs(res["ci_low"] - 0.0087) <= 0.0001
-    assert abs(res["ci_high"] - 0.7913) <= 0.0001
+    # se = sqrt(1.1²/50 + 0.9²/50) = 0.200998
+    assert abs(res["ci_low"] - 0.0061) <= 0.0001
+    assert abs(res["ci_high"] - 0.7939) <= 0.0001
 
 
 def test_normal_cdf_minus_196():

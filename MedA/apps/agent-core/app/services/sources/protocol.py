@@ -45,6 +45,10 @@ class AdapterResult:
     hits_on_source: int | None
     records: list[UnifiedLiteratureEntry]
     warnings: list[str]
+    # True when `records` come from an injected mock dataset instead of the live
+    # source, so callers can persist that provenance rather than storing mock
+    # rows as if they had been retrieved for real.
+    is_mock: bool = False
 
 
 class SourceAdapter(Protocol):

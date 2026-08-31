@@ -121,34 +121,38 @@ def get_stage_entry(
 
     ret = stage_entry
     # ── W8.4 LAZY-APPEND output_stage_cards 3 dynamic cards (BEGIN) ──
-    try:
-        from app.services.output_stage import build_output_stage_cards_3
-        from sqlmodel import select, func
-        from app.db import SessionLocal
-        from app.models import GradeAssessment, SofTableRow, ReportSnapshot, Prisma2020Checklist
+    from app.services.output_stage import build_output_stage_cards_3
+    from sqlmodel import select, func
+    from app.db import SessionLocal
+    from app.models import GradeAssessment, SofTableRow, ReportSnapshot, Prisma2020Checklist, OutcomeArmData
 
-        sl = SessionLocal()
-        with sl as s:
-            cnt_grade = s.exec(select(func.count()).select_from(GradeAssessment).where(GradeAssessment.project_id == project_id)).one()
-            prisma = s.exec(select(Prisma2020Checklist).where(Prisma2020Checklist.project_id == project_id).limit(1)).first()
-            prisma_cnt = 0
-            if prisma is not None:
-                prisma_cnt = sum(1 for i in range(1,28) if bool(getattr(prisma, f"item_{i}", False)))
-            cnt_sof = s.exec(select(func.count()).select_from(SofTableRow).where(SofTableRow.project_id == project_id)).one()
-            cnt_snap = s.exec(select(func.count()).select_from(ReportSnapshot).where(ReportSnapshot.project_id == project_id)).one()
-            studies_k = 3
-        cards = build_output_stage_cards_3(
-            grade_count=int(cnt_grade or 0),
-            prisma_items_checked=int(prisma_cnt or 0),
-            sof_rows=int(cnt_sof or 0),
-            studies_k_any_outcome=int(studies_k or 0),
-            snap_count=int(cnt_snap or 0),
-        )
-        ret.output_stage_cards = [
-            {"card_key": c.card_key, "ready": c.ready, "locked_reason": c.locked_reason} for c in cards
-        ]
-    except Exception:
-        pass
+    sl = SessionLocal()
+    with sl as s:
+        cnt_grade = s.exec(select(func.count()).select_from(GradeAssessment).where(GradeAssessment.project_id == project_id)).one()
+        prisma = s.exec(select(Prisma2020Checklist).where(Prisma2020Checklist.project_id == project_id).limit(1)).first()
+        prisma_cnt = 0
+        if prisma is not None:
+            prisma_cnt = sum(1 for i in range(1,28) if bool(getattr(prisma, f"item_{i}", False)))
+        cnt_sof = s.exec(select(func.count()).select_from(SofTableRow).where(SofTableRow.project_id == project_id)).one()
+        cnt_snap = s.exec(select(func.count()).select_from(ReportSnapshot).where(ReportSnapshot.project_id == project_id)).one()
+        # The card asks how many studies the best-populated outcome has, so the
+        # arm data is counted per outcome and the largest one wins.
+        per_outcome = s.exec(
+            select(func.count(func.distinct(OutcomeArmData.record_id)))
+            .where(OutcomeArmData.project_id == project_id)
+            .group_by(OutcomeArmData.outcome_id)
+        ).all()
+        studies_k = max(per_outcome) if per_outcome else 0
+    cards = build_output_stage_cards_3(
+        grade_count=int(cnt_grade or 0),
+        prisma_items_checked=int(prisma_cnt or 0),
+        sof_rows=int(cnt_sof or 0),
+        studies_k_any_outcome=int(studies_k or 0),
+        snap_count=int(cnt_snap or 0),
+    )
+    ret.output_stage_cards = [
+        {"card_key": c.card_key, "ready": c.ready, "locked_reason": c.locked_reason} for c in cards
+    ]
     # ── W8.4 LAZY-APPEND output_stage_cards 3 dynamic cards (END) ──
     return ret
 
@@ -1207,12 +1211,17 @@ def analysis_forest_svg(
 ) -> Response:
     project = _load_project_or_404(session, project_id, context)
     from app.services.meta_analysis import generate_forest_svg
-    svg_bytes = generate_forest_svg(
-        session,
-        project.id or project_id,
-        outcome_id,
-        model=model,
-    )
+    try:
+        svg_bytes = generate_forest_svg(
+            session,
+            project.id or project_id,
+            outcome_id,
+            model=model,
+        )
+    except Exception as e:
+        # An outcome that cannot be pooled has no forest plot; reporting why beats
+        # returning a plot of a neutral effect that was never computed.
+        raise HTTPException(status_code=422, detail=str(e)) from e
     return Response(
         content=svg_bytes,
         media_type="image/svg+xml",
@@ -1227,14 +1236,27 @@ def analysis_forest_svg(
 def w84_post_grade_assessment(project_id: int, payload: dict):
     from sqlmodel import select
     from app.db import SessionLocal
-    from app.models import GradeAssessment
+    from app.models import AnalysisRun, GradeAssessment
     from app.services.output_stage import (
-        _simulate_rule_O8, _simulate_rule_O1, OutputStageError as _OSErr,
+        assert_rule_O8, assert_rule_O2, assert_rule_O1, OutputStageError as _OSErr,
     )
+    outcome_id = int(payload.get("outcome_id", 0))
+    sl = SessionLocal()
+    with sl as s:
+        # GRADE 的确定性判断建立在该结局已完成的合并分析之上，所以这里查真实的
+        # AnalysisRun 完成记录，而不是假设它一定存在。
+        completed_meta = s.exec(
+            select(AnalysisRun.id)
+            .where(AnalysisRun.project_id == project_id)
+            .where(AnalysisRun.outcome_id == outcome_id)
+            .where(AnalysisRun.status == "completed")
+            .limit(1)
+        ).first()
     try:
         keys = list((payload.get("domains_5") or {}).keys())
-        _simulate_rule_O8(keys_count=len(keys))
-        _simulate_rule_O1(locked=bool(payload.get("locked", False)), touch="domains_5")
+        assert_rule_O8(keys_count=len(keys))
+        assert_rule_O2(has_meta=completed_meta is not None)
+        assert_rule_O1(locked=bool(payload.get("locked", False)), touch="domains_5")
     except _OSErr as e:
         from fastapi import HTTPException
         raise HTTPException(status_code=422, detail=str(e))
@@ -1242,7 +1264,7 @@ def w84_post_grade_assessment(project_id: int, payload: dict):
     with sl as s:
         g = GradeAssessment(
             project_id=project_id,
-            outcome_id=int(payload.get("outcome_id", 0)),
+            outcome_id=outcome_id,
             reviewer_id=int(payload.get("reviewer_id", 0)),
             domains_5=payload.get("domains_5") or {},
             upgrades_3=payload.get("upgrades_3") or {},
@@ -1274,7 +1296,7 @@ def w84_lock_grade(project_id: int, assessment_id: int):
     from sqlmodel import select
     from app.db import SessionLocal
     from app.models import GradeAssessment
-    from app.services.output_stage import _simulate_rule_O1, OutputStageError as _OSErr
+    from app.services.output_stage import assert_rule_O1, OutputStageError as _OSErr
     sl = SessionLocal()
     with sl as s:
         g = s.get(GradeAssessment, assessment_id)
@@ -1282,7 +1304,7 @@ def w84_lock_grade(project_id: int, assessment_id: int):
             from fastapi import HTTPException
             raise HTTPException(status_code=404, detail="Grade assessment not found")
         try:
-            _simulate_rule_O1(locked=g.locked, touch="certainty_final")
+            assert_rule_O1(locked=g.locked, touch="certainty_final")
         except _OSErr as e:
             from fastapi import HTTPException
             raise HTTPException(status_code=422, detail=str(e))
@@ -1322,9 +1344,9 @@ def w84_post_prisma2020_checklist(project_id: int, payload: dict):
     from sqlmodel import select
     from app.db import SessionLocal
     from app.models import Prisma2020Checklist as PCL
-    from app.services.output_stage import _simulate_rule_O7, OutputStageError as _OSErr
+    from app.services.output_stage import assert_rule_O7, OutputStageError as _OSErr
     try:
-        _simulate_rule_O7(locked=bool(payload.get("locked", False)))
+        assert_rule_O7(locked=bool(payload.get("locked", False)))
     except _OSErr as e:
         from fastapi import HTTPException
         raise HTTPException(status_code=422, detail=str(e))
@@ -1363,34 +1385,84 @@ def w84_post_report_generate(project_id: int, payload: dict | None = None):
     payload = payload or {}
     from sqlmodel import select
     from app.db import SessionLocal
-    from app.models import GradeAssessment
-    from app.services.output_stage import _simulate_rule_O5, _simulate_rule_O6_incomplete, OutputStageError as _OSErr
+    from app.models import (
+        GradeAssessment, OutcomeArmData, OutcomeDefinition, Prisma2020Checklist, ResearchProject,
+    )
+    from app.services.output_stage import assert_rule_O5, assert_rule_O6_complete, OutputStageError as _OSErr
     from app.services.report_engine import (
         generate_report_three_formats, ProjectReportInput, GradeAssRow as _GR,
     )
+    from app.services.meta_analysis import run_meta_analysis
     import hashlib
     import json as _json
     sl = SessionLocal()
     with sl as s:
         grades = s.exec(select(GradeAssessment).where(GradeAssessment.project_id == project_id)).all()
+        project = s.get(ResearchProject, project_id)
+        prisma = s.exec(select(Prisma2020Checklist).where(Prisma2020Checklist.project_id == project_id).limit(1)).first()
+        outcome_labels = {
+            o.id: o.label
+            for o in s.exec(select(OutcomeDefinition).where(OutcomeDefinition.project_id == project_id)).all()
+        }
+        # Each GRADE row reports the studies and participants behind its outcome, so
+        # the abstracted arm data is counted per outcome.
+        arm_rows = s.exec(
+            select(OutcomeArmData.outcome_id, OutcomeArmData.record_id, OutcomeArmData.data_json)
+            .where(OutcomeArmData.project_id == project_id)
+        ).all()
+        # A pooled effect only exists once an analysis has been run; whichever
+        # outcomes cannot be pooled report their effect as not reported.
+        pooled_by_outcome: dict[int, dict] = {}
+        for outcome_id in {g.outcome_id for g in grades}:
+            try:
+                pooled_by_outcome[outcome_id] = run_meta_analysis(s, project_id, outcome_id, "random_dl")
+            except Exception:
+                pass
+
+    studies_by_outcome: dict[int, set[int]] = {}
+    participants_by_outcome: dict[int, int] = {}
+    for outcome_id, record_id, data_json in arm_rows:
+        studies_by_outcome.setdefault(outcome_id, set()).add(record_id)
+        participants_by_outcome[outcome_id] = participants_by_outcome.get(outcome_id, 0) + int(
+            (data_json or {}).get("n", 0)
+        )
+
     try:
-        _simulate_rule_O5(grade_count=len(grades))
+        assert_rule_O5(grade_count=len(grades))
     except _OSErr as e:
         from fastapi import HTTPException
         raise HTTPException(status_code=422, detail=str(e))
+
+    def _effect_label(outcome_id: int) -> str:
+        result = pooled_by_outcome.get(outcome_id)
+        if result is None:
+            return "NR"
+        pooled = result["pooled_effect"]
+        measure = "RR" if "rr" in (result["studies"][0] if result["studies"] else {}) else "MD"
+        return f"{measure} {pooled['value']:.2f} [{pooled['ci_low']:.2f}, {pooled['ci_high']:.2f}]"
+
     grade_rows = [
         _GR(
-            outcome_label=f"Outcome {g.outcome_id}",
+            outcome_label=outcome_labels.get(g.outcome_id) or f"Outcome {g.outcome_id}",
             certainty=str(g.certainty_final),
-            participants_n=0, studies_k=0,
-            effect_label="NR", ar_control="NR", ar_intervention="NR",
+            participants_n=participants_by_outcome.get(g.outcome_id, 0),
+            studies_k=len(studies_by_outcome.get(g.outcome_id, ())),
+            effect_label=_effect_label(g.outcome_id),
+            # Absolute risks need a baseline risk the reviewer supplies, which is not
+            # captured anywhere yet, so they stay not reported rather than invented.
+            ar_control="NR", ar_intervention="NR",
             comments=g.note or "",
         ) for g in grades
     ]
+    prisma_checked = 0
+    if prisma is not None:
+        prisma_checked = sum(1 for i in range(1, 28) if bool(getattr(prisma, f"item_{i}", False)))
     pi = ProjectReportInput(
-        project_name=f"Project {project_id}", project_id=project_id,
-        owner_display="Owner", abstract_summary="",
-        prisma_checklist_masked_count=0, prisma_checklist_total_items=27,
+        project_name=project.name if project else f"Project {project_id}",
+        project_id=project_id,
+        owner_display=project.owner_user_id if project else "",
+        abstract_summary=project.description if project else "",
+        prisma_checklist_masked_count=prisma_checked, prisma_checklist_total_items=27,
         grade_rows=grade_rows, forest_svg_content="",
     )
     _overrides_tmp: dict[str, str] = {}
@@ -1402,12 +1474,29 @@ def w84_post_report_generate(project_id: int, payload: dict | None = None):
     _overrides_arg: dict | None = _overrides_tmp if _overrides_tmp else None
     md, html, txt = generate_report_three_formats(pi, overrides=_overrides_arg)
     try:
-        _simulate_rule_O6_incomplete(md=md, html=html, txt=txt)
+        assert_rule_O6_complete(md=md, html=html, txt=txt)
     except _OSErr as e:
         from fastapi import HTTPException
         raise HTTPException(status_code=422, detail=str(e))
     sha_grade = hashlib.sha256(_json.dumps([dict(domains_5=g.domains_5, upgrades_3=g.upgrades_3, certainty=g.certainty_final) for g in grades], sort_keys=True).encode("utf-8")).hexdigest()
-    sha_analysis = hashlib.sha256(b"empty-w84-t4-analysis-stub").hexdigest()
+    # The snapshot is deduplicated on these two digests, so the analysis one has to
+    # cover the pooled results the report was built from; a constant would make every
+    # snapshot of every project collide on it.
+    sha_analysis = hashlib.sha256(
+        _json.dumps(
+            [
+                {
+                    "outcome_id": outcome_id,
+                    "studies_k": len(studies_by_outcome.get(outcome_id, ())),
+                    "participants_n": participants_by_outcome.get(outcome_id, 0),
+                    "pooled_effect": pooled_by_outcome.get(outcome_id, {}).get("pooled_effect"),
+                    "heterogeneity": pooled_by_outcome.get(outcome_id, {}).get("heterogeneity"),
+                }
+                for outcome_id in sorted({g.outcome_id for g in grades})
+            ],
+            sort_keys=True,
+        ).encode("utf-8")
+    ).hexdigest()
     # === W84 T5 APPEND (idempotent get_or_create into ReportSnapshot table) ===
     from app.models import ReportSnapshot as _RS
     sl2 = SessionLocal()
@@ -1667,9 +1756,9 @@ def w9a_screening_funnel_stats(
     context: SessionContext = Depends(get_current_session),
     session: Session = Depends(get_session),
 ) -> dict:
+    from app.services.screening_engine import calc_funnel_from_records, compute_prisma_counts, FUNNEL_ORDER
     from sqlmodel import select, func
     from app.models import LiteratureRecord
-    from app.services.screening_engine import calc_funnel_from_records, FUNNEL_ORDER
 
     project = session.get(ResearchProject, payload.pi_id)
     if project is None:
@@ -1678,23 +1767,27 @@ def w9a_screening_funnel_stats(
     if project.organization_slug != context.organization_slug:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="no permission to access this project")
 
+    pid = project.id or payload.pi_id
     total_records = session.exec(
-        select(func.count(LiteratureRecord.id)).where(
-            LiteratureRecord.project_id == (project.id or payload.pi_id)
-        )
+        select(func.count(LiteratureRecord.id)).where(LiteratureRecord.project_id == pid)
     ).one()
-    n3 = int(payload.n3_override or total_records or 0)
-    n4_dedup = int(payload.n4_dupes_removed_override or (n3 // 6 if n3 > 0 else 0))
-    ta_excluded = int(n3 * 0.89) if n3 else 0
-    ft_excluded = int(n3 * 0.09) if n3 else 0
+    # The funnel is the same screening tally PRISMA reports, so it is read from the
+    # records' stage and decision rather than estimated from the record total.
+    prisma = compute_prisma_counts(session, pid)
+    n3 = int(payload.n3_override or prisma.identification or 0)
+    n4_dedup = int(
+        payload.n4_dupes_removed_override
+        if payload.n4_dupes_removed_override is not None
+        else prisma.duplicate_excluded
+    )
 
     raw_counts = calc_funnel_from_records(
         n1=n3,
         n2=n3,
         n3=n3,
         n4_dupes_removed=n4_dedup,
-        e2=ta_excluded,
-        e5=ft_excluded,
+        e2=prisma.ta_excluded,
+        e5=prisma.fulltext_excluded,
     )
 
     labels_map = {
@@ -1900,24 +1993,13 @@ def w9c_abstractor_run_pipeline(
         "abstract_text": payload.abstract_text,
     }
 
-    try:
-        result: AbTriageResult
-        failed_steps_info: list[str]
-        result, failed_steps_info = run_pipeline_with_llm_fallback(
-            record=record_dict,
-            llm_result=payload.llm_result,
-            fallback_times=payload.fallback_times,
-        )
-    except Exception as _pipe_err:
-        fallback_title = title.lower() if title else ""
-        is_t2dm = any(k in fallback_title for k in ("t2dm", "type 2", "2型", "2 型"))
-        result = AbTriageResult(
-            decision="review" if not is_t2dm else "review",
-            reasons=[f"pipeline error fallback: {str(_pipe_err)}"],
-            confidence=0.3,
-            failed_steps=["pipeline_exception"],
-        )
-        failed_steps_info = ["pipeline_exception"]
+    result: AbTriageResult
+    failed_steps_info: list[str]
+    result, failed_steps_info = run_pipeline_with_llm_fallback(
+        record=record_dict,
+        llm_result=payload.llm_result,
+        fallback_times=payload.fallback_times,
+    )
 
     decision_val = result.decision
     confidence_val = float(result.confidence or 0.0)
@@ -2007,13 +2089,15 @@ def w9c_abstractor_batch_stats(
             if int_key not in all_record_ids:
                 all_record_ids.append(int_key)
     else:
+        # These payload fields carry decisions only. The dashboard counts decisions,
+        # so no confidence is invented for them.
         if payload.include_decisions:
             for rid in payload.include_decisions:
                 try:
                     ir = int(rid)
                 except Exception:
                     continue
-                triage_map[ir] = AbTriageResult(decision="include", confidence=0.9)
+                triage_map[ir] = AbTriageResult(decision="include")
                 if ir not in all_record_ids:
                     all_record_ids.append(ir)
         if payload.exclude_decisions:
@@ -2022,7 +2106,7 @@ def w9c_abstractor_batch_stats(
                     er = int(rid)
                 except Exception:
                     continue
-                triage_map[er] = AbTriageResult(decision="exclude", confidence=0.3)
+                triage_map[er] = AbTriageResult(decision="exclude")
                 if er not in all_record_ids:
                     all_record_ids.append(er)
         if payload.review_decisions:
@@ -2031,7 +2115,7 @@ def w9c_abstractor_batch_stats(
                     rr = int(rid)
                 except Exception:
                     continue
-                triage_map[rr] = AbTriageResult(decision="review", confidence=0.6)
+                triage_map[rr] = AbTriageResult(decision="review")
                 if rr not in all_record_ids:
                     all_record_ids.append(rr)
 
