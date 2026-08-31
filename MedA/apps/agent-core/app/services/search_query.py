@@ -2,7 +2,13 @@ import json
 
 from sqlmodel import Session, select
 
-from app.models import ResearchProject, SearchQuery, SearchQueryDraft, SearchQueryVersion
+from app.models import (
+    ResearchProject,
+    SearchQuery,
+    SearchQueryDraft,
+    SearchQueryVersion,
+    SearchRun,
+)
 from app.schemas import (
     DeriveSearchQueryDraftRequest,
     SaveSearchQueryDraftRequest,
@@ -62,58 +68,6 @@ def _load_version(
     return version
 
 
-def _default_grouped_terms() -> list[SearchTermGroupSummary]:
-    return [
-        SearchTermGroupSummary(
-            group_key="population",
-            group_label="人群 / 疾病",
-            terms=[
-                SearchTermSummary(
-                    term_id="population-1",
-                    label="diabetes mellitus",
-                    source_type="controlled",
-                    selected=True,
-                )
-            ],
-        ),
-        SearchTermGroupSummary(
-            group_key="intervention",
-            group_label="干预 / 暴露",
-            terms=[
-                SearchTermSummary(
-                    term_id="intervention-1",
-                    label="metformin",
-                    source_type="free_text",
-                    selected=True,
-                )
-            ],
-        ),
-    ]
-
-
-def _default_expression_blocks() -> list[SearchExpressionBlock]:
-    return [
-        SearchExpressionBlock(
-            block_id="block-1",
-            block_type="term",
-            term_ref="population-1",
-            position=0,
-        ),
-        SearchExpressionBlock(
-            block_id="block-2",
-            block_type="operator",
-            operator="AND",
-            position=1,
-        ),
-        SearchExpressionBlock(
-            block_id="block-3",
-            block_type="term",
-            term_ref="intervention-1",
-            position=2,
-        ),
-    ]
-
-
 def _build_validation_messages(
     grouped_terms: list[SearchTermGroupSummary],
     expression_blocks: list[SearchExpressionBlock],
@@ -145,17 +99,53 @@ def _build_validation_messages(
     ]
 
 
+CORE_TERM_GROUP_KEYS = ("population", "intervention", "comparison", "outcome", "study_design")
+
+
 def _build_preview_summary(
+    session: Session,
+    project_id: int,
+    grouped_terms: list[SearchTermGroupSummary],
     selected_source_labels: list[str],
     source: str,
 ) -> SearchPreviewSummary:
+    """预览摘要只汇报能算出来的事实：真实主题组覆盖数，以及该项目历史检索的真实命中量。"""
+    covered_groups = len(
+        {
+            group.group_key
+            for group in grouped_terms
+            if group.group_key in CORE_TERM_GROUP_KEYS
+            and any(term.selected for term in group.terms)
+        }
+    )
+
+    if selected_source_labels:
+        # 命中量不做估算，只回放这个项目已完成检索的真实区间；没跑过就说明还没有依据。
+        hit_counts = [
+            int(value)
+            for value in session.exec(
+                select(SearchRun.total_after_dedupe)
+                .where(SearchRun.project_id == project_id)
+                .where(SearchRun.status == "completed")
+            ).all()
+            if value is not None
+        ]
+        if not hit_counts:
+            estimated_hit_band = "尚无历史检索数据"
+        elif min(hit_counts) == max(hit_counts):
+            estimated_hit_band = f"{min(hit_counts)}"
+        else:
+            estimated_hit_band = f"{min(hit_counts)}-{max(hit_counts)}"
+    else:
+        estimated_hit_band = "不可用"
+
     return SearchPreviewSummary(
         status="available" if selected_source_labels else "unavailable",
-        coverage_hint="主题组覆盖 2 / 5",
+        coverage_hint=f"主题组覆盖 {covered_groups} / {len(CORE_TERM_GROUP_KEYS)}",
         database_scope_summary=(
             ", ".join(selected_source_labels) if selected_source_labels else "未选择数据库"
         ),
-        estimated_hit_band="80-150" if selected_source_labels else "不可用",
+        estimated_hit_band=estimated_hit_band,
         last_generated_from=source,
     )
 
@@ -175,8 +165,9 @@ def get_or_create_search_query_editor(
         ).first()
 
     if query is None:
-        grouped_terms = _default_grouped_terms()
-        expression_blocks = _default_expression_blocks()
+        # 新建检索式不预填示例检索词，主题组与检索式都从空开始，由研究者自己录入。
+        grouped_terms: list[SearchTermGroupSummary] = []
+        expression_blocks: list[SearchExpressionBlock] = []
         query = SearchQuery(project_id=project_id, name="检索式 1")
         session.add(query)
         session.commit()
@@ -184,15 +175,12 @@ def get_or_create_search_query_editor(
 
         draft = SearchQueryDraft(
             query_id=query.id or 0,
-            grouped_terms_json=json.dumps(
-                [item.model_dump() for item in grouped_terms],
+            grouped_terms_json=json.dumps([], ensure_ascii=False),
+            expression_blocks_json=json.dumps([], ensure_ascii=False),
+            selected_sources_json=json.dumps(
+                source_labels_for_keys(enabled_source_keys_for_project(session, project)),
                 ensure_ascii=False,
             ),
-            expression_blocks_json=json.dumps(
-                [item.model_dump() for item in expression_blocks],
-                ensure_ascii=False,
-            ),
-            selected_sources_json=json.dumps(["PubMed", "Embase"], ensure_ascii=False),
         )
         session.add(draft)
         session.commit()
@@ -241,7 +229,9 @@ def get_or_create_search_query_editor(
         grouped_terms=grouped_terms,
         expression_blocks=expression_blocks,
         validation_messages=validation_messages,
-        preview_summary=_build_preview_summary(selected_sources, "draft"),
+        preview_summary=_build_preview_summary(
+            session, project_id, grouped_terms, selected_sources, "draft"
+        ),
     )
 
 
@@ -335,7 +325,9 @@ def get_search_query_snapshot(
         grouped_terms=grouped_terms,
         expression_blocks=expression_blocks,
         validation_messages=_build_validation_messages(grouped_terms, expression_blocks),
-        preview_summary=_build_preview_summary(selected_sources, "snapshot"),
+        preview_summary=_build_preview_summary(
+            session, project.id or 0, grouped_terms, selected_sources, "snapshot"
+        ),
     )
 
 

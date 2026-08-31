@@ -70,10 +70,14 @@ def test_query_builder_creates_default_draft_for_project() -> None:
     assert body["query_dirty"] is False
     assert body["query_version"] == "draft"
     assert body["selected_sources"] == ["PubMed", "Embase"]
-    assert body["grouped_terms"][0]["group_key"] == "population"
-    assert body["expression_blocks"][0]["block_type"] == "term"
+    # 新建检索式不再预填示例检索词，主题组与检索式块都是空的
+    assert body["grouped_terms"] == []
+    assert body["expression_blocks"] == []
     assert body["preview_summary"]["status"] == "available"
     assert body["preview_summary"]["database_scope_summary"] == "PubMed, Embase"
+    assert body["preview_summary"]["coverage_hint"] == "主题组覆盖 0 / 5"
+    # 该项目还没跑过检索，所以没有真实命中量可回放
+    assert body["preview_summary"]["estimated_hit_band"] == "尚无历史检索数据"
 
 
 def test_query_builder_saves_draft_and_creates_version_snapshot() -> None:
