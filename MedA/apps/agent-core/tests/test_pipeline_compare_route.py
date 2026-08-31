@@ -21,6 +21,7 @@ from app.services.pipeline_engine import (
     compute_pico_diff,
     compute_pipeline_compare,
     create_pipeline_run,
+    included_study_ids,
 )
 
 
@@ -191,10 +192,11 @@ class TestC5C6Rob2Delta:
             r = _make_run_with_steps(preset, mx, run_id=f"p-c6-{preset}-{mx}")
             result = compute_rob2_delta(r, r)
             row_a_sum = sum(row["a"] for row in result)
-            step5_n = compute_funnel_counts_for_run(r)[5]
-            diff = abs(row_a_sum - step5_n)
-            assert diff <= 10, (
-                f"C6 {preset} mx={mx}: sum(a)={row_a_sum} vs step5_n={step5_n}, diff={diff} > 10"
+            # Risk of bias is assessed for every included study and removes none of
+            # them, so the three buckets have to account for the whole included set.
+            assessed_n = len(included_study_ids(r))
+            assert row_a_sum == assessed_n, (
+                f"C6 {preset} mx={mx}: sum(a)={row_a_sum} vs assessed={assessed_n}"
             )
 
 
@@ -267,13 +269,9 @@ class TestC10C12PicoDiff:
         result = compute_pico_diff(r1, r2)
         combined = sorted(set(result["both"]) | set(result["only_in_a_nct_ids"]))
 
-        def _a_original_set():
-            import hashlib
-            seed = int(hashlib.sha1(r1.preset.encode()).hexdigest()[:8], 16)
-            n = compute_funnel_counts_for_run(r1)[4]
-            return sorted({f"NCT{(seed + i * 131) % 100000000:08d}" for i in range(n)})
-
-        expected = _a_original_set()
+        # The diff is over the studies run A actually included, so `both` plus
+        # `only_in_a` has to be exactly that set.
+        expected = sorted(set(included_study_ids(r1)))
         cap = min(len(expected), 200)
         assert combined == expected[:cap], (
             f"C12 combined len={len(combined)} vs expected[:{cap}] len={len(expected[:cap])}"

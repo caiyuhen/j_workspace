@@ -227,7 +227,7 @@ class TestCGetPipelineDetail:
         assert len(body["steps"]) == 8, f"A9 expected 8 steps, got {len(body['steps'])}"
         assert "cancel_flag" in body, "A9 missing cancel_flag"
         assert "report_url" in body, "A9 missing report_url"
-        assert f"/pipelines/{rid}/report.pdf" in body["report_url"], "A9 report_url shape wrong"
+        assert f"/pipelines/{rid}/report.md" in body["report_url"], "A9 report_url shape wrong"
 
     def test_A10_get_detail_401_not_logged_in(self):
         client = TestClient(app)

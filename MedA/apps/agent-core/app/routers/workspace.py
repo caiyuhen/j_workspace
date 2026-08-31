@@ -2277,12 +2277,61 @@ def w10_get_pipeline_detail(
         "cancel_flag": run.cancel_flag,
         "error_msg": run.error_msg,
         "steps": steps_out[:8],
-        "report_url": f"/pipelines/{run.id}/report.pdf",
+        "report_url": f"/api/workspace/{workspace_id}/pipelines/{run.id}/report.md",
         "created_at": run.created_at.isoformat() if run.created_at else None,
         "updated_at": run.updated_at.isoformat() if run.updated_at else None,
         "finished_at": run.finished_at.isoformat() if run.finished_at else None,
     }
     return detail
+
+
+@router.get("/{workspace_id}/pipelines/{run_id}/report.{ext}")
+def w10_get_pipeline_report(
+    workspace_id: str,
+    run_id: str,
+    ext: str,
+    context: SessionContext = Depends(get_current_session),
+    session: Session = Depends(get_session),
+) -> Response:
+    """Serve a report artifact written by the pipeline's report step.
+
+    Only the formats `report_engine` really renders are served; there is no PDF
+    renderer in this service, so `.pdf` is not a valid extension here.
+    """
+    from app.storage import read_run_artifact
+
+    _load_workspace_or_404(session, workspace_id, context)
+
+    media_types = {
+        "md": "text/markdown; charset=utf-8",
+        "html": "text/html; charset=utf-8",
+        "txt": "text/plain; charset=utf-8",
+    }
+    if ext not in media_types:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"unsupported report format: {ext}",
+        )
+
+    run = session.exec(
+        select(PipelineRun).where(
+            PipelineRun.workspace_id == workspace_id,
+            PipelineRun.id == run_id,
+        )
+    ).first()
+    if run is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="pipeline run not found",
+        )
+
+    text = read_run_artifact(run_id, f"report.{ext}")
+    if text is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="report not generated yet",
+        )
+    return Response(content=text, media_type=media_types[ext])
 
 
 @router.post("/{workspace_id}/pipelines/{run_id}/retry/{step_idx:int}")

@@ -781,13 +781,16 @@ def find_duplicates_hybrid(
 
     if n <= FALLBACK_N_PARITY:
         perf["fallback_used"] = True
+        t_bk_s = time.perf_counter()
         kept_bk, diag_bk = asyncio.run(find_duplicates_bktree(
             records, threshold_bits, n_jobs, enable_parity_check
         ))
-        total_ms = round((time.perf_counter() - t0) * 1000, 2)
-        perf["stage_ms"]["bk_ms"] = round(total_ms * 0.9, 2)
-        perf["stage_ms"]["union_ms"] = round(total_ms * 0.1, 2)
-        perf["stage_ms"]["total_ms"] = total_ms
+        t_bk_e = time.perf_counter()
+        # The BK-tree pass groups and picks the survivors in one go, so there is no
+        # separate union stage to time on this path.
+        perf["stage_ms"]["bk_ms"] = round((t_bk_e - t_bk_s) * 1000, 2)
+        perf["stage_ms"]["union_ms"] = 0.0
+        perf["stage_ms"]["total_ms"] = round((time.perf_counter() - t0) * 1000, 2)
         diag_bk["perf_json"] = perf
         return kept_bk, diag_bk
 

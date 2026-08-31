@@ -193,7 +193,7 @@ class TestHP1HP3Sglt2iCkdRun:
             pytest.fail(f"HP3 finished_at not ISO format: {finished_at!r}")
 
         report_url = body.get("report_url", "")
-        assert report_url.endswith("/report.pdf"), f"HP3 report_url wrong: {report_url}"
+        assert report_url.endswith("/report.md"), f"HP3 report_url wrong: {report_url}"
 
         with Session(engine) as s:
             db_run = s.get(PipelineRun, run.id)

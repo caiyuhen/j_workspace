@@ -241,7 +241,7 @@ async def test_E29_run_pipeline_full_success_8_steps():
         step7_payload = r2.steps_json[7]["payload_ref"]
         assert step7_payload is not None
         assert run.id in step7_payload
-        assert step7_payload.endswith("report.pdf")
+        assert step7_payload.endswith("report.md")
 
 
 def test_E30_get_first_non_success_index_all_pending():

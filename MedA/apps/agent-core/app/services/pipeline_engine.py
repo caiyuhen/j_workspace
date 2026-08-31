@@ -810,12 +810,122 @@ def parse_grade_payload_ref(payload_ref: str | None) -> list[str] | None:
     return letters
 
 
+REPORT_ARTIFACT_FORMATS: tuple[tuple[str, int], ...] = (
+    ("report.md", 0),
+    ("report.html", 1),
+    ("report.txt", 2),
+)
+
+
+def _grade_rows_for_report(
+    outcomes: list[dict[str, Any]],
+    assessed: list[dict[str, Any]],
+) -> list[Any]:
+    """Turn the GRADE results into the summary-of-findings rows the renderer takes."""
+    import statistics
+
+    from app.services.report_engine import GradeAssRow
+
+    participants = sum(s["outcome"].get("sample_size") or 0 for s in assessed)
+    hrs = [
+        s["outcome"]["hazard_ratio"]
+        for s in assessed
+        if s.get("outcome", {}).get("hazard_ratio")
+    ]
+    # The abstracted effect estimates are not split per outcome, so the pooled
+    # median is reported as-is rather than attributed to one outcome in particular.
+    effect_label = (
+        f"HR {statistics.median(hrs):.2f} (median of {len(hrs)} studies)"
+        if hrs
+        else "not estimable"
+    )
+
+    rows: list[Any] = []
+    for o in outcomes:
+        downgraded = [d for d, v in o["domains"].items() if v != "no_concerns"]
+        rows.append(
+            GradeAssRow(
+                outcome_label=o["outcome"],
+                certainty=o["certainty"],
+                participants_n=participants,
+                studies_k=o["n_studies"],
+                effect_label=effect_label,
+                ar_control="not reported",
+                ar_intervention="not reported",
+                comments=(
+                    "downgraded for " + ", ".join(downgraded) if downgraded else "no downgrades"
+                ),
+            )
+        )
+    return rows
+
+
+def _exec_report_generate(run: PipelineRun, ctx: dict[str, Any]) -> tuple[int, int, str]:
+    """step7 — render the report from the real GRADE results and write it to storage.
+
+    One report is produced per run, so `n_out` is 1. `report_engine` renders
+    Markdown, HTML and plain text; there is no PDF renderer in this service, so the
+    three real formats are what gets written and `payload_ref` points at the
+    Markdown, which is the canonical one.
+    """
+    from app.services.preset_profiles import get_profile
+    from app.services.report_engine import ProjectReportInput, generate_report_three_formats
+    from app.storage import write_run_artifact
+
+    outcomes = ctx.get("grade_outcomes")
+    if outcomes is None:
+        _exec_grade_downgrade(run, ctx)
+        outcomes = ctx["grade_outcomes"]
+    assessed = ctx["rob2_records"]
+
+    profile = get_profile(run.preset)
+    rob2_buckets: dict[str, int] = {b: 0 for b in _ROB2_BUCKETS}
+    for s in assessed:
+        rob2_buckets[s["rob2"]["overall"]] += 1
+
+    pi = ProjectReportInput(
+        project_name=f"{profile.condition} — {profile.intervention_text} vs {profile.comparator_text}",
+        # The report renderer is shared with the project-scoped reports, which key
+        # off an integer project id. A pipeline run has no project, so this stays 0.
+        project_id=0,
+        owner_display=run.workspace_id,
+        abstract_summary=(
+            f"{len(assessed)} studies were included after screening and data "
+            f"abstraction of {run.max_records} retrieved records. Risk of bias: "
+            f"{rob2_buckets['low']} low, {rob2_buckets['some']} some concerns, "
+            f"{rob2_buckets['high']} high."
+        ),
+        # PRISMA items are checked off by a reviewer, which no pipeline run does.
+        prisma_checklist_masked_count=0,
+        prisma_checklist_total_items=27,
+        grade_rows=_grade_rows_for_report(outcomes, assessed),
+    )
+    rendered = generate_report_three_formats(pi)
+
+    paths = [
+        write_run_artifact(run.id, filename, rendered[i])
+        for filename, i in REPORT_ARTIFACT_FORMATS
+    ]
+    ctx["report_paths"] = paths
+
+    with Session(engine) as session:
+        db_run = session.get(PipelineRun, run.id)
+        if db_run is not None:
+            db_run.report_blob_path = paths[0]
+            session.add(db_run)
+            session.commit()
+    run.report_blob_path = paths[0]
+
+    return len(outcomes), 1, paths[0]
+
+
 def _exec_step_N(
     idx: int,
     run: PipelineRun,
     ctx: dict[str, Any] | None,
 ) -> tuple[int, int, str | None]:
-    ctx = ctx or {}
+    if ctx is None:
+        ctx = {}
     _apply_fault_injection(idx, ctx)
 
     if idx == 0:
@@ -845,17 +955,12 @@ def _exec_step_N(
     if idx == 6:
         return _exec_grade_downgrade(run, ctx)
 
-    factors = [0.96, 0.86, 0.58, 0.56, 0.76, 0.98, 1.0, 1.0]
-    n_in = _get_step_n_out(run, idx - 1) or run.max_records
     if idx == 7:
-        n_out = 1
-    else:
-        n_out = max(1, int(n_in * factors[idx]))
-    if idx == 7:
-        payload_ref = f"storage/{run.id}/report.pdf"
-    else:
-        payload_ref = None
-    return n_in, n_out, payload_ref
+        return _exec_report_generate(run, ctx)
+
+    # step1 (dedup) is async and runs through `_exec_step1_real_dedup`, so it never
+    # reaches here; every other index is dispatched above.
+    raise AssertionError(f"no executor for pipeline step {idx}")
 
 
 RETRYABLE_EXCEPTIONS = (TimeoutError, ConnectionError)
@@ -884,7 +989,10 @@ async def run_single_step(
     attempt_no: int | None = None,
     ctx: dict[str, Any] | None = None,
 ) -> tuple[bool, bool]:
-    ctx = ctx or {}
+    # An empty dict is still the caller's dict: `ctx or {}` would replace it with a
+    # fresh one and break the hand-off of fetched/screened records between steps.
+    if ctx is None:
+        ctx = {}
     assert 0 <= step_index < 8
 
     if attempt_no is None:
@@ -946,7 +1054,8 @@ async def run_pipeline(
     run_id: str,
     ctx: dict[str, Any] | None = None,
 ) -> None:
-    ctx = ctx or {}
+    if ctx is None:
+        ctx = {}
 
     with Session(engine) as session:
         run = session.get(PipelineRun, run_id)
@@ -1078,7 +1187,6 @@ async def resume_pipeline(
 
 
 # ---- APPEND: W10 Pipeline Compare Delta Helpers (D2-2) ----
-from typing import Literal as _Literal
 _FUNNEL_STEP_LABELS = ["identify","dedup","ta_pass","ft_include","abstractor_include","rob2_assessed","grade_outcomes","report_generated"]
 
 def compute_funnel_counts_for_run(run: PipelineRun) -> list[int]:
@@ -1097,63 +1205,115 @@ def compute_funnel_delta(run_a: PipelineRun, run_b: PipelineRun) -> list[dict]:
         for i in range(8)
     ]
 
+def _step_payload_ref(run: PipelineRun, idx: int) -> str | None:
+    """The payload_ref step `idx` recorded, or None if it never ran."""
+    steps = run.steps_json if isinstance(run.steps_json, list) else []
+    if len(steps) <= idx:
+        return None
+    return (steps[idx] or {}).get("payload_ref")
+
+
+def _replayed_assessment(run: PipelineRun) -> list[dict]:
+    """Re-run screening, abstraction and RoB 2 for a run that recorded no summary.
+
+    Compare only receives a `PipelineRun` row, and the per-study results live in the
+    run context, not in the database. A run whose step5/step6 summary is missing (an
+    older run, or one that never reached those steps) is therefore replayed from its
+    preset corpus, which is deterministic. Nothing here is invented; it is the same
+    code the pipeline itself executes.
+    """
+    ctx: dict[str, Any] = {}
+    _exec_rob2_assessment(run, ctx)
+    return ctx["rob2_records"]
+
+
 def compute_rob2_delta(run_a: PipelineRun, run_b: PipelineRun) -> list[dict]:
-    """Return overall low/some/high for each run (synthetic deterministic by preset + step5 n_out)."""
-    def _rob_counts(preset: str, n_include: int) -> dict[str, int]:
-        import hashlib
-        seed = int(hashlib.md5(preset.encode()).hexdigest()[:6], 16)
-        low = int(n_include * 0.43) + (seed % 7)
-        some = int(n_include * 0.50) + ((seed >> 3) % 5)
-        high = max(0, n_include - low - some)
-        return {"low": low, "some": some, "high": high}
-    a_n = compute_funnel_counts_for_run(run_a)[5]
-    b_n = compute_funnel_counts_for_run(run_b)[5]
-    a_counts = _rob_counts(run_a.preset, a_n)
-    b_counts = _rob_counts(run_b.preset, b_n)
-    return [{"overall": o, "a": a_counts[o], "b": b_counts[o]} for o in ("low","some","high")]
+    """Compare the real RoB 2 / ROBINS-I overall judgements of the two runs."""
+    def _counts(run: PipelineRun) -> dict[str, int]:
+        recorded = parse_rob2_payload_ref(_step_payload_ref(run, 5))
+        if recorded is not None:
+            return recorded
+        counts = {bucket: 0 for bucket in _ROB2_BUCKETS}
+        for study in _replayed_assessment(run):
+            counts[study["rob2"]["overall"]] += 1
+        return counts
+
+    a_counts = _counts(run_a)
+    b_counts = _counts(run_b)
+    return [{"overall": o, "a": a_counts[o], "b": b_counts[o]} for o in _ROB2_BUCKETS]
+
+
+_GRADE_LETTER_TO_CERTAINTY: dict[str, str] = {
+    "H": "high",
+    "M": "moderate",
+    "L": "low",
+}
+
 
 def compute_grade_delta(run_a: PipelineRun, run_b: PipelineRun) -> list[dict]:
-    """Synthetic 4 outcomes for CKD preset (eGFR drop, HF hospitalization, all-cause death, serious AE). Deterministic hash grades."""
-    outcomes_map = {
-        "sglt2i_ckd": ["eGFR drop 40%","HF hospitalization","all-cause death","serious AEs"],
-        "empagliflozin_hf": ["CV death","HF hospitalization","all-cause death","serious AEs"],
-        "glp1_weightloss": ["≥15% weight loss","HbA1c reduction","all-cause death","serious AEs"],
-        "liraglutide_nafld": ["NAS remission","fibrosis worsening","all-cause death","serious AEs"],
-        "pkd_tolvaptan": ["eGFR slope","TKV increase","all-cause death","serious AEs"],
-        "ckd_blood_pressure_control": ["SBP<130 achievement","eGFR drop","CV events","all-cause death"],
-    }
-    import hashlib
-    def _grade(preset_seed: int, outcome_idx: int) -> _Literal["H","M","L"]:
-        bucket = (preset_seed + outcome_idx * 17) % 10
-        if bucket < 2: return "H"
-        if bucket < 8: return "M"
-        return "L"
-    a_seed = int(hashlib.md5((run_a.preset + str(run_a.id)).encode()).hexdigest()[:6], 16)
-    b_seed = int(hashlib.md5((run_b.preset + str(run_b.id)).encode()).hexdigest()[:6], 16)
-    outcomes = outcomes_map.get(run_a.preset, outcomes_map["sglt2i_ckd"])
-    def _reason(a_g: str, b_g: str, idx: int) -> str:
-        if a_g == b_g: return "Same grade; robust"
-        if a_g > b_g:
-            return f"A lower grade (more downgrades) vs B; outcome#{idx+1}"
-        return f"A higher grade (fewer downgrades) vs B; outcome#{idx+1}"
-    return [
-        {"outcome": outcomes[i], "a": _grade(a_seed, i), "b": _grade(b_seed, i),
-         "reason": _reason(_grade(a_seed,i), _grade(b_seed,i), i)}
-        for i in range(len(outcomes))
-    ]
+    """Compare the real GRADE certainty of each outcome of the review question."""
+    from app.services.preset_profiles import get_profile
+
+    def _letters(run: PipelineRun) -> list[str]:
+        recorded = parse_grade_payload_ref(_step_payload_ref(run, 6))
+        if recorded is not None:
+            return recorded
+        ctx: dict[str, Any] = {}
+        _exec_grade_downgrade(run, ctx)
+        return [o["letter"] for o in ctx["grade_outcomes"]]
+
+    # The outcomes are the ones the review question asks about, so they are named
+    # after run A's preset; a cross-preset comparison lines its certainty up
+    # positionally, which is how the two presets' outcome lists are ordered.
+    outcomes = get_profile(run_a.preset).outcome_labels
+    a_letters = _letters(run_a)
+    b_letters = _letters(run_b)
+
+    def _reason(a_g: str, b_g: str) -> str:
+        a_word = _GRADE_LETTER_TO_CERTAINTY[a_g]
+        b_word = _GRADE_LETTER_TO_CERTAINTY[b_g]
+        if a_g == b_g:
+            return f"Both runs rated {a_word} certainty"
+        # The letters are ordered H > M > L as certainty, which is the reverse of
+        # their alphabetical order.
+        order = ("H", "M", "L")
+        if order.index(a_g) < order.index(b_g):
+            return f"A rated {a_word} vs B {b_word}: fewer downgrades in A"
+        return f"A rated {a_word} vs B {b_word}: more downgrades in A"
+
+    rows: list[dict] = []
+    for i, label in enumerate(outcomes):
+        if i >= len(a_letters) or i >= len(b_letters):
+            break
+        a_g, b_g = a_letters[i], b_letters[i]
+        rows.append({"outcome": label, "a": a_g, "b": b_g, "reason": _reason(a_g, b_g)})
+    return rows
+
+
+# The compare payload is served over HTTP, so the id lists are capped rather than
+# returning one entry per included study of a large review.
+_PICO_DIFF_CAP = 100
+
+
+def included_study_ids(run: PipelineRun) -> list[str]:
+    """Registration ids of the studies that survived screening and abstraction."""
+    ids: list[str] = []
+    for study in _abstracted_pool(run, {}):
+        nct_id = study["record"].get("nct_id")
+        if nct_id:
+            ids.append(nct_id)
+    return ids
+
 
 def compute_pico_diff(run_a: PipelineRun, run_b: PipelineRun) -> dict:
-    """Return NCT IDs lists: only_a, only_b, both. Deterministic by preset + n_in."""
-    def _nct_set(preset: str, n: int) -> set[str]:
-        import hashlib
-        seed = int(hashlib.sha1(preset.encode()).hexdigest()[:8], 16)
-        return {f"NCT{(seed + i * 131) % 100000000:08d}" for i in range(n)}
-    a_set = _nct_set(run_a.preset, compute_funnel_counts_for_run(run_a)[4])
-    b_set = _nct_set(run_b.preset, compute_funnel_counts_for_run(run_b)[4])
-    only_a = sorted(a_set - b_set)[:100]
-    only_b = sorted(b_set - a_set)[:100]
-    both = sorted(a_set & b_set)[:100]
-    return {"only_in_a_nct_ids": only_a, "only_in_b_nct_ids": only_b, "both": both}
+    """Which included studies the two runs share, by trial registration id."""
+    a_set = set(included_study_ids(run_a))
+    b_set = set(included_study_ids(run_b))
+    return {
+        "only_in_a_nct_ids": sorted(a_set - b_set)[:_PICO_DIFF_CAP],
+        "only_in_b_nct_ids": sorted(b_set - a_set)[:_PICO_DIFF_CAP],
+        "both": sorted(a_set & b_set)[:_PICO_DIFF_CAP],
+    }
 
 def compute_pipeline_compare(run_a: PipelineRun, run_b: PipelineRun, metrics_requested: str) -> dict:
     """Orchestrator used by route. metrics_requested is CSV: funnel,rob,grade,pico (all 4 default)."""

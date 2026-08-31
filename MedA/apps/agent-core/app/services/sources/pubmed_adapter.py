@@ -405,20 +405,26 @@ def _live_pubmed_efetch(preset: str, max_records: int, min_interval_ms: int = 35
         efetch = _req.get("https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
                           params={"db":"pubmed","id":",".join(idlist),"rettype":"xml"}, timeout=30)
         efetch.raise_for_status()
-        # Minimal parsing (real XML parsing is responsibility of existing pubmed_adapter.parse_efetch_response — reuse if exists)
-        xml_bytes = efetch.content
-        # Attempt existing parse if available; otherwise use fallback synthetic parse:
-        try:
-            from .pubmed_adapter import parse_efetch_xml_records  # type: ignore
-            records = parse_efetch_xml_records(xml_bytes, max_records)
-            for r in records:
-                r["source"] = f"live:{preset}"
-            return records[:max_records]
-        except Exception:
-            # Fallback minimal parse: return snapshot with live flag to indicate fetch succeeded
-            snap = _load_preset_snapshot(preset, max_records)
-            for r in snap: r["source"] = f"live-fallback:{preset}"
-            return snap[:max_records]
+        entries = _parse_pubmed_xml(efetch.text)
+        if not entries:
+            raise ValueError("PubMed efetch XML yielded no parsable articles")
+        # Only what the response actually carries is reported. Design, effect
+        # estimates and registration ids are left out rather than guessed; the
+        # screening steps read them out of the title/abstract text themselves.
+        return [
+            {
+                "id": f"pmid-{e.pmid}" if e.pmid else f"live-{preset}-{i}",
+                "pmid": e.pmid,
+                "title": e.title,
+                "authors": e.authors,
+                "journal": e.journal,
+                "year": e.year,
+                "abstract": e.abstract,
+                "source": f"live:{preset}",
+                "preset": preset,
+            }
+            for i, e in enumerate(entries[:max_records])
+        ]
     except (ImportError, _req.exceptions.RequestException, TimeoutError, ValueError, KeyError) as e:
         raise ConnectionError(f"Live PubMed unavailable: {type(e).__name__}: {e}") from e
 

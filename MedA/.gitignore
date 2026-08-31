@@ -16,3 +16,4 @@ apps/agent-core/tests/fixtures/w12_synthetic_50k.json
 apps/agent-core/tests/fixtures/w12_synthetic_50k.meta
 *.db
 *.db-journal
+apps/agent-core/.storage/
