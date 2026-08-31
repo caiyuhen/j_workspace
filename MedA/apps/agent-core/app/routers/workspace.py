@@ -1954,10 +1954,18 @@ def w9c_abstractor_run_pipeline(
 
     pid = payload.project_id or payload.pi_id
     if pid is not None:
-        try:
-            _load_project_or_404(session, pid, context)
-        except HTTPException:
-            pass
+        # 归属校验的结果必须生效：此前它被 try/except 吞掉，等于任何组织都能对别人的
+        # 项目跑分诊并写入证据。与 funnel-stats 保持同一套 404/403 语义。
+        project = session.get(ResearchProject, pid)
+        if project is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="project not found"
+            )
+        if project.organization_slug != context.organization_slug:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="no permission to access this project",
+            )
 
     title = (payload.title or "").strip()
     dedup_ref = (payload.dedup_reference_title or "").strip()

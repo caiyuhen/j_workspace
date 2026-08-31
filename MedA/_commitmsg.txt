@@ -1,0 +1,7 @@
+abstractor: enforce the project ownership check on run-pipeline
+
+The endpoint ran the ownership check and then discarded its result in a
+try/except, so a caller from any organization could triage a project that was
+not theirs and have the evidence written against it. The check now raises the
+same 404/403 the funnel-stats endpoint does, and a cross-org request is
+covered by a test.

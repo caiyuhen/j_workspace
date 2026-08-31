@@ -528,3 +528,29 @@ class TestR6AbstractorPipeline:
         assert "pico_llm" in failed_steps, (
             f"R6 failed_steps should include 'pico_llm'; got {failed_steps}"
         )
+
+    def test_r6_pipeline_cross_org_project_403(self):
+        """R6 failure: 项目属于别的组织时不得放行，必须 403。"""
+        client = TestClient(app)
+        token_a = _dev_login(client, "meda-t13-a", "MedA T13 OrgA", "u-t13-013a")
+        pid_a = _create_project(client, token_a, "meda-t13-a", "u-t13-013a", "R6 OrgA Project")
+
+        token_b = _dev_login(client, "meda-t13-b", "MedA T13 OrgB", "u-t13-013b")
+
+        resp = client.post(
+            "/api/workspace/abstractor/run-pipeline",
+            headers={"Authorization": f"Bearer {token_b}"},
+            json={
+                "pi_id": pid_a,
+                "title": "Dapagliflozin RCT in T2DM",
+                "abstract_text": "Double-blind RCT of dapagliflozin vs placebo.",
+                "skip_simhash": True,
+            },
+        )
+        assert resp.status_code == 403, (
+            f"R6 expected HTTP 403 for cross-org access; got {resp.status_code}: {resp.text}"
+        )
+        detail = (resp.json() or {}).get("detail", "")
+        assert "permission" in detail.lower(), (
+            f"R6 403 detail should mention 'permission': {detail!r}"
+        )
