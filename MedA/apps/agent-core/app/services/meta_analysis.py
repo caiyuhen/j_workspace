@@ -20,6 +20,7 @@ _META_MIN_STUDIES_MSG = "meta_requires_at_least_2_studies"
 _EX3_BINARY_MISMATCH = "outcome_type_mismatch_expected_binary_arms"
 _EX4_CONTINUOUS_MISMATCH = "outcome_type_mismatch_expected_continuous"
 _EX6_EVENTS_GT_TOTAL = "2x2_events_gt_total_n_invalid"
+_EX6B_EVENTS_OR_N_NEGATIVE = "2x2_events_or_n_negative_invalid"
 _EX7_SD_OR_N_INVALID = "continuous_sd_or_n_invalid_nonpositive"
 _EX8_ZERO_WEIGHT = "zero_total_weight_cannot_compute_pooled"
 
@@ -134,7 +135,7 @@ def upsert_outcome_arm_data(
             ev = int(binary_data.get("events", 0))
             nn = int(binary_data.get("n", 0))
             if ev < 0 or nn < 0:
-                pass
+                raise Exception(_EX6B_EVENTS_OR_N_NEGATIVE)
             if ev > nn:
                 raise Exception(_EX6_EVENTS_GT_TOTAL)
             data_json = {"events": ev, "n": nn}

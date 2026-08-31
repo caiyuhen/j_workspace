@@ -344,7 +344,7 @@ def _clone_run(run: PipelineRun) -> PipelineRun:
 
 
 def _apply_fault_injection(idx: int, ctx: dict[str, Any]) -> None:
-    """Test-only fault hooks, shared by the simulated steps and the real step1."""
+    """Test-only fault hooks, shared by every pipeline step."""
     fail_key = f"fail_forever_step{idx}"
     fail_once_key = f"fail_once_step{idx}"
     fail_mode_key = f"fail_mode_step{idx}"

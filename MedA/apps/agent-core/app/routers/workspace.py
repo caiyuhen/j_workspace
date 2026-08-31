@@ -2014,18 +2014,16 @@ def w9c_abstractor_run_pipeline(
         rid_int = None
 
     if rid_int is not None:
-        try:
-            save_triage_result_to_evidence_artifact(
-                session,
-                literature_record_id=rid_int,
-                result=result,
-                stage="data_abstractor",
-                created_by=getattr(context, "user_id", None),
-            )
-            if decision_val == "include":
-                unlock_9c_to_9a_for_record(session, rid_int, decision_val)
-        except Exception:
-            pass
+        # 落库失败不能被吞掉：否则接口照常返回决策，调用方会以为证据已经存档。
+        save_triage_result_to_evidence_artifact(
+            session,
+            literature_record_id=rid_int,
+            result=result,
+            stage="data_abstractor",
+            created_by=getattr(context, "user_id", None),
+        )
+        if decision_val == "include":
+            unlock_9c_to_9a_for_record(session, rid_int, decision_val)
 
     response_record: dict = {
         "id": payload.record_id,

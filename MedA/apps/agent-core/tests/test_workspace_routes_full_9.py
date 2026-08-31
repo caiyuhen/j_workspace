@@ -430,6 +430,20 @@ class TestR6AbstractorPipeline:
         """R6 success: Perfect PICO via llm_result → decision=include, confidence>=0.85."""
         client = TestClient(app)
         token = _dev_login(client, "meda-t13", "MedA T13", "u-t13-011")
+        pid = _create_project(client, token, "meda-t13", "u-t13-011", "T13 R6 Success")
+        # 分诊结果会落成 EvidenceArtifact，外键指向真实文献记录，所以先插一条真实的
+        with Session(engine) as s:
+            lr = LiteratureRecord(
+                project_id=pid,
+                title="Dapagliflozin RCT in T2DM Patients with Cardiovascular Outcomes",
+                abstract="Double-blind RCT of dapagliflozin vs placebo on CV outcomes.",
+                source_key="pubmed",
+                source_record_id="pm-t13-r6-ok",
+            )
+            s.add(lr)
+            s.commit()
+            s.refresh(lr)
+            rid = lr.id
 
         perfect_pico = {
             "ok": True,
@@ -445,7 +459,7 @@ class TestR6AbstractorPipeline:
             "/api/workspace/abstractor/run-pipeline",
             headers={"Authorization": f"Bearer {token}"},
             json={
-                "record_id": 101,
+                "record_id": rid,
                 "title": "Dapagliflozin RCT in T2DM Patients with Cardiovascular Outcomes",
                 "abstract_text": (
                     "This double-blind RCT evaluated SGLT2 inhibitor dapagliflozin vs "
@@ -472,12 +486,25 @@ class TestR6AbstractorPipeline:
         """R6 failure: llm_result None + fallback_times=2 → decision=review + failed_steps=['pico_llm']."""
         client = TestClient(app)
         token = _dev_login(client, "meda-t13", "MedA T13", "u-t13-012")
+        pid = _create_project(client, token, "meda-t13", "u-t13-012", "T13 R6 Fallback")
+        with Session(engine) as s:
+            lr = LiteratureRecord(
+                project_id=pid,
+                title="Observational Study (no T2DM keywords)",
+                abstract="Retrospective cohort of patients with general cardiovascular risk.",
+                source_key="pubmed",
+                source_record_id="pm-t13-r6-fallback",
+            )
+            s.add(lr)
+            s.commit()
+            s.refresh(lr)
+            rid = lr.id
 
         resp = client.post(
             "/api/workspace/abstractor/run-pipeline",
             headers={"Authorization": f"Bearer {token}"},
             json={
-                "record_id": 202,
+                "record_id": rid,
                 "title": "Observational Study (no T2DM keywords)",
                 "abstract_text": "Retrospective cohort of patients with general cardiovascular risk.",
                 "llm_result": None,
